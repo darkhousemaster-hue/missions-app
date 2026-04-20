@@ -1,0 +1,38 @@
+# Dependencies - never commit these
+node_modules/
+npm-debug.log*
+
+# Database - contains real game data and passwords
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Uploaded media files - can be large, regenerated each game
+uploads/
+
+# Tunnel URL file written by bat script
+tunnel-url.txt
+
+# Environment / secrets
+.env
+.env.local
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Windows bat output
+*.tmp

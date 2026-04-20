@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<title>MiSSiONS — Join</title>
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  body {
+    display: flex; flex-direction: column; min-height: 100vh;
+    align-items: center; justify-content: center; padding: 1.5rem;
+    background: radial-gradient(ellipse at top, #1e0505 0%, #0e0e0e 70%);
+  }
+
+  .join-card {
+    width: 100%; max-width: 420px; text-align: center;
+  }
+
+  .join-logo { margin-bottom: 1.5rem; }
+  .join-logo img { height: 60px; }
+
+  .mission-title {
+    font-family: var(--heading);
+    font-size: 3.5rem;
+    letter-spacing: .15em;
+    color: var(--red);
+    margin-bottom: .25rem;
+    text-shadow: 0 0 30px rgba(212,43,43,.4);
+  }
+
+  .game-badge {
+    display: inline-block;
+    font-family: var(--mono); font-size: .8rem;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: .25rem .75rem; border-radius: var(--radius);
+    color: var(--text-dim); letter-spacing: .1em;
+    margin-bottom: 2rem;
+  }
+
+  .form-card {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.75rem;
+    box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    position: relative;
+  }
+  .form-card::before, .form-card::after {
+    content: ''; position: absolute; width: 18px; height: 18px;
+    border-color: var(--red); border-style: solid;
+  }
+  .form-card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .form-card::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+  .form-card h3 {
+    font-size: 1.6rem; margin-bottom: .25rem;
+    letter-spacing: .08em;
+  }
+  .form-card p { margin-bottom: 1.25rem; font-size: .9rem; }
+
+  .team-input {
+    text-align: center; font-size: 1.1rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .team-input::placeholder { text-transform: none; font-weight: 400; }
+
+  #error-msg {
+    color: var(--red-light); font-size: .85rem;
+    margin-top: .5rem; min-height: 1.2em;
+  }
+
+  .location-info {
+    margin-top: 1.5rem; font-size: .8rem; color: var(--text-muted); letter-spacing: .05em;
+  }
+
+  /* Loading/waiting state */
+  #screen-loading { text-align: center; }
+  #screen-loading .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--red); border-radius: 50%;
+    animation: spin .7s linear infinite; margin: 1rem auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #screen-error { text-align: center; }
+  #screen-error h2 { color: var(--red-light); margin-bottom: .75rem; }
+</style>
+</head>
+<body>
+
+<div class="join-card">
+  <div class="join-logo"><img src="/assets/logo.png" class="logo" alt="AdventureRooms"></div>
+  <div class="mission-title">MISSIONS</div>
+  <div class="game-badge" id="game-id-display">—</div>
+
+  <!-- Loading -->
+  <div id="screen-loading">
+    <div class="spinner"></div>
+    <p>Loading game…</p>
+  </div>
+
+  <!-- Error -->
+  <div id="screen-error" style="display:none;">
+    <h2>Game Not Found</h2>
+    <p>This game may have expired or the QR code is invalid.</p>
+  </div>
+
+  <!-- Join form -->
+  <div id="screen-join" style="display:none;">
+    <div class="form-card">
+      <h3>Choose Your<br>Team Name</h3>
+      <p>Each phone is one team. Pick a memorable name!</p>
+      <div class="field">
+        <input id="team-name" class="input team-input" type="text" placeholder="e.g. The Foxes" maxlength="24" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="error-msg"></div>
+      <button class="btn btn-primary btn-full btn-lg" id="btn-join" onclick="joinGame()" style="margin-top:.75rem;">
+        Enter Mission →
+      </button>
+    </div>
+    <div class="location-info" id="location-info"></div>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const gameId = params.get('game');
+
+document.getElementById('game-id-display').textContent = gameId ? `GAME #${gameId}` : 'INVALID';
+
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!gameId) { show('error'); return; }
+  // If player already joined this game (e.g. page refresh), skip straight to play
+  const storedGame = sessionStorage.getItem('gameId');
+  const storedTeam = sessionStorage.getItem('teamId');
+  if (storedGame === gameId && storedTeam) {
+    window.location.href = `/play.html?game=${gameId}&team=${storedTeam}`;
+    return;
+  }
+  try {
+    const res = await fetch(`/api/games/${gameId}`);
+    if (!res.ok) { show('error'); return; }
+    const game = await res.json();
+    if (game.status === 'ended') { document.getElementById('screen-error').innerHTML = '<h2>Game Ended</h2><p>This game has already finished. Ask your Gamemaster for a new code.</p>'; show('error'); return; }
+    document.getElementById('location-info').textContent = game.location ? `📍 ${game.location.name}` : '';
+    show('join');
+    const inp = document.getElementById('team-name');
+    inp.focus();
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') joinGame(); });
+  } catch (e) { show('error'); }
+});
+
+async function joinGame() {
+  const name = document.getElementById('team-name').value.trim();
+  const err  = document.getElementById('error-msg');
+  const btn  = document.getElementById('btn-join');
+
+  if (!name) { err.textContent = 'Please enter a team name.'; return; }
+  if (name.length < 2) { err.textContent = 'Name must be at least 2 characters.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Joining…';
+  err.textContent = '';
+
+  const res = await fetch(`/api/games/${gameId}/teams`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  }).then(r=>r.json());
+
+  if (res.id) {
+    sessionStorage.setItem('teamId', res.id);
+    sessionStorage.setItem('teamName', res.name);
+    sessionStorage.setItem('gameId', gameId);
+    window.location.href = `/play.html?game=${gameId}&team=${res.id}`;
+  } else {
+    err.textContent = res.error || 'Failed to join. Try again.';
+    btn.disabled = false; btn.textContent = 'Enter Mission →';
+  }
+}
+
+function show(s) {
+  document.getElementById('screen-loading').style.display = 'none';
+  document.getElementById('screen-error').style.display   = 'none';
+  document.getElementById('screen-join').style.display    = 'none';
+  document.getElementById(`screen-${s}`).style.display    = 'block';
+}
+</script>
+</body>
+</html>

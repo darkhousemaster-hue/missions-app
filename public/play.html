@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<title>MiSSiONS</title>
+<link rel="stylesheet" href="/css/app.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
+
+/* ── Topbar ── */
+.play-topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.6rem .75rem; background:var(--bg2); border-bottom:1px solid var(--border);
+  flex-shrink:0; gap:.5rem;
+}
+.play-timer { font-family:var(--mono); font-size:1.5rem; letter-spacing:.05em; white-space:nowrap; }
+.play-timer.urgent { color:var(--red); animation:pulse-red 1s infinite; }
+.play-timer.paused { color:var(--text-muted); }
+.team-name-display {
+  font-family:var(--heading); font-size:1.1rem; letter-spacing:.1em;
+  text-transform:uppercase; flex:1; text-align:center;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.topbar-btn {
+  background:var(--surface); border:1px solid var(--border); color:var(--text-dim);
+  border-radius:var(--radius); padding:.35rem .6rem; cursor:pointer;
+  font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+  white-space:nowrap; flex-shrink:0; transition:all .15s;
+}
+.topbar-btn:hover { border-color:var(--text-dim); color:var(--text); }
+.topbar-btn.active { border-color:var(--red); color:var(--red-light); }
+
+/* ── View switching ── */
+#view-missions { flex:1; overflow-y:auto; padding:.75rem; padding-bottom:calc(env(safe-area-inset-bottom,0px) + 2rem); display:flex; flex-direction:column; -webkit-overflow-scrolling:touch; }
+#view-chat { flex:1; min-height:0; display:none; flex-direction:column; }
+#view-rules { position:fixed; inset:0; background:var(--bg3); z-index:600; display:none; flex-direction:column; }
+
+/* ── Legend ── */
+.legend-bar {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:.5rem .75rem; margin-bottom:.75rem; display:flex; gap:1rem; flex-wrap:wrap;
+}
+.legend-item { display:flex; align-items:center; gap:.3rem; font-size:.8rem; color:var(--text-dim); }
+
+/* ── Mission card ── */
+.p-mission-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:1rem; margin-bottom:.75rem;
+}
+.p-mission-card.pending  { border-color:var(--orange); }
+.p-mission-card.accepted { border-color:#006628; }
+.p-mission-card.rejected { border-color:var(--red-dim); }
+.mission-meta { display:flex; gap:.4rem; align-items:center; margin-bottom:.4rem; flex-wrap:wrap; }
+.mission-name { font-weight:700; font-size:1rem; margin-bottom:.3rem; }
+.mission-desc { font-size:.9rem; color:var(--text-dim); line-height:1.5; margin-bottom:.5rem; }
+.mission-footer { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-top:.5rem; }
+
+/* Status pills */
+.pill { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:2px; font-size:.75rem; font-weight:700; text-transform:uppercase; }
+.pill-pending  { background:#4a2000; color:var(--orange); }
+.pill-accepted { background:#003318; color:var(--green); }
+.pill-rejected { background:#4a0000; color:var(--red-light); }
+
+/* Thumbnail */
+.sub-thumb { width:56px; height:42px; object-fit:cover; border-radius:3px; border:1px solid var(--border); cursor:pointer; display:inline-block; }
+.sub-thumb-video { width:56px; height:42px; object-fit:cover; border-radius:3px; border:1px solid var(--border); cursor:pointer; display:inline-block; vertical-align:middle; max-width:56px; }
+
+/* Upload progress */
+.upload-bar { height:3px; background:var(--red-dim); border-radius:2px; margin-top:.4rem; display:none; }
+.upload-fill { height:100%; background:var(--red); width:0; transition:width .2s; }
+
+/* ── Chat view ── */
+#chat-messages { flex:1; min-height:0; overflow-y:auto; padding:.75rem; display:flex; flex-direction:column; gap:.4rem; -webkit-overflow-scrolling:touch; }
+#chat-input-row { display:flex; gap:.5rem; padding:.6rem .75rem; padding-bottom:max(.6rem, env(safe-area-inset-bottom, .6rem)); border-top:1px solid var(--border); background:var(--bg2); flex-shrink:0; width:100%; }
+#chat-input-row input { flex:1; }
+
+/* ── Rules view ── */
+#rules-scroll { flex:1; overflow-y:auto; padding:1rem; }
+.rule-entry { padding:.5rem 0; border-bottom:1px solid var(--border); color:var(--text); line-height:1.6; }
+.rule-entry:last-child { border-bottom:none; }
+
+/* ── Camera modal ── */
+#camera-modal { position:fixed; inset:0; background:#000; z-index:500; display:none; flex-direction:column; }
+#cam-preview  { flex:1; width:100%; object-fit:cover; display:block; }
+#cap-img { flex:1; width:100%; object-fit:contain; display:none; background:#000; }
+#cap-vid { flex:1; width:100%; display:none; background:#000; }
+.cam-bar { padding:.75rem 1rem; background:#111; display:flex; gap:.75rem; align-items:center; justify-content:center; flex-shrink:0; }
+.shutter {
+  width:64px; height:64px; border-radius:50%; border:3px solid #fff;
+  background:rgba(255,255,255,.15); cursor:pointer; font-size:1.5rem;
+  display:flex; align-items:center; justify-content:center;
+}
+.shutter.recording { background:var(--red); border-color:var(--red); animation:pulse-red .8s infinite; }
+#rec-dot { position:absolute; top:14px; left:14px; background:var(--red); color:#fff; padding:.15rem .5rem; border-radius:3px; font-size:.8rem; font-weight:700; display:none; }
+
+/* ── Lightbox ── */
+#lightbox { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:900; display:none; align-items:center; justify-content:center; cursor:pointer; }
+#lightbox img, #lightbox video { max-width:96vw; max-height:92vh; border-radius:4px; }
+
+/* ── GM Message popup ── */
+#msg-popup {
+  position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:1400;
+  display:none; align-items:center; justify-content:center; padding:1.5rem;
+}
+.msg-popup-box {
+  background:var(--bg3); border:2px solid var(--red); border-radius:var(--radius);
+  padding:1.5rem; max-width:400px; width:100%; text-align:center;
+  box-shadow:0 0 40px rgba(212,43,43,.4);
+}
+.msg-popup-box h3 { color:var(--red-light); margin-bottom:.75rem; font-size:1.4rem; }
+.msg-popup-box p  { color:var(--text); margin-bottom:1.25rem; line-height:1.6; }
+
+/* ── Rejection overlay ── */
+#rejection-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.95); z-index:1500;
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:2rem;
+}
+#rejection-overlay h2 { color:var(--red-light); font-size:2rem; margin-bottom:1rem; }
+#rejection-overlay p  { color:var(--text); max-width:380px; margin:0 auto 1.5rem; line-height:1.6; }
+
+/* ── Game over ── */
+#gameover-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.97); z-index:1600;
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:2rem;
+}
+#gameover-overlay h1 { font-size:clamp(3rem,12vw,6rem); color:var(--red); letter-spacing:.1em; }
+#gameover-overlay p  { font-size:1.1rem; max-width:480px; margin:1rem auto; color:var(--text-dim); }
+
+@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.5} }
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div class="play-topbar">
+  <div class="play-timer" id="player-timer">--:--</div>
+  <div class="team-name-display" id="team-name-display"></div>
+  <div style="display:flex;gap:.4rem;flex-shrink:0;">
+    <button class="topbar-btn" id="btn-missions" onclick="showView('missions')">📋</button>
+    <button class="topbar-btn" id="btn-chat" onclick="showView('chat')" style="position:relative;">
+      💬
+      <span id="chat-dot" style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--orange);display:none;"></span>
+    </button>
+    <button class="topbar-btn" id="btn-rules" onclick="showView('rules')">📖</button>
+    <button class="topbar-btn" id="btn-lang" onclick="cycleLang()">DE</button>
+  </div>
+</div>
+
+<!-- ── MISSIONS VIEW ── -->
+<div id="view-missions">
+  <div class="legend-bar">
+    <div class="legend-item">📷 <span id="leg-photo">Fotoauftrag</span></div>
+    <div class="legend-item">🎬 <span id="leg-video">Videoauftrag</span></div>
+    <div class="legend-item">🏠 <span id="leg-indoor">Auch drinnen möglich</span></div>
+  </div>
+  <div id="missions-list"></div>
+</div>
+
+<!-- ── CHAT VIEW ── -->
+<div id="view-chat">
+  <div id="chat-messages"></div>
+  <div id="chat-input-row">
+    <input type="text" id="chat-input" class="input" placeholder="Nachricht an Gamemaster…"
+           onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn btn-primary btn-sm" onclick="sendChat()" id="chat-send-btn">Senden</button>
+  </div>
+</div>
+
+<!-- ── RULES VIEW (full screen overlay) ── -->
+<div id="view-rules">
+  <div class="topbar" style="flex-shrink:0;">
+    <button class="topbar-btn" onclick="showView('missions')" id="rules-back-btn">← Zurück</button>
+    <span id="rules-title" style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;">REGELN</span>
+  </div>
+  <div id="rules-scroll"><div id="rules-text"></div></div>
+</div>
+
+<!-- ── CAMERA MODAL ── -->
+<div id="camera-modal">
+  <div id="rec-dot">● REC</div>
+  <video id="cam-preview" autoplay muted playsinline></video>
+  <img   id="cap-img" alt="Aufnahme">
+  <video id="cap-vid" controls playsinline></video>
+  <div class="cam-bar" id="cam-bar-capture">
+    <button class="topbar-btn" onclick="closeCamera()">✕ Abbrechen</button>
+    <button class="shutter" id="shutter-btn" onclick="doCapture()"><span id="shutter-icon">📷</span></button>
+    <button class="topbar-btn" onclick="flipCam()">🔄 Flip</button>
+  </div>
+  <div class="cam-bar" id="cam-bar-review" style="display:none;">
+    <button class="btn btn-danger" onclick="retake()">↺ Neu aufnehmen</button>
+    <button class="btn btn-success btn-lg" onclick="doUpload()" id="upload-btn">✓ Hochladen</button>
+  </div>
+</div>
+
+<!-- ── LIGHTBOX ── -->
+<div id="lightbox" onclick="document.getElementById('lightbox').style.display='none'">
+  <img id="lb-img" src="" alt="" style="display:none;">
+  <video id="lb-vid" src="" controls style="display:none;"></video>
+</div>
+
+<!-- ── GM MESSAGE POPUP ── -->
+<div id="msg-popup">
+  <div class="msg-popup-box">
+    <h3>📨 Gamemaster</h3>
+    <p id="msg-popup-text"></p>
+    <button class="btn btn-primary btn-full" onclick="closePopup()">OK</button>
+  </div>
+</div>
+
+<!-- ── REJECTION OVERLAY ── -->
+<div id="rejection-overlay">
+  <h2 id="rej-title">❌ Abgelehnt</h2>
+  <p id="rej-reason"></p>
+  <button class="btn btn-primary btn-lg" onclick="closeRejection()" id="rej-btn">OK — Erneut versuchen</button>
+</div>
+
+<!-- ── GAME OVER ── -->
+<div id="gameover-overlay">
+  <h1 id="go-title">ZEIT ABGELAUFEN</h1>
+  <p id="go-msg"></p>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+'use strict';
+
+// ── State ────────────────────────────────────────────────────────────────────
+let gameId, teamId, teamName;
+let socket;
+let lang = localStorage.getItem('m_lang') || 'de';
+let cameraStream = null, mediaRecorder = null, recordedChunks = [];
+let capturedBlob = null, capturedIsVideo = false, capturedMimeType = 'video/webm';
+let currentMissionId = null, currentMissionType = 'photo';
+let useFront = false;
+let currentView = 'missions';
+
+// ── Translations ─────────────────────────────────────────────────────────────
+const T = {
+  de: {
+    description:'Beschreibung', task:'Aufgabe',
+    photo:'Fotoauftrag', video:'Videoauftrag', indoor:'Auch drinnen möglich',
+    rules:'REGELN', rules_back:'← Zurück', send:'Senden', chat_ph:'Nachricht an Gamemaster…',
+    pending:'⏳ Wird geprüft', accepted:'✓ Angenommen',
+    take_photo:'📷 Foto aufnehmen', take_video:'🎬 Video aufnehmen',
+    redo:'↺ Erneut versuchen', go:'ZEIT ABGELAUFEN',
+    rej_title:'❌ Abgelehnt', rej_btn:'OK — Erneut versuchen',
+    upload:'✓ Hochladen', retake:'↺ Neu aufnehmen', cancel:'✕ Abbrechen',
+    awaiting:'⏳ Wird geprüft',
+  },
+  en: {
+    description:'Description', task:'Task',
+    photo:'Photo mission', video:'Video mission', indoor:'Can be done indoors',
+    rules:'RULES', rules_back:'← Back', send:'Send', chat_ph:'Message to Gamemaster…',
+    pending:'⏳ Awaiting review', accepted:'✓ Accepted',
+    take_photo:'📷 Take Photo', take_video:'🎬 Record Video',
+    redo:'↺ Try again', go:"TIME'S UP",
+    rej_title:'❌ Rejected', rej_btn:'OK — Try Again',
+    upload:'✓ Upload', retake:'↺ Retake', cancel:'✕ Cancel',
+    awaiting:'⏳ Awaiting review',
+  },
+  fr: {
+    photo:'Mission photo', video:'Mission vidéo', indoor:'Possible en intérieur',
+    rules:'RÈGLES', rules_back:'← Retour', send:'Envoyer', chat_ph:'Message au Gamemaster…',
+    pending:'⏳ En attente', accepted:'✓ Accepté',
+    take_photo:'📷 Prendre photo', take_video:'🎬 Enregistrer vidéo',
+    redo:'↺ Réessayer', go:'TEMPS ÉCOULÉ',
+    rej_title:'❌ Refusé', rej_btn:'OK — Réessayer',
+    upload:'✓ Envoyer', retake:'↺ Reprendre', cancel:'✕ Annuler',
+    awaiting:'⏳ En attente de validation',
+    description:'Description', task:'Aufgabe',
+  },
+  it: {
+    photo:'Missione foto', video:'Missione video', indoor:'Possibile anche al chiuso',
+    rules:'REGOLE', rules_back:'← Indietro', send:'Invia', chat_ph:'Messaggio al Gamemaster…',
+    pending:'⏳ In attesa', accepted:'✓ Accettato',
+    take_photo:'📷 Scatta foto', take_video:'🎬 Registra video',
+    redo:'↺ Riprova', go:'TEMPO SCADUTO',
+    rej_title:'❌ Rifiutato', rej_btn:'OK — Riprova',
+    upload:'✓ Carica', retake:'↺ Riprendi', cancel:'✕ Annulla',
+    awaiting:'⏳ In attesa di revisione',
+    description:'Descrizione', task:'Compito',
+  }
+};
+const LANGS = ['de','en','fr','it'];
+function t(k) { return (T[lang]||T.de)[k]||k; }
+
+function applyTranslations() {
+  document.getElementById('btn-lang').textContent = lang.toUpperCase();
+  document.getElementById('leg-photo').textContent = t('photo');
+  document.getElementById('leg-video').textContent = t('video');
+  document.getElementById('leg-indoor').textContent = t('indoor');
+  document.getElementById('rules-title').textContent = t('rules');
+  document.getElementById('rules-back-btn').textContent = t('rules_back');
+  document.getElementById('chat-send-btn').textContent = t('send');
+  document.getElementById('chat-input').placeholder = t('chat_ph');
+  document.getElementById('rej-title').textContent = t('rej_title');
+  document.getElementById('rej-btn').textContent = t('rej_btn');
+  document.getElementById('go-title').textContent = t('go');
+  const ub = document.getElementById('upload-btn');
+  if (ub) ub.textContent = t('upload');
+}
+
+function cycleLang() {
+  lang = LANGS[(LANGS.indexOf(lang)+1) % LANGS.length];
+  localStorage.setItem('m_lang', lang);
+  applyTranslations();
+  loadMissions();
+  loadRules();
+}
+
+// ── View switching ────────────────────────────────────────────────────────────
+function showView(v) {
+  currentView = v;
+  document.getElementById('view-missions').style.display = v==='missions' ? 'flex' : 'none';
+  document.getElementById('view-chat').style.display     = v==='chat'     ? 'flex' : 'none';
+  document.getElementById('view-rules').style.display    = v==='rules'    ? 'flex' : 'none';
+  ['missions','chat','rules'].forEach(name => {
+    const btn = document.getElementById(`btn-${name}`);
+    if (btn) btn.classList.toggle('active', name===v);
+  });
+  if (v==='chat') {
+    document.getElementById('chat-dot').style.display = 'none';
+    scrollChat();
+  }
+  if (v==='rules') loadRules();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const p = new URLSearchParams(window.location.search);
+  gameId   = p.get('game')  || sessionStorage.getItem('gameId');
+  teamId   = parseInt(p.get('team') || sessionStorage.getItem('teamId'));
+  teamName = sessionStorage.getItem('teamName') || 'Team';
+  if (!gameId || !teamId) { window.location.href='/'; return; }
+
+  document.getElementById('team-name-display').textContent = teamName;
+  applyTranslations();
+  showView('missions');
+
+  await loadMissions();
+  await loadChatHistory();
+  await loadRules();
+
+  socket = io({ reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000 });
+
+  function joinRooms() {
+    socket.emit('join_game', { gameId, teamId });
+  }
+
+  // Wait for connection before joining — fixes the "no real-time events" bug
+  socket.on('connect', () => {
+    joinRooms();
+  });
+  // Re-join after reconnect so timer/chat resume without page reload
+  socket.on('reconnect', () => {
+    joinRooms();
+  });
+
+  socket.on('timer_update', updateTimer);
+  socket.on('timer_state',  updateTimer);
+  socket.on('mission_accepted', ({ missionId }) => onAccepted(missionId));
+  socket.on('mission_rejected', ({ missionId, message }) => onRejected(missionId, message));
+  socket.on('chat_message', onChatMessage);
+  socket.on('game_ended',   ({ message }) => showGameOver(message));
+  socket.on('settings_updated', () => { loadMissions(); });
+});
+
+// ── Timer ─────────────────────────────────────────────────────────────────────
+function updateTimer({ remaining, running }) {
+  const el = document.getElementById('player-timer');
+  const m  = Math.floor(remaining/60).toString().padStart(2,'0');
+  const s  = (remaining%60).toString().padStart(2,'0');
+  el.textContent = `${m}:${s}`;
+  el.className = 'play-timer' + (remaining<=60&&running?' urgent' : !running?' paused':'');
+}
+
+// ── Missions ──────────────────────────────────────────────────────────────────
+async function loadMissions() {
+  const data = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
+  const list = document.getElementById('missions-list');
+  if (!data.missions || !data.missions.length) {
+    list.innerHTML = '<div class="empty"><p>Keine Missionen gefunden.</p></div>';
+    return;
+  }
+  list.innerHTML = data.missions.map(m => missionCard(m)).join('');
+}
+
+function missionCard(m) {
+  const icon   = m.media_type==='video' ? '🎬' : '📷';
+  const desc   = m[`description_${lang}`] || m.description_de || m.description_en || '';
+  const task   = m[`task_${lang}`] || m.task_de || m.task_en || '';
+  const status = m.status || 'open';
+  const pts    = `<span class="badge badge-orange">+${m.points}pt</span>`;
+  const indoor = m.is_indoor ? '🏠' : '';
+
+  let footer = '';
+  if (status==='open' || status==='rejected') {
+    const label = m.media_type==='video' ? t('take_video') : t('take_photo');
+    footer = `<button class="btn btn-primary btn-sm" onclick="openCamera(${m.mission_id},'${m.media_type}')">${label}</button>`;
+    if (status==='rejected' && m.rejection_message) {
+      footer += `<div style="width:100%;margin-top:.4rem;padding:.4rem .6rem;background:rgba(212,43,43,.12);border-radius:3px;font-size:.82rem;color:var(--red-light);">${esc(m.rejection_message)}</div>`;
+    }
+  } else if (status==='pending') {
+    footer = `<span class="pill pill-pending">${t('pending')}</span>`;
+    if (m.media_path) {
+      const src = `/uploads/${m.media_path}`;
+      const isVid = m.media_type==='video';
+      footer += isVid
+        ? `<video class="sub-thumb-video" src="${src}" onclick="openLightbox('${src}',true)" muted></video>`
+        : `<img class="sub-thumb" src="${src}" onclick="openLightbox('${src}',false)" alt="thumb">`;
+    }
+  } else if (status==='accepted') {
+    footer = `<span class="pill pill-accepted">${t('accepted')} ${pts}</span>`;
+    if (m.media_path) {
+      const src = `/uploads/${m.media_path}`;
+      const isVid = m.media_type==='video';
+      footer += isVid
+        ? `<video class="sub-thumb-video" src="${src}" onclick="openLightbox('${src}',true)" muted></video>`
+        : `<img class="sub-thumb" src="${src}" onclick="openLightbox('${src}',false)" alt="thumb">`;
+    }
+  }
+
+  return `<div class="p-mission-card ${status}" id="mc-${m.mission_id}">
+    <div class="mission-meta">${icon} ${indoor} ${pts}</div>
+    <div class="mission-name">${esc(m.mission_name||'')}</div>
+    ${desc ? `<div style="font-size:.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem;">${t('description')}</div><div class="mission-desc">${esc(desc)}</div>` : ''}
+    ${task ? `<div style="font-size:.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin:.5rem 0 .15rem;">${t('task')}</div><div class="mission-desc" style="color:var(--text);">${esc(task)}</div>` : ''}
+    <div class="mission-footer" id="mf-${m.mission_id}">${footer}</div>
+    <div class="upload-bar" id="ub-${m.mission_id}"><div class="upload-fill" id="uf-${m.mission_id}"></div></div>
+  </div>`;
+}
+
+function onAccepted(missionId) {
+  const card = document.getElementById(`mc-${missionId}`); if (!card) return;
+  card.className = 'p-mission-card accepted';
+  const footer = document.getElementById(`mf-${missionId}`);
+  if (footer) footer.innerHTML = `<span class="pill pill-accepted">${t('accepted')}</span>`;
+  toast('✓ Mission angenommen!', 'success');
+}
+
+function onRejected(missionId, message) {
+  document.getElementById('rej-reason').textContent = message || '';
+  document.getElementById('rejection-overlay').style.display = 'flex';
+}
+function closeRejection() {
+  document.getElementById('rejection-overlay').style.display = 'none';
+  loadMissions();
+}
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+async function openCamera(missionId, type) {
+  currentMissionId   = missionId;
+  currentMissionType = type;
+  document.getElementById('shutter-icon').textContent = type==='video' ? '🔴' : '📷';
+  document.getElementById('camera-modal').style.display = 'flex';
+  document.getElementById('cam-preview').style.display  = 'block';
+  document.getElementById('cap-img').style.display      = 'none';
+  document.getElementById('cap-vid').style.display      = 'none';
+  document.getElementById('cam-bar-capture').style.display = 'flex';
+  document.getElementById('cam-bar-review').style.display  = 'none';
+  document.getElementById('rec-dot').style.display         = 'none';
+  document.getElementById('shutter-btn').classList.remove('recording');
+  capturedBlob = null;
+  await startStream();
+}
+
+async function startStream() {
+  if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
+  const facingMode = useFront ? 'user' : 'environment';
+
+  // For video: try with audio first, fall back to video-only if denied
+  if (currentMissionType === 'video') {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+    } catch(e) {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
+        toast('Mikrofon nicht verfügbar – kein Ton', 'warning');
+      } catch(e2) {
+        toast('Kamerazugriff verweigert', 'error');
+        closeCamera();
+        return;
+      }
+    }
+  } else {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+    } catch(e) {
+      toast('Kamerazugriff verweigert', 'error');
+      closeCamera();
+      return;
+    }
+  }
+  document.getElementById('cam-preview').srcObject = cameraStream;
+}
+
+function flipCam() { useFront = !useFront; startStream(); }
+
+async function doCapture() {
+  if (currentMissionType === 'video') {
+    const btn = document.getElementById('shutter-btn');
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+    } else {
+      recordedChunks = [];
+      // Detect supported MIME type
+      const mimes = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+      capturedMimeType = mimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+      try {
+        mediaRecorder = new MediaRecorder(cameraStream, capturedMimeType ? { mimeType: capturedMimeType } : {});
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          capturedBlob = new Blob(recordedChunks, { type: capturedMimeType || 'video/webm' });
+          capturedIsVideo = true;
+          const url = URL.createObjectURL(capturedBlob);
+          const vid = document.getElementById('cap-vid');
+          vid.src = url; vid.style.display = 'block';
+          document.getElementById('cam-preview').style.display = 'none';
+          document.getElementById('cam-bar-capture').style.display = 'none';
+          document.getElementById('cam-bar-review').style.display  = 'flex';
+          document.getElementById('rec-dot').style.display          = 'none';
+          btn.classList.remove('recording');
+          document.getElementById('shutter-icon').textContent = '🔴';
+        };
+        mediaRecorder.start();
+        btn.classList.add('recording');
+        document.getElementById('rec-dot').style.display = 'block';
+        document.getElementById('shutter-icon').textContent = '⏹';
+      } catch(e) {
+        toast('Aufnahme nicht möglich: ' + e.message, 'error');
+      }
+    }
+  } else {
+    // Photo
+    const video  = document.getElementById('cam-preview');
+    const canvas = document.createElement('canvas');
+    canvas.width  = video.videoWidth  || 1280;
+    canvas.height = video.videoHeight || 720;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob(blob => {
+      capturedBlob = blob;
+      capturedIsVideo = false;
+      const img = document.getElementById('cap-img');
+      img.src = URL.createObjectURL(blob); img.style.display = 'block';
+      document.getElementById('cam-preview').style.display  = 'none';
+      document.getElementById('cam-bar-capture').style.display = 'none';
+      document.getElementById('cam-bar-review').style.display  = 'flex';
+    }, 'image/jpeg', 0.85);
+  }
+}
+
+function retake() {
+  capturedBlob = null;
+  document.getElementById('cam-preview').style.display  = 'block';
+  document.getElementById('cap-img').style.display      = 'none';
+  document.getElementById('cap-vid').style.display      = 'none';
+  document.getElementById('cam-bar-capture').style.display = 'flex';
+  document.getElementById('cam-bar-review').style.display  = 'none';
+  document.getElementById('shutter-icon').textContent = currentMissionType==='video' ? '🔴' : '📷';
+}
+
+async function doUpload() {
+  if (!capturedBlob || !currentMissionId) return;
+
+  const blobToUpload = capturedBlob;
+  const isVid        = capturedIsVideo;
+  const ext          = isVid ? (capturedMimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
+  closeCamera();
+
+  const ub   = document.getElementById(`ub-${currentMissionId}`);
+  const fill = document.getElementById(`uf-${currentMissionId}`);
+  if (ub) ub.style.display = 'block';
+
+  const form = new FormData();
+  form.append('media', blobToUpload, `capture.${ext}`);
+
+  const xhr = new XMLHttpRequest();
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable && fill) fill.style.width = `${(e.loaded/e.total*100).toFixed(0)}%`;
+  };
+  xhr.onload = () => {
+    if (ub) ub.style.display = 'none';
+    if (xhr.status === 200) {
+      toast('Hochgeladen! Wird geprüft…', 'success');
+      // Update card to pending with thumbnail
+      const card = document.getElementById(`mc-${currentMissionId}`);
+      if (card) card.className = 'p-mission-card pending';
+      const footer = document.getElementById(`mf-${currentMissionId}`);
+      if (footer) {
+        const thumbUrl = URL.createObjectURL(blobToUpload);
+        const thumbHtml = isVid
+          ? `<video class="sub-thumb-video" src="${thumbUrl}" onclick="openLightbox('${thumbUrl}',true)" muted></video>`
+          : `<img class="sub-thumb" src="${thumbUrl}" onclick="openLightbox('${thumbUrl}',false)" alt="thumb">`;
+        footer.innerHTML = `<span class="pill pill-pending">${t('pending')}</span>${thumbHtml}`;
+      }
+    } else {
+      toast('Upload fehlgeschlagen', 'error');
+    }
+  };
+  xhr.onerror = () => { if(ub) ub.style.display='none'; toast('Upload fehlgeschlagen','error'); };
+  xhr.open('POST', `/api/games/${gameId}/teams/${teamId}/missions/${currentMissionId}/upload`);
+  xhr.send(form);
+}
+
+function closeCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream = null; }
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') { try { mediaRecorder.stop(); } catch(e){} }
+  document.getElementById('camera-modal').style.display = 'none';
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function openLightbox(url, isVid) {
+  const lb  = document.getElementById('lightbox');
+  const img = document.getElementById('lb-img');
+  const vid = document.getElementById('lb-vid');
+  if (isVid) { img.style.display='none'; vid.src=url; vid.style.display='block'; }
+  else        { vid.style.display='none'; img.src=url; img.style.display='block'; }
+  lb.style.display = 'flex';
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+async function loadChatHistory() {
+  const msgs = await fetch(`/api/games/${gameId}/chat?teamId=${teamId}`).then(r=>r.json());
+  const box  = document.getElementById('chat-messages');
+  box.innerHTML = msgs.map(m => bubble(m)).join('');
+  scrollChat();
+}
+
+function bubble(m) {
+  const fromGm = m.from_gm===1 || m.from_gm===true;
+  const time   = new Date(m.created_at||m.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}">
+    <div class="chat-meta">${fromGm?'Gamemaster':'Du'} · ${time}</div>
+    ${esc(m.content)}
+  </div>`;
+}
+
+function onChatMessage(msg) {
+  const fromGm = msg.fromGm===1 || msg.fromGm===true;
+
+  // Skip player's own messages - already added optimistically in sendChat()
+  if (!fromGm) return;
+
+  const box  = document.getElementById('chat-messages');
+  const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm">
+    <div class="chat-meta">Gamemaster · ${time}</div>${esc(msg.content)}</div>`);
+  scrollChat();
+
+  if (currentView !== 'chat') {
+    document.getElementById('chat-dot').style.display = 'block';
+    document.getElementById('msg-popup-text').textContent = msg.content;
+    document.getElementById('msg-popup').style.display = 'flex';
+  }
+}
+
+function scrollChat() {
+  const box = document.getElementById('chat-messages');
+  setTimeout(() => { box.scrollTop = box.scrollHeight; }, 30);
+}
+
+async function sendChat() {
+  const input   = document.getElementById('chat-input');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+
+  // Add to DOM immediately (optimistic) so player sees their own message right away
+  const box = document.getElementById('chat-messages');
+  const now  = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  box.insertAdjacentHTML('beforeend',
+    `<div class="chat-bubble from-player"><div class="chat-meta">Du · ${now}</div>${esc(content)}</div>`);
+  scrollChat();
+
+  await fetch(`/api/games/${gameId}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, content, fromGm: false })
+  });
+}
+
+function closePopup() { document.getElementById('msg-popup').style.display = 'none'; }
+
+// ── Rules ─────────────────────────────────────────────────────────────────────
+async function loadRules() {
+  const box = document.getElementById('rules-text');
+  let list = [];
+  // Try game-specific ruleset first (via mode)
+  if (gameId) {
+    try {
+      list = await fetch(`/api/games/${gameId}/rules`).then(r=>r.json());
+    } catch(e) {}
+  }
+  // Fallback to global settings
+  if (!list.length) {
+    try {
+      const s = await fetch('/api/settings').then(r=>r.json());
+      list = JSON.parse(s.rules_list || '[]');
+    } catch(e) {}
+  }
+  if (list.length) {
+    box.innerHTML = list.map((r,i) => {
+      const txt = (r[lang]||r.de||r.en||'')
+        .replace(/\[photo\]/gi,'📷').replace(/\[video\]/gi,'🎬').replace(/\[indoor\]/gi,'🏠');
+      return `<div class="rule-entry"><strong style="color:var(--text-muted);margin-right:.4rem;">${i+1}.</strong>${esc(txt)}</div>`;
+    }).join('');
+  } else {
+    box.innerHTML = '<p style="color:var(--text-muted);">Keine Regeln vorhanden.</p>';
+  }
+}
+
+// ── Game over ─────────────────────────────────────────────────────────────────
+function showGameOver(message) {
+  document.getElementById('go-title').textContent = t('go');
+  document.getElementById('go-msg').textContent   = message || '';
+  document.getElementById('gameover-overlay').style.display = 'flex';
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>

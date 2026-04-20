@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<title>MiSSiONS — Spielleiter</title>
+<link rel="stylesheet" href="/css/app.css">
+<style>
+body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+#app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+#screen-landing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;padding:2rem;}
+.landing-logo{text-align:center;}
+.landing-logo img{height:160px;margin-bottom:1rem;}
+.landing-logo h1{font-size:4rem;letter-spacing:.15em;color:var(--red);}
+.location-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;width:100%;max-width:700px;}
+.location-card{padding:1.2rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .15s;text-align:center;}
+.location-card:hover{border-color:var(--red);background:rgba(212,43,43,.08);}
+#screen-game-select{flex:1;overflow-y:auto;}
+.gs-inner{max-width:700px;margin:0 auto;padding:2rem 1rem;}
+.games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem;}
+.game-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;cursor:pointer;transition:border-color .15s;}
+.game-card:hover{border-color:var(--red);}
+.game-card-id{font-family:var(--mono);font-size:1.1rem;font-weight:700;}
+.game-card-date{font-size:.8rem;color:var(--text-dim);margin:.25rem 0;}
+.game-card-actions{display:flex;gap:.4rem;margin-top:.75rem;}
+#screen-new-game{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;text-align:center;}
+/* Dashboard */
+#screen-dashboard{flex:1;display:grid;grid-template-rows:auto auto 1fr;grid-template-columns:1fr 300px;grid-template-areas:"topbar topbar" "teams teams" "main panel";overflow:hidden;}
+#dash-topbar{grid-area:topbar;}
+#dash-teams{grid-area:teams;border-bottom:1px solid var(--border);background:var(--bg2);padding:.5rem .75rem;overflow-x:auto;display:flex;align-items:center;gap:.4rem;flex-shrink:0;}
+#dash-main{grid-area:main;overflow-y:auto;padding:1rem;}
+#dash-panel{grid-area:panel;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.team-chip-gm{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .8rem;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:600;font-size:.85rem;text-transform:uppercase;flex-shrink:0;}
+.team-chip-gm:hover{border-color:var(--text-dim);}
+.team-chip-gm.active{border-color:var(--red);background:rgba(212,43,43,.1);color:var(--red-light);}
+#dash-panel .tabs{padding:0 .75rem;margin-bottom:0;flex-shrink:0;}
+.panel-content{flex:1;overflow:hidden;display:none;}
+.panel-content.active{display:flex;flex-direction:column;}
+.rankings-section{padding:.75rem;border-top:1px solid var(--border);flex-shrink:0;}
+/* Settings */
+#screen-settings{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.stab{display:none;}.stab.active{display:block;}
+/* Rules */
+.rule-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:.5rem;position:relative;}
+.rule-item.drag-over::before{content:'';display:block;height:4px;background:var(--red);border-radius:2px;margin-bottom:.5rem;}
+.rule-item-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+.drag-handle{color:var(--text-muted);cursor:grab;font-size:1.1rem;user-select:none;flex-shrink:0;}
+.rule-langs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.5rem;}
+/* Mission tabs */
+.mission-tab-content{display:none;}.mission-tab-content.active{display:block;}
+/* Template editor */
+#tpl-canvas-wrap{position:relative;display:inline-block;cursor:crosshair;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-width:100%;}
+#tpl-canvas{display:block;max-width:100%;}
+#qr-placeholder{position:absolute;border:3px dashed var(--red);background:rgba(212,43,43,.1);cursor:move;user-select:none;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--red);font-weight:700;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- LANDING -->
+<div id="screen-landing" style="display:none;">
+  <div class="landing-logo">
+    <img src="/assets/logo.png" class="logo" alt="AR">
+    <h1>MiSSiONS</h1>
+    <p id="ll-select">Standort wählen</p>
+  </div>
+  <div id="location-grid" class="location-grid"></div>
+  <button class="btn btn-ghost btn-sm" onclick="showSettingsGate()">⚙ <span id="ll-settings">Einstellungen</span></button>
+</div>
+
+<!-- GAME SELECT -->
+<div id="screen-game-select" style="display:none;flex:1;flex-direction:column;overflow-y:auto;">
+  <div class="gs-inner">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-landing')">← <span id="gs-back">Zurück</span></button>
+      <h2 id="gs-location-name"></h2>
+    </div>
+    <div id="mode-select-wrap" style="margin-bottom:1rem;">
+      <label class="label" id="gs-mode-label">Spielmodus</label>
+      <select id="mode-select" class="select" style="max-width:300px;"></select>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="createNewGame()" id="btn-new-game" style="margin-bottom:1.5rem;">＋ <span id="gs-new">Neues Spiel</span></button>
+    <div class="divider"></div>
+    <div class="sidebar-title" id="gs-recent">Letzte Spiele</div>
+    <div id="games-grid" class="games-grid" style="margin-top:.5rem;"></div>
+  </div>
+</div>
+
+<!-- NEW GAME QR -->
+<div id="screen-new-game" style="display:none;">
+  <img src="/assets/logo.png" class="logo" alt="AR">
+  <div>
+    <h2 id="ng-title">Neues Spiel</h2>
+    <p>ID: <span id="qr-game-id" style="font-family:var(--mono);color:var(--orange);"></span></p>
+  </div>
+  <div class="qr-box"><img id="qr-img" width="240" alt="QR"></div>
+  <p style="font-size:.8rem;font-family:var(--mono);color:var(--text-dim);" id="join-url-display"></p>
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-ghost" onclick="showScreen('screen-game-select')">← <span id="ng-back">Zurück</span></button>
+    <button class="btn btn-ghost" onclick="downloadQRWithTemplate()">⬇ QR herunterladen</button>
+    <button class="btn btn-primary" onclick="openDashboard(currentGameId)"><span id="ng-open">Dashboard öffnen</span> →</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" style="display:none;">
+  <div id="dash-topbar" class="topbar">
+    <div class="topbar-left">
+      <button class="btn btn-ghost btn-sm" onclick="goToDashboardBack()">← <span id="db-games">Spiele</span></button>
+      <img src="/assets/logo.png" class="logo-sm" alt="AR">
+      <span style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;color:var(--red);">MiSSiONS</span>
+    </div>
+    <div class="topbar-center">
+      <div>
+        <div class="timer-display" id="gm-timer">--:--</div>
+        <div class="timer-controls">
+          <button class="btn btn-success btn-sm" id="btn-timer-start" onclick="timerAction('start')">▶ <span id="tb-start">Start</span></button>
+          <button class="btn btn-ghost btn-sm" id="btn-timer-pause" onclick="timerAction('pause')" style="display:none;">⏸ <span id="tb-pause">Pause</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span style="font-family:var(--mono);font-size:.8rem;color:var(--text-muted);" id="gm-game-id-display"></span>
+      <button class="btn btn-ghost btn-sm" onclick="showQRModal()">QR</button>
+      <button class="btn btn-ghost btn-sm" onclick="showSettingsGate()">⚙</button>
+      <button class="btn btn-ghost btn-sm" id="gm-lang-btn" onclick="cycleGmLang()">DE</button>
+    </div>
+  </div>
+  <div id="dash-teams">
+    <span style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);flex-shrink:0;" id="db-teams">TEAMS</span>
+    <div id="teams-chips" style="display:flex;gap:.4rem;align-items:center;margin-left:.5rem;"></div>
+  </div>
+  <div id="dash-main">
+    <div id="no-team-selected" class="empty"><div class="empty-icon">👥</div><p id="db-select-team">Team auswählen</p></div>
+    <div id="team-detail" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <h2 id="detail-team-name"></h2>
+        <span class="badge badge-orange" id="detail-team-score" style="font-size:.95rem;padding:.25rem .75rem;"></span>
+      </div>
+      <div id="team-missions-list"></div>
+    </div>
+  </div>
+  <div id="dash-panel">
+    <div class="tabs">
+      <button class="tab active" onclick="switchPanel('chat',this)" id="tab-chat">Chat</button>
+      <button class="tab" onclick="switchPanel('broadcast',this)" id="tab-broadcast">Broadcast</button>
+    </div>
+    <div id="panel-chat" class="panel-content active">
+      <div id="gm-chat-messages" class="chat-messages" style="flex:1;"></div>
+      <div class="chat-input-row">
+        <input id="gm-chat-input" class="input" placeholder="Nachricht…" style="flex:1;" onkeydown="if(event.key==='Enter')sendGmChat()">
+        <button class="btn btn-primary btn-sm" onclick="sendGmChat()" id="db-send">Senden</button>
+      </div>
+    </div>
+    <div id="panel-broadcast" class="panel-content">
+      <div style="padding:.75rem;flex:1;">
+        <p style="margin-bottom:.75rem;" id="db-broadcast-info">Nachricht an alle Teams senden.</p>
+        <textarea id="broadcast-input" class="textarea" rows="4"></textarea>
+      </div>
+      <div style="padding:.75rem;border-top:1px solid var(--border);">
+        <button class="btn btn-primary btn-full" onclick="sendBroadcast()">📢 <span id="db-broadcast">An alle senden</span></button>
+      </div>
+    </div>
+    <div class="rankings-section">
+      <div class="sidebar-title" id="db-rankings">RANGLISTE</div>
+      <div id="rankings-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS GATE -->
+<div id="screen-settings-gate" style="display:none;flex:1;align-items:center;justify-content:center;padding:2rem;">
+  <div class="card bracket" style="max-width:380px;width:100%;">
+    <h3 class="modal-title">🔐 <span id="sg-title">Einstellungen</span></h3>
+    <div class="field"><label class="label" id="sg-pw-label">Passwort</label><input id="gate-pw" type="password" class="input" onkeydown="if(event.key==='Enter')verifyGate()"></div>
+    <div style="display:flex;gap:.75rem;">
+      <button class="btn btn-ghost" onclick="goBack()" id="sg-back">← Zurück</button>
+      <button class="btn btn-primary btn-full" onclick="verifyGate()" id="sg-unlock">Entsperren</button>
+    </div>
+    <p id="gate-err" style="color:var(--red-light);font-size:.85rem;margin-top:.5rem;"></p>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="screen-settings">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn btn-ghost btn-sm" onclick="goBack()">← <span id="s-back">Zurück</span></button>
+      <span style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;" id="s-title">EINSTELLUNGEN</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" id="gm-lang-btn2" onclick="cycleGmLang()">DE</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto;">
+    <div class="page" style="max-width:900px;">
+      <div class="tabs" id="settings-tabs" style="flex-wrap:wrap;">
+        <button class="tab active" onclick="switchSettingsTab('general',this)" id="st-general">Allgemein</button>
+        <button class="tab" onclick="switchSettingsTab('locations',this)" id="st-locations">Standorte</button>
+        <button class="tab" onclick="switchSettingsTab('missions',this)" id="st-missions">MiSSiONS</button>
+        <button class="tab" onclick="switchSettingsTab('rules',this)" id="st-rules">Regeln</button>
+        <button class="tab" onclick="switchSettingsTab('template',this)" id="st-template">QR-Vorlage</button>
+        <button class="tab" onclick="switchSettingsTab('security',this)" id="st-security">Sicherheit</button>
+      </div>
+
+      <!-- General -->
+      <div id="stab-general" class="stab active">
+        <div class="card mb-2">
+          <h3 style="margin-bottom:1rem;" id="s-gen-title">Allgemeine Einstellungen</h3>
+          <div class="field">
+            <label class="label" id="s-url-label">Öffentliche URL (für QR-Codes)</label>
+            <div style="display:flex;gap:.5rem;">
+              <input id="s-public-url" class="input" placeholder="https://xxx.trycloudflare.com">
+              <button class="btn btn-ghost btn-sm" onclick="detectTunnel()">🔍 <span id="s-detect">Erkennen</span></button>
+            </div>
+            <small id="s-url-hint">Starte start-tunnel-windows.bat, dann klicke Erkennen.</small>
+          </div>
+          <div class="field">
+            <label class="label" id="s-timeout-label">Timeout-Nachricht</label>
+            <textarea id="s-timeout-text" class="textarea"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveGeneralSettings()" id="s-save">Speichern</button>
+        </div>
+      </div>
+
+      <!-- Locations -->
+      <div id="stab-locations" class="stab">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:.75rem;">
+          <button class="btn btn-primary btn-sm" onclick="showAddLocation()" id="s-add-loc">＋ Standort hinzufügen</button>
+        </div>
+        <div id="locations-list"></div>
+      </div>
+
+      <!-- Missions (with modes) -->
+      <div id="stab-missions" class="stab">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            <span class="label" style="margin:0;" id="s-mode-label">Modus:</span>
+            <div id="mode-tabs" class="tabs" style="border:none;margin:0;"></div>
+            <button class="btn btn-ghost btn-sm" onclick="showAddMode()" id="s-add-mode">＋ Modus</button>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <select id="mission-filter" class="select" style="width:auto;" onchange="loadMissions()">
+              <option value="">Alle</option>
+              <option value="null">Pool</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="showAddMission()" id="s-add-mission">＋ MiSSiON</button>
+          </div>
+        </div>
+        <div id="missions-list"></div>
+      </div>
+
+      <!-- Rules (with ruleset subtabs) -->
+      <div id="stab-rules" class="stab">
+        <div class="card mb-2">
+          <!-- Ruleset navigation -->
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <span style="font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);" id="s-ruleset-label">Regelwerk:</span>
+            <div id="ruleset-subtabs" style="display:flex;gap:.3rem;flex-wrap:wrap;flex:1;"></div>
+            <button class="btn btn-ghost btn-sm" onclick="showAddRuleset()" id="s-add-rs">＋</button>
+          </div>
+          <div class="divider" style="margin:.5rem 0 1rem;"></div>
+          <!-- Active ruleset name + actions -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+            <h3 id="s-rules-title" style="font-size:1.2rem;">Regeln</h3>
+            <div style="display:flex;gap:.4rem;">
+              <button class="btn btn-ghost btn-sm" onclick="showCopyRuleset()" id="s-copy-rs">⎘ Kopieren nach…</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteCurrentRuleset()" id="s-del-rs">🗑</button>
+              <button class="btn btn-primary btn-sm" onclick="addRuleItem()" id="s-add-rule">＋ Regel</button>
+            </div>
+          </div>
+          <p style="margin-bottom:1rem;font-size:.85rem;color:var(--text-muted);" id="s-rules-hint">Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.</p>
+          <div id="rules-list"></div>
+          <button class="btn btn-primary" style="margin-top:.75rem;" onclick="saveRules()" id="s-rules-save">Speichern</button>
+        </div>
+      </div>
+
+      <!-- QR Template -->
+      <div id="stab-template" class="stab">
+        <div class="card mb-2">
+          <h3 style="margin-bottom:1rem;" id="s-tpl-title">QR-Code Vorlage</h3>
+          <div class="field">
+            <label class="label" id="s-tpl-size-label">Papiergröße</label>
+            <select id="tpl-size" class="select" style="width:auto;" onchange="loadTemplate()">
+              <option value="A4">A4</option>
+              <option value="A5">A5</option>
+              <option value="A6">A6</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label" id="s-tpl-upload-label">Vorlage hochladen (PNG/JPG)</label>
+            <input type="file" id="tpl-file-input" accept="image/*" onchange="uploadTemplate(this)" style="color:var(--text);">
+          </div>
+          <div id="tpl-editor" style="display:none;">
+            <p style="margin-bottom:.75rem;font-size:.85rem;" id="s-tpl-drag-hint">QR-Platzhalter ziehen um zu positionieren. Größe über die Ecke anpassen.</p>
+            <div id="tpl-canvas-wrap">
+              <canvas id="tpl-canvas"></canvas>
+              <div id="qr-placeholder">QR</div>
+            </div>
+            <div style="margin-top:.75rem;display:flex;gap:.75rem;">
+              <button class="btn btn-primary" onclick="saveTemplatePosition()" id="s-tpl-save">Position speichern</button>
+              <button class="btn btn-ghost" onclick="deleteTemplate()" id="s-tpl-delete">Vorlage löschen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div id="stab-security" class="stab">
+        <div class="card">
+          <h3 style="margin-bottom:1rem;" id="s-sec-title">Passwort ändern</h3>
+          <div class="field"><label class="label" id="s-sec-old">Aktuelles Passwort</label><input id="sec-old-pw" type="password" class="input"></div>
+          <div class="field"><label class="label" id="s-sec-new">Neues Passwort</label><input id="sec-new-pw" type="password" class="input"></div>
+          <div class="field"><label class="label" id="s-sec-new2">Bestätigen</label><input id="sec-new-pw2" type="password" class="input"></div>
+          <button class="btn btn-primary" onclick="changePassword()" id="s-sec-save">Aktualisieren</button>
+          <p id="sec-msg" style="margin-top:.5rem;font-size:.85rem;"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- #app -->
+
+<!-- Modals -->
+<div id="modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()"><div id="modal-content"></div></div>
+</div>
+<div id="reject-modal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3 class="modal-title" style="color:var(--red-light);" id="rej-title">Abgelehnt</h3>
+    <p style="margin-bottom:1rem;" id="rej-hint">Das Medium wird gelöscht und das Team benachrichtigt.</p>
+    <div class="field"><label class="label" id="rej-reason-label">Begründung (wird dem Team angezeigt)</label>
+      <textarea id="reject-reason" class="textarea"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('reject-modal').style.display='none'">Abbrechen</button>
+      <button class="btn btn-danger" onclick="confirmReject()" id="rej-confirm">Ablehnen & Benachrichtigen</button>
+    </div>
+  </div>
+</div>
+<div id="qr-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)document.getElementById('qr-modal').style.display='none'">
+  <div class="modal" onclick="event.stopPropagation()" style="text-align:center;">
+    <h3 class="modal-title" id="qrm-title">QR-Code beitreten</h3>
+    <div class="qr-box" style="display:inline-block;margin:1rem auto;"><img id="qr-modal-img" width="260" alt="QR"></div>
+    <p style="font-family:var(--mono);font-size:.8rem;color:var(--text-dim);" id="qr-modal-url"></p>
+    <div class="modal-footer" style="justify-content:center;gap:.75rem;">
+      <button class="btn btn-ghost" onclick="document.getElementById('qr-modal').style.display='none'">Schließen</button>
+      <button class="btn btn-primary" onclick="downloadQRWithTemplate()">⬇ QR herunterladen</button>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+'use strict';
+const sel = v => v ? 'selected' : '';
+// ── GM Language ────────────────────────────────────────────────────────────
+let gmLang = localStorage.getItem('gm_lang')||'de';
+const LANGS_GM=['de','en','fr','it'];
+const GMT={
+  de:{'ll-select':'Standort wählen','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','db-send':'Senden','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','s-gen-title':'Allgemeine Einstellungen','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'🏠 Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen'},
+  en:{'ll-select':'Select a location','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-recent':'Recent Games','gs-new':'New Game','ng-title':'New Game Created','ng-back':'Back','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','db-send':'Send','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','s-gen-title':'General Settings','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'🏠 Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove'},
+  fr:{'ll-select':'Choisir un lieu','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','ng-title':'Partie créée','ng-back':'Retour','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','db-send':'Envoyer','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','s-gen-title':'Paramètres généraux','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'🏠 Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer'},
+  it:{'ll-select':'Scegli un luogo','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-recent':'Partite recenti','gs-new':'Nuova partita','ng-title':'Partita creata','ng-back':'Indietro','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','db-send':'Invia','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','s-gen-title':'Impostazioni generali','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'🏠 Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi'}
+};
+function gmt(key){
+  return (GMT[gmLang]||GMT['en']||{})[key] || (GMT['en']||{})[key] || '';
+}
+function applyGmLang(){
+  const t=GMT[gmLang]||GMT.en;
+  Object.entries(t).forEach(([id,text])=>{const el=document.getElementById(id);if(el)el.textContent=text;});
+  ['gm-lang-btn','gm-lang-btn2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=gmLang.toUpperCase();});
+}
+function cycleGmLang(){
+  gmLang=LANGS_GM[(LANGS_GM.indexOf(gmLang)+1)%LANGS_GM.length];
+  localStorage.setItem('gm_lang',gmLang);
+  applyGmLang();
+  // Re-render any visible dynamic content
+  if(document.getElementById('screen-dashboard')?.style.display!=='none'&&selectedTeamId){
+    selectTeam(selectedTeamId);
+  }
+  if(document.getElementById('stab-locations')?.classList.contains('active')) loadLocationsSettings();
+  if(document.getElementById('stab-missions')?.classList.contains('active')) loadMissions();
+  if(document.getElementById('stab-rules')?.classList.contains('active')) loadRulesetsSettings();
+  if(document.getElementById('games-grid')) loadGames(selectedLocationId);
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let socket,currentGameId=null,selectedLocationId=null,selectedTeamId=null;
+let settingsPassword=null,pendingRejectSubId=null,pendingRejectGameId=null;
+let currentQRData=null,currentJoinUrl=null;
+let currentModeId=1,currentModeName='MiSSiONS';
+// rulesList already declared above
+
+const API=(url,o={})=>fetch(url,{headers:{'Content-Type':'application/json'},...o,body:o.body?JSON.stringify(o.body):undefined}).then(r=>r.json());
+
+// ── Init ────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',async()=>{
+  applyGmLang();
+  await loadLanding();
+  showScreen('screen-landing');
+});
+
+async function loadLanding(){
+  const locs=await API('/api/locations');
+  const grid=document.getElementById('location-grid');
+  if(!locs.length){grid.innerHTML='<div class="empty"><div class="empty-icon">📍</div><p>Keine Standorte. Einstellungen → Standorte.</p></div>';return;}
+  grid.innerHTML=locs.map(l=>`<div class="location-card" onclick="selectLocation(${l.id},'${esc(l.name)}')"><h3>${esc(l.name)}</h3><small>${l.timer_default} min · ${l.missions_count} MiSSiONS</small></div>`).join('');
+}
+
+async function selectLocation(id,name){
+  selectedLocationId=id;
+  document.getElementById('gs-location-name').textContent=name;
+  showScreen('screen-game-select');
+  // Load modes into selector
+  const modes=await API('/api/modes');
+  const sel=document.getElementById('mode-select');
+  sel.innerHTML=modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  sel.value=currentModeId;
+  await loadGames(id);
+}
+
+async function loadGames(locationId){
+  const games=await API(`/api/games?location_id=${locationId}`);
+  const grid=document.getElementById('games-grid');
+  if(!games.length){grid.innerHTML='<p style="color:var(--text-muted);">Noch keine Spiele.</p>';return;}
+  grid.innerHTML=games.map(g=>`
+    <div class="game-card">
+      <div class="game-card-id">${g.id}</div>
+      <div class="game-card-date">${new Date(g.created_at).toLocaleString('de-DE')}</div>
+      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin:.25rem 0;">
+        <span class="badge badge-${g.status==='ended'?'red':'green'}">${g.status}</span>
+        ${g.mode_name?`<span class="badge badge-grey">${esc(g.mode_name)}</span>`:''}
+      </div>
+      <div class="game-card-actions">
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="openDashboard('${g.id}')">Öffnen</button>
+        <button class="btn btn-ghost btn-sm" onclick="showGameQR('${g.id}')">QR</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteGame('${g.id}',event)">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function createNewGame(){
+  const btn=document.getElementById('btn-new-game');
+  if(btn.disabled)return;
+  btn.disabled=true;
+  const modeId=Number(document.getElementById('mode-select').value)||1;
+  const res=await API('/api/games',{method:'POST',body:{location_id:selectedLocationId,mode_id:modeId}});
+  btn.disabled=false;
+  if(res.error){toast(res.error,'error');return;}
+  currentGameId=res.id; currentQRData=res.qrCode; currentJoinUrl=res.joinUrl;
+  document.getElementById('qr-game-id').textContent=res.id;
+  document.getElementById('join-url-display').textContent=res.joinUrl;
+  document.getElementById('qr-img').src=res.qrCode;
+  showScreen('screen-new-game');
+}
+
+async function showGameQR(gameId){
+  const res=await API(`/api/games/${gameId}/qr`);
+  currentQRData=res.qrCode; currentJoinUrl=res.joinUrl;
+  document.getElementById('qr-modal-img').src=res.qrCode;
+  document.getElementById('qr-modal-url').textContent=res.joinUrl;
+  document.getElementById('qr-modal').style.display='flex';
+}
+async function showQRModal(){if(currentGameId)await showGameQR(currentGameId);}
+
+function downloadQR(){
+  if(!currentQRData)return;
+  const a=document.createElement('a');a.href=currentQRData;a.download=`missions-qr-${currentGameId||'game'}.png`;a.click();
+}
+function downloadQRFromModal(){downloadQR();}
+
+async function downloadQRWithTemplate(){
+  if(!currentQRData){toast('No QR code yet','warning');return;}
+  const s=await API('/api/settings');
+  // Determine size - try to get from settings tab, default A4
+  const sizeEl=document.getElementById('tpl-size');
+  const size=sizeEl?sizeEl.value:'A4';
+  const tplPath=s[`qr_template_${size}`];
+  // PDF dimensions in mm
+  const dims={A4:[210,297],A5:[148,210],A6:[105,148]};
+  const [pW,pH]=dims[size]||dims.A4;
+  const {jsPDF}=window.jspdf||{};
+  if(!jsPDF){toast('PDF library not loaded','error');return;}
+  const doc=new jsPDF({orientation:pW>pH?'landscape':'portrait',unit:'mm',format:size.toLowerCase()});
+  // If template exists, draw it first
+  if(tplPath){
+    const tplImg=new Image();tplImg.crossOrigin='anonymous';
+    await new Promise(r=>{tplImg.onload=r;tplImg.onerror=r;tplImg.src=`/uploads/${tplPath}?t=${Date.now()}`;});
+    if(tplImg.naturalWidth){
+      const canvas=document.createElement('canvas');
+      canvas.width=tplImg.naturalWidth;canvas.height=tplImg.naturalHeight;
+      canvas.getContext('2d').drawImage(tplImg,0,0);
+      doc.addImage(canvas.toDataURL('image/jpeg',0.9),'JPEG',0,0,pW,pH);
+    }
+  }
+  // Draw QR code
+  const px=parseFloat(s[`qr_pos_${size}_x`])||0.1;
+  const py=parseFloat(s[`qr_pos_${size}_y`])||0.1;
+  const ps=parseFloat(s[`qr_pos_${size}_size`])||0.25;
+  const qrMmW=ps*pW, qrMmH=ps*pW; // square
+  const qrMmX=px*pW, qrMmY=py*pH;
+  doc.addImage(currentQRData,'PNG',qrMmX,qrMmY,qrMmW,qrMmH);
+  // Add join URL below QR
+  doc.setFontSize(8);doc.setTextColor(80);
+  doc.text(currentJoinUrl||'',qrMmX,qrMmY+qrMmH+3,{maxWidth:qrMmW*1.5});
+  doc.save(`qr-${size}-${currentGameId||'game'}.pdf`);
+  toast('PDF erstellt!','success');
+}
+
+async function deleteGame(gameId,e){
+  e.stopPropagation();
+  if(!settingsPassword){
+    const pw=prompt('Passwort eingeben:');if(!pw)return;
+    const v=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
+    if(!v.valid){toast('Falsches Passwort','error');return;}
+    settingsPassword=pw;
+  }
+  if(!confirm(`Spiel ${gameId} löschen? Alle Medien werden gelöscht.`))return;
+  const res=await API(`/api/games/${gameId}`,{method:'DELETE',body:{password:settingsPassword}});
+  if(res.success){toast('Gelöscht','success');loadGames(selectedLocationId);}
+  else toast(res.error,'error');
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+async function openDashboard(gameId){
+  currentGameId=gameId;
+  selectedTeamId=null;
+  document.getElementById('team-detail').style.display='none';
+  document.getElementById('no-team-selected').style.display='block';
+  document.getElementById('gm-chat-messages').innerHTML='';
+  showScreen('screen-dashboard');
+  document.getElementById('gm-game-id-display').textContent=`#${gameId}`;
+  if(socket)socket.disconnect();
+  socket=io({reconnection:true});
+  socket.on('connect',()=>socket.emit('join_gm',{gameId}));
+  socket.on('timer_update',updateTimer);
+  socket.on('timer_state',updateTimer);
+  socket.on('team_joined',(team)=>{addTeamChip(team);toast(`${team.name} beigetreten!`,'success');});
+  socket.on('submission_new',onSubmissionNew);
+  socket.on('submission_reviewed',onSubmissionReviewed);
+  socket.on('rankings_update',renderRankings);
+  socket.on('chat_message',onChatMessage);
+  socket.on('game_ended',()=>toast('Spiel beendet!'));
+  socket.on('settings_updated',({type})=>{
+    if(type==='missions'&&selectedTeamId)selectTeam(selectedTeamId);
+  });
+  await refreshDashboard(gameId);
+}
+
+function goToDashboardBack(){
+  showScreen('screen-game-select');
+  if(selectedLocationId)loadGames(selectedLocationId);
+}
+
+async function refreshDashboard(gameId){
+  const game=await API(`/api/games/${gameId}`);
+  renderTeamsBar(game.teams);
+  renderRankings(await API(`/api/games/${gameId}/rankings`));
+  if(game.teams.length>0)selectTeam(game.teams[0].id);
+}
+
+function renderTeamsBar(teams){
+  const bar=document.getElementById('teams-chips');
+  if(!teams.length){bar.innerHTML='<span style="font-size:.8rem;color:var(--text-muted);">Warten auf Spieler…</span>';return;}
+  bar.innerHTML=teams.map(t=>`
+    <div class="team-chip-gm ${t.id===selectedTeamId?'active':''}" id="tc-${t.id}" onclick="selectTeam(${t.id})">
+      ${esc(t.name)}
+      <span id="tscore-${t.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--orange);">${t.score}pt</span>
+      <span class="notif-dot" id="notif-${t.id}" style="display:none;"></span>
+    </div>`).join('');
+}
+
+function addTeamChip(team){
+  const bar=document.getElementById('teams-chips');
+  // Only clear if it's the waiting message (has no id)
+  const wait=bar.querySelector('span:not([id])');if(wait&&wait.parentElement===bar)bar.innerHTML='';
+  // Don't add if chip already exists (prevent duplicates)
+  if(document.getElementById('tc-'+team.id))return;
+  const div=document.createElement('div');
+  div.className='team-chip-gm';div.id=`tc-${team.id}`;
+  div.innerHTML=`${esc(team.name)}<span id="tscore-${team.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--orange);">0pt</span><span class="notif-dot" id="notif-${team.id}" style="display:none;"></span>`;
+  div.onclick=()=>selectTeam(team.id);
+  bar.appendChild(div);
+  if(!selectedTeamId)selectTeam(team.id);
+}
+
+async function selectTeam(teamId){
+  selectedTeamId=teamId;
+  document.querySelectorAll('.team-chip-gm').forEach(el=>el.classList.remove('active'));
+  const chip=document.getElementById(`tc-${teamId}`);if(chip)chip.classList.add('active');
+  const notif=document.getElementById(`notif-${teamId}`);if(notif)notif.style.display='none';
+  document.getElementById('no-team-selected').style.display='none';
+  document.getElementById('team-detail').style.display='block';
+  const data=await API(`/api/games/${currentGameId}/teams/${teamId}`);
+  document.getElementById('detail-team-name').textContent=data.name;
+  document.getElementById('detail-team-score').textContent=`${data.score} pts`;
+  renderTeamMissions(data.missions);
+  await loadGmChat(teamId);
+}
+
+function renderTeamMissions(missions){
+  const list=document.getElementById('team-missions-list');
+  if(!missions.length){list.innerHTML='<div class="empty"><p>Keine MiSSiONS in diesem Spiel.</p></div>';return;}
+  list.innerHTML=missions.map(m=>{
+    const icon=m.media_type==='video'?'🎬':'📷';
+    const indoor=m.is_indoor?'🏠':''
+    const sc=m.status==='pending'?'has-pending':m.status==='accepted'?'accepted':m.status==='rejected'?'rejected':'';
+    const bc=m.status==='pending'?'orange':m.status==='accepted'?'green':m.status==='rejected'?'red':'grey';
+    let media='';
+    if(m.media_path&&(m.status==='pending'||m.status==='accepted')){
+      const src=`/uploads/${m.media_path}`;
+      media=m.media_type==='video'
+        ?`<video src="${src}" controls style="max-width:100%;max-height:180px;border-radius:var(--radius);border:1px solid var(--border);display:block;margin:.5rem 0;"></video>`
+        :`<img src="${src}" onclick="openLightbox('${src}',false)" style="width:80px;height:60px;object-fit:cover;border-radius:3px;cursor:pointer;border:1px solid var(--border);" alt="thumb">`;
+    }
+    let actions='';
+    if(m.status==='pending')actions=`<div class="review-actions">
+      <button class="btn btn-success btn-sm" onclick="reviewSub(${m.id},'accept')">✓ Annehmen</button>
+      <button class="btn btn-danger btn-sm" onclick="openRejectModal(${m.id})">✗ Ablehnen</button>
+    </div>`;
+    const desc=m.description_de||m.description_en||'';
+    const task=m.task_de||m.task_en||'';
+    return `<div class="mission-card ${sc}" id="mcard-${m.mission_id}">
+      <div class="mission-header">
+        <span class="mission-icon">${icon}</span>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:.9rem;">${esc(m.mission_name||'')} ${indoor}</div>
+          ${desc?`<div style="font-size:.85rem;color:var(--text-dim);">${esc(desc)}</div>`:''}
+          ${task?`<div style="font-size:.85rem;color:var(--orange);">→ ${esc(task)}</div>`:''}
+          <small>${m.points} Punkt${m.points!==1?'e':''}</small>
+        </div>
+        <span class="badge badge-${bc}">${m.status}</span>
+      </div>
+      ${media}${actions}
+    </div>`;
+  }).join('');
+}
+
+// Lightbox
+function openLightbox(url,isVid){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9000;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  d.onclick=()=>d.remove();
+  const el=isVid?document.createElement('video'):document.createElement('img');
+  el.src=url;el.style.cssText='max-width:96vw;max-height:92vh;border-radius:4px;';
+  if(isVid){el.controls=true;el.onclick=e=>e.stopPropagation();}
+  d.appendChild(el);document.body.appendChild(d);
+}
+
+async function reviewSub(tmId,action){
+  if(action==='reject'){openRejectModal(tmId);return;}
+  await API(`/api/submissions/${tmId}/review`,{method:'POST',body:{action,gameId:currentGameId}});
+  if(selectedTeamId)selectTeam(selectedTeamId);
+  toast('Angenommen!','success');
+}
+function openRejectModal(tmId){pendingRejectSubId=tmId;pendingRejectGameId=currentGameId;document.getElementById('reject-reason').value='';document.getElementById('reject-modal').style.display='flex';}
+async function confirmReject(){
+  const reason=document.getElementById('reject-reason').value.trim();
+  if(!reason){toast('Bitte Begründung eingeben','error');return;}
+  await API(`/api/submissions/${pendingRejectSubId}/review`,{method:'POST',body:{action:'reject',message:reason,gameId:pendingRejectGameId}});
+  document.getElementById('reject-modal').style.display='none';
+  if(selectedTeamId)selectTeam(selectedTeamId);
+  toast('Abgelehnt & Team benachrichtigt.','warning');
+}
+
+function renderRankings(rankings){
+  const list=document.getElementById('rankings-list');
+  if(!rankings.length){list.innerHTML='<p style="font-size:.8rem;color:var(--text-muted);">Noch keine Teams.</p>';return;}
+  list.innerHTML=rankings.map((r,i)=>`
+    <div class="ranking-row">
+      <span class="ranking-pos">${i+1}</span>
+      <span class="ranking-name">${esc(r.name)}</span>
+      <span class="ranking-score">${r.score}pt</span>
+    </div>`).join('');
+  rankings.forEach(r=>{const el=document.getElementById(`tscore-${r.id}`);if(el)el.textContent=`${r.score}pt`;});
+}
+
+function onSubmissionNew({teamId,missionId}){
+  const notif=document.getElementById(`notif-${teamId}`);
+  if(notif)notif.style.display='inline-block';
+  if(teamId===selectedTeamId)selectTeam(teamId);
+  toast('📥 Neue Einreichung!','warning');
+}
+function onSubmissionReviewed({teamId}){if(teamId===selectedTeamId)selectTeam(teamId);}
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+function updateTimer(state){
+  const el=document.getElementById('gm-timer');
+  const m=Math.floor(state.remaining/60).toString().padStart(2,'0');
+  const s=(state.remaining%60).toString().padStart(2,'0');
+  el.textContent=`${m}:${s}`;
+  el.className='timer-display'+(state.remaining<=60&&state.running?' urgent':!state.running?' paused':'');
+  document.getElementById('btn-timer-start').style.display=state.running?'none':'inline-flex';
+  document.getElementById('btn-timer-pause').style.display=state.running?'inline-flex':'none';
+}
+async function timerAction(action){await API(`/api/games/${currentGameId}/timer`,{method:'POST',body:{action}});}
+
+// ── Chat ───────────────────────────────────────────────────────────────────
+async function loadGmChat(teamId){
+  const msgs=await API(`/api/games/${currentGameId}/chat?teamId=${teamId}`);
+  const box=document.getElementById('gm-chat-messages');
+  box.innerHTML=msgs.map(m=>gmBubble(m)).join('');
+  box.scrollTop=box.scrollHeight;
+}
+function gmBubble(m){
+  const fromGm=m.from_gm===1||m.from_gm===true;
+  const time=new Date(m.created_at||m.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}"><div class="chat-meta">${fromGm?'Du':esc(m.team_name||'Team')} · ${time}</div>${esc(m.content)}</div>`;
+}
+function onChatMessage(msg){
+  if(!msg)return;
+  const fromGm=msg.fromGm===1||msg.fromGm===true;
+  if(msg.teamId===selectedTeamId||((!msg.teamId)&&fromGm)){
+    const box=document.getElementById('gm-chat-messages');
+    const time=new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    box.insertAdjacentHTML('beforeend',`<div class="chat-bubble ${fromGm?'from-gm':'from-player'}"><div class="chat-meta">${fromGm?'Du':'Team'} · ${time}</div>${esc(msg.content)}</div>`);
+    box.scrollTop=box.scrollHeight;
+  }
+  if(!fromGm&&msg.teamId!==selectedTeamId){
+    const notif=document.getElementById(`notif-${msg.teamId}`);
+    if(notif)notif.style.display='inline-block';
+  }
+}
+async function sendGmChat(){
+  const input=document.getElementById('gm-chat-input');
+  const content=input.value.trim();if(!content||!selectedTeamId)return;
+  input.value='';
+  // Optimistic
+  const box=document.getElementById('gm-chat-messages');
+  const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-gm"><div class="chat-meta">Du · ${now}</div>${esc(content)}</div>`);
+  box.scrollTop=box.scrollHeight;
+  await API(`/api/games/${currentGameId}/chat`,{method:'POST',body:{teamId:selectedTeamId,content,fromGm:true}});
+}
+async function sendBroadcast(){
+  const content=document.getElementById('broadcast-input').value.trim();if(!content)return;
+  await API(`/api/games/${currentGameId}/chat`,{method:'POST',body:{content,fromGm:true}});
+  document.getElementById('broadcast-input').value='';
+  toast('Broadcast gesendet!','success');
+}
+function switchPanel(panel,el){
+  document.querySelectorAll('#dash-panel .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-chat').classList.toggle('active',panel==='chat');
+  document.getElementById('panel-broadcast').classList.toggle('active',panel==='broadcast');
+}
+
+// ── Settings ───────────────────────────────────────────────────────────────
+function showSettingsGate(){
+  _prevScreen=currentScreen();
+  showScreen('screen-settings-gate');
+  document.getElementById('gate-pw').value='';
+  document.getElementById('gate-err').textContent='';
+}
+async function verifyGate(){
+  const pw=document.getElementById('gate-pw').value;
+  const res=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
+  if(res.valid){settingsPassword=pw;document.getElementById('gate-err').textContent='';await loadSettings();showScreen('screen-settings');}
+  else document.getElementById('gate-err').textContent=gmt('wrong-pw')||'Falsches Passwort. / Incorrect password.';
+}
+
+async function loadSettings(){
+  const s=await API('/api/settings');
+  document.getElementById('s-public-url').value=s.public_url||'';
+  document.getElementById('s-timeout-text').value=s.timeout_text||'';
+  await loadLocationsSettings();
+  await loadModeTabs();
+  await loadMissions();
+  await loadMissionFilter();
+  await loadRulesetsSettings();
+  loadTemplate();
+}
+
+async function detectTunnel(){
+  const res=await API('/api/detect-tunnel');
+  if(res.url){document.getElementById('s-public-url').value=res.url;toast('Tunnel erkannt: '+res.url,'success');}
+  else toast(gmt('no-tunnel')||'Kein Tunnel. / No tunnel found.','warning');
+}
+
+async function saveGeneralSettings(){
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,timeout_text:document.getElementById('s-timeout-text').value}});
+  toast(res.success?'Gespeichert!':res.error,res.success?'success':'error');
+}
+
+// Modes
+async function loadModeTabs(){
+  const modes=await API('/api/modes');
+  const bar=document.getElementById('mode-tabs');
+  bar.innerHTML=modes.map(m=>`
+    <span style="display:inline-flex;align-items:center;gap:1px;margin-right:.25rem;">
+      <button class="tab ${sel(m.id===currentModeId)}" onclick="selectMode(${m.id},'${esc(m.name)}',this)">${esc(m.name)}</button>
+      <button style="padding:.2rem .35rem;font-size:.7rem;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius);cursor:pointer;" onclick="showEditMode(${m.id})" title="Bearbeiten">✎</button>
+      ${m.id!==1?`<button style="padding:.2rem .35rem;font-size:.7rem;background:#4a0000;border:1px solid var(--red-dim);color:var(--red-light);border-radius:var(--radius);cursor:pointer;" onclick="confirmDeleteMode(${m.id})" title="Löschen">✕</button>`:''}
+    </span>`).join('');
+}
+async function selectMode(id,name,el){
+  currentModeId=id;currentModeName=name;
+  document.querySelectorAll('#mode-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  await loadMissions();await loadMissionFilter();
+}
+async function showAddMode(){
+  const rulesets=await API('/api/rulesets');
+  const rsOpts=rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('add-mode')||'Modus / Mode'}</h3>
+    <div class="field"><label class="label">Name</label><input id="mode-name" class="input" placeholder="${gmt('mode-placeholder')||'z.B. ADVANCED'}"></div>
+    <div class="field"><label class="label">${gmt('ruleset')||'Regelwerk / Ruleset'}</label>
+      <select id="mode-ruleset" class="select">${rsOpts}</select></div>
+    <div class="field"><label class="label" id="mode-timer-label">Timer (Minuten / Minutes)</label><input id="mode-timer" type="number" class="input" value="60" min="1"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
+      <button class="btn btn-primary" onclick="saveNewMode()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+async function showEditMode(id){
+  const modes=await API('/api/modes');
+  const rulesets=await API('/api/rulesets');
+  const m=modes.find(x=>x.id===id);if(!m)return;
+  const rsOpts=rulesets.map(r=>`<option value="${r.id}" ${sel(r.id===m.ruleset_id)}>${esc(r.name)}</option>`).join('');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('edit-mode')||'Modus bearbeiten / Edit Mode'}</h3>
+    <div class="field"><label class="label">Name</label><input id="edit-mode-name" class="input" value="${esc(m.name)}"></div>
+    <div class="field"><label class="label">${gmt('s-tpl-size-label')||'Regelwerk / Ruleset'}</label>
+      <select id="edit-mode-ruleset" class="select">${rsOpts}</select></div>
+    <div class="field"><label class="label">Timer (${gmt('min-label')||'Minuten / Minutes'})</label>
+      <input id="edit-mode-timer" type="number" class="input" value="${m.timer_default||60}" min="1"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">'+gmt('cancel')+'</button>
+      <button class="btn btn-primary" onclick="saveEditMode(${id})">Speichern / Save</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+async function saveEditMode(id){
+  const name=document.getElementById('edit-mode-name').value.trim();
+  if(!name){toast('Name required','error');return;}
+  const rulesetId=Number(document.getElementById('edit-mode-ruleset').value);
+  const timer=Number(document.getElementById('edit-mode-timer').value)||60;
+  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer}});
+  if(res.success){closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast('Gespeichert!','success');}
+  else toast(res.error,'error');
+}
+async function confirmDeleteMode(id){
+  if(id===1){toast('Standard-Modus kann nicht gelöscht werden.','warning');return;}
+  if(!confirm(gmt('del-mode-confirm')||'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht. / Delete mode? All missions will be deleted too.'))return;
+  const res=await API(`/api/modes/${id}`,{method:'DELETE',body:{password:settingsPassword}});
+  if(res.success){currentModeId=1;currentModeName='MiSSiONS';await loadModeTabs();await loadMissions();toast('Gelöscht','success');}
+  else toast(res.error,'error');
+}
+async function saveNewMode(){
+  const name=document.getElementById('mode-name').value.trim();
+  if(!name){toast('Name erforderlich','error');return;}
+  const rulesetEl=document.getElementById('mode-ruleset');const rulesetId=rulesetEl?Number(rulesetEl.value):1;
+  const timerEl=document.getElementById('mode-timer');const modeTimer=timerEl?Number(timerEl.value):60;
+  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer}});
+  if(res.success){closeModal();loadModeTabs();toast('Modus erstellt!','success');}
+}
+
+// Locations
+async function loadLocationsSettings(){
+  const locs=await API('/api/locations');
+  const list=document.getElementById('locations-list');
+  if(!locs.length){list.innerHTML='<div class="empty"><p>Keine Standorte.</p></div>';return;}
+  list.innerHTML=locs.map(l=>`
+    <div class="card mb-1">
+      <div class="card-header"><strong>${esc(l.name)}</strong>
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-ghost btn-sm" onclick="editLocation(${l.id})">${gmt('edit')||(gmLang==='de'?'Bearbeiten':gmLang==='fr'?'Modifier':gmLang==='it'?'Modifica':'Edit')}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteLocation(${l.id})">${gmt('delete')||(gmLang==='de'?'Löschen':gmLang==='fr'?'Supprimer':gmLang==='it'?'Elimina':'Delete')}</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:1.5rem;font-size:.85rem;color:var(--text-dim);">
+        <span>📋 ${l.missions_count} MiSSiONS</span>
+        <span>📍 Min ${l.min_location_missions} ${gmt('location-label')||'Standort'}</span>
+      </div>
+    </div>`).join('');
+}
+
+function showAddLocation(){
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('add-loc')||'Standort hinzufügen / Add Location'}</h3>
+    <div class="field"><label class="label">Name</label><input id="loc-name" class="input"></div>
+    <div class="field"><label class="label">MiSSiONS ${gmt('per-game')||'pro Spiel / per game'}</label><input id="loc-max" type="number" class="input" value="10" min="1"></div>
+    <div class="field"><label class="label">Min. ${gmt('loc-spec')||'Standort-MiSSiONS'}</label><input id="loc-min-loc" type="number" class="input" value="3" min="0"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
+      <button class="btn btn-primary" onclick="saveNewLocation()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+async function saveNewLocation(){
+  const name=document.getElementById('loc-name').value.trim();if(!name){toast('Name fehlt','error');return;}
+  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value}});
+  if(res.success){closeModal();loadLocationsSettings();loadMissionFilter();toast('Erstellt!','success');}
+}
+async function editLocation(id){
+  const locs=await API('/api/locations');const l=locs.find(x=>x.id===id);if(!l)return;
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('edit-loc')||'Standort bearbeiten / Edit Location'}</h3>
+    <div class="field"><label class="label">Name</label><input id="loc-name" class="input" value="${esc(l.name)}"></div>
+    <div class="field"><label class="label">MiSSiONS</label><input id="loc-max" type="number" class="input" value="${l.missions_count||l.max_missions||10}"></div>
+    <div class="field"><label class="label">Min. Standort</label><input id="loc-min-loc" type="number" class="input" value="${l.min_location_missions}"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
+      <button class="btn btn-primary" onclick="saveEditLocation(${id})">${gmt('save')||(gmLang==='de'?'Speichern':gmLang==='fr'?'Sauvegarder':gmLang==='it'?'Salva':'Save')}</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+async function saveEditLocation(id){
+  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value}});
+  if(res.success){closeModal();loadLocationsSettings();toast('Gespeichert!','success');}
+}
+async function deleteLocation(id){
+  if(!confirm(gmt('del-loc-confirm')||'Standort und alle MiSSiONS löschen? / Delete location and all its missions?'))return;
+  await API(`/api/locations/${id}`,{method:'DELETE',body:{password:settingsPassword}});
+  loadLocationsSettings();loadMissionFilter();loadMissions();
+}
+
+// Missions
+async function loadMissionFilter(){
+  const locs=await API('/api/locations');
+  const sel=document.getElementById('mission-filter');
+  const cur=sel.value;
+  sel.innerHTML=`<option value="">${gmt('all')||'Alle / All'}</option><option value="null">Pool</option>`+locs.map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
+  sel.value=cur;
+}
+async function loadMissions(){
+  const filter=document.getElementById('mission-filter')?.value;
+  let url=`/api/missions?mode_id=${currentModeId}`;
+  if(filter==='null')url+='&location_id=null';
+  else if(filter)url+=`&location_id=${filter}`;
+  const missions=await API(url);
+  const list=document.getElementById('missions-list');
+  if(!missions.length){list.innerHTML=`<div class="empty"><p>${gmt('no-missions')||'Keine MiSSiONS. / No missions.'}</p></div>`;return;}
+  const locs=await API('/api/locations');
+  const locMap=Object.fromEntries(locs.map(l=>[l.id,l.name]));
+  list.innerHTML=missions.map(m=>`
+    <div class="card mb-1">
+      <div class="card-header" style="align-items:flex-start;">
+        <div style="flex:1;">
+          <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:.25rem;">
+            <strong>${esc(m.name||'(kein Name)')}</strong>
+            <span>${m.media_type==='video'?'🎬':'📷'}</span>
+            ${m.is_indoor?'<span>🏠</span>':''}
+            <span class="badge badge-orange">${m.points}pt</span>
+            <span class="badge badge-grey">${m.location_id?esc(locMap[m.location_id]||'?'):'Pool'}</span>
+          </div>
+          ${m.description_de?`<div style="font-size:.85rem;color:var(--text-dim);">${esc(m.description_de)}</div>`:''}
+          ${m.task_de?`<div style="font-size:.82rem;color:var(--orange);">→ ${esc(m.task_de)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:.4rem;margin-left:.75rem;">
+          <button class="btn btn-ghost btn-sm" onclick="editMission(${m.id})">${gmt('edit')||(gmLang==='de'?'Bearbeiten':gmLang==='fr'?'Modifier':gmLang==='it'?'Modifica':'Edit')}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteMission(${m.id})">${gmt('del')||'Del'}</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function missionModal(m,locs){
+  const locOpts=locs.map(l=>`<option value="${l.id}" ${sel(m&&m.location_id==l.id)}>${esc(l.name)}</option>`).join('');
+  const v=(f)=>m?esc(m[f]||''):'';
+  return `
+    <div class="field"><label class="label">${gmt('mission-name-label')||'Name'}</label><input id="m-name" class="input" value="${v('name')}"></div>
+    <div class="grid-2">
+      <div class="field"><label class="label">${gmt('loc-label')||'Standort / Location'}</label>
+        <select id="m-loc" class="select"><option value="" ${sel(!m||!m.location_id)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
+      <div class="field"><label class="label">Modus</label>
+        <select id="m-mode" class="select"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label class="label">${gmt('media-label')||'Media'}</label>
+        <select id="m-type" class="select"><option value="photo" ${sel(!m||m.media_type==='photo')}>📷 Foto</option><option value="video" ${sel(m&&m.media_type==='video')}>🎬 Video</option></select></div>
+      <div class="field"><label class="label">Punkte</label><input id="m-pts" type="number" class="input" value="${m?m.points:1}" min="1"></div>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:.5rem;">
+      <input type="checkbox" id="m-indoor" ${m&&m.is_indoor?'checked':''} style="width:18px;height:18px;accent-color:var(--red);">
+      <label for="m-indoor" style="cursor:pointer;font-weight:600;font-size:.9rem;">🏠 ${gmt('indoor-label')||'🏠 Indoor OK'}</label>
+    </div>
+    <div class="tabs" style="margin-top:.75rem;">
+      <button class="tab active" onclick="switchMissionTab('desc',this)">📖 ${gmt('desc-label')||'Beschreibung / Description'}</button>
+      <button class="tab" onclick="switchMissionTab('task',this)">🎯 ${gmt('task-label')||'Aufgabe / Task'}</button>
+    </div>
+    <div id="mtab-desc" class="mission-tab-content active">
+      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">${gmt('desc-hint')||'Story / Hintergrund'}</p>
+      <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:.4rem;">
+        <button class="btn btn-ghost btn-sm" onclick="autoTranslate('desc')" title="${gmt('auto-translate')||'🌐 Auto'}">🌐 Auto</button>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="field"><label class="label">DE</label><textarea id="m-desc-de" class="textarea" rows="3">${v('description_de')}</textarea></div>
+        <div class="field"><label class="label">EN</label><textarea id="m-desc-en" class="textarea" rows="3">${v('description_en')}</textarea></div>
+        <div class="field"><label class="label">FR</label><textarea id="m-desc-fr" class="textarea" rows="3">${v('description_fr')}</textarea></div>
+        <div class="field"><label class="label">IT</label><textarea id="m-desc-it" class="textarea" rows="3">${v('description_it')}</textarea></div>
+      </div>
+    </div>
+    <div id="mtab-task" class="mission-tab-content">
+      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">${gmt('task-hint')||'Aufgabe für Spieler'}</p>
+      <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:.4rem;">
+        <button class="btn btn-ghost btn-sm" onclick="autoTranslate('task')" title="${gmt('auto-translate')||'🌐 Auto'}">🌐 Auto</button>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+        <div class="field"><label class="label">DE</label><textarea id="m-task-de" class="textarea" rows="3">${v('task_de')}</textarea></div>
+        <div class="field"><label class="label">EN</label><textarea id="m-task-en" class="textarea" rows="3">${v('task_en')}</textarea></div>
+        <div class="field"><label class="label">FR</label><textarea id="m-task-fr" class="textarea" rows="3">${v('task_fr')}</textarea></div>
+        <div class="field"><label class="label">IT</label><textarea id="m-task-it" class="textarea" rows="3">${v('task_it')}</textarea></div>
+      </div>
+    </div>`;
+}
+
+function switchMissionTab(tab,el){
+  document.querySelectorAll('.mission-tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`mtab-${tab}`).classList.add('active');
+  document.querySelectorAll('.modal .tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+}
+
+async function autoTranslate(section){
+  const texts={de:document.getElementById(`m-${section}-de`)?.value,en:document.getElementById(`m-${section}-en`)?.value,fr:document.getElementById(`m-${section}-fr`)?.value,it:document.getElementById(`m-${section}-it`)?.value};
+  const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
+  if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben / Enter text first','warning');return;}
+  const [fromLang,text]=filled;
+  const empty=Object.entries(texts).filter(([k,v])=>k!==fromLang&&(!v||!v.trim())).map(([k])=>k);
+  if(!empty.length){toast(gmt('all-filled')||'Alle Felder ausgefüllt / All filled','warning');return;}
+  toast(gmt('translating')||'Übersetze… / Translating…');
+  const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
+  empty.forEach(lang=>{if(res[lang]){const el=document.getElementById(`m-${section}-${lang}`);if(el)el.value=res[lang];}});
+  toast(gmt('translated')||'Übersetzt! / Translated!','success');
+}
+
+async function showAddMission(){
+  const locs=await API('/api/locations');
+  const modes=await API('/api/modes');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('add-mission')||'MiSSiON hinzufügen / Add MiSSiON'}</h3>
+    ${missionModal(null,locs)}
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
+      <button class="btn btn-primary" onclick="saveNewMission()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
+    </div>`;
+  // update mode select
+  const msel=document.getElementById('m-mode');
+  if(msel){msel.innerHTML=modes.map(m=>`<option value="${m.id}" ${sel(m.id===currentModeId)}>${esc(m.name)}</option>`).join('');}
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+async function saveNewMission(){
+  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name').value,media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value}});
+  if(res.success){closeModal();loadMissions();toast('MiSSiON erstellt!','success');}else toast(res.error,'error');
+}
+async function editMission(id){
+  const locs=await API('/api/locations');
+  const modes=await API('/api/modes');
+  const m=await fetch(`/api/missions?mode_id=&location_id=`).then(r=>r.json()).then(arr=>arr.find(x=>x.id===id));
+  if(!m)return;
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('edit-mission')||'MiSSiON bearbeiten / Edit MiSSiON'}</h3>
+    ${missionModal(m,locs)}
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
+      <button class="btn btn-primary" onclick="saveEditMission(${id})">${gmt('save')||(gmLang==='de'?'Speichern':gmLang==='fr'?'Sauvegarder':gmLang==='it'?'Salva':'Save')}</button>
+    </div>`;
+  const msel=document.getElementById('m-mode');
+  if(msel){msel.innerHTML=modes.map(mo=>`<option value="${mo.id}" ${sel(mo.id===(m.mode_id||1))}>${esc(mo.name)}</option>`).join('');}
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+async function saveEditMission(id){
+  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name').value,media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value}});
+  if(res.success){closeModal();loadMissions();toast('Gespeichert!','success');}
+}
+async function deleteMission(id){
+  if(!confirm(gmt('del-mission-confirm')||'MiSSiON löschen? / Delete mission?'))return;
+  await API(`/api/missions/${id}`,{method:'DELETE',body:{password:settingsPassword}});loadMissions();
+}
+
+// Rules with drag ghost
+let rulesList=[];
+function loadRulesList(rules){rulesList=rules;renderRulesList();}
+let dragSrc=null,ghostEl=null;
+
+function renderRulesList(){
+  const container=document.getElementById('rules-list');
+  if(!rulesList.length){container.innerHTML=`<p style="color:var(--text-muted);">${gmt('no-rules')||'Noch keine Regeln. / No rules yet.'}</p>`;return;}
+  container.innerHTML=rulesList.map((r,i)=>`
+    <div class="rule-item" id="rule-item-${i}" draggable="true"
+      ondragstart="ruleDragStart(event,${i})" ondragover="ruleDragOver(event,${i})" ondragleave="ruleDragLeave(event,${i})" ondrop="ruleDrop(event,${i})" ondragend="ruleDragEnd()">
+      <div class="rule-item-header">
+        <span class="drag-handle" ondragstart="event.stopPropagation()" draggable="false">⠿</span>
+        <span style="font-weight:600;font-size:.85rem;flex:1;">${gmt('rule')||(gmLang==='de'?'Regel':gmLang==='fr'?'Règle':gmLang==='it'?'Regola':'Rule')} ${i+1}</span>
+        <div style="display:flex;gap:.4rem;">
+          <button class="btn btn-ghost btn-sm" onclick="autoTranslateRule(${i})" title="Auto-übersetzen">🌐</button>
+          <button class="btn btn-ghost btn-sm" onclick="showCopyOneRule(${i})" title="In anderes Regelwerk kopieren">⎘</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRule(${i})">${'✕'}</button>
+        </div>
+      </div>
+      <div class="rule-langs">
+        <div class="field" style="margin:0;"><label class="label">DE</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'de',this.value)">${esc(r.de||'')}</textarea></div>
+        <div class="field" style="margin:0;"><label class="label">EN</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'en',this.value)">${esc(r.en||'')}</textarea></div>
+        <div class="field" style="margin:0;"><label class="label">FR</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'fr',this.value)">${esc(r.fr||'')}</textarea></div>
+        <div class="field" style="margin:0;"><label class="label">IT</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'it',this.value)">${esc(r.it||'')}</textarea></div>
+      </div>
+    </div>`).join('');
+  // Ensure textareas are not draggable
+  container.querySelectorAll('textarea').forEach(ta=>{ta.addEventListener('mousedown',e=>e.stopPropagation());});
+}
+
+function ruleDragStart(e,i){dragSrc=i;e.dataTransfer.effectAllowed='move';e.target.style.opacity='.4';}
+function ruleDragOver(e,i){e.preventDefault();if(i===dragSrc)return;e.dataTransfer.dropEffect='move';const el=document.getElementById(`rule-item-${i}`);if(el)el.style.borderTop='3px solid var(--red)';}
+function ruleDragLeave(e,i){const el=document.getElementById(`rule-item-${i}`);if(el)el.style.borderTop='';}
+function ruleDrop(e,i){
+  e.preventDefault();if(dragSrc===null||dragSrc===i)return;
+  const moved=rulesList.splice(dragSrc,1)[0];rulesList.splice(i,0,moved);
+  renderRulesList();
+}
+function ruleDragEnd(){
+  document.querySelectorAll('.rule-item').forEach(el=>{el.style.opacity='';el.style.borderTop='';});
+  dragSrc=null;
+}
+function addRuleItem(){rulesList.push({de:'',en:'',fr:'',it:''});renderRulesList();}
+function deleteRule(i){rulesList.splice(i,1);renderRulesList();}
+function updateRule(i,lang,val){if(rulesList[i])rulesList[i][lang]=val;}
+
+async function autoTranslateRule(i){
+  const r=rulesList[i];if(!r)return;
+  const texts={de:r.de,en:r.en,fr:r.fr,it:r.it};
+  const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
+  if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben / Enter text first','warning');return;}
+  const [fromLang,text]=filled;
+  const empty=Object.entries(texts).filter(([k,v])=>k!==fromLang&&(!v||!v.trim())).map(([k])=>k);
+  if(!empty.length){toast(gmt('all-filled')||'Alle Felder ausgefüllt / All filled','warning');return;}
+  toast(gmt('translating')||'Übersetze… / Translating…');
+  const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
+  empty.forEach(lang=>{if(res[lang]){rulesList[i][lang]=res[lang];}});
+  renderRulesList();
+  toast(gmt('translated')||'Übersetzt! / Translated!','success');
+}
+
+async function saveRules(){
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,rules_list:JSON.stringify(rulesList)}});
+  toast(res.success?'Regeln gespeichert!':res.error,res.success?'success':'error');
+}
+
+// QR Template
+let tplImg=null,qrDragging=false,qrResizing=false,qrOffX=0,qrOffY=0;
+async function loadTemplate(){
+  const size=document.getElementById('tpl-size')?.value||'A4';
+  const s=await API('/api/settings');
+  const tplPath=s[`qr_template_${size}`];
+  if(!tplPath){document.getElementById('tpl-editor').style.display='none';return;}
+  renderTemplateEditor(tplPath,size,s);
+}
+function renderTemplateEditor(tplPath,size,s){
+  const wrap=document.getElementById('tpl-canvas-wrap');
+  const canvas=document.getElementById('tpl-canvas');
+  const placeholder=document.getElementById('qr-placeholder');
+  tplImg=new Image();tplImg.crossOrigin='anonymous';
+  tplImg.onload=()=>{
+    const maxW=560;
+    const scale=maxW/tplImg.naturalWidth;
+    canvas.width=maxW;canvas.height=tplImg.naturalHeight*scale;
+    canvas.style.width=maxW+'px';canvas.style.height=(tplImg.naturalHeight*scale)+'px';
+    const ctx=canvas.getContext('2d');ctx.drawImage(tplImg,0,0,canvas.width,canvas.height);
+    // Position placeholder
+    const px=parseFloat(s[`qr_pos_${size}_x`])||0.1;
+    const py=parseFloat(s[`qr_pos_${size}_y`])||0.1;
+    const ps=parseFloat(s[`qr_pos_${size}_size`])||0.25;
+    const qrSize=ps*canvas.width;
+    placeholder.style.left=(px*canvas.width)+'px';
+    placeholder.style.top=(py*canvas.height)+'px';
+    placeholder.style.width=qrSize+'px';
+    placeholder.style.height=qrSize+'px';
+    document.getElementById('tpl-editor').style.display='block';
+  };
+  tplImg.onerror=()=>{document.getElementById('tpl-editor').style.display='none';};
+  tplImg.src=`/uploads/${tplPath}?t=${Date.now()}`;
+  // Drag events for placeholder
+  const ph=document.getElementById('qr-placeholder');
+  ph.onmousedown=(e)=>{
+    e.preventDefault();
+    const rect=ph.getBoundingClientRect();
+    // Check if near bottom-right corner for resize
+    if(e.clientX>rect.right-16&&e.clientY>rect.bottom-16){qrResizing=true;}
+    else{qrDragging=true;}
+    qrOffX=e.clientX-rect.left;qrOffY=e.clientY-rect.top;
+  };
+  document.addEventListener('mousemove',(e)=>{
+    if(!qrDragging&&!qrResizing)return;
+    const wrapRect=wrap.getBoundingClientRect();
+    if(qrDragging){
+      let newX=e.clientX-wrapRect.left-qrOffX;
+      let newY=e.clientY-wrapRect.top-qrOffY;
+      newX=Math.max(0,Math.min(newX,canvas.width-parseInt(ph.style.width)));
+      newY=Math.max(0,Math.min(newY,canvas.height-parseInt(ph.style.height)));
+      ph.style.left=newX+'px';ph.style.top=newY+'px';
+    }
+    if(qrResizing){
+      const phRect=ph.getBoundingClientRect();
+      let newSize=Math.max(40,e.clientX-phRect.left+qrOffX);
+      newSize=Math.min(newSize,canvas.width-parseInt(ph.style.left));
+      ph.style.width=newSize+'px';ph.style.height=newSize+'px';
+    }
+  });
+  document.addEventListener('mouseup',()=>{qrDragging=false;qrResizing=false;});
+}
+async function uploadTemplate(input){
+  const file=input.files[0];if(!file)return;
+  const size=document.getElementById('tpl-size').value;
+  const form=new FormData();form.append('template',file);form.append('size',size);
+  const res=await fetch('/api/settings/template',{method:'POST',body:form}).then(r=>r.json());
+  if(res.success){toast(gmt('tpl-uploaded')||'Vorlage hochgeladen! / Template uploaded!','success');loadTemplate();}
+  else toast(res.error,'error');
+}
+async function saveTemplatePosition(){
+  const size=document.getElementById('tpl-size').value;
+  const ph=document.getElementById('qr-placeholder');
+  const canvas=document.getElementById('tpl-canvas');
+  const x=parseFloat(ph.style.left)/canvas.width;
+  const y=parseFloat(ph.style.top)/canvas.height;
+  const s=parseFloat(ph.style.width)/canvas.width;
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,[`qr_pos_${size}_x`]:x.toFixed(4),[`qr_pos_${size}_y`]:y.toFixed(4),[`qr_pos_${size}_size`]:s.toFixed(4)}});
+  toast(res.success?'Position gespeichert!':res.error,res.success?'success':'error');
+}
+async function deleteTemplate(){
+  const size=document.getElementById('tpl-size').value;
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,[`qr_template_${size}`]:null}});
+  if(res.success){document.getElementById('tpl-editor').style.display='none';toast('Vorlage gelöscht','success');}
+}
+
+async function changePassword(){
+  const old=document.getElementById('sec-old-pw').value;
+  const nw=document.getElementById('sec-new-pw').value;
+  const nw2=document.getElementById('sec-new-pw2').value;
+  const msg=document.getElementById('sec-msg');
+  if(nw!==nw2){msg.style.color='var(--red-light)';msg.textContent=gmt('pw-mismatch')||'Passwörter stimmen nicht überein.';return;}
+  const res=await API('/api/settings/change-password',{method:'POST',body:{oldPassword:old,newPassword:nw}});
+  if(res.success){settingsPassword=nw;msg.style.color='var(--green)';msg.textContent=gmt('pw-changed')||'Passwort geändert!';}
+  else{msg.style.color='var(--red-light)';msg.textContent=gmt('wrong-pw')||'Falsches Passwort.';}
+}
+
+// ── Rulesets management (now shown as subtabs inside Rules tab) ───────────────
+let currentEditRulesetId=1, currentEditRulesetName='Standard';
+
+// Load ruleset subtabs and activate the current one
+async function loadRulesetsSettings(){
+  const rulesets = await API('/api/rulesets');
+  const bar = document.getElementById('ruleset-subtabs');
+  if(!bar) return;
+  if(!rulesets.length){bar.innerHTML='<span style="color:var(--text-muted);font-size:.85rem;">Keine Regelwerke.</span>';return;}
+  bar.innerHTML = rulesets.map(rs=>`
+    <button class="tab ${rs.id===currentEditRulesetId?'active':''}"
+      style="border-bottom-width:2px;padding:.35rem .8rem;font-size:.8rem;"
+      onclick="switchRuleset(${rs.id},${JSON.stringify(rs.name)})">${esc(rs.name)}</button>`).join('');
+  // Load current ruleset rules
+  const cur = rulesets.find(r=>r.id===currentEditRulesetId) || rulesets[0];
+  if(cur){
+    currentEditRulesetId=cur.id; currentEditRulesetName=cur.name;
+    try{rulesList=JSON.parse(cur.rules_list||'[]');}catch(e){rulesList=[];}
+    renderRulesList();
+    const title=document.getElementById('s-rules-title');
+    if(title) title.textContent=cur.name;
+    // Hide delete button for Standard (id=1)
+    const delBtn=document.getElementById('s-del-rs');
+    if(delBtn) delBtn.style.display=cur.id===1?'none':'inline-flex';
+  }
+}
+
+async function switchRuleset(id, name){
+  // Save current rules first (silently)
+  if(rulesList.length>0){
+    await API(`/api/rulesets/${currentEditRulesetId}`,{method:'PUT',body:{password:settingsPassword,name:currentEditRulesetName,rules_list:JSON.stringify(rulesList)}});
+  }
+  currentEditRulesetId=id; currentEditRulesetName=name;
+  await loadRulesetsSettings();
+}
+
+function showAddRuleset(){
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('s-add-rule')||'＋'}</h3>
+    <div class="field"><label class="label">Name</label><input id="rs-name" class="input" placeholder="z.B. Outdoor-Regeln" autofocus></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">'+gmt('cancel')+'</button>
+      <button class="btn btn-primary" onclick="saveNewRuleset()">'+gmt('create')+'</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+
+async function saveNewRuleset(){
+  const name=document.getElementById('rs-name').value.trim();
+  if(!name){toast('Name required','error');return;}
+  const res=await API('/api/rulesets',{method:'POST',body:{password:settingsPassword,name}});
+  if(res.success){
+    currentEditRulesetId=res.id; currentEditRulesetName=name;
+    closeModal(); await loadRulesetsSettings();
+    toast('Regelwerk erstellt!','success');
+  }
+}
+
+async function saveRules(){
+  const res=await API(`/api/rulesets/${currentEditRulesetId}`,{method:'PUT',body:{password:settingsPassword,name:currentEditRulesetName,rules_list:JSON.stringify(rulesList)}});
+  if(res.success){
+    // backward compat: also save to settings.rules_list if Standard
+    if(currentEditRulesetId===1){
+      await API('/api/settings',{method:'PUT',body:{password:settingsPassword,rules_list:JSON.stringify(rulesList)}});
+    }
+    await loadRulesetsSettings();
+    toast('Gespeichert!','success');
+  } else toast(res.error,'error');
+}
+
+async function deleteCurrentRuleset(){
+  if(currentEditRulesetId===1){toast('Standard-Regelwerk kann nicht gelöscht werden.','warning');return;}
+  if(!confirm(gmt('del-rs-confirm')||'Regelwerk löschen? Modi werden auf Standard zurückgesetzt. / Delete ruleset? Modes will fall back to Standard.'))return;
+  const res=await API(`/api/rulesets/${currentEditRulesetId}`,{method:'DELETE',body:{password:settingsPassword}});
+  if(res.success){
+    currentEditRulesetId=1; currentEditRulesetName='Standard';
+    await loadRulesetsSettings(); toast('Gelöscht','success');
+  } else toast(res.error,'error');
+}
+
+// Copy rules from current ruleset to another
+async function showCopyRuleset(){
+  const rulesets=await API('/api/rulesets');
+  const others=rulesets.filter(r=>r.id!==currentEditRulesetId);
+  if(!others.length){toast('Kein anderes Regelwerk vorhanden.','warning');return;}
+  const opts=others.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">Regeln kopieren nach…</h3>
+    <p style="margin-bottom:1rem;">Kopiert alle Regeln von <strong>${esc(currentEditRulesetName)}</strong> in ein anderes Regelwerk.</p>
+    <div class="field"><label class="label">Ziel-Regelwerk</label>
+      <select id="copy-target" class="select">${opts}</select></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmCopyRuleset()">Kopieren</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+
+async function confirmCopyRuleset(){
+  const targetId=Number(document.getElementById('copy-target').value);
+  const rulesets=await API('/api/rulesets');
+  const target=rulesets.find(r=>r.id===targetId);
+  if(!target)return;
+  const res=await API(`/api/rulesets/${targetId}`,{method:'PUT',body:{password:settingsPassword,name:target.name,rules_list:JSON.stringify(rulesList)}});
+  if(res.success){closeModal();toast(gmt('rules-copied')||'Regeln kopiert!','success');}
+  else toast(res.error,'error');
+}
+
+// Copy a SINGLE rule to another ruleset
+async function showCopyOneRule(ruleIndex){
+  const rulesets=await API('/api/rulesets');
+  const others=rulesets.filter(r=>r.id!==currentEditRulesetId);
+  if(!others.length){toast(gmt('no-other-rs')||'Kein anderes Regelwerk vorhanden. / No other rulesets.','warning');return;}
+  const opts=others.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  const rule=rulesList[ruleIndex];
+  const preview=rule?(rule[gmLang]||rule.de||rule.en||'').slice(0,60):'';
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('copy-rule-title')||'Regel kopieren / Copy Rule'}</h3>
+    <p style="margin-bottom:.75rem;font-size:.85rem;color:var(--text-dim);">"${esc(preview)}..."</p>
+    <div class="field"><label class="label">${gmt('target-rs')||'Ziel-Regelwerk / Target'}</label>
+      <select id="copy-one-target" class="select">${opts}</select></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmCopyOneRule(${ruleIndex})">${gmt('copy')||(gmLang==='de'?'Kopieren':gmLang==='fr'?'Copier':gmLang==='it'?'Copia':'Copy')}</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+}
+async function confirmCopyOneRule(ruleIndex){
+  const targetId=Number(document.getElementById('copy-one-target').value);
+  const rulesets=await API('/api/rulesets');
+  const target=rulesets.find(r=>r.id===targetId);if(!target)return;
+  let targetRules=[];try{targetRules=JSON.parse(target.rules_list||'[]');}catch(e){}
+  targetRules.push({...rulesList[ruleIndex]});
+  const res=await API(`/api/rulesets/${targetId}`,{method:'PUT',body:{password:settingsPassword,name:target.name,rules_list:JSON.stringify(targetRules)}});
+  if(res.success){closeModal();toast(gmt('rule-copied')||'Regel kopiert!','success');}
+  else toast(res.error,'error');
+}
+
+// Util
+const SCREENS=['screen-landing','screen-game-select','screen-new-game','screen-dashboard','screen-settings-gate','screen-settings'];
+const GRID_SCREENS=['screen-dashboard'];
+let _prevScreen='screen-landing';
+function currentScreen(){return SCREENS.find(s=>document.getElementById(s).style.display!=='none')||'screen-landing';}
+function showScreen(id){
+  SCREENS.forEach(s=>document.getElementById(s).style.display='none');
+  const t=document.getElementById(id);
+  t.style.display=GRID_SCREENS.includes(id)?'grid':'flex';
+  if(!['screen-settings-gate','screen-settings'].includes(id))_prevScreen=id;
+}
+function goBack(){showScreen(_prevScreen);}
+function closeModal(){document.getElementById('modal-overlay').style.display='none';}
+function switchSettingsTab(tab,el){
+  document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`stab-${tab}`).classList.add('active');
+  document.querySelectorAll('#settings-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(tab==='rules') loadRulesetsSettings();
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast-container').appendChild(el);setTimeout(()=>el.remove(),3500);}
+</script>
+</body>
+</html>
