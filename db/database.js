@@ -33,6 +33,7 @@ db.exec(`
     mode_id INTEGER REFERENCES modes(id) ON DELETE CASCADE,
     location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
     name TEXT DEFAULT '',
+    name_de TEXT DEFAULT '', name_en TEXT DEFAULT '', name_fr TEXT DEFAULT '', name_it TEXT DEFAULT '',
     description_de TEXT DEFAULT '', description_en TEXT DEFAULT '',
     description_fr TEXT DEFAULT '', description_it TEXT DEFAULT '',
     task_de TEXT DEFAULT '', task_en TEXT DEFAULT '',
@@ -102,6 +103,10 @@ migrations.forEach(sql => { try { db.exec(sql); } catch(e) {} });
 // Rulesets migrations
 try { db.exec("ALTER TABLE modes ADD COLUMN ruleset_id INTEGER"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN timer_default INTEGER DEFAULT 60"); } catch(e) {}
+try { db.exec("ALTER TABLE missions ADD COLUMN name_de TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE missions ADD COLUMN name_en TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE missions ADD COLUMN name_fr TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE missions ADD COLUMN name_it TEXT DEFAULT ''"); } catch(e) {}
 // Seed default ruleset if none exist
 const rsCheck = db.prepare('SELECT id FROM rulesets LIMIT 1').get();
 if (!rsCheck) {
@@ -174,10 +179,10 @@ const getMissions = (modeId, locationId) => {
   return db.prepare('SELECT * FROM missions WHERE mode_id=? ORDER BY id').all(modeId);
 };
 const getMission = id => db.prepare('SELECT * FROM missions WHERE id=?').get(id);
-const createMission = ({mode_id=1,location_id=null,name='',description_de='',description_en='',description_fr='',description_it='',task_de='',task_en='',task_fr='',task_it='',media_type='photo',points=1,is_indoor=0}) =>
-  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,description_de,description_en,description_fr,description_it,task_de,task_en,task_fr,task_it,media_type,points,is_indoor) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name,description_de,description_en,description_fr,description_it,task_de,task_en,task_fr,task_it,media_type,points,is_indoor?1:0).lastInsertRowid);
-const updateMission = (id,{mode_id,location_id,name,description_de,description_en,description_fr,description_it,task_de,task_en,task_fr,task_it,media_type,points,is_indoor}) =>
-  db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,description_de=?,description_en=?,description_fr=?,description_it=?,task_de=?,task_en=?,task_fr=?,task_it=?,media_type=?,points=?,is_indoor=? WHERE id=?').run(mode_id||1,location_id||null,name||'',description_de,description_en,description_fr,description_it||'',task_de||'',task_en||'',task_fr||'',task_it||'',media_type,points,is_indoor?1:0,id);
+const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',description_de='',description_en='',description_fr='',description_it='',task_de='',task_en='',task_fr='',task_it='',media_type='photo',points=1,is_indoor=0}) =>
+  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,description_de,description_en,description_fr,description_it,task_de,task_en,task_fr,task_it,media_type,points,is_indoor) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',description_de,description_en,description_fr,description_it,task_de,task_en,task_fr,task_it,media_type,points,is_indoor?1:0).lastInsertRowid);
+const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,description_de,description_en,description_fr,description_it,task_de,task_en,task_fr,task_it,media_type,points,is_indoor}) =>
+  db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,description_de=?,description_en=?,description_fr=?,description_it=?,task_de=?,task_en=?,task_fr=?,task_it=?,media_type=?,points=?,is_indoor=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',description_de,description_en,description_fr,description_it||'',task_de||'',task_en||'',task_fr||'',task_it||'',media_type,points,is_indoor?1:0,id);
 const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id);
 
 // ── Games ─────────────────────────────────────────────────────────────────────
@@ -239,7 +244,7 @@ const getRankings = gameId => db.prepare(`
 
 // ── Team Missions ─────────────────────────────────────────────────────────────
 const getTeamMissions = teamId => db.prepare(`
-  SELECT tm.*, m.name as mission_name,
+  SELECT tm.*, m.name as mission_name, m.name_de, m.name_en, m.name_fr, m.name_it,
     m.description_de, m.description_en, m.description_fr, m.description_it,
     m.task_de, m.task_en, m.task_fr, m.task_it,
     m.media_type, m.points, m.is_indoor

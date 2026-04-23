@@ -101,6 +101,43 @@ app.post('/api/translate', async (req,res) => {
   }
 });
 
+// ── Update from GitHub ────────────────────────────────────────────────────────
+app.post('/api/update', async (req,res) => {
+  const { password } = req.body;
+  if (!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  const { exec } = require('child_process');
+  const appDir = __dirname;
+  const log = [];
+  const run = (cmd) => new Promise((resolve) => {
+    exec(cmd, {cwd: appDir}, (err, stdout, stderr) => {
+      log.push(`$ ${cmd}`);
+      if (stdout) log.push(stdout.trim());
+      if (stderr) log.push(stderr.trim());
+      resolve(!err);
+    });
+  });
+  log.push('Starting update...');
+  const gitOk = await run('git pull origin main');
+  if (!gitOk) { return res.json({success:false, log:log.join('\n')}); }
+  await run('npm install --production');
+  log.push('Update complete. Restarting...');
+  res.json({success:true, log:log.join('\n')});
+  // Restart gracefully after response sent
+  setTimeout(() => process.exit(0), 1000);
+});
+
+app.get('/api/version', (req,res) => {
+  const { execSync } = require('child_process');
+  let version = 'v1.0.0';
+  let commit = '';
+  try { commit = execSync('git rev-parse --short HEAD', {cwd:__dirname}).toString().trim(); } catch(e) {}
+  try {
+    const pkg = require('./package.json');
+    version = 'v' + (pkg.version || '1.0.0');
+  } catch(e) {}
+  res.json({ version, commit, full: commit ? `${version} (${commit})` : version });
+});
+
 // ── Modes ─────────────────────────────────────────────────────────────────────
 app.get('/api/modes', (req,res) => res.json(db.getModes()));
 app.post('/api/modes', (req,res) => {
@@ -330,8 +367,16 @@ setInterval(() => {
     io.to(`gm_${game.id}`).emit('timer_update',state);
     if(state.remaining<=0) {
       db.updateGame(game.id,{timer_running:0,status:'ended'});
-      const msg=db.getSetting('timeout_text')||'Die Zeit ist abgelaufen!';
-      io.to(`game_${game.id}`).emit('game_ended',{message:msg});
+      // Pick timeout message for the game's language (fallback chain)
+      const lang_key = 'timeout_text'; // base key
+      const msg = db.getSetting('timeout_text_de') || db.getSetting('timeout_text') || 'Die Zeit ist abgelaufen!';
+      const langMsgs = {
+        de: db.getSetting('timeout_text_de')||db.getSetting('timeout_text')||'Die Zeit ist abgelaufen!',
+        en: db.getSetting('timeout_text_en')||'Time is up!',
+        fr: db.getSetting('timeout_text_fr')||'Temps écoulé!',
+        it: db.getSetting('timeout_text_it')||'Il tempo è scaduto!'
+      };
+      io.to(`game_${game.id}`).emit('game_ended',{messages:langMsgs, message:msg});
       io.to(`gm_${game.id}`).emit('game_ended',{});
     }
   });

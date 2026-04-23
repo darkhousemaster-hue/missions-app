@@ -35,7 +35,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 /* ── View switching ── */
 #view-missions { flex:1; overflow-y:auto; padding:.75rem; padding-bottom:calc(env(safe-area-inset-bottom,0px) + 2rem); display:flex; flex-direction:column; -webkit-overflow-scrolling:touch; }
-#view-chat { flex:1; min-height:0; display:none; flex-direction:column; }
+#view-chat { flex:1; min-height:0; display:none; flex-direction:column; overflow:hidden; }
 #view-rules { position:fixed; inset:0; background:var(--bg3); z-index:600; display:none; flex-direction:column; }
 
 /* ── Legend ── */
@@ -303,6 +303,8 @@ function applyTranslations() {
   document.getElementById('rej-title').textContent = t('rej_title');
   document.getElementById('rej-btn').textContent = t('rej_btn');
   document.getElementById('go-title').textContent = t('go');
+  const ci=document.getElementById('chat-input');
+  if(ci) ci.placeholder=t('chat_ph');
   const ub = document.getElementById('upload-btn');
   if (ub) ub.textContent = t('upload');
 }
@@ -368,8 +370,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   socket.on('mission_accepted', ({ missionId }) => onAccepted(missionId));
   socket.on('mission_rejected', ({ missionId, message }) => onRejected(missionId, message));
   socket.on('chat_message', onChatMessage);
-  socket.on('game_ended',   ({ message }) => showGameOver(message));
+  socket.on('game_ended',   ({ messages, message }) => showGameOver((messages&&messages[lang])||message||''));
   socket.on('settings_updated', () => { loadMissions(); });
+
+  // Fix Android keyboard pushing input off screen
+  function fixViewportHeight() {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.body.style.height = h + 'px';
+    document.body.style.maxHeight = h + 'px';
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fixViewportHeight);
+  }
+  window.addEventListener('resize', fixViewportHeight);
+  fixViewportHeight();
 });
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
@@ -429,7 +443,7 @@ function missionCard(m) {
 
   return `<div class="p-mission-card ${status}" id="mc-${m.mission_id}">
     <div class="mission-meta">${icon} ${indoor} ${pts}</div>
-    <div class="mission-name">${esc(m.mission_name||'')}</div>
+    <div class="mission-name">${esc(m['name_'+lang]||m.mission_name||m.name||'')}</div>
     ${desc ? `<div style="font-size:.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem;">${t('description')}</div><div class="mission-desc">${esc(desc)}</div>` : ''}
     ${task ? `<div style="font-size:.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin:.5rem 0 .15rem;">${t('task')}</div><div class="mission-desc" style="color:var(--text);">${esc(task)}</div>` : ''}
     <div class="mission-footer" id="mf-${m.mission_id}">${footer}</div>
@@ -719,6 +733,8 @@ async function loadRules() {
 // ── Game over ─────────────────────────────────────────────────────────────────
 function showGameOver(message) {
   document.getElementById('go-title').textContent = t('go');
+  const ci=document.getElementById('chat-input');
+  if(ci) ci.placeholder=t('chat_ph');
   document.getElementById('go-msg').textContent   = message || '';
   document.getElementById('gameover-overlay').style.display = 'flex';
 }
