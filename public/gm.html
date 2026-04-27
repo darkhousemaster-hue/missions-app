@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
-<title>MiSSiONS — Spielleiter</title>
+<title>MiSSiONS&#8203; — Spielleiter</title>
 <link rel="stylesheet" href="/css/app.css">
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
@@ -66,7 +66,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   </div>
   <div class="landing-logo">
     <img src="/assets/logo.png" class="logo" alt="AR">
-    <h1>MiSSiONS</h1>
+    <h1><span>MiSSi</span><span>ONS</span></h1>
     <p id="ll-select">Standort wählen</p>
   </div>
   <div id="location-grid" class="location-grid"></div>
@@ -293,6 +293,17 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
       <div id="stab-template" class="stab">
         <div class="card mb-2">
           <h3 style="margin-bottom:1rem;" id="s-tpl-title">QR-Code Vorlage</h3>
+          <!-- Language tabs for templates -->
+          <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;">
+            <span class="label" style="margin:0;">Sprache:</span>
+            <div style="display:flex;gap:2px;">
+              <button class="tab active" id="tpl-lang-de" onclick="switchTplLang('de',this)">DE</button>
+              <button class="tab" id="tpl-lang-en" onclick="switchTplLang('en',this)">EN</button>
+              <button class="tab" id="tpl-lang-fr" onclick="switchTplLang('fr',this)">FR</button>
+              <button class="tab" id="tpl-lang-it" onclick="switchTplLang('it',this)">IT</button>
+            </div>
+            <span id="tpl-lang-hint" style="font-size:.8rem;color:var(--text-muted);">DE-Vorlage</span>
+          </div>
           <div class="field">
             <label class="label" id="s-tpl-size-label">Papiergröße</label>
             <select id="tpl-size" class="select" style="width:auto;" onchange="loadTemplate()">
@@ -407,6 +418,7 @@ function applyGmLang(){
 }
 function cycleGmLang(){
   gmLang=LANGS_GM[(LANGS_GM.indexOf(gmLang)+1)%LANGS_GM.length];
+  tplLang=gmLang; // sync template language with GM language
   localStorage.setItem('gm_lang',gmLang);
   applyGmLang();
   // Re-render any visible dynamic content
@@ -425,6 +437,7 @@ let socket,currentGameId=null,selectedLocationId=null,selectedTeamId=null;
 let settingsPassword=null,pendingRejectSubId=null,pendingRejectGameId=null;
 let currentQRData=null,currentJoinUrl=null;
 let currentModeId=1,currentModeName='MiSSiONS';
+let tplLang='de'; // which language's template we're editing
 // rulesList already declared above
 
 const API=(url,o={})=>fetch(url,{headers:{'Content-Type':'application/json'},...o,body:o.body?JSON.stringify(o.body):undefined}).then(r=>r.json());
@@ -514,10 +527,10 @@ function downloadQRFromModal(){downloadQR();}
 async function downloadQRWithTemplate(){
   if(!currentQRData){toast('No QR code yet','warning');return;}
   const s=await API('/api/settings');
-  // Determine size - try to get from settings tab, default A4
+  // Use gmLang to pick the correct language template
   const sizeEl=document.getElementById('tpl-size');
   const size=sizeEl?sizeEl.value:'A4';
-  const tplPath=s[`qr_template_${size}`];
+  const tplPath=s[`qr_template_${gmLang}_${size}`]||s[`qr_template_${size}`]; // fallback to legacy key
   // PDF dimensions in mm
   const dims={A4:[210,297],A5:[148,210],A6:[105,148]};
   const [pW,pH]=dims[size]||dims.A4;
@@ -536,9 +549,9 @@ async function downloadQRWithTemplate(){
     }
   }
   // Draw QR code
-  const px=parseFloat(s[`qr_pos_${size}_x`])||0.1;
-  const py=parseFloat(s[`qr_pos_${size}_y`])||0.1;
-  const ps=parseFloat(s[`qr_pos_${size}_size`])||0.25;
+  const px=parseFloat(s[`qr_pos_${tplLang}_${size}_x`])||parseFloat(s[`qr_pos_${size}_x`])||0.1;
+  const py=parseFloat(s[`qr_pos_${tplLang}_${size}_y`])||parseFloat(s[`qr_pos_${size}_y`])||0.1;
+  const ps=parseFloat(s[`qr_pos_${tplLang}_${size}_size`])||parseFloat(s[`qr_pos_${size}_size`])||0.25;
   const qrMmW=ps*pW, qrMmH=ps*pW; // square
   const qrMmX=px*pW, qrMmY=py*pH;
   doc.addImage(currentQRData,'PNG',qrMmX,qrMmY,qrMmW,qrMmH);
@@ -1237,10 +1250,21 @@ async function saveRules(){
 
 // QR Template
 let tplImg=null,qrDragging=false,qrResizing=false,qrOffX=0,qrOffY=0;
+
+function switchTplLang(lang, el){
+  tplLang = lang;
+  document.querySelectorAll('#stab-template [id^="tpl-lang-"]').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const langNames = {de:'DE-Vorlage',en:'EN Template',fr:'Modèle FR',it:'Modello IT'};
+  const hint = document.getElementById('tpl-lang-hint');
+  if(hint) hint.textContent = langNames[lang]||lang.toUpperCase();
+  loadTemplate();
+}
+
 async function loadTemplate(){
   const size=document.getElementById('tpl-size')?.value||'A4';
   const s=await API('/api/settings');
-  const tplPath=s[`qr_template_${size}`];
+  const tplPath=s[`qr_template_${tplLang}_${size}`]||s[`qr_template_${size}`]; // fallback to old key
   if(!tplPath){document.getElementById('tpl-editor').style.display='none';return;}
   renderTemplateEditor(tplPath,size,s);
 }
@@ -1300,7 +1324,7 @@ function renderTemplateEditor(tplPath,size,s){
 async function uploadTemplate(input){
   const file=input.files[0];if(!file)return;
   const size=document.getElementById('tpl-size').value;
-  const form=new FormData();form.append('template',file);form.append('size',size);
+  const form=new FormData();form.append('template',file);form.append('size',size);form.append('lang',tplLang);
   const res=await fetch('/api/settings/template',{method:'POST',body:form}).then(r=>r.json());
   if(res.success){toast(gmt('tpl-uploaded')||'Vorlage hochgeladen! / Template uploaded!','success');loadTemplate();}
   else toast(res.error,'error');
@@ -1312,7 +1336,7 @@ async function saveTemplatePosition(){
   const x=parseFloat(ph.style.left)/canvas.width;
   const y=parseFloat(ph.style.top)/canvas.height;
   const s=parseFloat(ph.style.width)/canvas.width;
-  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,[`qr_pos_${size}_x`]:x.toFixed(4),[`qr_pos_${size}_y`]:y.toFixed(4),[`qr_pos_${size}_size`]:s.toFixed(4)}});
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,[`qr_pos_${tplLang}_${size}_x`]:x.toFixed(4),[`qr_pos_${tplLang}_${size}_y`]:y.toFixed(4),[`qr_pos_${tplLang}_${size}_size`]:s.toFixed(4)}});
   toast(res.success?'Position gespeichert!':res.error,res.success?'success':'error');
 }
 async function deleteTemplate(){

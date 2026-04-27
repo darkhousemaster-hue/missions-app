@@ -79,7 +79,10 @@ app.post('/api/settings/template', uploadSingle.single('template'), (req,res) =>
   fs.renameSync(req.file.path, dest);
   const relPath = `templates/${req.file.filename}${path.extname(req.file.originalname||'.png')}`;
   const size = req.body.size || 'A4';
-  db.setSetting(`qr_template_${size}`, relPath);
+  const lang = req.body.lang || 'de';
+  // Save with lang key (new) and also legacy key (backward compat for de)
+  db.setSetting(`qr_template_${lang}_${size}`, relPath);
+  if (lang === 'de') db.setSetting(`qr_template_${size}`, relPath); // legacy
   res.json({success:true, path:relPath});
 });
 
