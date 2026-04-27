@@ -1268,10 +1268,39 @@ async function loadTemplate(){
   if(!tplPath){document.getElementById('tpl-editor').style.display='none';return;}
   renderTemplateEditor(tplPath,size,s);
 }
+// Named handlers so we can remove them before re-adding (prevents stacking)
+function _tplMouseMove(e){
+  if(!qrDragging&&!qrResizing)return;
+  const wrap=document.getElementById('tpl-canvas-wrap');
+  const canvas=document.getElementById('tpl-canvas');
+  const ph=document.getElementById('qr-placeholder');
+  if(!wrap||!canvas||!ph)return;
+  const wrapRect=wrap.getBoundingClientRect();
+  if(qrDragging){
+    let newX=e.clientX-wrapRect.left-qrOffX;
+    let newY=e.clientY-wrapRect.top-qrOffY;
+    newX=Math.max(0,Math.min(newX,canvas.width-parseInt(ph.style.width)));
+    newY=Math.max(0,Math.min(newY,canvas.height-parseInt(ph.style.height)));
+    ph.style.left=newX+'px';ph.style.top=newY+'px';
+  }
+  if(qrResizing){
+    const phRect=ph.getBoundingClientRect();
+    let newSize=Math.max(40,e.clientX-phRect.left+qrOffX);
+    newSize=Math.min(newSize,canvas.width-parseInt(ph.style.left));
+    ph.style.width=newSize+'px';ph.style.height=newSize+'px';
+  }
+}
+function _tplMouseUp(){qrDragging=false;qrResizing=false;}
+
 function renderTemplateEditor(tplPath,size,s){
   const wrap=document.getElementById('tpl-canvas-wrap');
   const canvas=document.getElementById('tpl-canvas');
-  const placeholder=document.getElementById('qr-placeholder');
+  const ph=document.getElementById('qr-placeholder');
+
+  // Remove any previously stacked listeners before adding new ones
+  document.removeEventListener('mousemove',_tplMouseMove);
+  document.removeEventListener('mouseup',_tplMouseUp);
+
   tplImg=new Image();tplImg.crossOrigin='anonymous';
   tplImg.onload=()=>{
     const maxW=560;
@@ -1279,47 +1308,31 @@ function renderTemplateEditor(tplPath,size,s){
     canvas.width=maxW;canvas.height=tplImg.naturalHeight*scale;
     canvas.style.width=maxW+'px';canvas.style.height=(tplImg.naturalHeight*scale)+'px';
     const ctx=canvas.getContext('2d');ctx.drawImage(tplImg,0,0,canvas.width,canvas.height);
-    // Position placeholder
-    const px=parseFloat(s[`qr_pos_${size}_x`])||0.1;
-    const py=parseFloat(s[`qr_pos_${size}_y`])||0.1;
-    const ps=parseFloat(s[`qr_pos_${size}_size`])||0.25;
+
+    // Use tplLang-aware position keys, fall back to legacy keys
+    const px=parseFloat(s[`qr_pos_${tplLang}_${size}_x`])||parseFloat(s[`qr_pos_${size}_x`])||0.1;
+    const py=parseFloat(s[`qr_pos_${tplLang}_${size}_y`])||parseFloat(s[`qr_pos_${size}_y`])||0.1;
+    const ps=parseFloat(s[`qr_pos_${tplLang}_${size}_size`])||parseFloat(s[`qr_pos_${size}_size`])||0.25;
     const qrSize=ps*canvas.width;
-    placeholder.style.left=(px*canvas.width)+'px';
-    placeholder.style.top=(py*canvas.height)+'px';
-    placeholder.style.width=qrSize+'px';
-    placeholder.style.height=qrSize+'px';
+    ph.style.left=(px*canvas.width)+'px';
+    ph.style.top=(py*canvas.height)+'px';
+    ph.style.width=qrSize+'px';
+    ph.style.height=qrSize+'px';
     document.getElementById('tpl-editor').style.display='block';
   };
   tplImg.onerror=()=>{document.getElementById('tpl-editor').style.display='none';};
   tplImg.src=`/uploads/${tplPath}?t=${Date.now()}`;
-  // Drag events for placeholder
-  const ph=document.getElementById('qr-placeholder');
+
+  // Drag — use named handlers so they can be removed cleanly
   ph.onmousedown=(e)=>{
     e.preventDefault();
     const rect=ph.getBoundingClientRect();
-    // Check if near bottom-right corner for resize
     if(e.clientX>rect.right-16&&e.clientY>rect.bottom-16){qrResizing=true;}
     else{qrDragging=true;}
     qrOffX=e.clientX-rect.left;qrOffY=e.clientY-rect.top;
   };
-  document.addEventListener('mousemove',(e)=>{
-    if(!qrDragging&&!qrResizing)return;
-    const wrapRect=wrap.getBoundingClientRect();
-    if(qrDragging){
-      let newX=e.clientX-wrapRect.left-qrOffX;
-      let newY=e.clientY-wrapRect.top-qrOffY;
-      newX=Math.max(0,Math.min(newX,canvas.width-parseInt(ph.style.width)));
-      newY=Math.max(0,Math.min(newY,canvas.height-parseInt(ph.style.height)));
-      ph.style.left=newX+'px';ph.style.top=newY+'px';
-    }
-    if(qrResizing){
-      const phRect=ph.getBoundingClientRect();
-      let newSize=Math.max(40,e.clientX-phRect.left+qrOffX);
-      newSize=Math.min(newSize,canvas.width-parseInt(ph.style.left));
-      ph.style.width=newSize+'px';ph.style.height=newSize+'px';
-    }
-  });
-  document.addEventListener('mouseup',()=>{qrDragging=false;qrResizing=false;});
+  document.addEventListener('mousemove',_tplMouseMove);
+  document.addEventListener('mouseup',_tplMouseUp);
 }
 async function uploadTemplate(input){
   const file=input.files[0];if(!file)return;
