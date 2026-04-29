@@ -182,12 +182,12 @@ app.get('/api/locations', (req,res) => res.json(db.getLocations()));
 app.post('/api/locations', (req,res) => {
   const {password,...d}=req.body;
   if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
-  const {timer_default:_ctd, ...locCreateData} = d; res.json({id:db.createLocation(locCreateData),success:true});
+  const {timer_default:_ctd, ...locCreateData} = d; locCreateData.allow_photo=d.allow_photo!==undefined?d.allow_photo:1; locCreateData.allow_video=d.allow_video!==undefined?d.allow_video:1; locCreateData.allow_indoor=d.allow_indoor!==undefined?d.allow_indoor:1; res.json({id:db.createLocation(locCreateData),success:true});
 });
 app.put('/api/locations/:id', (req,res) => {
   const {password,...d}=req.body;
   if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
-  const {timer_default:_td, ...locData} = d; db.updateLocation(req.params.id,locData); res.json({success:true});
+  const {timer_default:_td, ...locData} = d; locData.allow_photo=d.allow_photo!==undefined?d.allow_photo:1; locData.allow_video=d.allow_video!==undefined?d.allow_video:1; locData.allow_indoor=d.allow_indoor!==undefined?d.allow_indoor:1; db.updateLocation(req.params.id,locData); res.json({success:true});
 });
 app.delete('/api/locations/:id', (req,res) => {
   if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
@@ -265,6 +265,10 @@ app.post('/api/games/:gameId/teams', (req,res) => {
   const game=db.getGame(req.params.gameId);
   if(!game) return res.status(404).json({error:'Game not found'});
   if(game.status==='ended') return res.status(400).json({error:'Game has ended'});
+  // Check for duplicate team name
+  const existingTeams=db.getTeams(req.params.gameId);
+  const nameTaken=existingTeams.some(t=>t.name.toLowerCase()===req.body.name.toLowerCase());
+  if(nameTaken) return res.status(400).json({error:'Team name already taken. Please choose a different name.'});
   const teamId=db.createTeam({game_id:req.params.gameId, name:req.body.name});
   const team=db.getTeam(teamId);
   io.to(`gm_${req.params.gameId}`).emit('team_joined',team);
@@ -330,14 +334,24 @@ app.get('/api/games/:gameId/chat', (req,res) =>
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
 app.post('/api/games/:gameId/timer', (req,res) => {
-  const {action}=req.body;
+  const {action, seconds}=req.body;
   const game=db.getGame(req.params.gameId);
   if(!game) return res.status(404).json({error:'Not found'});
   const now=Date.now();
   if(action==='start' && !game.timer_running) {
-    db.updateGame(req.params.gameId,{timer_started_at: now-(game.timer_paused_elapsed||0), timer_running:1});
+    db.updateGame(req.params.gameId,{timer_started_at: now-(game.timer_paused_elapsed||0), timer_running:1, status:'active'});
   } else if(action==='pause' && game.timer_running && game.timer_started_at) {
     db.updateGame(req.params.gameId,{timer_paused_elapsed: now-game.timer_started_at, timer_running:0});
+  } else if(action==='adjust' && typeof seconds==='number') {
+    // Add or subtract seconds from the total duration
+    const newDuration = Math.max(10, (game.timer_duration||3600) + seconds);
+    db.updateGame(req.params.gameId,{timer_duration: newDuration});
+    // If running, also adjust started_at so remaining time changes immediately
+    if(game.timer_running && game.timer_started_at) {
+      // Extending: move started_at further back (more time remaining)
+      // Subtracting: move started_at forward (less time remaining)
+      db.updateGame(req.params.gameId,{timer_started_at: game.timer_started_at - seconds*1000});
+    }
   }
   const updated=db.getGame(req.params.gameId);
   const state=getTimerState(updated);

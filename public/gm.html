@@ -121,6 +121,27 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
         <div class="timer-controls">
           <button class="btn btn-success btn-sm" id="btn-timer-start" onclick="timerAction('start')">▶ <span id="tb-start">Start</span></button>
           <button class="btn btn-ghost btn-sm" id="btn-timer-pause" onclick="timerAction('pause')" style="display:none;">⏸ <span id="tb-pause">Pause</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleTimerAdjust()">⏱ <span id="tb-adjust">Timer</span></button>
+        </div>
+        <!-- Timer adjust panel -->
+        <div id="timer-adjust-panel" style="display:none;margin-top:.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;text-align:center;">
+          <div style="display:flex;gap:.3rem;justify-content:center;margin-bottom:.4rem;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(60)">+1m</button>
+            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(120)">+2m</button>
+            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(300)">+5m</button>
+            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(600)">+10m</button>
+          </div>
+          <div style="display:flex;gap:.3rem;justify-content:center;margin-bottom:.6rem;flex-wrap:wrap;">
+            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-60)">−1m</button>
+            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-120)">−2m</button>
+            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-300)">−5m</button>
+            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-600)">−10m</button>
+          </div>
+          <div style="display:flex;gap:.4rem;align-items:center;justify-content:center;">
+            <input id="custom-timer-mins" type="number" class="input" placeholder="min" min="1" max="999" style="width:70px;text-align:center;">
+            <button class="btn btn-ghost btn-sm" onclick="adjustTimerCustom(1)" id="btn-add-custom">＋ Add</button>
+            <button class="btn btn-danger btn-sm" onclick="adjustTimerCustom(-1)" id="btn-sub-custom">− Sub</button>
+          </div>
         </div>
       </div>
     </div>
@@ -253,11 +274,13 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
             <div id="mode-tabs" class="tabs" style="border:none;margin:0;"></div>
             <button class="btn btn-ghost btn-sm" onclick="showAddMode()" id="s-add-mode">＋ Modus</button>
           </div>
-          <div style="display:flex;gap:.5rem;align-items:center;">
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
             <select id="mission-filter" class="select" style="width:auto;" onchange="loadMissions()">
               <option value="">Alle</option>
               <option value="null">Pool</option>
             </select>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file-input').click()">⬆ Import</button>
+            <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="importMissions(this.files[0])">
             <button class="btn btn-primary btn-sm" onclick="showAddMission()" id="s-add-mission">＋ MiSSiON</button>
           </div>
         </div>
@@ -483,7 +506,7 @@ async function loadGames(locationId){
       <div class="game-card-id">${g.id}</div>
       <div class="game-card-date">${new Date(g.created_at).toLocaleString('de-DE')}</div>
       <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin:.25rem 0;">
-        <span class="badge badge-${g.status==='ended'?'red':'green'}">${g.status}</span>
+        <span class="badge badge-${g.status==='ended'?'red':g.timer_running?'green':'grey'}">${g.status==='ended'?(gmt('s-sec-title')||'ended'):g.timer_running?'playing':'waiting'}</span>
         ${g.mode_name?`<span class="badge badge-grey">${esc(g.mode_name)}</span>`:''}
       </div>
       <div class="game-card-actions">
@@ -748,6 +771,20 @@ function updateTimer(state){
   document.getElementById('btn-timer-start').style.display=state.running?'none':'inline-flex';
   document.getElementById('btn-timer-pause').style.display=state.running?'inline-flex':'none';
 }
+function toggleTimerAdjust(){
+  const panel=document.getElementById('timer-adjust-panel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+async function adjustTimer(seconds){
+  await API(`/api/games/${currentGameId}/timer`,{method:'POST',body:{action:'adjust',seconds}});
+  const sign=seconds>0?'+':'';
+  toast(`${sign}${Math.round(seconds/60)}m`,'success');
+}
+async function adjustTimerCustom(direction){
+  const mins=parseFloat(document.getElementById('custom-timer-mins').value);
+  if(!mins||mins<=0){toast('Minuten eingeben','warning');return;}
+  await adjustTimer(direction*Math.round(mins*60));
+}
 async function timerAction(action){await API(`/api/games/${currentGameId}/timer`,{method:'POST',body:{action}});}
 
 // ── Chat ───────────────────────────────────────────────────────────────────
@@ -765,13 +802,16 @@ function gmBubble(m){
 function onChatMessage(msg){
   if(!msg)return;
   const fromGm=msg.fromGm===1||msg.fromGm===true;
-  if(msg.teamId===selectedTeamId||((!msg.teamId)&&fromGm)){
+  // Skip GM's own messages - already added optimistically in sendGmChat
+  if(fromGm) return;
+  // Only show player messages for the selected team
+  if(msg.teamId===selectedTeamId){
     const box=document.getElementById('gm-chat-messages');
     const time=new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    box.insertAdjacentHTML('beforeend',`<div class="chat-bubble ${fromGm?'from-gm':'from-player'}"><div class="chat-meta">${fromGm?'Du':'Team'} · ${time}</div>${esc(msg.content)}</div>`);
+    box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-player"><div class="chat-meta">Team · ${time}</div>${esc(msg.content)}</div>`);
     box.scrollTop=box.scrollHeight;
   }
-  if(!fromGm&&msg.teamId!==selectedTeamId){
+  if(msg.teamId!==selectedTeamId){
     const notif=document.getElementById(`notif-${msg.teamId}`);
     if(notif)notif.style.display='inline-block';
   }
@@ -970,6 +1010,13 @@ function showAddLocation(){
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input"></div>
     <div class="field"><label class="label">MiSSiONS ${gmt('per-game')||'pro Spiel / per game'}</label><input id="loc-max" type="number" class="input" value="10" min="1"></div>
     <div class="field"><label class="label">Min. ${gmt('loc-spec')||'Standort-MiSSiONS'}</label><input id="loc-min-loc" type="number" class="input" value="3" min="0"></div>
+    <div class="field"><label class="label">Erlaubte Medien</label>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" checked style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" checked style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" checked style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveNewLocation()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
@@ -978,7 +1025,7 @@ function showAddLocation(){
 }
 async function saveNewLocation(){
   const name=document.getElementById('loc-name').value.trim();if(!name){toast('Name fehlt','error');return;}
-  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value}});
+  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0}});
   if(res.success){closeModal();loadLocationsSettings();loadMissionFilter();toast('Erstellt!','success');}
 }
 async function editLocation(id){
@@ -988,6 +1035,13 @@ async function editLocation(id){
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input" value="${esc(l.name)}"></div>
     <div class="field"><label class="label">MiSSiONS</label><input id="loc-max" type="number" class="input" value="${l.missions_count||l.max_missions||10}"></div>
     <div class="field"><label class="label">Min. Standort</label><input id="loc-min-loc" type="number" class="input" value="${l.min_location_missions}"></div>
+    <div class="field"><label class="label">Erlaubte Medien</label>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" ${sel(l.allow_photo!==0)} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" ${sel(l.allow_video!==0)} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" ${sel(l.allow_indoor!==0)} style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveEditLocation(${id})">${gmt('save')||(gmLang==='de'?'Speichern':gmLang==='fr'?'Sauvegarder':gmLang==='it'?'Salva':'Save')}</button>
@@ -995,7 +1049,7 @@ async function editLocation(id){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveEditLocation(id){
-  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value}});
+  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0}});
   if(res.success){closeModal();loadLocationsSettings();toast('Gespeichert!','success');}
 }
 async function deleteLocation(id){
@@ -1022,9 +1076,18 @@ async function loadMissions(){
   if(!missions.length){list.innerHTML=`<div class="empty"><p>${gmt('no-missions')||'Keine MiSSiONS. / No missions.'}</p></div>`;return;}
   const locs=await API('/api/locations');
   const locMap=Object.fromEntries(locs.map(l=>[l.id,l.name]));
-  list.innerHTML=missions.map(m=>`
-    <div class="card mb-1">
+  // Add multiselect toolbar
+  const toolbar = `<div id="ms-toolbar" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-size:.85rem;">
+      <input type="checkbox" id="ms-select-all" onchange="toggleSelectAll(this)" style="accent-color:var(--red);"> Alle
+    </label>
+    <button class="btn btn-ghost btn-sm" onclick="copySelectedMissions()" id="btn-ms-copy" style="display:none;">⎘ Kopieren nach Modus…</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadSelectedMissions()" id="btn-ms-download" style="display:none;">⬇ Exportieren</button>
+  </div>`;
+  list.innerHTML = toolbar + missions.map(m=>`
+    <div class="card mb-1" id="mcard-s-${m.id}">
       <div class="card-header" style="align-items:flex-start;">
+        <input type="checkbox" class="ms-checkbox" data-id="${m.id}" onchange="onMsChange()" style="accent-color:var(--red);margin-top:.2rem;margin-right:.25rem;width:16px;height:16px;flex-shrink:0;">
         <div style="flex:1;">
           <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:.25rem;">
             <strong>${esc(m['name_'+gmLang]||m.name||'(kein Name)')}</strong>
@@ -1557,6 +1620,143 @@ async function confirmCopyOneRule(ruleIndex){
   const res=await API(`/api/rulesets/${targetId}`,{method:'PUT',body:{password:settingsPassword,name:target.name,rules_list:JSON.stringify(targetRules)}});
   if(res.success){closeModal();toast(gmt('rule-copied')||'Regel kopiert!','success');}
   else toast(res.error,'error');
+}
+
+// ── Multiselect helpers ──────────────────────────────────────────────────────
+function onMsChange(){
+  const boxes=document.querySelectorAll('.ms-checkbox');
+  const checked=[...boxes].filter(b=>b.checked);
+  const sa=document.getElementById('ms-select-all');
+  if(sa) sa.indeterminate=checked.length>0&&checked.length<boxes.length, sa.checked=checked.length===boxes.length;
+  const anyChecked=checked.length>0;
+  const copyBtn=document.getElementById('btn-ms-copy');
+  const dlBtn=document.getElementById('btn-ms-download');
+  if(copyBtn) copyBtn.style.display=anyChecked?'inline-flex':'none';
+  if(dlBtn) dlBtn.style.display=anyChecked?'inline-flex':'none';
+}
+function toggleSelectAll(cb){
+  document.querySelectorAll('.ms-checkbox').forEach(b=>b.checked=cb.checked);
+  onMsChange();
+}
+function getSelectedMissionIds(){
+  return [...document.querySelectorAll('.ms-checkbox:checked')].map(b=>Number(b.dataset.id));
+}
+async function copySelectedMissions(){
+  const ids=getSelectedMissionIds();
+  if(!ids.length){toast('Keine MiSSiON ausgewählt','warning');return;}
+  const modes=await API('/api/modes');
+  const others=modes.filter(m=>m.id!==currentModeId);
+  if(!others.length){toast('Kein anderer Modus vorhanden','warning');return;}
+  const opts=others.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${ids.length} MiSSiON${ids.length!==1?'s':''} kopieren nach…</h3>
+    <div class="field"><label class="label">Ziel-Modus</label>
+      <select id="copy-mode-target" class="select">${opts}</select></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmCopyMissions(${JSON.stringify(ids)})">Kopieren</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
+}
+async function confirmCopyMissions(ids){
+  const targetModeId=Number(document.getElementById('copy-mode-target').value);
+  let ok=0;
+  for(const id of ids){
+    const missions=await API('/api/missions');
+    const m=missions.find(x=>x.id===id);if(!m)continue;
+    const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,...m,id:undefined,mode_id:targetModeId}});
+    if(res.id)ok++;
+  }
+  closeModal();toast(`${ok} MiSSiON${ok!==1?'s':''} kopiert!`,'success');
+}
+async function downloadSelectedMissions(){
+  const ids=getSelectedMissionIds();
+  if(!ids.length){toast('Keine MiSSiON ausgewählt','warning');return;}
+  const allMissions=await API('/api/missions');
+  const selected=allMissions.filter(m=>ids.includes(m.id));
+  const modes=await API('/api/modes');
+  const locs=await API('/api/locations');
+  const modeMap=Object.fromEntries(modes.map(m=>[m.id,m.name]));
+  const locMap=Object.fromEntries(locs.map(l=>[l.id,l.name]));
+  // Build human-readable structured format
+  const payload={
+    format: 'missions-app-export',
+    version: '1.0',
+    exported: new Date().toISOString(),
+    instructions: 'Upload this file via Settings → MiSSiONS → Import to recreate these missions. You can also edit values directly in this file before uploading.',
+    missions: selected.map(m=>({
+      // ── Identity ──────────────────────────────────
+      name_de: m.name_de||m.name||'',
+      name_en: m.name_en||'',
+      name_fr: m.name_fr||'',
+      name_it: m.name_it||'',
+      // ── Mode & Location ───────────────────────────
+      mode:     modeMap[m.mode_id]||'MiSSiONS',
+      location: m.location_id ? (locMap[m.location_id]||null) : null,
+      // ── Media & Points ────────────────────────────
+      media_type: m.media_type||'photo',
+      points:     m.points||1,
+      is_indoor:  m.is_indoor===1||m.is_indoor===true,
+      // ── Description (story/background) ───────────
+      description_de: m.description_de||'',
+      description_en: m.description_en||'',
+      description_fr: m.description_fr||'',
+      description_it: m.description_it||'',
+      // ── Task (what players must do) ───────────────
+      task_de: m.task_de||'',
+      task_en: m.task_en||'',
+      task_fr: m.task_fr||'',
+      task_it: m.task_it||'',
+    }))
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`missions-export-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  toast(`${selected.length} MiSSiON${selected.length!==1?'s':''} exportiert`,'success');
+}
+async function importMissions(file){
+  if(!file)return;
+  const text=await file.text();
+  let data;
+  try{data=JSON.parse(text);}catch(e){toast('Ungültige JSON-Datei','error');return;}
+  if(!data.missions||!Array.isArray(data.missions)){toast('Kein gültiges Format (missions-Array fehlt)','error');return;}
+  const locs=await API('/api/locations');
+  const modes=await API('/api/modes');
+  const locByName=Object.fromEntries(locs.map(l=>[l.name.toLowerCase(),l.id]));
+  const modeByName=Object.fromEntries(modes.map(m=>[m.name.toLowerCase(),m.id]));
+  let ok=0, errors=0;
+  for(const m of data.missions){
+    // Map location name → id
+    let location_id=null;
+    if(m.location){
+      location_id=locByName[m.location.toLowerCase()]||null;
+    }
+    // Map mode name → id (fallback to currently selected mode)
+    let mode_id=currentModeId;
+    if(m.mode){
+      mode_id=modeByName[m.mode.toLowerCase()]||currentModeId;
+    }
+    // Use name_de as primary name, fallback to name field
+    const name=m.name_de||m.name||'';
+    const res=await API('/api/missions',{method:'POST',body:{
+      password:settingsPassword,
+      mode_id, location_id, name,
+      name_de:m.name_de||name, name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'',
+      media_type:m.media_type||'photo',
+      points:Number(m.points)||1,
+      is_indoor:m.is_indoor?1:0,
+      description_de:m.description_de||'', description_en:m.description_en||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'',
+      task_de:m.task_de||'', task_en:m.task_en||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'',
+    }});
+    if(res.id) ok++; else errors++;
+  }
+  // Reset file input so same file can be re-imported
+  const fi=document.getElementById('import-file-input');
+  if(fi) fi.value='';
+  loadMissions();
+  toast(`${ok} importiert${errors?', '+errors+' Fehler':''}!`, ok>0?'success':'error');
 }
 
 // Util

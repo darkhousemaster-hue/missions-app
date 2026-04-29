@@ -27,6 +27,9 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
     timer_default INTEGER DEFAULT 60, missions_count INTEGER DEFAULT 10,
     min_location_missions INTEGER DEFAULT 3,
+    allow_photo INTEGER DEFAULT 1,
+    allow_video INTEGER DEFAULT 1,
+    allow_indoor INTEGER DEFAULT 1,
     created_at INTEGER DEFAULT (unixepoch()*1000));
   CREATE TABLE IF NOT EXISTS missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,6 +107,9 @@ migrations.forEach(sql => { try { db.exec(sql); } catch(e) {} });
 try { db.exec("ALTER TABLE modes ADD COLUMN ruleset_id INTEGER"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN timer_default INTEGER DEFAULT 60"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_de TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE locations ADD COLUMN allow_photo INTEGER DEFAULT 1"); } catch(e) {}
+try { db.exec("ALTER TABLE locations ADD COLUMN allow_video INTEGER DEFAULT 1"); } catch(e) {}
+try { db.exec("ALTER TABLE locations ADD COLUMN allow_indoor INTEGER DEFAULT 1"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_en TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_fr TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_it TEXT DEFAULT ''"); } catch(e) {}
@@ -165,10 +171,10 @@ const deleteRuleset = id => {
 // ── Locations ─────────────────────────────────────────────────────────────────
 const getLocations   = () => db.prepare('SELECT * FROM locations ORDER BY name').all();
 const getLocation    = id => db.prepare('SELECT * FROM locations WHERE id=?').get(id);
-const createLocation = ({name,missions_count=10,min_location_missions=3}) =>
-  num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions) VALUES(?,?,?,?)').run(name,60,missions_count,min_location_missions).lastInsertRowid);
-const updateLocation = (id,{name,missions_count,min_location_missions}) =>
-  db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,id);
+const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1}) =>
+  num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor) VALUES(?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0).lastInsertRowid);
+const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1}) =>
+  db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,id);
 const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(id);
 
 // ── Missions ──────────────────────────────────────────────────────────────────

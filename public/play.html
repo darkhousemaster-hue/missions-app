@@ -153,10 +153,10 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 <!-- ── MISSIONS VIEW ── -->
 <div id="view-missions">
-  <div class="legend-bar">
-    <div class="legend-item">📷 <span id="leg-photo">Fotoauftrag</span></div>
-    <div class="legend-item">🎬 <span id="leg-video">Videoauftrag</span></div>
-    <div class="legend-item">🏠 <span id="leg-indoor">Auch drinnen möglich</span></div>
+  <div class="legend-bar" id="legend-bar">
+    <div class="legend-item" id="leg-photo-item">📷 <span id="leg-photo">Fotoauftrag</span></div>
+    <div class="legend-item" id="leg-video-item">🎬 <span id="leg-video">Videoauftrag</span></div>
+    <div class="legend-item" id="leg-indoor-item">🏠 <span id="leg-indoor">Auch drinnen möglich</span></div>
   </div>
   <div id="missions-list"></div>
 </div>
@@ -244,6 +244,7 @@ let currentView = 'missions';
 // ── Translations ─────────────────────────────────────────────────────────────
 const T = {
   de: {
+    times_up:'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.',
     description:'Beschreibung', task:'Aufgabe',
     photo:'Fotoauftrag', video:'Videoauftrag', indoor:'Auch drinnen möglich',
     rules:'REGELN', rules_back:'← Zurück', send:'Senden', chat_ph:'Nachricht an Gamemaster…',
@@ -255,6 +256,7 @@ const T = {
     awaiting:'⏳ Wird geprüft',
   },
   en: {
+    times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
     description:'Description', task:'Task',
     photo:'Photo mission', video:'Video mission', indoor:'Can be done indoors',
     rules:'RULES', rules_back:'← Back', send:'Send', chat_ph:'Message to Gamemaster…',
@@ -349,6 +351,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadMissions();
   await loadChatHistory();
   await loadRules();
+  // Apply location icon settings
+  try {
+    const gameInfo = await fetch(`/api/games/${gameId}`).then(r=>r.json());
+    const loc = gameInfo.location || {};
+    const photoItem = document.getElementById('leg-photo-item');
+    const videoItem = document.getElementById('leg-video-item');
+    const indoorItem = document.getElementById('leg-indoor-item');
+    if(photoItem && loc.allow_photo===0) photoItem.style.display='none';
+    if(videoItem && loc.allow_video===0) videoItem.style.display='none';
+    if(indoorItem && loc.allow_indoor===0) indoorItem.style.display='none';
+  } catch(e) {}
 
   socket = io({ reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000 });
 
@@ -398,6 +411,13 @@ function updateTimer({ remaining, running }) {
 // ── Missions ──────────────────────────────────────────────────────────────────
 async function loadMissions() {
   const data = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
+  // Update teamName from server (fixes reload showing 'Team')
+  if (data.name) {
+    teamName = data.name;
+    sessionStorage.setItem('teamName', data.name);
+    const nameEl = document.getElementById('team-name-display');
+    if (nameEl) nameEl.textContent = data.name;
+  }
   const list = document.getElementById('missions-list');
   if (!data.missions || !data.missions.length) {
     list.innerHTML = '<div class="empty"><p>Keine Missionen gefunden.</p></div>';
@@ -470,6 +490,12 @@ function closeRejection() {
 
 // ── Camera ────────────────────────────────────────────────────────────────────
 async function openCamera(missionId, type) {
+  // Block if game has ended
+  const gameState = await fetch(`/api/games/${gameId}`).then(r=>r.json()).catch(()=>null);
+  if (gameState && gameState.status === 'ended') {
+    toast(t('times_up')||'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.', 'error');
+    return;
+  }
   currentMissionId   = missionId;
   currentMissionType = type;
   document.getElementById('shutter-icon').textContent = type==='video' ? '🔴' : '📷';
