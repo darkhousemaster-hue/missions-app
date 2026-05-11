@@ -407,13 +407,16 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
             <button class="btn btn-primary btn-sm" onclick="showAddCrMode()" id="s-cr-add-mode">＋ Modus</button>
           </div>
           <p id="s-cr-info" style="font-size:.85rem;color:var(--text-muted);margin-bottom:.75rem;">
-            CityRush nutzt GPS-Ortung. Spieler folgen nichlinearen Missionen durch verschiedene Städte.
+            CityRush nutzt GPS-Ortung. Spieler folgen nichtlinearen Missionen durch verschiedene Städte.
           </p>
           <div id="cr-mode-tabs" class="tabs" style="flex-wrap:wrap;border:none;margin-bottom:.5rem;"></div>
           <div id="cr-mode-panel" style="display:none;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem;">
               <h4 id="cr-mode-title">Missionen</h4>
-              <div style="display:flex;gap:.4rem;">
+              <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cr-import-file-input').click()" id="s-cr-import">⬆ Import</button>
+                <input type="file" id="cr-import-file-input" accept=".json" style="display:none;" onchange="importCrMissions(this.files[0])">
+                <button class="btn btn-ghost btn-sm" onclick="exportCrMissions()" id="s-cr-export">⬇ Export</button>
                 <button class="btn btn-ghost btn-sm" onclick="showAddCrMission()" id="s-cr-add-mission">＋ Mission</button>
                 <button class="btn btn-ghost btn-sm" onclick="editCurrentCrMode()" id="s-cr-edit-mode">✎ Modus</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteCurrentCrMode()">🗑</button>
@@ -2547,11 +2550,29 @@ function crMissionModal(m){
   const v=f=>m?esc(m[f]||''):'';
   const chk=(f,def=0)=>m?(m[f]?'checked':''):(def?'checked':'');
   const num=(f,def=0)=>m?m[f]||def:def;
-  // Constrain media options to what the current CR mode allows.
+  // Constrain media options to what the current CR mode allows — but always
+  // keep the mission's currently-saved value selectable, even if the parent
+  // mode was later restricted. Otherwise the GM can't edit an older mission
+  // whose media type is no longer "allowed".
   const mode = (window._crModesCache||[]).find(x=>x.id===currentCrModeId) || {allow_photo:1, allow_video:1};
-  const photoOpt = mode.allow_photo!==0 ? `<option value="photo" ${m&&m.media_required==='photo'?'selected':''}>📷 Foto</option>` : '';
-  const videoOpt = mode.allow_video!==0 ? `<option value="video" ${m&&m.media_required==='video'?'selected':''}>🎬 Video</option>` : '';
+  const showPhoto = mode.allow_photo !== 0 || (m && m.media_required === 'photo');
+  const showVideo = mode.allow_video !== 0 || (m && m.media_required === 'video');
+  const photoOpt = showPhoto ? `<option value="photo" ${m&&m.media_required==='photo'?'selected':''}>📷 Foto</option>` : '';
+  const videoOpt = showVideo ? `<option value="video" ${m&&m.media_required==='video'?'selected':''}>🎬 Video</option>` : '';
   return `
+    <!-- SPECIAL MISSION TOGGLE — sits before everything else. When ticked
+         this is a parallel mission (no GPS dependency, always available),
+         and the cooldown row below appears. -->
+    <div style="background:rgba(255,107,0,.06);border:1px solid var(--orange);border-radius:var(--radius);padding:.6rem .75rem;margin-bottom:.75rem;" data-tip="cr-special">
+      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;margin:0;">
+        <input type="checkbox" id="cr-is-special" ${chk('is_special')} style="accent-color:var(--orange);width:16px;height:16px;" onchange="crToggleSpecial()">
+        <strong>⭐ ${gmt('cr-m-special')||'Spezial-Mission (jederzeit verfügbar, GPS-unabhängig)'}</strong>
+      </label>
+      <div id="cr-special-cooldown-row" style="margin-top:.5rem;${m&&m.is_special?'':'display:none;'}">
+        <label class="label" data-tip="cr-special-cooldown">${gmt('cr-m-special-cooldown')||'Begrenzt auf X (Minuten zwischen Versuchen, 0 = aus)'}</label>
+        <input id="cr-repeat-minutes" type="number" class="input" min="0" value="${num('repeat_minutes',0)}">
+      </div>
+    </div>
     <!-- Names -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
       <label class="label" style="margin:0;">${gmt('cr-m-name')||'Name'}</label>
@@ -2700,6 +2721,12 @@ function crToggleAnswer(){
   }
   crSyncMediaAnswerExclusion();
 }
+// Show/hide the cooldown row when the special-mission flag flips.
+function crToggleSpecial(){
+  const chk = document.getElementById('cr-is-special');
+  const row = document.getElementById('cr-special-cooldown-row');
+  if(row) row.style.display = chk && chk.checked ? 'block' : 'none';
+}
 function crToggleOptions(){
   const gpsChk=document.getElementById('cr-use-gps');
   const timedChk=document.getElementById('cr-is-timed');
@@ -2735,6 +2762,8 @@ function getCrMissionData(){
     penalty_interval: parseInt(document.getElementById('cr-penalty-interval')?.value)||60,
     penalty_points: parseInt(document.getElementById('cr-penalty-pts')?.value)||2,
     media_required: mediaReq,
+    is_special: document.getElementById('cr-is-special')?.checked?1:0,
+    repeat_minutes: Math.max(0, parseInt(document.getElementById('cr-repeat-minutes')?.value)||0),
     has_answer: hasAnswer,
     answer_de: document.getElementById('cr-answer-de')?.value||'',
     answer_en: document.getElementById('cr-answer-en')?.value||'',
@@ -2866,7 +2895,10 @@ function renderCrHintsInline(type){
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.35rem;" id="hint-row-${h.id}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
         <span style="font-size:.8rem;color:var(--text-muted);font-weight:700;">${gmt('hint')||'Hinweis'} ${i+1}</span>
-        <button class="btn btn-danger btn-sm" onclick="removeCrHintInline('${h.id}','${type}')">✕</button>
+        <div style="display:flex;gap:.3rem;">
+          <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateHint('${h.id}','${type}')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
+          <button class="btn btn-danger btn-sm" onclick="removeCrHintInline('${h.id}','${type}')">✕</button>
+        </div>
       </div>
       ${h.image_path?`<img src="/uploads/${h.image_path}" onerror="this.style.display='none'" style="max-width:80px;max-height:50px;border-radius:3px;margin-bottom:.35rem;display:block;" alt="">`:''}
       <div class="field" style="margin-bottom:.35rem;">
@@ -3012,6 +3044,149 @@ async function _loadExistingHints(missionId){
   });
   _crTempHints = _crTempHintsByType.answer;   // back-compat alias
   renderCrHintsInline();   // refresh both lists
+}
+
+// Per-hint auto-translate. Picks the first non-empty language on the hint
+// card and fills the others via the same translation API the other fields use.
+async function autoTranslateHint(hintId, type){
+  type = type === 'gps' ? 'gps' : 'answer';
+  const h = (_crTempHintsByType[type]||[]).find(x => String(x.id) === String(hintId));
+  if(!h){ toast('Hinweis nicht gefunden','error'); return; }
+  // Pull live values from the inputs in case the user typed but hasn't
+  // blurred yet — keeps behaviour identical to the field-level translator.
+  const langs = ['de','en','fr','it'];
+  const texts = Object.fromEntries(langs.map(l => {
+    const el = document.getElementById(`hint-${l}-${hintId}`);
+    return [l, el ? el.value : (h[`text_${l}`]||'')];
+  }));
+  const filled = Object.entries(texts).find(([,v]) => v && v.trim());
+  if(!filled){ toast('Bitte Text eingeben','warning'); return; }
+  const [fromLang, text] = filled;
+  const empty = Object.entries(texts)
+    .filter(([k,v]) => k !== fromLang && (!v || !v.trim()))
+    .map(([k]) => k);
+  if(!empty.length){ toast('Alle Felder ausgefüllt','warning'); return; }
+  toast('Übersetze…');
+  const res = await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
+  empty.forEach(l => {
+    if(!res[l]) return;
+    const el = document.getElementById(`hint-${l}-${hintId}`);
+    if(el) el.value = res[l];
+    h[`text_${l}`] = res[l];
+  });
+  toast('Übersetzt!','success');
+}
+
+// ── CityRush mission export / import ─────────────────────────────────────────
+async function exportCrMissions(){
+  if(!currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
+  const missions = await API(`/api/cr/missions?mode_id=${currentCrModeId}`);
+  if(!missions.length){ toast(gmt('cr-no-missions')||'Keine Missionen','warning'); return; }
+  // Pull the hints for every mission so the export is round-trippable.
+  const withHints = await Promise.all(missions.map(async m => {
+    const hints = await API(`/api/cr/hints/${m.id}`);
+    return {
+      // Identity
+      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'',
+      // Gating + scoring
+      points: m.points||10,
+      lat: m.lat, lng: m.lng, radius_meters: m.radius_meters||30,
+      use_map: !!m.use_map, use_gps: !!m.use_gps,
+      is_timed: !!m.is_timed, timer_seconds: m.timer_seconds||300,
+      penalty_interval: m.penalty_interval||60, penalty_points: m.penalty_points||2,
+      media_required: m.media_required||'none',
+      is_special: !!m.is_special, repeat_minutes: m.repeat_minutes||0,
+      // Q/A
+      has_answer: !!m.has_answer,
+      answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'',
+      // Body
+      description_de:m.description_de||'', description_en:m.description_en||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'',
+      task_de:m.task_de||'', task_en:m.task_en||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'',
+      // Hints (split by type; images become URLs that the importer will skip
+      // unless the file is hand-edited to point at an existing upload).
+      hints: (hints||[]).map(h => ({
+        hint_type: h.hint_type === 'gps' ? 'gps' : 'answer',
+        text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'',
+        image_path: h.image_path || null,
+      })),
+    };
+  }));
+  const payload = {
+    format: 'cityrush-missions-export',
+    version: '1.0',
+    exported: new Date().toISOString(),
+    mode_name: currentCrModeName,
+    instructions: 'Upload via Settings → CityRush → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
+    missions: withHints,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `cityrush-missions-${(currentCrModeName||'mode').toLowerCase().replace(/[^a-z0-9]+/g,'-')}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast(`${withHints.length} ${gmt('cr-mission-suffix')||'Missionen'} exportiert`,'success');
+}
+
+async function importCrMissions(file){
+  if(!file || !currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
+  let data;
+  try { data = JSON.parse(await file.text()); }
+  catch(e){ toast('Ungültige JSON-Datei','error'); return; }
+  if(!data.missions || !Array.isArray(data.missions)){
+    toast('Kein gültiges Format (missions-Array fehlt)','error'); return;
+  }
+  let ok=0, errors=0;
+  for(const m of data.missions){
+    const body = {
+      password: settingsPassword,
+      mode_id: currentCrModeId,
+      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'',
+      description_de:m.description_de||'', description_en:m.description_en||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'',
+      task_de:m.task_de||'', task_en:m.task_en||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'',
+      points: Number(m.points)||10,
+      lat: (m.lat ?? null), lng: (m.lng ?? null),
+      radius_meters: Number(m.radius_meters)||30,
+      use_map: m.use_map?1:0, use_gps: m.use_gps?1:0,
+      is_timed: m.is_timed?1:0,
+      timer_seconds: Number(m.timer_seconds)||300,
+      penalty_interval: Number(m.penalty_interval)||60,
+      penalty_points: Number(m.penalty_points)||2,
+      media_required: m.media_required || 'none',
+      is_special: m.is_special?1:0,
+      repeat_minutes: Math.max(0, Number(m.repeat_minutes)||0),
+      has_answer: m.has_answer?1:0,
+      answer_de:m.answer_de||'', answer_en:m.answer_en||'',
+      answer_fr:m.answer_fr||'', answer_it:m.answer_it||'',
+    };
+    const res = await API('/api/cr/missions',{method:'POST',body});
+    if(res && res.id){
+      ok++;
+      // Re-create hints for the new mission (without image attachments —
+      // image_path is carried only as a reference to an existing upload).
+      const hints = Array.isArray(m.hints) ? m.hints : [];
+      for(let i=0; i<hints.length; i++){
+        const h = hints[i];
+        const form = new FormData();
+        form.append('password', settingsPassword);
+        form.append('text_de', h.text_de||''); form.append('text_en', h.text_en||'');
+        form.append('text_fr', h.text_fr||''); form.append('text_it', h.text_it||'');
+        form.append('order_index', i);
+        form.append('hint_type', h.hint_type === 'gps' ? 'gps' : 'answer');
+        await fetch(`/api/cr/hints/${res.id}`,{method:'POST',body:form}).catch(()=>{});
+      }
+    } else {
+      errors++;
+    }
+  }
+  // Allow re-importing the same file in this session.
+  const fi = document.getElementById('cr-import-file-input');
+  if(fi) fi.value='';
+  await loadCrMissions();
+  toast(`${ok} importiert${errors?', '+errors+' Fehler':''}!`, ok>0?'success':'error');
 }
 
 async function autoTranslateCrField(field){

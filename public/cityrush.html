@@ -132,7 +132,13 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
       <div id="cr-progress-text" style="font-size:.8rem;color:var(--text-muted);"></div>
       <div class="cr-progress-bar"><div class="cr-progress-fill" id="cr-progress-fill"></div></div>
     </div>
-    <!-- All missions tiles. Each tile = one mission; click to open full popup. -->
+    <!-- Special missions (always-available, parallel) — appear above the
+         linear roster. Hidden block when there are none. -->
+    <div id="cr-special-section" style="display:none;margin-top:.5rem;">
+      <div class="cr-section-label" id="cr-lbl-special" style="color:var(--orange);">⭐ Spezial-Missionen</div>
+      <div id="cr-special-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin-bottom:.75rem;"></div>
+    </div>
+    <!-- Linear mission tiles. Each tile = one mission; click to open full popup. -->
     <div id="cr-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin-top:.5rem;"></div>
     <!-- Capture a team -->
     <div id="cr-capture-section" style="margin-top:1rem;display:none;">
@@ -301,7 +307,10 @@ const T = {
         time_left:'Zeit übrig', no_rules:'Keine Regeln vorhanden.',
         pending_review:'Wird vom Spielleiter geprüft…',
         rejected_retry:'Abgelehnt — bitte erneut versuchen.',
-        accepted:'Angenommen!', rejected:'Abgelehnt' },
+        accepted:'Angenommen!', rejected:'Abgelehnt',
+        skip_mission:'Mission überspringen', skip_confirm:'Mission überspringen? Es gibt keine Punkte dafür.', skipped:'Übersprungen',
+        special:'Spezial', special_missions:'Spezial-Missionen', available:'Verfügbar', cooldown_wait:'Bitte warten:',
+        gps_hint:'GPS-Hinweis' },
   en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
         searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
         penalty:'Penalty', penalties:'Penalties', overtime:'Overtime',
@@ -316,7 +325,10 @@ const T = {
         time_left:'Time left', no_rules:'No rules set.',
         pending_review:'Awaiting Gamemaster review…',
         rejected_retry:'Rejected — please try again.',
-        accepted:'Accepted!', rejected:'Rejected' },
+        accepted:'Accepted!', rejected:'Rejected',
+        skip_mission:'Skip mission', skip_confirm:'Skip this mission? You will not get any points.', skipped:'Skipped',
+        special:'Special', special_missions:'Special missions', available:'Available', cooldown_wait:'Please wait:',
+        gps_hint:'GPS hint' },
   fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
         searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
         penalty:'Pénalité', penalties:'Pénalités', overtime:'Dépassement',
@@ -331,7 +343,10 @@ const T = {
         time_left:'Temps restant', no_rules:'Aucune règle.',
         pending_review:'En attente de validation du Gamemaster…',
         rejected_retry:'Refusé — veuillez réessayer.',
-        accepted:'Accepté!', rejected:'Refusé' },
+        accepted:'Accepté!', rejected:'Refusé',
+        skip_mission:'Passer la mission', skip_confirm:'Passer cette mission ? Vous n\'aurez aucun point.', skipped:'Passée',
+        special:'Spécial', special_missions:'Missions spéciales', available:'Disponible', cooldown_wait:'Veuillez attendre :',
+        gps_hint:'Indice GPS' },
   it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
         searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
         penalty:'Penalità', penalties:'Penalità', overtime:'Tempo extra',
@@ -346,7 +361,10 @@ const T = {
         time_left:'Tempo rimanente', no_rules:'Nessuna regola.',
         pending_review:'In attesa della revisione del Gamemaster…',
         rejected_retry:'Rifiutato — riprova.',
-        accepted:'Accettato!', rejected:'Rifiutato' },
+        accepted:'Accettato!', rejected:'Rifiutato',
+        skip_mission:'Salta missione', skip_confirm:'Saltare la missione? Non riceverai punti.', skipped:'Saltata',
+        special:'Speciale', special_missions:'Missioni speciali', available:'Disponibile', cooldown_wait:'Attendi:',
+        gps_hint:'Suggerimento GPS' },
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
 function crCycleLang(){
@@ -462,17 +480,39 @@ function updateGameTimer({remaining, running}){
 }
 
 // ── Load progress from server ─────────────────────────────────────────────────
+let specialMissions = [];
+let specialProgress = {};   // {missionId: {last_attempt, completed_count}}
+
 async function loadProgress(){
   const data = await fetch(`/api/games/${gameId}/cr/progress/${teamId}`).then(r=>r.json());
   if(!data.active){
     document.getElementById('cr-loading').textContent = 'Kein CityRush in diesem Spiel.';
     return;
   }
-  // Pull the full mission list for this CR mode so we can render the all-missions list and map markers.
+  // Pull the full mission list for the CR mode so we can render the tile grid
+  // and map markers. Linear missions only — specials are surfaced separately.
   try {
     const cr = await fetch(`/api/games/${gameId}/cr`).then(r=>r.json());
-    if(cr.active && Array.isArray(cr.missions)) allMissions = cr.missions;
+    if(cr.active && Array.isArray(cr.missions)){
+      allMissions     = cr.missions.filter(m => !m.is_special);
+      specialMissions = cr.missions.filter(m =>  m.is_special);
+    }
   } catch(e) {}
+  // Sticky team arrival: if any teammate already triggered arrival for the
+  // current mission, treat it as arrived locally too so the action UI unlocks.
+  if(Array.isArray(data.arrivedMissionIds) && data.currentMission){
+    if(data.arrivedMissionIds.includes(data.currentMission.id)){
+      arrivedAtMissionId = data.currentMission.id;
+    }
+  }
+  // Server-known special cooldowns for this team — used to disable buttons.
+  specialProgress = {};
+  (data.specialProgress || []).forEach(p => { specialProgress[p.mission_id] = p; });
+  // Also pull specials returned alongside progress if /cr wasn't reachable.
+  if(!specialMissions.length && Array.isArray(data.specialMissions)){
+    specialMissions = data.specialMissions;
+  }
+
   totalMissions = data.totalMissions;
   missionIndex  = data.progress?.mission_index || 0;
   if(data.progress?.status === 'finished'){
@@ -484,6 +524,7 @@ async function loadProgress(){
   document.getElementById('cr-mission-wrap').style.display = 'block';
   renderMission();
   renderAllMissions();
+  renderSpecialTiles();
   fetchAllTeams();
   refreshScore();
 }
@@ -523,14 +564,190 @@ function renderMission(){
   document.getElementById('cr-progress-text').textContent =
     `${t('mission')} ${missionIndex+1} / ${totalMissions}`;
   document.getElementById('cr-progress-fill').style.width = pct + '%';
-  // Mission timer is global because penalties accrue while the player works.
-  if(m.is_timed) startMissionTimer(m); else stopMissionTimer();
+  // Mission timer — only start ticking once the player has arrived (for GPS
+  // missions). For non-GPS missions it starts immediately as before.
+  const timerActive = m.is_timed && (!m.use_gps || arrivedAtMissionId === m.id);
+  if(timerActive) startMissionTimer(m); else stopMissionTimer();
   // Map gating: only auto-pan if GM ticked "show on map".
   if(m.use_map && m.lat && m.lng){ setTimeout(()=>centerMapOnMission(m), 300); }
   renderTiles();
   renderAllMissionMarkers();
   // If the popup is showing the current mission, refresh it.
   if(popupMissionId === m.id) refreshPopup();
+}
+
+// Special-mission tiles — parallel to the linear roster, always available
+// (subject to per-mission cooldown). Disabled while cooldown is active.
+function renderSpecialTiles(){
+  const section = document.getElementById('cr-special-section');
+  const grid    = document.getElementById('cr-special-tiles');
+  const label   = document.getElementById('cr-lbl-special');
+  if(!grid || !section) return;
+  if(label) label.textContent = '⭐ ' + (t('special_missions')||'Spezial-Missionen');
+  if(!specialMissions.length){ section.style.display = 'none'; grid.innerHTML = ''; return; }
+  section.style.display = 'block';
+  const now = Date.now();
+  grid.innerHTML = specialMissions.map(m => {
+    const prog = specialProgress[m.id] || {};
+    const cooldownMs = (m.repeat_minutes||0) * 60 * 1000;
+    const elapsed   = prog.last_attempt ? (now - prog.last_attempt) : Infinity;
+    const onCooldown = cooldownMs > 0 && prog.last_attempt && elapsed < cooldownMs;
+    const oneShot    = (m.repeat_minutes||0) === 0 && (prog.completed_count||0) > 0;
+    const disabled   = onCooldown || oneShot;
+    const waitSec    = onCooldown ? Math.ceil((cooldownMs - elapsed)/1000) : 0;
+    const waitLabel  = onCooldown
+      ? `${Math.floor(waitSec/60)}:${String(waitSec%60).padStart(2,'0')}`
+      : '';
+    const status     = oneShot ? (t('completed')||'Erledigt')
+                     : onCooldown ? `⏳ ${waitLabel}` : `⭐ ${t('available')||'Verfügbar'}`;
+    const name = m[`name_${lang}`] || m.name_de || `Special`;
+    const icons = [
+      m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
+      m.has_answer?'❓':'',
+    ].filter(Boolean).join(' ');
+    const tileClasses = ['cr-tile', oneShot?'done':'current', disabled?'special-disabled':''].join(' ');
+    return `<div class="${tileClasses}" ${disabled?'':'onclick="openSpecialPopup('+m.id+')"'}
+      style="border-color:var(--orange);${disabled?'opacity:.55;cursor:not-allowed;':''}">
+      <span class="status-pill" style="background:#4a2000;color:var(--orange);">${status}</span>
+      <div class="num">⭐</div>
+      <div class="name">${esc(name)}</div>
+      <div class="badges" style="color:var(--orange);">${icons} · +${m.points}pt</div>
+    </div>`;
+  }).join('');
+}
+
+// Open the special-mission popup. Same UI as a regular mission popup but
+// rendered from the special list, without GPS gating.
+function openSpecialPopup(missionId){
+  popupMissionId = missionId;
+  document.getElementById('cr-mission-popup').style.display = 'flex';
+  refreshSpecialPopup();
+}
+function refreshSpecialPopup(){
+  if(popupMissionId == null) return;
+  const m = specialMissions.find(x => x.id === popupMissionId);
+  if(!m) return;
+  const name = m[`name_${lang}`] || m.name_de || '';
+  const desc = m[`description_${lang}`] || m.description_de || '';
+  const task = m[`task_${lang}`] || m.task_de || '';
+  document.getElementById('cr-popup-content').innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;">
+      <div>
+        <div class="cr-mission-number" style="color:var(--orange);">⭐ ${(t('special')||'SPEZIAL').toUpperCase()}</div>
+        <div class="cr-mission-name">${esc(name)}</div>
+        <div class="cr-mission-pts">+${m.points} ${t('points')}</div>
+      </div>
+    </div>
+    ${desc?`<div class="cr-section-label">${t('desc')}</div><div class="cr-desc">${esc(desc)}</div>`:''}
+    ${task?`<div class="cr-section-label">${t('task')}</div><div class="cr-task">${esc(task)}</div>`:''}
+    <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
+    <div id="cr-actions" style="margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
+  `;
+  // Specials have no GPS gate — render their action UI directly.
+  renderActionsForSpecial(m);
+  renderRevealedHints(m);
+}
+function renderActionsForSpecial(m){
+  const actEl = document.getElementById('cr-actions');
+  if(!actEl) return;
+  actEl.innerHTML = '';
+  if(mediaReviewState[m.id] === 'pending'){
+    const note = document.createElement('div');
+    note.style.cssText='padding:.6rem .75rem;background:rgba(255,107,0,.08);border-left:3px solid var(--orange);border-radius:0 var(--radius) var(--radius) 0;font-size:.9rem;';
+    note.innerHTML = '⏳ ' + (t('pending_review')||'Wird vom Spielleiter geprüft…');
+    actEl.appendChild(note);
+    return;
+  }
+  if(m.has_answer){
+    const wrap = document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;gap:.5rem;';
+    const inp = document.createElement('input');
+    inp.type='text'; inp.className='input'; inp.id='cr-answer-input';
+    inp.placeholder = t('answer_ph'); inp.autocomplete='off';
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitSpecialAnswer(m); }});
+    const btn = document.createElement('button');
+    btn.className='btn btn-primary btn-full'; btn.textContent=t('answer_btn');
+    btn.onclick = () => submitSpecialAnswer(m);
+    const err = document.createElement('div');
+    err.id='cr-answer-err'; err.style.cssText='color:var(--red-light);font-size:.85rem;min-height:1.2em;';
+    wrap.appendChild(inp); wrap.appendChild(btn); wrap.appendChild(err);
+    actEl.appendChild(wrap);
+    addHintButton(actEl, m, 'answer');
+    return;
+  }
+  if(m.media_required === 'photo' || m.media_required === 'video'){
+    const label = m.media_required==='photo' ? t('photo') : t('video');
+    addActionBtn(actEl, label, 'btn-primary', () => { _specialMissionForUpload = m; openCrCamera('special'); });
+    const lbl = document.createElement('label');
+    lbl.className='btn btn-secondary btn-full'; lbl.style.cursor='pointer';
+    const galleryIcon = m.media_required==='video' ? '🎞️' : '🖼️';
+    const accept = m.media_required==='video' ? 'video/*' : 'image/*';
+    lbl.innerHTML=`${galleryIcon} ${t('gallery_upload')}<input type="file" accept="${accept}" style="display:none;">`;
+    lbl.querySelector('input').addEventListener('change', e=>{
+      const f=e.target.files?.[0]; if(!f)return;
+      _specialMissionForUpload = m;
+      capturedBlob=f; captureMode='special'; capturedIsVideo=(m.media_required==='video');
+      crUploadBlob(f);
+    });
+    actEl.appendChild(lbl);
+    addHintButton(actEl, m, 'answer');
+    return;
+  }
+  addActionBtn(actEl, t('complete'), 'btn-primary', () => completeSpecialMission(m, null));
+  addHintButton(actEl, m, 'answer');
+}
+
+let _specialMissionForUpload = null;
+
+async function submitSpecialAnswer(m){
+  const inp = document.getElementById('cr-answer-input');
+  const err = document.getElementById('cr-answer-err');
+  const answer = inp?.value?.trim();
+  if(!answer){ if(err) err.textContent='Bitte Antwort eingeben.'; return; }
+  const res = await fetch(`/api/games/${gameId}/cr/answer`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, missionId:m.id, answer}),
+  }).then(r=>r.json());
+  if(res.correct){
+    if(err) err.textContent='';
+    toast('✓ Richtig!','success');
+    await completeSpecialMission(m, null);
+    closeMissionPopup();
+  } else {
+    if(err) err.textContent = res.message || 'Leider falsch. Versuche es erneut!';
+    if(inp){ inp.style.borderColor='var(--red)'; setTimeout(()=>inp.style.borderColor='',1500); }
+  }
+}
+
+async function completeSpecialMission(m, mediaPath){
+  const res = await fetch(`/api/games/${gameId}/cr/special/complete`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, missionId:m.id, mediaPath:mediaPath||null}),
+  }).then(r=>r.json()).catch(()=>({error:'network'}));
+  if(res.error === 'Cooldown'){
+    toast(`⏳ ${t('cooldown_wait')||'Bitte warten:'} ${Math.ceil((res.waitSeconds||0)/60)} min`, 'warning');
+    return;
+  }
+  if(res.pending){
+    mediaReviewState[m.id] = 'pending';
+    refreshSpecialPopup();
+    toast('Hochgeladen — wird vom Spielleiter geprüft…','success');
+    // Locally bump cooldown so UI reflects the new last_attempt.
+    specialProgress[m.id] = {...(specialProgress[m.id]||{}), last_attempt: Date.now()};
+    renderSpecialTiles();
+    return;
+  }
+  if(res.success){
+    toast(`+${res.score} ${t('points')||'Punkte'}!`,'success');
+    specialProgress[m.id] = {
+      ...(specialProgress[m.id]||{}),
+      last_attempt: Date.now(),
+      completed_count: (specialProgress[m.id]?.completed_count||0) + 1,
+    };
+    refreshScore();
+    renderSpecialTiles();
+    closeMissionPopup();
+  }
 }
 
 // Tile grid: every mission appears, click opens the popup.
@@ -633,6 +850,14 @@ function refreshPopup(){
     <!-- Inline revealed hints -->
     <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
     <div id="cr-actions" style="margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
+    ${isCurrent ? `
+      <button id="cr-skip-btn" onclick="confirmSkipMission()"
+        style="margin-top:.6rem;padding:.45rem .75rem;font-size:.8rem;font-family:var(--body);
+               font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+               background:transparent;border:1px dashed var(--text-muted);color:var(--text-muted);
+               border-radius:var(--radius);cursor:pointer;align-self:center;">
+        ⏭ ${t('skip_mission')||'Mission überspringen'}
+      </button>` : ''}
     ${isLocked ? `<p style="color:var(--text-muted);font-style:italic;margin-top:.5rem;">${t('mission_locked')}</p>` : ''}
   `;
   // Render any previously-revealed hints (persistent visibility).
@@ -842,6 +1067,32 @@ function addActionBtn(container, label, cls, fn){
   container.appendChild(btn);
 }
 
+// Skip the current linear mission. Awards no points and advances the team.
+async function confirmSkipMission(){
+  if(!currentMission) return;
+  const ok = confirm(t('skip_confirm') || 'Mission überspringen? Es gibt keine Punkte dafür.');
+  if(!ok) return;
+  const res = await fetch(`/api/games/${gameId}/cr/skip`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId}),
+  }).then(r=>r.json()).catch(()=>({error:'network'}));
+  if(res.success){
+    stopMissionTimer();
+    if(res.nextMission){
+      missionIndex = res.nextIndex;
+      currentMission = res.nextMission;
+      arrivedAtMissionId = null;
+      renderMission();
+      closeMissionPopup();
+      toast(t('skipped') || 'Übersprungen','warning');
+    } else {
+      showFinished(0);
+    }
+  } else {
+    toast(res.error || 'Fehler', 'error');
+  }
+}
+
 // One-shot tick to populate the timer immediately when the popup opens
 // (the recurring tick runs from startMissionTimer's interval).
 function tickMissionTimerOnce(m){
@@ -1030,7 +1281,7 @@ async function checkArrival(lat, lng){
   // and we don't want to lose that). Fire-and-forget; ignore the response.
   fetch(`/api/games/${gameId}/cr/arrival`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamId, lat, lng}),
+    body: JSON.stringify({teamId, lat, lng, accuracy: gpsAccuracy||null}),
   }).catch(()=>{});
 
   const dot = document.getElementById('cr-gps-dot');
@@ -1050,10 +1301,19 @@ async function checkArrival(lat, lng){
 
 // (manual arrival override removed — was abusable as a cheat)
 
-function showArrivedOverlay({missionId}){
+function showArrivedOverlay({missionId, sticky}){
   if(!currentMission || currentMission.id !== missionId) return;
   if(arrivedAtMissionId === missionId) return;       // already shown for this mission
   arrivedAtMissionId = missionId;
+  // Start the mission timer now (it was deferred while the player was
+  // navigating). Non-GPS missions don't take this path.
+  if(currentMission.is_timed) startMissionTimer(currentMission);
+  // If this arrival is sticky (a teammate already triggered it), skip the
+  // splash overlay & sound — just unlock the UI silently.
+  if(sticky){
+    refreshPopup();
+    return;
+  }
   playArrivalSound();
   crShowView('mission');
   const overlay = document.getElementById('cr-arrived-overlay');
@@ -1297,6 +1557,26 @@ function crRetake(){
   document.getElementById('cr-cam-bar-review').style.display='none';
   document.getElementById('cr-shutter-icon').textContent = currentCaptureType==='video' ? '🔴' : '📷';
 }
+// Helper: upload media bytes to the regular upload endpoint and return the
+// server-stored path. Surfaces HTTP/network errors to the user via a toast so
+// failures don't silently swallow the player's tap. Returns null on failure.
+async function _crSendMedia(form){
+  try {
+    const r = await fetch(`/api/games/${gameId}/teams/${teamId}/missions/${currentMission?.id||0}/upload`,
+      {method:'POST', body:form});
+    if(!r.ok){
+      let msg = `Upload fehlgeschlagen (${r.status})`;
+      try { const j = await r.json(); if(j && j.error) msg = `${msg}: ${j.error}`; } catch(e){}
+      toast(msg, 'error');
+      return null;
+    }
+    return await r.json();
+  } catch(e) {
+    toast('Upload fehlgeschlagen — Netzwerk/Verbindung', 'error');
+    return null;
+  }
+}
+
 async function crUploadBlob(blob){
   // Direct upload without camera (gallery selected)
   const isVid = blob.type.startsWith('video');
@@ -1306,11 +1586,16 @@ async function crUploadBlob(blob){
   if(captureMode==='team' && captureTargetTeamId){
     form.append('teamId', teamId);
     form.append('targetTeamId', captureTargetTeamId);
-    const res=await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json());
-    if(res.success) toast('Foto gesendet! +5 Punkte möglich','success');
+    const res=await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json()).catch(()=>null);
+    if(res && res.success) toast('Foto gesendet! +5 Punkte möglich','success');
+    else toast('Upload fehlgeschlagen','error');
+  } else if(captureMode==='special' && _specialMissionForUpload){
+    // Special-mission upload → goes through cr/special/complete (with GM review).
+    const upRes = await _crSendMedia(form);
+    if(upRes) await completeSpecialMission(_specialMissionForUpload, upRes.mediaPath||null);
   } else {
-    const upRes=await fetch(`/api/games/${gameId}/teams/${teamId}/missions/${currentMission.id}/upload`,{method:'POST',body:form}).then(r=>r.json());
-    await completeMission(upRes.mediaPath||null);
+    const upRes = await _crSendMedia(form);
+    if(upRes) await completeMission(upRes.mediaPath||null);
   }
 }
 
@@ -1325,12 +1610,15 @@ async function crUpload(){
   if(captureMode==='team' && captureTargetTeamId){
     form.append('teamId', teamId);
     form.append('targetTeamId', captureTargetTeamId);
-    const res = await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json());
-    if(res.success) toast('Foto gesendet! +5 Punkte möglich','success');
+    const res = await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json()).catch(()=>null);
+    if(res && res.success) toast('Foto gesendet! +5 Punkte möglich','success');
+    else toast('Upload fehlgeschlagen','error');
+  } else if(captureMode==='special' && _specialMissionForUpload){
+    const upRes = await _crSendMedia(form);
+    if(upRes) await completeSpecialMission(_specialMissionForUpload, upRes.mediaPath||null);
   } else {
-    const upRes = await fetch(`/api/games/${gameId}/teams/${teamId}/missions/${currentMission.id}/upload`,
-      {method:'POST',body:form}).then(r=>r.json());
-    await completeMission(upRes.mediaPath||null);
+    const upRes = await _crSendMedia(form);
+    if(upRes) await completeMission(upRes.mediaPath||null);
   }
 }
 function crCloseCamera(){

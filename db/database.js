@@ -207,6 +207,37 @@ try { db.exec("ALTER TABLE cr_modes ADD COLUMN ruleset_id INTEGER"); } catch(e) 
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN timer_default INTEGER DEFAULT 60"); } catch(e) {}
 // Hide a CR mission's description/task until the player physically arrives.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN hide_until_arrival INTEGER DEFAULT 0"); } catch(e) {}
+// "Special" missions: available at any time, no GPS dependency, repeatable
+// every `repeat_minutes` (0 = one-shot). They render above the regular linear
+// roster on the player side. is_special=1 implies use_gps/use_map are
+// ignored for gating purposes.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_special INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN repeat_minutes INTEGER DEFAULT 0"); } catch(e) {}
+// Per-team progress for special missions — separate from the linear team
+// progress so repeat cooldown can be tracked without disturbing the main
+// mission_index. last_attempt = ms epoch of last attempt (accepted or pending).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS cr_special_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL,
+    team_id INTEGER NOT NULL,
+    mission_id INTEGER NOT NULL,
+    last_attempt INTEGER,           -- last attempt (start of cooldown)
+    completed_count INTEGER DEFAULT 0,
+    UNIQUE(game_id, team_id, mission_id));
+`);
+// Track team-wide GPS arrival on a CityRush mission. Once any team member
+// arrives, the row marks the whole team as arrived for that mission so
+// later GPS checks short-circuit and trigger the action UI for everyone.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS cr_arrivals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL,
+    team_id INTEGER NOT NULL,
+    mission_id INTEGER NOT NULL,
+    arrived_at INTEGER DEFAULT (unixepoch()*1000),
+    UNIQUE(game_id, team_id, mission_id));
+`);
 // Distinguish GPS-trigger hints (shown before arrival to help find the spot)
 // from answer/question hints (shown after arrival to help solve the mission).
 // Existing rows default to 'answer' so previously-saved hints keep their meaning.
@@ -214,6 +245,28 @@ try { db.exec("ALTER TABLE cr_hints ADD COLUMN hint_type TEXT DEFAULT 'answer'")
 // Track per-team GPS hint usage on the same cr_team_hints row as the answer
 // hint usage — avoids changing the existing UNIQUE(game,team,mission) key.
 try { db.exec("ALTER TABLE cr_team_hints ADD COLUMN gps_hints_used INTEGER DEFAULT 0"); } catch(e) {}
+
+// One-shot back-fill: missions created before the multi-hint editor only had
+// the single hint_de/en/fr/it columns on cr_missions. Migrate that text into
+// a single GPS-type cr_hints row so existing missions show their hint to
+// players under the new system. Guarded by a settings flag so it runs once.
+try {
+  const done = db.prepare("SELECT value FROM settings WHERE key='cr_hint_migration_v1'").get();
+  if (!done) {
+    const oldRows = db.prepare(`
+      SELECT id, hint_de, hint_en, hint_fr, hint_it FROM cr_missions
+      WHERE COALESCE(hint_de,'') || COALESCE(hint_en,'') || COALESCE(hint_fr,'') || COALESCE(hint_it,'') <> ''
+    `).all();
+    const ins = db.prepare(`INSERT INTO cr_hints(mission_id,order_index,text_de,text_en,text_fr,text_it,image_path,hint_type)
+                            VALUES(?,?,?,?,?,?,?, 'gps')`);
+    oldRows.forEach(r => {
+      // Avoid double-creating: skip if this mission already has a GPS hint.
+      const exists = db.prepare(`SELECT 1 FROM cr_hints WHERE mission_id=? AND hint_type='gps' LIMIT 1`).get(r.id);
+      if (!exists) ins.run(r.id, 0, r.hint_de||'', r.hint_en||'', r.hint_fr||'', r.hint_it||'', null);
+    });
+    db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('cr_hint_migration_v1','1')").run();
+  }
+} catch(e) { /* best-effort; don't block startup */ }
 try { db.exec("ALTER TABLE missions ADD COLUMN name_en TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_fr TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_it TEXT DEFAULT ''"); } catch(e) {}
@@ -465,7 +518,8 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'points','lat','lng','radius_meters','use_map','use_gps',
   'is_timed','timer_seconds','penalty_interval','penalty_points','media_required',
   'has_answer','answer_de','answer_en','answer_fr','answer_it',
-  'hide_until_arrival'];
+  'hide_until_arrival',
+  'is_special','repeat_minutes'];
 const createCrMission  = (data) => {
   const fields = ['mode_id', ...CR_MISSION_EDIT_FIELDS];
   const vals = fields.map(f => data[f] !== undefined ? data[f] : null);
@@ -580,10 +634,54 @@ const getPendingCrSubmissionsByTeam = gameId =>
 // expose `prepare` itself.
 const listCrSubmissions = gameId =>
   db.prepare('SELECT * FROM cr_submissions WHERE game_id=? ORDER BY id').all(gameId);
+const listCrArrivalsForGame = gameId =>
+  db.prepare('SELECT * FROM cr_arrivals WHERE game_id=?').all(gameId);
+const listCrSpecialProgressForGame = gameId =>
+  db.prepare('SELECT * FROM cr_special_progress WHERE game_id=?').all(gameId);
 const addTeamScore = (teamId, delta) => {
   if(!delta) return;
   db.prepare('UPDATE teams SET score = score + ? WHERE id = ?').run(delta, teamId);
 };
+
+// ── Team-wide GPS arrival ─────────────────────────────────────────────────────
+// One row per (game, team, mission). Once any team member triggers arrival
+// the row persists, so any further GPS-check short-circuits and the action
+// UI is unlocked for every team member.
+const recordCrArrival = (gameId, teamId, missionId) =>
+  db.prepare('INSERT OR IGNORE INTO cr_arrivals(game_id,team_id,mission_id) VALUES(?,?,?)')
+    .run(gameId, teamId, missionId);
+const hasCrArrival = (gameId, teamId, missionId) =>
+  !!db.prepare('SELECT 1 FROM cr_arrivals WHERE game_id=? AND team_id=? AND mission_id=?')
+       .get(gameId, teamId, missionId);
+const listCrArrivals = (gameId, teamId) =>
+  db.prepare('SELECT mission_id FROM cr_arrivals WHERE game_id=? AND team_id=?')
+    .all(gameId, teamId).map(r => r.mission_id);
+
+// ── Special missions (parallel, always-available, optionally on cooldown) ─────
+const getSpecialCrMissions = modeId =>
+  db.prepare('SELECT * FROM cr_missions WHERE mode_id=? AND is_special=1 ORDER BY order_index, id').all(modeId);
+const getLinearCrMissions = modeId =>
+  db.prepare('SELECT * FROM cr_missions WHERE mode_id=? AND (is_special IS NULL OR is_special=0) ORDER BY order_index, id').all(modeId);
+const getCrSpecialProgress = (gameId, teamId, missionId) =>
+  db.prepare('SELECT * FROM cr_special_progress WHERE game_id=? AND team_id=? AND mission_id=?')
+    .get(gameId, teamId, missionId);
+const getCrSpecialProgressForTeam = (gameId, teamId) =>
+  db.prepare('SELECT * FROM cr_special_progress WHERE game_id=? AND team_id=?')
+    .all(gameId, teamId);
+const upsertCrSpecialProgress = (gameId, teamId, missionId, fields) => {
+  db.prepare('INSERT OR IGNORE INTO cr_special_progress(game_id,team_id,mission_id) VALUES(?,?,?)')
+    .run(gameId, teamId, missionId);
+  if(fields && Object.keys(fields).length){
+    const sets = Object.keys(fields).map(k=>`${k}=?`).join(',');
+    db.prepare(`UPDATE cr_special_progress SET ${sets} WHERE game_id=? AND team_id=? AND mission_id=?`)
+      .run(...Object.values(fields), gameId, teamId, missionId);
+  }
+};
+// Reset the cooldown so the player can retry immediately (used when the GM
+// rejects a special-mission submission).
+const clearCrSpecialCooldown = (gameId, teamId, missionId) =>
+  db.prepare('UPDATE cr_special_progress SET last_attempt=NULL WHERE game_id=? AND team_id=? AND mission_id=?')
+    .run(gameId, teamId, missionId);
 
 const acceptCrSubmission = id => {
   db.prepare('UPDATE cr_submissions SET status=?, reviewed_at=? WHERE id=?')
@@ -650,4 +748,8 @@ module.exports = {
   createCrSubmission,getCrSubmission,getCrSubmissionFor,
   getPendingCrSubmissionsByTeam,acceptCrSubmission,rejectCrSubmission,
   getPendingCountsByTeam,listCrSubmissions,addTeamScore,
+  recordCrArrival,hasCrArrival,listCrArrivals,listCrArrivalsForGame,
+  getSpecialCrMissions,getLinearCrMissions,
+  getCrSpecialProgress,getCrSpecialProgressForTeam,upsertCrSpecialProgress,clearCrSpecialCooldown,
+  listCrSpecialProgressForGame,
 };
