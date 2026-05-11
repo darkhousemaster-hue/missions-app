@@ -207,6 +207,13 @@ try { db.exec("ALTER TABLE cr_modes ADD COLUMN ruleset_id INTEGER"); } catch(e) 
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN timer_default INTEGER DEFAULT 60"); } catch(e) {}
 // Hide a CR mission's description/task until the player physically arrives.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN hide_until_arrival INTEGER DEFAULT 0"); } catch(e) {}
+// Distinguish GPS-trigger hints (shown before arrival to help find the spot)
+// from answer/question hints (shown after arrival to help solve the mission).
+// Existing rows default to 'answer' so previously-saved hints keep their meaning.
+try { db.exec("ALTER TABLE cr_hints ADD COLUMN hint_type TEXT DEFAULT 'answer'"); } catch(e) {}
+// Track per-team GPS hint usage on the same cr_team_hints row as the answer
+// hint usage — avoids changing the existing UNIQUE(game,team,mission) key.
+try { db.exec("ALTER TABLE cr_team_hints ADD COLUMN gps_hints_used INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_en TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_fr TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE missions ADD COLUMN name_it TEXT DEFAULT ''"); } catch(e) {}
@@ -513,23 +520,44 @@ const updateTeamGps = (gameId, teamId, lat, lng) =>
 const getTeamGps = gameId =>
   db.prepare('SELECT * FROM team_gps WHERE game_id=?').all(gameId);
 
-// CR Hints
-const getCrHints     = missionId => db.prepare('SELECT * FROM cr_hints WHERE mission_id=? ORDER BY order_index,id').all(missionId);
-const createCrHint   = ({mission_id,order_index=0,text_de='',text_en='',text_fr='',text_it='',image_path=null}) =>
-  num(db.prepare('INSERT INTO cr_hints(mission_id,order_index,text_de,text_en,text_fr,text_it,image_path) VALUES(?,?,?,?,?,?,?)').run(mission_id,order_index,text_de,text_en,text_fr,text_it,image_path).lastInsertRowid);
-const updateCrHint   = (id,{order_index,text_de,text_en,text_fr,text_it,image_path}) =>
-  db.prepare('UPDATE cr_hints SET order_index=?,text_de=?,text_en=?,text_fr=?,text_it=?,image_path=? WHERE id=?').run(order_index||0,text_de||'',text_en||'',text_fr||'',text_it||'',image_path||null,id);
+// CR Hints. `hint_type` is 'gps' (shown before arrival) or 'answer' (shown
+// after arrival / for answer missions). getCrHints can optionally be scoped
+// to one type.
+const getCrHints     = (missionId, type) => type
+  ? db.prepare('SELECT * FROM cr_hints WHERE mission_id=? AND hint_type=? ORDER BY order_index,id').all(missionId, type)
+  : db.prepare('SELECT * FROM cr_hints WHERE mission_id=? ORDER BY order_index,id').all(missionId);
+const createCrHint   = ({mission_id,order_index=0,text_de='',text_en='',text_fr='',text_it='',image_path=null,hint_type='answer'}) =>
+  num(db.prepare('INSERT INTO cr_hints(mission_id,order_index,text_de,text_en,text_fr,text_it,image_path,hint_type) VALUES(?,?,?,?,?,?,?,?)').run(mission_id,order_index,text_de,text_en,text_fr,text_it,image_path,hint_type==='gps'?'gps':'answer').lastInsertRowid);
+const updateCrHint   = (id,{order_index,text_de,text_en,text_fr,text_it,image_path,hint_type}) => {
+  // If hint_type isn't passed we leave the existing value alone (back-compat).
+  const existing = db.prepare('SELECT hint_type FROM cr_hints WHERE id=?').get(id);
+  const ht = hint_type !== undefined
+    ? (hint_type==='gps'?'gps':'answer')
+    : (existing ? existing.hint_type : 'answer');
+  db.prepare('UPDATE cr_hints SET order_index=?,text_de=?,text_en=?,text_fr=?,text_it=?,image_path=?,hint_type=? WHERE id=?')
+    .run(order_index||0,text_de||'',text_en||'',text_fr||'',text_it||'',image_path||null,ht,id);
+};
 const deleteCrHint   = id => db.prepare('DELETE FROM cr_hints WHERE id=?').run(id);
 const reorderCrHints = (missionId, orderedIds) => {
   const stmt = db.prepare('UPDATE cr_hints SET order_index=? WHERE id=? AND mission_id=?');
   runTx(() => orderedIds.forEach((id,i) => stmt.run(i,id,missionId)));
 };
-const getTeamHintsUsed = (gameId,teamId,missionId) =>
-  db.prepare('SELECT hints_used FROM cr_team_hints WHERE game_id=? AND team_id=? AND mission_id=?').get(gameId,teamId,missionId)?.hints_used || 0;
-const incrementTeamHints = (gameId,teamId,missionId) => {
+// Per-team hint counters. Stored as two separate columns on the same row so
+// the existing UNIQUE(game_id, team_id, mission_id) constraint still holds.
+// hints_used = answer hints consumed; gps_hints_used = GPS hints consumed.
+const _hintColumn = type => type==='gps' ? 'gps_hints_used' : 'hints_used';
+const getTeamHintsUsed = (gameId,teamId,missionId,hintType='answer') => {
+  const col = _hintColumn(hintType);
+  const row = db.prepare(`SELECT ${col} as used FROM cr_team_hints WHERE game_id=? AND team_id=? AND mission_id=?`)
+    .get(gameId,teamId,missionId);
+  return row?.used || 0;
+};
+const incrementTeamHints = (gameId,teamId,missionId,hintType='answer') => {
+  const col = _hintColumn(hintType);
   db.prepare('INSERT OR IGNORE INTO cr_team_hints(game_id,team_id,mission_id) VALUES(?,?,?)').run(gameId,teamId,missionId);
-  db.prepare('UPDATE cr_team_hints SET hints_used=hints_used+1 WHERE game_id=? AND team_id=? AND mission_id=?').run(gameId,teamId,missionId);
-  return getTeamHintsUsed(gameId,teamId,missionId);
+  db.prepare(`UPDATE cr_team_hints SET ${col}=${col}+1 WHERE game_id=? AND team_id=? AND mission_id=?`)
+    .run(gameId,teamId,missionId);
+  return getTeamHintsUsed(gameId,teamId,missionId,hintType);
 };
 
 // CR Submissions (photo/video that needs GM approval)

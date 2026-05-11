@@ -386,7 +386,12 @@ app.post('/api/games/:gameId/timer', (req,res) => {
 
 
 // ── CR Hints ──────────────────────────────────────────────────────────────────
-app.get('/api/cr/hints/:missionId', (req,res) => res.json(db.getCrHints(req.params.missionId)));
+// Optional ?type=gps|answer to scope the result to one hint group. Without
+// the query param we still return every hint for backward compatibility.
+app.get('/api/cr/hints/:missionId', (req,res) => {
+  const type = req.query.type === 'gps' || req.query.type === 'answer' ? req.query.type : null;
+  res.json(db.getCrHints(req.params.missionId, type));
+});
 
 // Multer was writing to UPLOAD_DIR/<gameId|misc>/<filename>, but the DB stores
 // `cr_hints/<filename>`. So `/uploads/cr_hints/<filename>` 404'd and the player
@@ -409,7 +414,8 @@ app.post('/api/cr/hints/:missionId', upload.single('image'), (req,res) => {
     order_index: req.body.order_index||0,
     text_de: req.body.text_de||'', text_en: req.body.text_en||'',
     text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
-    image_path: imagePath
+    image_path: imagePath,
+    hint_type: req.body.hint_type === 'gps' ? 'gps' : 'answer',
   });
   res.json({id, success:true});
 });
@@ -424,7 +430,8 @@ app.put('/api/cr/hints/:id', upload.single('image'), (req,res) => {
     order_index: req.body.order_index||0,
     text_de: req.body.text_de||'', text_en: req.body.text_en||'',
     text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
-    image_path: imagePath
+    image_path: imagePath,
+    hint_type: req.body.hint_type === 'gps' ? 'gps' : 'answer',
   });
   res.json({success:true});
 });
@@ -441,14 +448,16 @@ app.post('/api/cr/hints/reorder/:missionId', (req,res) => {
   res.json({success:true});
 });
 
-// Request next hint
+// Request next hint. `type` is 'gps' or 'answer' (default) so the GPS hint
+// stream and the answer hint stream advance independently per team.
 app.post('/api/games/:gameId/cr/hint', (req,res) => {
   const {teamId, missionId} = req.body;
-  const hints = db.getCrHints(missionId);
-  if(!hints.length) return res.json({hint:null, index:-1, total:0});
-  const used = db.incrementTeamHints(req.params.gameId, teamId, missionId);
+  const type = req.body.type === 'gps' ? 'gps' : 'answer';
+  const hints = db.getCrHints(missionId, type);
+  if(!hints.length) return res.json({hint:null, index:-1, total:0, type});
+  const used = db.incrementTeamHints(req.params.gameId, teamId, missionId, type);
   const idx = Math.min(used-1, hints.length-1);
-  res.json({hint: hints[idx], index: idx, total: hints.length, allUsed: used >= hints.length});
+  res.json({hint: hints[idx], index: idx, total: hints.length, type, allUsed: used >= hints.length});
 });
 
 // Answer submission for question missions
@@ -532,7 +541,12 @@ app.get('/api/games/:id/cr', (req,res) => {
   const crMode = db.getGameCrMode(req.params.id);
   if(!crMode) return res.json({active:false});
   const missions = db.getCrMissions(crMode.id);
-  const missionsWithHints = missions.map(m => ({...m, hints: db.getCrHints(m.id)}));
+  const missionsWithHints = missions.map(m => ({
+    ...m,
+    hints: db.getCrHints(m.id),                       // back-compat: full list
+    gps_hints: db.getCrHints(m.id, 'gps'),            // pre-arrival reveals
+    answer_hints: db.getCrHints(m.id, 'answer'),      // post-arrival reveals
+  }));
   const progress = db.getAllCrProgress(req.params.id);
   const gps      = db.getTeamGps(req.params.id);
   const captures = db.getCrCaptures(req.params.id);

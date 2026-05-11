@@ -509,9 +509,11 @@ function renderAllMissions(){ renderTiles(); }
 
 // ── Render current mission ────────────────────────────────────────────────────
 // Per-mission state for revealed hints, kept in memory so closing/reopening
-// the popup keeps previously-revealed hints visible.
-const revealedHints = {};   // {missionId: [hintObj, ...]}
-let popupMissionId = null;  // which mission's popup is open right now
+// the popup keeps previously-revealed hints visible. Split by hint type so
+// GPS hints (revealed before arrival) and answer hints (after arrival) advance
+// independently — matching the new two-stream backend.
+const revealedHints = { gps: {}, answer: {} };   // {type: {missionId: [hintObj]}}
+let popupMissionId = null;                       // which mission's popup is open
 
 function renderMission(){
   if(!currentMission) return;
@@ -592,13 +594,14 @@ function refreshPopup(){
   const isDone    = (idx <  missionIndex);
   const isLocked  = !isCurrent && !isDone;
   const name = m[`name_${lang}`] || m.name_de || '';
-  let desc = m[`description_${lang}`] || m.description_de || '';
-  let task = m[`task_${lang}`] || m.task_de || '';
+  const desc = m[`description_${lang}`] || m.description_de || '';
+  let task   = m[`task_${lang}`] || m.task_de || '';
   const hint = m[`hint_${lang}`] || m.hint_de || '';
-  // GM-controlled "hide until arrival": for the current GPS mission, suppress
-  // description/task until the player physically arrives at the geofence.
-  if(m.hide_until_arrival && m.use_gps && isCurrent && arrivedAtMissionId !== m.id){
-    desc = ''; task = '';
+  // The task is the "solve me" step — keep it hidden for GPS missions until
+  // the player physically arrives. The description (background/story) is
+  // always shown so the player has context while navigating.
+  if(m.use_gps && isCurrent && arrivedAtMissionId !== m.id){
+    task = '';
   }
   // GPS status (only meaningful for the current mission with use_gps).
   const gpsHtml = (isCurrent && m.use_gps)
@@ -644,11 +647,13 @@ function renderActions(m){
   const actEl = document.getElementById('cr-actions');
   if(!actEl) return;
   actEl.innerHTML = '';
-  // GPS gate: until the player physically arrives, NO action UI and NO
-  // mission/question hints are shown. (The optional GPS-trigger hint text is
-  // rendered in the popup body separately and is allowed to appear pre-arrival.)
+  // GPS gate: until the player physically arrives, the mission-action UI
+  // (answer / photo / video / complete) is hidden. The GPS-hint reveal
+  // button is allowed pre-arrival because that's exactly what GPS hints are
+  // for — helping the player find the spot.
   const gpsBlocks = m.use_gps && arrivedAtMissionId !== m.id;
   if(gpsBlocks){
+    addHintButton(actEl, m, 'gps');
     return;
   }
   // If a media submission is awaiting GM review, surface that and don't
@@ -712,16 +717,19 @@ function renderActions(m){
 }
 
 // Render previously-revealed hints inline so they persist between renders.
+// Renders the appropriate stream for the current phase: pre-arrival shows the
+// GPS hints; post-arrival shows the answer/question hints. (For non-GPS
+// answer missions the answer stream is always shown.)
 function renderRevealedHints(m){
   const box = document.getElementById('cr-revealed-hints');
   if(!box) return;
-  const list = revealedHints[m.id] || [];
+  const phase = (m.use_gps && arrivedAtMissionId !== m.id) ? 'gps' : 'answer';
+  const list = (revealedHints[phase] && revealedHints[phase][m.id]) || [];
   if(!list.length){ box.innerHTML=''; return; }
+  const labelText = phase === 'gps' ? (t('gps_hint')||t('hint')) : t('hint');
   box.innerHTML = list.map((h, i) => {
     const text = h[`text_${lang}`] || h.text_de || h.text_en || '';
-    // Click to open in the zoomable lightbox. The cursor:zoom-in hint makes
-    // the affordance obvious. `onerror` hides any orphan path from a previous
-    // broken upload so the player never sees the browser's missing-image icon.
+    // Click to open in the zoomable lightbox; onerror hides orphaned paths.
     const img  = h.image_path
       ? `<img src="/uploads/${h.image_path}"
               onclick="openLightbox('/uploads/${h.image_path}')"
@@ -729,7 +737,7 @@ function renderRevealedHints(m){
               style="max-width:100%;max-height:160px;object-fit:contain;border-radius:3px;display:block;margin-bottom:.4rem;cursor:zoom-in;" alt="">`
       : '';
     return `<div class="cr-hint-chip">
-      <div style="font-size:.7rem;font-weight:700;letter-spacing:.05em;color:var(--orange);text-transform:uppercase;margin-bottom:.25rem;">💡 ${t('hint')} ${i+1}</div>
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.05em;color:var(--orange);text-transform:uppercase;margin-bottom:.25rem;">💡 ${labelText} ${i+1}</div>
       ${img}${text?esc(text):''}
     </div>`;
   }).join('');
@@ -764,31 +772,41 @@ function closeLightbox(e){
   _setViewport(_APP_VIEWPORT);        // restore the app's fixed scale
 }
 
-// Cumulative hint button: each click reveals the next hint inline.
-// Disappears once all hints are exhausted.
-function addHintButton(container, m){
-  const total = (m.hints||[]).length;
+// Cumulative hint button — phase-aware:
+//   pre-arrival on a GPS mission  → reveals the GPS hint stream
+//   post-arrival / non-GPS answer → reveals the answer hint stream
+// Hidden once the relevant stream is exhausted.
+function addHintButton(container, m, phase){
+  // Auto-detect the phase if the caller didn't supply one.
+  if(!phase) phase = (m.use_gps && arrivedAtMissionId !== m.id) ? 'gps' : 'answer';
+  // Prefer the per-type lists from the server payload, but fall back to the
+  // flat `hints` list (older payloads) so things keep working.
+  const pool = phase === 'gps'
+    ? (m.gps_hints || (m.hints||[]).filter(h => h.hint_type === 'gps'))
+    : (m.answer_hints || (m.hints||[]).filter(h => !h.hint_type || h.hint_type === 'answer'));
+  const total = pool.length;
   if(!total) return;
-  const used = (revealedHints[m.id]||[]).length;
-  if(used >= total) return; // exhausted → hide button entirely
+  const used = (revealedHints[phase][m.id] || []).length;
+  if(used >= total) return;   // exhausted → hide button entirely
   const btn = document.createElement('button');
-  btn.className='btn btn-ghost btn-full'; btn.id='cr-hint-btn';
+  btn.className='btn btn-ghost btn-full';
+  btn.id = `cr-hint-btn-${phase}`;
   btn.textContent = `${t('show_hint')} (${used}/${total})`;
-  btn.onclick = () => requestHint(m);
+  btn.onclick = () => requestHint(m, phase);
   container.appendChild(btn);
 }
 
-async function requestHint(m){
+async function requestHint(m, phase){
+  if(!phase) phase = (m.use_gps && arrivedAtMissionId !== m.id) ? 'gps' : 'answer';
   const res = await fetch(`/api/games/${gameId}/cr/hint`,{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamId, missionId: m.id})
+    body: JSON.stringify({teamId, missionId: m.id, type: phase})
   }).then(r=>r.json());
   if(!res.hint){ toast('Keine Hinweise mehr','warning'); return; }
-  // Append, dedupe by index so reveals are stable.
-  if(!revealedHints[m.id]) revealedHints[m.id] = [];
-  // Avoid duplicates if the server returns the same hint twice for some reason.
-  const already = revealedHints[m.id].some(h => h.id === res.hint.id);
-  if(!already) revealedHints[m.id].push(res.hint);
+  // Persist into the correct stream and dedupe by hint id.
+  if(!revealedHints[phase][m.id]) revealedHints[phase][m.id] = [];
+  const already = revealedHints[phase][m.id].some(h => h.id === res.hint.id);
+  if(!already) revealedHints[phase][m.id].push(res.hint);
   refreshPopup();    // re-render so the new hint chip appears and the
                      // button disappears once exhausted
 }

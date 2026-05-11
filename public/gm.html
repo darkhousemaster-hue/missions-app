@@ -407,7 +407,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
             <button class="btn btn-primary btn-sm" onclick="showAddCrMode()" id="s-cr-add-mode">＋ Modus</button>
           </div>
           <p id="s-cr-info" style="font-size:.85rem;color:var(--text-muted);margin-bottom:.75rem;">
-            CityRush nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.
+            CityRush nutzt GPS-Ortung. Spieler folgen nichlinearen Missionen durch verschiedene Städte.
           </p>
           <div id="cr-mode-tabs" class="tabs" style="flex-wrap:wrap;border:none;margin-bottom:.5rem;"></div>
           <div id="cr-mode-panel" style="display:none;">
@@ -2585,23 +2585,18 @@ function crMissionModal(m){
         ${gmt('cr-m-timed')||'⏱ Zeitlimit'}
       </label>
     </div>
-    <!-- GPS hint (shown when use_gps checked) -->
-    <div id="cr-gps-section" style="${m&&m.use_gps?'':'display:none;'}">
-      <label class="label" data-tip="cr-hint">${gmt('cr-m-gps-hint')||'Hinweis für Spieler (GPS-Trigger)'}</label>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:.2rem;">
-        <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('hint')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
+    <!-- GPS hints (multi-hint editor; only meaningful when use_gps is on).
+         Collapsible <details> so the modal stays compact. -->
+    <details id="cr-gps-section" style="${m&&m.use_gps?'':'display:none;'}border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;margin-bottom:.75rem;">
+      <summary style="cursor:pointer;font-weight:700;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--text-dim);" data-tip="cr-hint">
+        📍 ${gmt('cr-m-gps-hints-label')||'GPS-Hinweise (vor Ankunft)'}
+      </summary>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;margin-bottom:.5rem;">
+        <small style="color:var(--text-muted);">${gmt('cr-m-gps-hints-help')||'Werden vor der Ankunft einzeln aufgedeckt. Helfen, das Ziel zu finden.'}</small>
+        <button class="btn btn-ghost btn-sm" onclick="addCrHintInline('gps')">${gmt('cr-m-add-hint')||'＋ Hinweis'}</button>
       </div>
-      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem;">
-        <div><label class="label">DE</label><textarea id="cr-hint-de" class="textarea" rows="2">${v('hint_de')}</textarea></div>
-        <div><label class="label">EN</label><textarea id="cr-hint-en" class="textarea" rows="2">${v('hint_en')}</textarea></div>
-        <div><label class="label">FR</label><textarea id="cr-hint-fr" class="textarea" rows="2">${v('hint_fr')}</textarea></div>
-        <div><label class="label">IT</label><textarea id="cr-hint-it" class="textarea" rows="2">${v('hint_it')}</textarea></div>
-      </div>
-      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;margin-bottom:.5rem;" data-tip="cr-hide-until-arrival">
-        <input type="checkbox" id="cr-hide-until-arrival" ${chk('hide_until_arrival')} style="accent-color:var(--red);width:16px;height:16px;" data-tip="cr-hide-until-arrival">
-        ${gmt('cr-m-hide-until-arrival')||'🔒 Aufgabe & Beschreibung erst nach Ankunft anzeigen'}
-      </label>
-    </div>
+      <div id="cr-gps-hints-list"><span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span></div>
+    </details>
     <!-- Media required: below the checkboxes & GPS, above hints editor. -->
     <div class="field" data-tip="cr-media">
       <label class="label" data-tip="cr-media">${gmt('cr-m-media')||'Medientyp'}</label>
@@ -2639,14 +2634,18 @@ function crMissionModal(m){
         </div>
       </div>
     </div>
-    <!-- Hints section (shown for GPS and answer missions) -->
-    <div id="cr-hints-editor" style="${m&&(m.has_answer||m.use_gps)?'':'display:none;'}border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:.75rem;" data-tip="cr-hints">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
-        <label class="label" style="margin:0;" data-tip="cr-hints">${gmt('cr-m-hints-label')||'💡 Hinweise (optional)'}</label>
-        <button class="btn btn-ghost btn-sm" onclick="addCrHintInline()">${gmt('cr-m-add-hint')||'＋ Hinweis'}</button>
+    <!-- Answer/question hints (multi-hint editor; revealed after arrival, or
+         immediately for non-GPS answer missions). Collapsible <details>. -->
+    <details id="cr-hints-editor" style="border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;margin-bottom:.75rem;" data-tip="cr-hints">
+      <summary style="cursor:pointer;font-weight:700;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--text-dim);" data-tip="cr-hints">
+        💡 ${gmt('cr-m-answer-hints-label')||'Aufgaben-Hinweise (nach Ankunft)'}
+      </summary>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;margin-bottom:.5rem;">
+        <small style="color:var(--text-muted);">${gmt('cr-m-answer-hints-help')||'Werden nach Ankunft einzeln aufgedeckt. Helfen, die Aufgabe zu lösen.'}</small>
+        <button class="btn btn-ghost btn-sm" onclick="addCrHintInline('answer')">${gmt('cr-m-add-hint')||'＋ Hinweis'}</button>
       </div>
-      <div id="cr-hints-list"><span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span></div>
-    </div>
+      <div id="cr-answer-hints-list"><span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span></div>
+    </details>
     <!-- Description & Task tabs -->
     <div class="tabs" style="margin-top:.5rem;">
       <button class="tab active" onclick="switchMissionTab('desc',this)">${gmt('cr-m-tab-desc')||'📖 Beschreibung'}</button>
@@ -2736,7 +2735,6 @@ function getCrMissionData(){
     penalty_interval: parseInt(document.getElementById('cr-penalty-interval')?.value)||60,
     penalty_points: parseInt(document.getElementById('cr-penalty-pts')?.value)||2,
     media_required: mediaReq,
-    hide_until_arrival: document.getElementById('cr-hide-until-arrival')?.checked?1:0,
     has_answer: hasAnswer,
     answer_de: document.getElementById('cr-answer-de')?.value||'',
     answer_en: document.getElementById('cr-answer-en')?.value||'',
@@ -2757,9 +2755,20 @@ function getCrMissionData(){
   };
 }
 
+function _resetTempHints(){
+  _crTempHintsByType.gps = [];
+  _crTempHintsByType.answer = [];
+  _crTempHints = _crTempHintsByType.answer;
+}
+function _hasTempHintWork(){
+  // True if any hint (in either group) is new or has a pending image upload.
+  return ['gps','answer'].some(t =>
+    (_crTempHintsByType[t]||[]).some(h => h._new || h._imageFile));
+}
+
 async function showAddCrMission(){
   if(!currentCrModeId){toast('Erst einen Modus auswählen','warning');return;}
-  _crTempHints=[];
+  _resetTempHints();
   // Refresh the cached mode list so the modal can filter media options
   // (uses a static cache to avoid awaiting inside the template).
   window._crModesCache = await API('/api/cr/modes');
@@ -2772,13 +2781,14 @@ async function showAddCrMission(){
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
   crSyncMediaAnswerExclusion();
+  renderCrHintsInline();   // paint both empty hint lists
 }
 async function saveNewCrMission(){
   const data=getCrMissionData();
   const res=await API('/api/cr/missions',{method:'POST',body:{password:settingsPassword,...data}});
   if(res.id){
-    if(_crTempHints.length) await saveCrHintsForMission(res.id);
-    _crTempHints=[];
+    if(_hasTempHintWork()) await saveCrHintsForMission(res.id);
+    _resetTempHints();
     closeModal();loadCrMissions();toast('Mission erstellt!','success');
   } else toast(res.error,'error');
 }
@@ -2789,7 +2799,7 @@ async function editCrMission(id){
   ]);
   window._crModesCache = modes;
   const m=missions.find(x=>x.id===id);if(!m)return;
-  _crTempHints=[];
+  _resetTempHints();
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('cr-m-edit-title')||'CityRush Mission bearbeiten'}</h3>
     ${crMissionModal(m)}
@@ -2803,11 +2813,11 @@ async function editCrMission(id){
 }
 async function saveEditCrMission(id){
   const data=getCrMissionData();
-  const data2={password:settingsPassword,...getCrMissionData()};
+  const data2={password:settingsPassword,...data};
   const res=await API(`/api/cr/missions/${id}`,{method:'PUT',body:data2});
   if(res.success){
-    if(_crTempHints.some(h=>h._new||h._imageFile)) await saveCrHintsForMission(id);
-    _crTempHints=[];
+    if(_hasTempHintWork()) await saveCrHintsForMission(id);
+    _resetTempHints();
     closeModal();loadCrMissions();toast('Gespeichert!','success');
   }
 }
@@ -2823,79 +2833,97 @@ async function deleteCrMission(id){
     toast(res.error||'Fehler beim Löschen','error');
   }
 }
-// Inline hint management - works before and after saving mission
-let _crTempHints = []; // temporary hints array for new missions
+// Inline hint management — split across two types now:
+//   _crTempHintsByType.gps    → revealed before arrival (find the spot)
+//   _crTempHintsByType.answer → revealed after arrival / for answer missions
+// Each list is rendered into its own #cr-{type}-hints-list container and
+// every hint carries `hint_type` when posted to the server.
+const _crTempHintsByType = { gps: [], answer: [] };
+// Back-compat alias: anything that still touched the old flat array
+// `_crTempHints` will now reference the answer list (the prior default).
+let _crTempHints = _crTempHintsByType.answer;
 
-function addCrHintInline(){
-  const hintId = 'tmp_' + Date.now();
-  _crTempHints.push({id: hintId, text_de:'', text_en:'', text_fr:'', text_it:'', image_path:null, _new:true});
-  renderCrHintsInline();
+function addCrHintInline(type='answer'){
+  type = type === 'gps' ? 'gps' : 'answer';
+  const hintId = 'tmp_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  _crTempHintsByType[type].push({id: hintId, text_de:'', text_en:'', text_fr:'', text_it:'', image_path:null, _new:true, hint_type:type});
+  renderCrHintsInline(type);
 }
 
-function renderCrHintsInline(){
-  const list = document.getElementById('cr-hints-list');
+function _crHintListId(type){ return type === 'gps' ? 'cr-gps-hints-list' : 'cr-answer-hints-list'; }
+
+function renderCrHintsInline(type){
+  // If called with no type, refresh both groups (used after a mission load).
+  if(!type){ renderCrHintsInline('gps'); renderCrHintsInline('answer'); return; }
+  const list = document.getElementById(_crHintListId(type));
   if(!list) return;
-  if(!_crTempHints.length){
-    list.innerHTML='<span style="color:var(--text-muted);font-size:.85rem;">Noch keine Hinweise.</span>';
+  const items = _crTempHintsByType[type];
+  if(!items.length){
+    list.innerHTML = `<span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span>`;
     return;
   }
-  list.innerHTML = _crTempHints.map((h,i) => `
+  list.innerHTML = items.map((h,i) => `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.35rem;" id="hint-row-${h.id}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
-        <span style="font-size:.8rem;color:var(--text-muted);font-weight:700;">Hinweis ${i+1}</span>
-        <button class="btn btn-danger btn-sm" onclick="removeCrHintInline('${h.id}')">✕</button>
+        <span style="font-size:.8rem;color:var(--text-muted);font-weight:700;">${gmt('hint')||'Hinweis'} ${i+1}</span>
+        <button class="btn btn-danger btn-sm" onclick="removeCrHintInline('${h.id}','${type}')">✕</button>
       </div>
       ${h.image_path?`<img src="/uploads/${h.image_path}" onerror="this.style.display='none'" style="max-width:80px;max-height:50px;border-radius:3px;margin-bottom:.35rem;display:block;" alt="">`:''}
       <div class="field" style="margin-bottom:.35rem;">
         <label class="label">Bild</label>
-        <input type="file" accept="image/*" onchange="attachCrHintImage(this,'${h.id}')" style="color:var(--text);font-size:.8rem;">
+        <input type="file" accept="image/*" onchange="attachCrHintImage(this,'${h.id}','${type}')" style="color:var(--text);font-size:.8rem;">
       </div>
       <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.3rem;">
-        <div><label class="label">DE</label><input class="input" id="hint-de-${h.id}" value="${esc(h.text_de||'')}" oninput="_crUpdateHint('${h.id}','text_de',this.value)"></div>
-        <div><label class="label">EN</label><input class="input" id="hint-en-${h.id}" value="${esc(h.text_en||'')}" oninput="_crUpdateHint('${h.id}','text_en',this.value)"></div>
-        <div><label class="label">FR</label><input class="input" id="hint-fr-${h.id}" value="${esc(h.text_fr||'')}" oninput="_crUpdateHint('${h.id}','text_fr',this.value)"></div>
-        <div><label class="label">IT</label><input class="input" id="hint-it-${h.id}" value="${esc(h.text_it||'')}" oninput="_crUpdateHint('${h.id}','text_it',this.value)"></div>
+        <div><label class="label">DE</label><input class="input" id="hint-de-${h.id}" value="${esc(h.text_de||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_de',this.value)"></div>
+        <div><label class="label">EN</label><input class="input" id="hint-en-${h.id}" value="${esc(h.text_en||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_en',this.value)"></div>
+        <div><label class="label">FR</label><input class="input" id="hint-fr-${h.id}" value="${esc(h.text_fr||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_fr',this.value)"></div>
+        <div><label class="label">IT</label><input class="input" id="hint-it-${h.id}" value="${esc(h.text_it||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_it',this.value)"></div>
       </div>
     </div>`).join('');
 }
 
-function _crUpdateHint(id, field, value){
-  const h = _crTempHints.find(x=>String(x.id)===String(id));
+function _crUpdateHint(id, type, field, value){
+  const h = (_crTempHintsByType[type]||[]).find(x=>String(x.id)===String(id));
   if(h) h[field] = value;
 }
 
-function removeCrHintInline(id){
-  _crTempHints = _crTempHints.filter(h=>String(h.id)!==String(id));
-  renderCrHintsInline();
+function removeCrHintInline(id, type='answer'){
+  _crTempHintsByType[type] = _crTempHintsByType[type].filter(h=>String(h.id)!==String(id));
+  renderCrHintsInline(type);
 }
 
-async function attachCrHintImage(input, hintId){
+async function attachCrHintImage(input, hintId, type='answer'){
   const file = input.files?.[0];
   if(!file) return;
-  const h = _crTempHints.find(x=>String(x.id)===String(hintId));
+  const h = (_crTempHintsByType[type]||[]).find(x=>String(x.id)===String(hintId));
   if(!h) return;
   h._imageFile = file;
   h._imagePreview = URL.createObjectURL(file);
   h.image_path = null; // will be set after upload
-  renderCrHintsInline();
+  renderCrHintsInline(type);
 }
 
 async function saveCrHintsForMission(missionId){
-  for(const h of _crTempHints){
-    const form = new FormData();
-    form.append('password', settingsPassword);
-    form.append('text_de', h.text_de||'');
-    form.append('text_en', h.text_en||'');
-    form.append('text_fr', h.text_fr||'');
-    form.append('text_it', h.text_it||'');
-    form.append('order_index', _crTempHints.indexOf(h));
-    if(h._imageFile) form.append('image', h._imageFile);
-    if(!h._new){
-      // Existing hint - update
-      await fetch(`/api/cr/hints/${h.id}`,{method:'PUT',body:form});
-    } else {
-      // New hint - create
-      await fetch(`/api/cr/hints/${missionId}`,{method:'POST',body:form});
+  // Iterate both groups; each hint is posted with its hint_type so the
+  // server can write to the right bucket.
+  for(const type of ['gps','answer']){
+    const items = _crTempHintsByType[type] || [];
+    for(let i=0; i<items.length; i++){
+      const h = items[i];
+      const form = new FormData();
+      form.append('password', settingsPassword);
+      form.append('text_de', h.text_de||'');
+      form.append('text_en', h.text_en||'');
+      form.append('text_fr', h.text_fr||'');
+      form.append('text_it', h.text_it||'');
+      form.append('order_index', i);
+      form.append('hint_type', type);
+      if(h._imageFile) form.append('image', h._imageFile);
+      if(!h._new){
+        await fetch(`/api/cr/hints/${h.id}`,{method:'PUT',body:form});
+      } else {
+        await fetch(`/api/cr/hints/${missionId}`,{method:'POST',body:form});
+      }
     }
   }
 }
@@ -2971,16 +2999,30 @@ async function deleteCrHintFromEditor(hintId,missionId){
   loadCrHintsEditor(missionId);
 }
 
-// When editing, pre-load existing hints into the temp array
+// When editing, pre-load existing hints — split into the two type buckets so
+// each section's editor renders its own list. Older rows without a hint_type
+// column default to 'answer' (the prior behaviour).
 async function _loadExistingHints(missionId){
   const hints = await API(`/api/cr/hints/${missionId}`);
-  _crTempHints = hints.map(h=>({...h, _new:false}));
-  renderCrHintsInline();
+  _crTempHintsByType.gps    = [];
+  _crTempHintsByType.answer = [];
+  hints.forEach(h => {
+    const t = h.hint_type === 'gps' ? 'gps' : 'answer';
+    _crTempHintsByType[t].push({...h, _new:false, hint_type:t});
+  });
+  _crTempHints = _crTempHintsByType.answer;   // back-compat alias
+  renderCrHintsInline();   // refresh both lists
 }
 
 async function autoTranslateCrField(field){
   const langs=['de','en','fr','it'];
-  const texts=Object.fromEntries(langs.map(l=>[l,document.getElementById(`cr-${field}-${l}`)?.value||'']));
+  // Some textareas use a shorter id prefix than the field name we get called
+  // with (e.g. `cr-desc-de` for `description`). Map call-site names to the
+  // actual DOM prefix so auto-translate doesn't silently no-op with
+  // "Bitte Text eingeben" when the field is actually populated.
+  const FIELD_ID_ALIASES = { description: 'desc' };
+  const idPrefix = FIELD_ID_ALIASES[field] || field;
+  const texts=Object.fromEntries(langs.map(l=>[l,document.getElementById(`cr-${idPrefix}-${l}`)?.value||'']));
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast('Bitte Text eingeben','warning');return;}
   const [fromLang,text]=filled;
@@ -2988,7 +3030,7 @@ async function autoTranslateCrField(field){
   if(!empty.length){toast('Alle Felder ausgefüllt','warning');return;}
   toast('Übersetze…');
   const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
-  empty.forEach(l=>{const el=document.getElementById(`cr-${field}-${l}`);if(el&&res[l])el.value=res[l];});
+  empty.forEach(l=>{const el=document.getElementById(`cr-${idPrefix}-${l}`);if(el&&res[l])el.value=res[l];});
   toast('Übersetzt!','success');
 }
 
