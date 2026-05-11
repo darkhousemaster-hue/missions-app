@@ -14,13 +14,18 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;pad
 .logo-area h1{font-size:3rem;letter-spacing:.15em;color:var(--red);margin-top:.5rem;}
 .loc-sub{font-size:.85rem;color:var(--text-muted);margin-top:.3rem;}
 .gameid-sub{font-family:var(--mono);font-size:.8rem;color:var(--orange);margin-top:.15rem;}
-.join-tabs{display:flex;gap:0;margin-bottom:1.25rem;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-.join-tab{flex:1;padding:.7rem;font-family:var(--body);font-weight:700;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:none;background:var(--surface);color:var(--text-dim);transition:all .15s;}
-.join-tab.active{background:var(--red);color:#fff;}
+.join-choice{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem;}
+.join-choice .btn-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;padding:1.25rem .75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;color:var(--text);font-family:var(--body);font-weight:700;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;text-align:center;transition:all .15s;}
+.join-choice .btn-choice .icon{font-size:1.6rem;line-height:1;}
+.join-choice .btn-choice:hover{border-color:var(--red);color:var(--red-light);background:rgba(212,43,43,.06);}
+.join-choice .btn-choice.disabled{opacity:.45;cursor:not-allowed;}
+.join-choice .btn-choice.disabled:hover{border-color:var(--border);color:var(--text);background:var(--surface);}
 .error-msg{color:var(--red-light);font-size:.85rem;margin-top:.4rem;min-height:1.2em;}
 .team-row{display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.4rem;}
 .team-row-name{flex:1;font-weight:600;}
 .team-row-pts{font-family:var(--mono);font-size:.75rem;color:var(--orange);}
+.back-link{display:inline-flex;align-items:center;gap:.3rem;background:transparent;border:none;color:var(--text-muted);font-family:var(--body);font-size:.85rem;cursor:pointer;padding:0;margin-bottom:.75rem;}
+.back-link:hover{color:var(--text);}
 </style>
 </head>
 <body>
@@ -41,13 +46,21 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;pad
   </div>
 
   <div id="screen-join" style="display:none;">
-    <div class="join-tabs" id="join-tabs" style="display:none;">
-      <button class="join-tab active" id="tab-new"  onclick="switchTab('new')">Neues Team</button>
-      <button class="join-tab"        id="tab-join" onclick="switchTab('join')">Team beitreten</button>
+    <!-- Two big buttons: pick "create new" or "join existing" up front. -->
+    <div class="join-choice" id="join-choice">
+      <button class="btn-choice" id="btn-go-new"  onclick="switchTab('new')">
+        <span class="icon">＋</span><span>Neues Team erstellen</span>
+      </button>
+      <button class="btn-choice" id="btn-go-join" onclick="switchTab('join')">
+        <span class="icon">👥</span>
+        <span>Team beitreten</span>
+        <small id="btn-go-join-count" style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted);"></small>
+      </button>
     </div>
 
     <!-- New team panel -->
-    <div id="panel-new">
+    <div id="panel-new" style="display:none;">
+      <button class="back-link" onclick="showChoice()">← Zurück</button>
       <div class="field">
         <label class="label">Teamname</label>
         <input id="team-name" class="input" type="text" placeholder="Teamname eingeben…"
@@ -61,6 +74,7 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;pad
 
     <!-- Join existing team panel -->
     <div id="panel-join" style="display:none;">
+      <button class="back-link" onclick="showChoice()">← Zurück</button>
       <div id="teams-list"></div>
       <p style="font-size:.8rem;color:var(--text-muted);margin-top:.75rem;text-align:center;">
         Du siehst dieselben MiSSiONS und kannst unabhängig Medien einreichen.
@@ -101,16 +115,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (game.location) {
       document.getElementById('location-info').textContent = '📍 ' + game.location.name;
     }
-
-    existingTeams = game.teams || [];
-    if (existingTeams.length > 0) {
-      document.getElementById('join-tabs').style.display = 'flex';
-      renderTeamsList();
+    // If game has CityRush mode AND no normal missions, go to cityrush page
+    if (game.crMode) {
+      document.getElementById('location-info').textContent += '  🏃 CityRush: ' + game.crMode.name;
     }
 
+    existingTeams = game.teams || [];
+    renderTeamsList();
+    refreshJoinChoice();
+
     show('join');
+    showChoice();   // start at the two-button choice screen
     const inp = document.getElementById('team-name');
-    inp.focus();
     inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') joinAsNew(); });
   } catch(e) {
     show('error');
@@ -136,10 +152,31 @@ function renderTeamsList() {
 }
 
 function switchTab(tab) {
-  document.getElementById('panel-new').style.display  = tab === 'new'  ? 'block' : 'none';
-  document.getElementById('panel-join').style.display = tab === 'join' ? 'block' : 'none';
-  document.getElementById('tab-new').classList.toggle('active',  tab === 'new');
-  document.getElementById('tab-join').classList.toggle('active', tab === 'join');
+  // "Join existing" is disabled when no teams exist yet — bail out so the
+  // choice screen stays the entry point.
+  if(tab === 'join' && existingTeams.length === 0) return;
+  document.getElementById('join-choice').style.display = 'none';
+  document.getElementById('panel-new').style.display   = tab === 'new'  ? 'block' : 'none';
+  document.getElementById('panel-join').style.display  = tab === 'join' ? 'block' : 'none';
+  if(tab === 'new'){
+    const inp = document.getElementById('team-name');
+    if(inp) inp.focus();
+  }
+}
+// Show the two-button landing.
+function showChoice() {
+  document.getElementById('join-choice').style.display = 'grid';
+  document.getElementById('panel-new').style.display   = 'none';
+  document.getElementById('panel-join').style.display  = 'none';
+  refreshJoinChoice();
+}
+// Reflect current team count in the join button (count + disabled state).
+function refreshJoinChoice() {
+  const cnt = existingTeams.length;
+  const lbl = document.getElementById('btn-go-join-count');
+  if(lbl) lbl.textContent = cnt > 0 ? `(${cnt})` : '';
+  const btn = document.getElementById('btn-go-join');
+  if(btn) btn.classList.toggle('disabled', cnt === 0);
 }
 
 async function joinAsNew() {
@@ -163,7 +200,10 @@ async function joinAsNew() {
       sessionStorage.setItem('teamId',   String(res.id));
       sessionStorage.setItem('teamName', res.name);
       sessionStorage.setItem('gameId',   gameId);
-      window.location.href = '/play.html?game=' + gameId + '&team=' + res.id;
+      // Check if this game has CityRush
+      const gameInfo = await fetch('/api/games/' + gameId).then(r=>r.json()).catch(()=>null);
+      const targetPage = (gameInfo && gameInfo.crMode) ? '/cityrush.html' : '/play.html';
+      window.location.href = targetPage + '?game=' + gameId + '&team=' + res.id;
     } else {
       err.textContent = res.error || 'Fehler. Bitte erneut versuchen.';
       btn.disabled = false;
@@ -176,11 +216,13 @@ async function joinAsNew() {
   }
 }
 
-function joinExisting(teamId, teamName) {
+async function joinExisting(teamId, teamName) {
   sessionStorage.setItem('teamId',   String(teamId));
   sessionStorage.setItem('teamName', teamName);
   sessionStorage.setItem('gameId',   gameId);
-  window.location.href = '/play.html?game=' + gameId + '&team=' + teamId;
+  const gInfo = await fetch('/api/games/' + gameId).then(r=>r.json()).catch(()=>null);
+  const pg = (gInfo && gInfo.crMode) ? '/cityrush.html' : '/play.html';
+  window.location.href = pg + '?game=' + gameId + '&team=' + teamId;
 }
 
 function show(s) {

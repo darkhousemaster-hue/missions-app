@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<title>CityRush</title>
+<link rel="stylesheet" href="/css/app.css">
+<!-- Leaflet for maps -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
+
+/* ── Topbar ── */
+.cr-topbar { display:flex; align-items:center; justify-content:space-between; padding:.6rem .75rem;
+  background:var(--bg2); border-bottom:1px solid var(--border); flex-shrink:0; gap:.5rem; }
+.cr-timer { font-family:var(--mono); font-size:1.4rem; letter-spacing:.05em; white-space:nowrap; }
+.cr-timer.urgent { color:var(--red); animation:pulse-red 1s infinite; }
+.team-name-cr { font-family:var(--heading); font-size:1rem; letter-spacing:.1em; text-transform:uppercase;
+  flex:1; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+/* Score chip lives outside the team-name container so a long team name
+   can't clip it via overflow:hidden. */
+.cr-score-chip { font-family:var(--mono); color:var(--orange); font-size:.9rem;
+  background:rgba(255,107,0,.12); border:1px solid rgba(255,107,0,.4);
+  border-radius:var(--radius); padding:.15rem .5rem; flex-shrink:0;
+  white-space:nowrap; }
+.topbar-btn { background:var(--surface); border:1px solid var(--border); color:var(--text-dim);
+  border-radius:var(--radius); padding:.35rem .6rem; cursor:pointer; font-size:.75rem;
+  font-weight:700; text-transform:uppercase; white-space:nowrap; flex-shrink:0; position:relative; }
+.topbar-btn.active { border-color:var(--red); color:var(--red-light); }
+
+/* ── Views ── */
+#view-mission { flex:1; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 1.5rem); }
+#view-map     { flex:1; display:none; position:relative; }
+#cr-map       { width:100%; height:100%; }
+
+/* ── Mission card ── */
+.cr-progress { text-align:center; margin-bottom:.75rem; }
+.cr-progress-bar { height:4px; background:var(--surface); border-radius:2px; overflow:hidden; margin-top:.3rem; }
+.cr-progress-fill { height:100%; background:var(--red); border-radius:2px; transition:width .4s; }
+.cr-mission-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.cr-mission-header { padding:1rem; background:var(--bg3); border-bottom:1px solid var(--border); }
+.cr-mission-number { font-size:.75rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-muted); margin-bottom:.2rem; }
+.cr-mission-name { font-family:var(--heading); font-size:1.6rem; letter-spacing:.05em; color:var(--text); }
+.cr-mission-pts  { font-family:var(--mono); color:var(--orange); font-size:.9rem; margin-top:.2rem; }
+.cr-mission-body { padding:1rem; }
+.cr-section-label { font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-muted); margin-bottom:.3rem; }
+.cr-desc { font-size:.95rem; line-height:1.6; color:var(--text-dim); margin-bottom:.75rem; }
+.cr-task { font-size:.95rem; line-height:1.6; color:var(--text); background:rgba(212,43,43,.06);
+  border-left:3px solid var(--red); padding:.6rem .8rem; border-radius:0 var(--radius) var(--radius) 0;
+  margin-bottom:.75rem; }
+
+/* ── GPS arrival badge ── */
+.cr-gps-status { display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  margin-bottom:.75rem; font-size:.85rem; }
+.cr-gps-dot { width:10px; height:10px; border-radius:50%; background:var(--text-muted); flex-shrink:0; }
+.cr-gps-dot.searching { background:var(--orange); animation:pulse-red .8s infinite; }
+.cr-gps-dot.near      { background:var(--green); }
+.cr-gps-dot.arrived   { background:var(--green); }
+
+/* ── Mission timer ── */
+.cr-mission-timer { text-align:center; padding:.75rem; background:var(--bg3);
+  border:1px solid var(--border); border-radius:var(--radius); margin-bottom:.75rem; }
+.cr-mission-timer-val { font-family:var(--mono); font-size:2.5rem; }
+.cr-mission-timer-val.warning { color:var(--orange); }
+.cr-mission-timer-val.overtime { color:var(--red); animation:pulse-red 1s infinite; }
+.cr-penalty-info { font-size:.8rem; color:var(--text-muted); margin-top:.2rem; }
+
+/* ── Capture team ── */
+.cr-teams-grid { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; margin-top:.5rem; }
+.cr-team-capture-btn { padding:.6rem .75rem; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); text-align:center; cursor:pointer; font-size:.85rem; font-weight:600; }
+.cr-team-capture-btn:hover { border-color:var(--red); }
+
+/* ── Map markers ── */
+.team-marker { background:var(--red); color:#fff; border-radius:50%; width:32px; height:32px;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.75rem;
+  border:2px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+.my-marker { background:var(--green); }
+
+/* ── Finished ── */
+#view-finished { flex:1; display:none; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:2rem; }
+#view-finished h1 { font-size:3rem; color:var(--green); margin-bottom:.5rem; }
+
+/* ── Camera modal (reused from play.html style) ── */
+#cr-camera-modal { position:fixed; inset:0; background:#000; z-index:500; display:none; flex-direction:column; }
+#cr-cam-preview { flex:1; width:100%; object-fit:cover; display:block; }
+#cr-cap-img { flex:1; width:100%; object-fit:contain; display:none; background:#000; }
+.cr-cam-bar { padding:.75rem 1rem; background:#111; display:flex; gap:.75rem; align-items:center;
+  justify-content:center; flex-shrink:0; }
+.cr-shutter { width:64px; height:64px; border-radius:50%; border:3px solid #fff;
+  background:rgba(255,255,255,.15); cursor:pointer; font-size:1.5rem;
+  display:flex; align-items:center; justify-content:center; }
+
+/* ── Arrived overlay ── */
+#cr-arrived-overlay { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:1000;
+  display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem; }
+#cr-arrived-overlay h2 { font-size:2.5rem; color:var(--green); margin-bottom:.75rem; }
+
+@keyframes pulse-red { 0%,100%{opacity:1}50%{opacity:.5} }
+</style>
+</head>
+<body>
+
+<div class="cr-topbar">
+  <div class="cr-timer" id="cr-game-timer">--:--</div>
+  <div class="team-name-cr">
+    <span id="cr-team-name-text">CityRush</span>
+  </div>
+  <span class="cr-score-chip" id="cr-team-score">0pt</span>
+  <div style="display:flex;gap:.35rem;flex-shrink:0;">
+    <button class="topbar-btn active" id="btn-v-mission" onclick="crShowView('mission')">📋</button>
+    <button class="topbar-btn" id="btn-v-map" onclick="crShowView('map')">🗺️</button>
+    <button class="topbar-btn" id="btn-v-rules" onclick="showRulesView()">📖</button>
+    <button class="topbar-btn" id="btn-v-lang" onclick="crCycleLang()">DE</button>
+  </div>
+</div>
+
+<!-- MISSION VIEW -->
+<div id="view-mission">
+  <div id="cr-loading" style="text-align:center;padding:2rem;color:var(--text-muted);">Laden…</div>
+  <div id="cr-mission-wrap" style="display:none;">
+    <!-- Progress -->
+    <div class="cr-progress">
+      <div id="cr-progress-text" style="font-size:.8rem;color:var(--text-muted);"></div>
+      <div class="cr-progress-bar"><div class="cr-progress-fill" id="cr-progress-fill"></div></div>
+    </div>
+    <!-- All missions tiles. Each tile = one mission; click to open full popup. -->
+    <div id="cr-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin-top:.5rem;"></div>
+    <!-- Capture a team -->
+    <div id="cr-capture-section" style="margin-top:1rem;display:none;">
+      <div class="cr-section-label">Team fotografieren (+5 Punkte)</div>
+      <div class="cr-teams-grid" id="cr-capture-teams"></div>
+    </div>
+  </div>
+  <div id="cr-finished-wrap" style="display:none;text-align:center;padding:2rem;">
+    <div style="font-size:3rem;">🏁</div>
+    <h2 style="color:var(--green);margin:.5rem 0;">Alle Missionen geschafft!</h2>
+    <p id="cr-final-score" style="color:var(--orange);font-family:var(--mono);font-size:1.3rem;"></p>
+  </div>
+</div>
+
+<style>
+  .cr-tile {
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:.85rem .75rem; cursor:pointer; transition:all .15s; min-height:100px;
+    display:flex; flex-direction:column; gap:.3rem; position:relative;
+  }
+  .cr-tile:hover { border-color:var(--red-dim); }
+  .cr-tile.current { border-color:var(--red); box-shadow:0 0 12px rgba(212,43,43,.3); }
+  .cr-tile.done    { border-color:#006628; opacity:.85; }
+  .cr-tile .num { font-family:var(--mono); font-size:.7rem; color:var(--text-muted); }
+  .cr-tile .name { font-weight:700; font-size:.95rem; line-height:1.2; }
+  .cr-tile .badges { font-size:.75rem; color:var(--orange); margin-top:auto; }
+  .cr-tile .status-pill {
+    position:absolute; top:.4rem; right:.4rem;
+    font-size:.62rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    padding:.1rem .4rem; border-radius:2px;
+  }
+  .cr-tile.done    .status-pill { background:#003318; color:var(--green); }
+  .cr-tile.current .status-pill { background:#4a2000; color:var(--orange); }
+  .cr-tile.upcoming .status-pill { background:var(--surface2); color:var(--text-muted); }
+  /* Inline hint chip inside the popup so revealed hints persist visibly. */
+  .cr-hint-chip { background:rgba(255,107,0,.08); border-left:3px solid var(--orange);
+    padding:.5rem .75rem; border-radius:0 var(--radius) var(--radius) 0; margin-bottom:.4rem;
+    font-size:.9rem; line-height:1.5; }
+</style>
+
+<!-- MAP VIEW -->
+<div id="view-map">
+  <div id="cr-map"></div>
+  <!-- Anchored to the viewport (not the map) so the browser's chrome
+       can't hide it. Sits below the topbar on the right with a high
+       z-index, well clear of Leaflet's zoom controls and attribution. -->
+  <button id="cr-jump-me" onclick="jumpToMe()"
+    style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 64px);right:.75rem;z-index:1200;
+           display:none;align-items:center;gap:.35rem;
+           padding:.6rem .9rem;font-size:.85rem;font-family:var(--body);font-weight:700;
+           letter-spacing:.05em;text-transform:uppercase;
+           background:var(--surface);border:2px solid var(--red);color:var(--text);
+           border-radius:var(--radius);cursor:pointer;
+           box-shadow:0 4px 16px rgba(0,0,0,.6);">📍 <span id="cr-jump-me-label">Zu mir</span></button>
+</div>
+
+<!-- RULES VIEW (full-screen overlay so it stays out of the keyboard's way) -->
+<div id="cr-view-rules" style="position:fixed;inset:0;background:var(--bg3);z-index:600;display:none;flex-direction:column;">
+  <div class="cr-topbar">
+    <button class="topbar-btn" onclick="closeRulesView()">← <span id="cr-rules-back">Zurück</span></button>
+    <span id="cr-rules-title" style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;flex:1;text-align:center;">REGELN</span>
+    <span style="width:60px;"></span>
+  </div>
+  <div id="cr-rules-scroll" style="flex:1;overflow-y:auto;padding:1rem;">
+    <div id="cr-rules-text"></div>
+  </div>
+</div>
+
+<!-- HINT LIGHTBOX (pinch-to-zoom image viewer for phones) -->
+<!-- The outer scroller has `touch-action:pinch-zoom` so the browser's native
+     pinch gesture handles the zoom. No button-driven zoom — players are on
+     smartphones. Tap anywhere outside the image to dismiss. -->
+<div id="cr-lightbox" onclick="closeLightbox(event)"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:2000;display:none;align-items:center;justify-content:center;
+         padding:1rem;box-sizing:border-box;touch-action:pinch-zoom;overflow:auto;">
+  <button onclick="closeLightbox(event)"
+    style="position:fixed;top:.75rem;right:.75rem;z-index:2001;
+           padding:.5rem .75rem;font-size:1rem;font-weight:700;
+           background:var(--surface);border:1px solid var(--red);color:var(--text);
+           border-radius:var(--radius);cursor:pointer;">✕</button>
+  <img id="cr-lightbox-img" src="" alt=""
+    style="max-width:100%;max-height:100%;object-fit:contain;touch-action:pinch-zoom;">
+</div>
+
+<!-- MISSION DETAIL POPUP -->
+<div id="cr-mission-popup" class="modal-overlay" style="display:none;">
+  <div class="modal" style="padding:0;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div id="cr-popup-content" style="overflow-y:auto;flex:1;padding:1.25rem;"></div>
+    <div style="padding:.75rem 1rem;border-top:1px solid var(--border);background:var(--bg2);">
+      <button class="btn btn-ghost btn-full" onclick="closeMissionPopup()" id="cr-popup-close">← Zurück</button>
+    </div>
+  </div>
+</div>
+
+<!-- GPS ARRIVED OVERLAY -->
+<div id="cr-arrived-overlay">
+  <h2>✅ Angekommen!</h2>
+  <p id="cr-arrived-text" style="color:var(--text-dim);max-width:320px;margin:0 auto 1.5rem;"></p>
+  <button class="btn btn-primary btn-lg" onclick="dismissArrived()">Mission starten →</button>
+</div>
+
+<!-- CAMERA MODAL -->
+<div id="cr-camera-modal">
+  <div id="cr-rec-dot" style="position:absolute;top:14px;left:14px;background:var(--red);color:#fff;padding:.15rem .5rem;border-radius:3px;font-size:.8rem;font-weight:700;display:none;z-index:10;">● REC</div>
+  <video id="cr-cam-preview" autoplay muted playsinline></video>
+  <img id="cr-cap-img" alt="">
+  <video id="cr-cap-vid" controls playsinline style="flex:1;width:100%;display:none;background:#000;"></video>
+  <div class="cr-cam-bar" id="cr-cam-bar-capture">
+    <button class="topbar-btn" onclick="crCloseCamera()">✕</button>
+    <button class="cr-shutter" id="cr-shutter-btn" onclick="crCapture()"><span id="cr-shutter-icon">📷</span></button>
+    <button class="topbar-btn" onclick="crFlip()">🔄</button>
+  </div>
+  <div class="cr-cam-bar" id="cr-cam-bar-review" style="display:none;">
+    <button class="btn btn-danger" onclick="crRetake()">↺ Neu</button>
+    <button class="btn btn-success btn-lg" onclick="crUpload()">✓ Hochladen</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+'use strict';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const params   = new URLSearchParams(window.location.search);
+const gameId   = params.get('game');
+const teamId   = parseInt(params.get('team') || sessionStorage.getItem('teamId'));
+const teamName = sessionStorage.getItem('teamName') || 'Team';
+
+let lang       = localStorage.getItem('cr_lang') || 'de';
+let socket;
+let crMap = null, myMarker = null, teamMarkers = {};
+let currentMission = null, missionIndex = 0, totalMissions = 0;
+let missionTimerInterval = null, missionStartTime = null;
+let penalties = 0;
+let gpsWatchId = null, myLat = null, myLng = null;
+let cameraStream = null, capturedBlob = null, captureMode = 'mission'; // 'mission' or 'team'
+let captureTargetTeamId = null;
+let useFrontCamera = false;
+let gameEnded = false;
+let allTeams = [];
+let allMissions = [];                    // all CR missions in this mode
+let myScore = 0;                         // team's current score
+let mediaRecorder = null;
+let recordedChunks = [];
+let capturedIsVideo = false;
+let capturedMimeType = '';
+let currentCaptureType = 'photo';        // 'photo' or 'video'
+let mapMissionLayer = null;              // L.layerGroup for mission markers (so we can clear)
+let gpsAccuracy   = null;                // last known GPS accuracy in meters (±)
+let lastDistance  = null;                // last computed distance to current mission
+
+const T = {
+  de: { desc:'Beschreibung', task:'Aufgabe', hint:'Hinweis', mission:'Mission',
+        searching:'GPS wird gesucht…', near:'In der Nähe…', arrived:'Angekommen!',
+        penalty:'Strafpunkt', penalties:'Strafpunkte', overtime:'Overtime',
+        complete:'Mission abschliessen', photo:'📷 Foto aufnehmen', video:'🎬 Video aufnehmen',
+        capture_team:'Team fotografieren', no_gps:'Kein GPS-Signal',
+        timer_up:'Zeit abgelaufen!', next:'Nächste Mission', finished:'Fertig!',
+        all_missions:'Alle Missionen', completed:'Erledigt', current:'Aktuell', upcoming:'Kommend',
+        gallery_upload:'Aus Galerie hochladen', show_hint:'💡 Hinweis anzeigen',
+        rules:'REGELN', rules_back:'← Zurück', back:'← Zurück', close:'Schließen',
+        jump_to_me:'📍 Zu mir', answer_ph:'Antwort eingeben…', answer_btn:'✓ Antworten',
+        points:'Punkte', mission_locked:'Erst zum Ziel laufen…',
+        time_left:'Zeit übrig', no_rules:'Keine Regeln vorhanden.',
+        pending_review:'Wird vom Spielleiter geprüft…',
+        rejected_retry:'Abgelehnt — bitte erneut versuchen.',
+        accepted:'Angenommen!', rejected:'Abgelehnt' },
+  en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
+        searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
+        penalty:'Penalty', penalties:'Penalties', overtime:'Overtime',
+        complete:'Complete mission', photo:'📷 Take photo', video:'🎬 Record video',
+        capture_team:'Photograph a team', no_gps:'No GPS signal',
+        timer_up:'Time is up!', next:'Next mission', finished:'Finished!',
+        all_missions:'All missions', completed:'Done', current:'Current', upcoming:'Upcoming',
+        gallery_upload:'Upload from gallery', show_hint:'💡 Show hint',
+        rules:'RULES', rules_back:'← Back', back:'← Back', close:'Close',
+        jump_to_me:'📍 Jump to me', answer_ph:'Type your answer…', answer_btn:'✓ Answer',
+        points:'points', mission_locked:'Walk to the destination first…',
+        time_left:'Time left', no_rules:'No rules set.',
+        pending_review:'Awaiting Gamemaster review…',
+        rejected_retry:'Rejected — please try again.',
+        accepted:'Accepted!', rejected:'Rejected' },
+  fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
+        searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
+        penalty:'Pénalité', penalties:'Pénalités', overtime:'Dépassement',
+        complete:'Terminer la mission', photo:'📷 Prendre photo', video:'🎬 Enregistrer',
+        capture_team:'Photographier une équipe', no_gps:'Pas de GPS',
+        timer_up:'Temps écoulé!', next:'Mission suivante', finished:'Terminé!',
+        all_missions:'Toutes les missions', completed:'Fait', current:'En cours', upcoming:'À venir',
+        gallery_upload:'Charger depuis la galerie', show_hint:'💡 Afficher un indice',
+        rules:'RÈGLES', rules_back:'← Retour', back:'← Retour', close:'Fermer',
+        jump_to_me:'📍 Vers moi', answer_ph:'Saisir la réponse…', answer_btn:'✓ Répondre',
+        points:'points', mission_locked:'Allez d\'abord à destination…',
+        time_left:'Temps restant', no_rules:'Aucune règle.',
+        pending_review:'En attente de validation du Gamemaster…',
+        rejected_retry:'Refusé — veuillez réessayer.',
+        accepted:'Accepté!', rejected:'Refusé' },
+  it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
+        searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
+        penalty:'Penalità', penalties:'Penalità', overtime:'Tempo extra',
+        complete:'Completa missione', photo:'📷 Scatta foto', video:'🎬 Registra',
+        capture_team:'Fotografa una squadra', no_gps:'Nessun GPS',
+        timer_up:'Tempo scaduto!', next:'Prossima missione', finished:'Finito!',
+        all_missions:'Tutte le missioni', completed:'Fatto', current:'Attuale', upcoming:'Prossime',
+        gallery_upload:'Carica dalla galleria', show_hint:'💡 Mostra suggerimento',
+        rules:'REGOLE', rules_back:'← Indietro', back:'← Indietro', close:'Chiudi',
+        jump_to_me:'📍 Vai a me', answer_ph:'Scrivi la risposta…', answer_btn:'✓ Rispondi',
+        points:'punti', mission_locked:'Vai prima alla destinazione…',
+        time_left:'Tempo rimanente', no_rules:'Nessuna regola.',
+        pending_review:'In attesa della revisione del Gamemaster…',
+        rejected_retry:'Rifiutato — riprova.',
+        accepted:'Accettato!', rejected:'Rifiutato' },
+};
+function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
+function crCycleLang(){
+  const LANGS=['de','en','fr','it'];
+  lang=LANGS[(LANGS.indexOf(lang)+1)%LANGS.length];
+  localStorage.setItem('cr_lang',lang);
+  document.getElementById('btn-v-lang').textContent=lang.toUpperCase();
+  applyCrTranslations();
+  renderTiles();
+  if(currentMission) renderMission();
+  if(popupMissionId != null) refreshPopup();
+  loadRules();   // re-render rules in the new language
+}
+
+// Localise static labels (back button, jump-to-me, popup close, rules title).
+function applyCrTranslations(){
+  const set = (id, txt) => { const el=document.getElementById(id); if(el) el.textContent = txt; };
+  set('cr-jump-me-label', t('jump_to_me').replace(/^📍\s*/,''));
+  set('cr-rules-back', t('back').replace(/^←\s*/,''));
+  set('cr-rules-title', t('rules'));
+  set('cr-popup-close', t('back'));
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  if(!gameId || !teamId){ window.location.href='/'; return; }
+  // Set the team name on the inner span so we don't wipe out the score chip.
+  document.getElementById('cr-team-name-text').textContent = teamName;
+  document.getElementById('btn-v-lang').textContent = lang.toUpperCase();
+
+  socket = io({ reconnection:true });
+  socket.on('connect', () => socket.emit('join_game', {gameId, teamId}));
+  socket.on('timer_update', updateGameTimer);
+  socket.on('timer_state',  updateGameTimer);
+  socket.on('gps_update',   onGpsUpdate);
+  socket.on('cr_next_mission', onNextMission);
+  socket.on('cr_arrived',   showArrivedOverlay);
+  socket.on('cr_finished',  onCrFinished);
+  socket.on('game_ended',   () => { gameEnded=true; });
+  // GM accepted/rejected a CR media submission. On accept the server has
+  // already advanced us via cr_next_mission/cr_finished; on reject we
+  // unblock the action buttons so the player can try again.
+  socket.on('cr_submission_reviewed', ({missionId, accepted, message}) => {
+    if(accepted){
+      delete mediaReviewState[missionId];
+      delete mediaReviewState[`${missionId}_msg`];
+      toast('✓ ' + (t('accepted')||'Angenommen!'), 'success');
+      refreshScore();
+    } else {
+      mediaReviewState[missionId] = 'rejected';
+      mediaReviewState[`${missionId}_msg`] = message || '';
+      toast('❌ ' + (t('rejected')||'Abgelehnt'), 'error');
+      // Re-render the popup so the rejection message + retry buttons show.
+      if(popupMissionId === missionId) refreshPopup();
+    }
+  });
+
+  applyCrTranslations();
+  await loadProgress();
+  await loadRules();
+  startGpsTracking();
+  // Map is the default view
+  crShowView('map');
+  // Poll score so GM-awarded capture bonuses appear without a reload.
+  setInterval(refreshScore, 15000);
+});
+
+// ── Rules view ────────────────────────────────────────────────────────────────
+let crRulesList = [];
+async function loadRules(){
+  try {
+    crRulesList = await fetch(`/api/games/${gameId}/rules`).then(r=>r.json());
+  } catch(e) { crRulesList = []; }
+  renderRulesView();
+}
+function renderRulesView(){
+  const box = document.getElementById('cr-rules-text');
+  if(!box) return;
+  if(!crRulesList.length){
+    box.innerHTML = `<p style="color:var(--text-muted);">${t('no_rules')}</p>`;
+    return;
+  }
+  box.innerHTML = crRulesList.map((r,i) => {
+    const txt = (r[lang]||r.de||r.en||'')
+      .replace(/\[photo\]/gi,'📷').replace(/\[video\]/gi,'🎬').replace(/\[indoor\]/gi,'🏠');
+    return `<div style="padding:.5rem 0;border-bottom:1px solid var(--border);color:var(--text);line-height:1.6;">
+      <strong style="color:var(--text-muted);margin-right:.4rem;">${i+1}.</strong>${esc(txt)}
+    </div>`;
+  }).join('');
+}
+function showRulesView(){
+  renderRulesView();   // re-render in current language in case it changed
+  document.getElementById('cr-view-rules').style.display = 'flex';
+  // The fixed jump-to-me button would otherwise overlap the rules overlay.
+  const jm = document.getElementById('cr-jump-me');
+  if(jm) jm.style.display = 'none';
+}
+function closeRulesView(){
+  document.getElementById('cr-view-rules').style.display = 'none';
+  // Restore the jump-to-me visibility based on the underlying view.
+  const onMap = document.getElementById('view-map').style.display !== 'none';
+  const jm = document.getElementById('cr-jump-me');
+  if(jm) jm.style.display = onMap ? 'inline-flex' : 'none';
+}
+
+// ── Game timer ────────────────────────────────────────────────────────────────
+function updateGameTimer({remaining, running}){
+  const el = document.getElementById('cr-game-timer');
+  const m = Math.floor(remaining/60).toString().padStart(2,'0');
+  const s = (remaining%60).toString().padStart(2,'0');
+  el.textContent = `${m}:${s}`;
+  el.className = 'cr-timer' + (remaining<=60&&running?' urgent':'');
+}
+
+// ── Load progress from server ─────────────────────────────────────────────────
+async function loadProgress(){
+  const data = await fetch(`/api/games/${gameId}/cr/progress/${teamId}`).then(r=>r.json());
+  if(!data.active){
+    document.getElementById('cr-loading').textContent = 'Kein CityRush in diesem Spiel.';
+    return;
+  }
+  // Pull the full mission list for this CR mode so we can render the all-missions list and map markers.
+  try {
+    const cr = await fetch(`/api/games/${gameId}/cr`).then(r=>r.json());
+    if(cr.active && Array.isArray(cr.missions)) allMissions = cr.missions;
+  } catch(e) {}
+  totalMissions = data.totalMissions;
+  missionIndex  = data.progress?.mission_index || 0;
+  if(data.progress?.status === 'finished'){
+    showFinished(data.progress.score_earned);
+    return;
+  }
+  currentMission = data.currentMission;
+  document.getElementById('cr-loading').style.display = 'none';
+  document.getElementById('cr-mission-wrap').style.display = 'block';
+  renderMission();
+  renderAllMissions();
+  fetchAllTeams();
+  refreshScore();
+}
+
+// Pull team score from rankings periodically and after key events.
+async function refreshScore(){
+  try {
+    const ranks = await fetch(`/api/games/${gameId}/rankings`).then(r=>r.json());
+    const me = (ranks||[]).find(r=>r.id===teamId);
+    if(me) updateScoreDisplay(me.score);
+  } catch(e) {}
+}
+function updateScoreDisplay(score){
+  myScore = score;
+  const el = document.getElementById('cr-team-score');
+  if(el) el.textContent = `${score}pt`;
+}
+
+// renderAllMissions() was the old "list view" below the single mission card.
+// It's superseded by the tile grid (renderTiles), but we keep a tiny shim so
+// any leftover callers still no-op safely.
+function renderAllMissions(){ renderTiles(); }
+
+// ── Render current mission ────────────────────────────────────────────────────
+// Per-mission state for revealed hints, kept in memory so closing/reopening
+// the popup keeps previously-revealed hints visible.
+const revealedHints = {};   // {missionId: [hintObj, ...]}
+let popupMissionId = null;  // which mission's popup is open right now
+
+function renderMission(){
+  if(!currentMission) return;
+  const m = currentMission;
+  // Progress bar (shared header)
+  const pct = totalMissions > 0 ? ((missionIndex)/totalMissions*100) : 0;
+  document.getElementById('cr-progress-text').textContent =
+    `${t('mission')} ${missionIndex+1} / ${totalMissions}`;
+  document.getElementById('cr-progress-fill').style.width = pct + '%';
+  // Mission timer is global because penalties accrue while the player works.
+  if(m.is_timed) startMissionTimer(m); else stopMissionTimer();
+  // Map gating: only auto-pan if GM ticked "show on map".
+  if(m.use_map && m.lat && m.lng){ setTimeout(()=>centerMapOnMission(m), 300); }
+  renderTiles();
+  renderAllMissionMarkers();
+  // If the popup is showing the current mission, refresh it.
+  if(popupMissionId === m.id) refreshPopup();
+}
+
+// Tile grid: every mission appears, click opens the popup.
+function renderTiles(){
+  const grid = document.getElementById('cr-tiles');
+  if(!grid) return;
+  if(!allMissions.length){ grid.innerHTML=''; return; }
+  grid.innerHTML = allMissions.map((m,i) => {
+    const status = i<missionIndex ? 'done' : i===missionIndex ? 'current' : 'upcoming';
+    const pill = status==='done' ? `✓ ${t('completed')}`
+               : status==='current' ? `▶ ${t('current')}`
+               : `· ${t('upcoming')}`;
+    const name = m[`name_${lang}`] || m.name_de || `${t('mission')} ${i+1}`;
+    const icons = [
+      m.use_gps?'📍':'',
+      m.use_map?'🗺️':'',
+      m.is_timed?'⏱':'',
+      m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
+      m.has_answer?'❓':''
+    ].filter(Boolean).join(' ');
+    return `<div class="cr-tile ${status}" onclick="openMissionPopup(${m.id})">
+      <span class="status-pill">${pill}</span>
+      <div class="num">${i+1} / ${allMissions.length}</div>
+      <div class="name">${esc(name)}</div>
+      <div class="badges">${icons} · +${m.points}pt</div>
+    </div>`;
+  }).join('');
+}
+
+// Open the popup for a given mission. Upcoming/done missions are read-only;
+// the current mission gets the full action UI.
+function openMissionPopup(missionId){
+  popupMissionId = missionId;
+  document.getElementById('cr-mission-popup').style.display = 'flex';
+  refreshPopup();
+  // Don't make the player wait for the next watchPosition tick to see GPS
+  // status — fire an immediate check using the freshest fix we have.
+  if(currentMission && currentMission.id === missionId && currentMission.use_gps){
+    if(myLat != null && myLng != null){
+      checkArrival(myLat, myLng);
+    } else if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        pos => { myLat = pos.coords.latitude; myLng = pos.coords.longitude;
+                 updateMyMapMarker(myLat, myLng); checkArrival(myLat, myLng); },
+        () => {},
+        { enableHighAccuracy:true, maximumAge:0, timeout:5000 }
+      );
+    }
+  }
+}
+function closeMissionPopup(){
+  popupMissionId = null;
+  document.getElementById('cr-mission-popup').style.display = 'none';
+}
+function refreshPopup(){
+  if(popupMissionId == null) return;
+  const m   = allMissions.find(x => x.id === popupMissionId);
+  if(!m) return;
+  const idx = allMissions.indexOf(m);
+  const isCurrent = (idx === missionIndex);
+  const isDone    = (idx <  missionIndex);
+  const isLocked  = !isCurrent && !isDone;
+  const name = m[`name_${lang}`] || m.name_de || '';
+  let desc = m[`description_${lang}`] || m.description_de || '';
+  let task = m[`task_${lang}`] || m.task_de || '';
+  const hint = m[`hint_${lang}`] || m.hint_de || '';
+  // GM-controlled "hide until arrival": for the current GPS mission, suppress
+  // description/task until the player physically arrives at the geofence.
+  if(m.hide_until_arrival && m.use_gps && isCurrent && arrivedAtMissionId !== m.id){
+    desc = ''; task = '';
+  }
+  // GPS status (only meaningful for the current mission with use_gps).
+  const gpsHtml = (isCurrent && m.use_gps)
+    ? `<div class="cr-gps-status" style="display:flex;">
+         <div class="cr-gps-dot ${arrivedAtMissionId===m.id?'arrived':'searching'}" id="cr-gps-dot"></div>
+         <span id="cr-gps-text">${arrivedAtMissionId===m.id ? t('arrived')+' ✅' : t('searching')}</span>
+       </div>` : '';
+  // Mission timer block (only for current + is_timed).
+  const timerHtml = (isCurrent && m.is_timed)
+    ? `<div class="cr-mission-timer">
+         <div class="cr-mission-timer-val" id="cr-mission-timer-val">--:--</div>
+         <div class="cr-penalty-info" id="cr-penalty-info"></div>
+       </div>` : '';
+  document.getElementById('cr-popup-content').innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;">
+      <div>
+        <div class="cr-mission-number">${t('mission').toUpperCase()} ${idx+1}</div>
+        <div class="cr-mission-name">${esc(name)}</div>
+        <div class="cr-mission-pts">+${m.points} ${t('points')}</div>
+      </div>
+      <span class="status-pill" style="position:static;${isDone?'background:#003318;color:var(--green);':isCurrent?'background:#4a2000;color:var(--orange);':'background:var(--surface2);color:var(--text-muted);'}font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.2rem .5rem;border-radius:2px;">
+        ${isDone?'✓ '+t('completed'):isCurrent?'▶ '+t('current'):'· '+t('upcoming')}
+      </span>
+    </div>
+    ${gpsHtml}${timerHtml}
+    ${desc ? `<div class="cr-section-label">${t('desc')}</div><div class="cr-desc">${esc(desc)}</div>` : ''}
+    ${task ? `<div class="cr-section-label">${t('task')}</div><div class="cr-task">${esc(task)}</div>` : ''}
+    ${(isCurrent && m.use_gps && hint) ? `<div class="cr-section-label">${t('hint')}</div><div class="cr-desc">${esc(hint)}</div>` : ''}
+    <!-- Inline revealed hints -->
+    <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
+    <div id="cr-actions" style="margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
+    ${isLocked ? `<p style="color:var(--text-muted);font-style:italic;margin-top:.5rem;">${t('mission_locked')}</p>` : ''}
+  `;
+  // Render any previously-revealed hints (persistent visibility).
+  renderRevealedHints(m);
+  // Action buttons live only on the current mission's popup.
+  if(isCurrent) renderActions(m);
+  // Tick the mission timer text immediately so the user doesn't see "--:--".
+  if(isCurrent && m.is_timed) tickMissionTimerOnce(m);
+}
+
+function renderActions(m){
+  const actEl = document.getElementById('cr-actions');
+  if(!actEl) return;
+  actEl.innerHTML = '';
+  // GPS gate: until the player physically arrives, NO action UI and NO
+  // mission/question hints are shown. (The optional GPS-trigger hint text is
+  // rendered in the popup body separately and is allowed to appear pre-arrival.)
+  const gpsBlocks = m.use_gps && arrivedAtMissionId !== m.id;
+  if(gpsBlocks){
+    return;
+  }
+  // If a media submission is awaiting GM review, surface that and don't
+  // re-render the upload buttons — otherwise the player would queue duplicates.
+  if(mediaReviewState[m.id] === 'pending'){
+    const note = document.createElement('div');
+    note.style.cssText='padding:.6rem .75rem;background:rgba(255,107,0,.08);border-left:3px solid var(--orange);border-radius:0 var(--radius) var(--radius) 0;font-size:.9rem;';
+    note.innerHTML = '⏳ ' + (t('pending_review')||'Wird vom Spielleiter geprüft…');
+    actEl.appendChild(note);
+    addHintButton(actEl, m);
+    return;
+  }
+  if(mediaReviewState[m.id] === 'rejected'){
+    const note = document.createElement('div');
+    note.style.cssText='padding:.6rem .75rem;background:rgba(212,43,43,.12);border-left:3px solid var(--red);border-radius:0 var(--radius) var(--radius) 0;font-size:.9rem;margin-bottom:.4rem;';
+    note.textContent = '❌ ' + (mediaReviewState[`${m.id}_msg`] || t('rejected_retry') || 'Abgelehnt — bitte erneut versuchen.');
+    actEl.appendChild(note);
+    // Fall through to render upload buttons again so the player can retry.
+  }
+  // Answer/question flow.
+  if(m.has_answer){
+    const wrap = document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;gap:.5rem;';
+    const inp = document.createElement('input');
+    inp.type='text'; inp.className='input'; inp.id='cr-answer-input';
+    inp.placeholder = t('answer_ph');
+    inp.autocomplete='off';
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitAnswer(); }});
+    const btn = document.createElement('button');
+    btn.className='btn btn-primary btn-full'; btn.textContent=t('answer_btn');
+    btn.onclick = submitAnswer;
+    const errEl = document.createElement('div');
+    errEl.id='cr-answer-err'; errEl.style.cssText='color:var(--red-light);font-size:.85rem;min-height:1.2em;';
+    wrap.appendChild(inp); wrap.appendChild(btn); wrap.appendChild(errEl);
+    actEl.appendChild(wrap);
+    addHintButton(actEl, m);
+    return;
+  }
+  // Media required (photo / video).
+  if(m.media_required === 'photo' || m.media_required === 'video'){
+    const label = m.media_required==='photo' ? t('photo') : t('video');
+    const galleryIcon = m.media_required==='video' ? '🎞️' : '🖼️';
+    const accept = m.media_required==='video' ? 'video/*' : 'image/*';
+    addActionBtn(actEl, label, 'btn-primary', ()=>openCrCamera('mission'));
+    const lbl = document.createElement('label');
+    lbl.className='btn btn-secondary btn-full';
+    lbl.style.cursor='pointer';
+    lbl.innerHTML=`${galleryIcon} ${t('gallery_upload')}<input type="file" accept="${accept}" style="display:none;">`;
+    lbl.querySelector('input').addEventListener('change', e=>{
+      const f=e.target.files?.[0]; if(!f)return;
+      capturedBlob=f; captureMode='mission'; capturedIsVideo=(m.media_required==='video');
+      crUploadBlob(f);
+    });
+    actEl.appendChild(lbl);
+    addHintButton(actEl, m);
+    return;
+  }
+  // Plain "complete" action (no media, no answer).
+  addActionBtn(actEl, t('complete'), 'btn-primary', ()=>completeMission());
+  addHintButton(actEl, m);
+}
+
+// Render previously-revealed hints inline so they persist between renders.
+function renderRevealedHints(m){
+  const box = document.getElementById('cr-revealed-hints');
+  if(!box) return;
+  const list = revealedHints[m.id] || [];
+  if(!list.length){ box.innerHTML=''; return; }
+  box.innerHTML = list.map((h, i) => {
+    const text = h[`text_${lang}`] || h.text_de || h.text_en || '';
+    // Click to open in the zoomable lightbox. The cursor:zoom-in hint makes
+    // the affordance obvious. `onerror` hides any orphan path from a previous
+    // broken upload so the player never sees the browser's missing-image icon.
+    const img  = h.image_path
+      ? `<img src="/uploads/${h.image_path}"
+              onclick="openLightbox('/uploads/${h.image_path}')"
+              onerror="this.style.display='none'"
+              style="max-width:100%;max-height:160px;object-fit:contain;border-radius:3px;display:block;margin-bottom:.4rem;cursor:zoom-in;" alt="">`
+      : '';
+    return `<div class="cr-hint-chip">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.05em;color:var(--orange);text-transform:uppercase;margin-bottom:.25rem;">💡 ${t('hint')} ${i+1}</div>
+      ${img}${text?esc(text):''}
+    </div>`;
+  }).join('');
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+// The page's <meta name="viewport"> sets user-scalable=no (needed for the
+// app UI), which disables native pinch-zoom *everywhere*. CSS can't override
+// it. We swap the viewport meta on lightbox open so the user CAN pinch-zoom
+// the hint image, then restore it on close so the rest of the app keeps its
+// fixed scale.
+function _setViewport(content){
+  const meta = document.querySelector('meta[name="viewport"]');
+  if(meta) meta.setAttribute('content', content);
+}
+const _APP_VIEWPORT     = 'width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no';
+const _ZOOMABLE_VIEWPORT = 'width=device-width,initial-scale=1.0,maximum-scale=5.0,user-scalable=yes';
+
+function openLightbox(url){
+  const lb  = document.getElementById('cr-lightbox');
+  const img = document.getElementById('cr-lightbox-img');
+  if(!lb || !img) return;
+  img.src = url;
+  _setViewport(_ZOOMABLE_VIEWPORT);   // allow pinch-to-zoom while open
+  lb.style.display = 'flex';
+}
+function closeLightbox(e){
+  // Tapping the image itself shouldn't dismiss — only the dark surround / ✕.
+  if(e && e.target && e.target.id === 'cr-lightbox-img') return;
+  const lb = document.getElementById('cr-lightbox');
+  if(lb) lb.style.display = 'none';
+  _setViewport(_APP_VIEWPORT);        // restore the app's fixed scale
+}
+
+// Cumulative hint button: each click reveals the next hint inline.
+// Disappears once all hints are exhausted.
+function addHintButton(container, m){
+  const total = (m.hints||[]).length;
+  if(!total) return;
+  const used = (revealedHints[m.id]||[]).length;
+  if(used >= total) return; // exhausted → hide button entirely
+  const btn = document.createElement('button');
+  btn.className='btn btn-ghost btn-full'; btn.id='cr-hint-btn';
+  btn.textContent = `${t('show_hint')} (${used}/${total})`;
+  btn.onclick = () => requestHint(m);
+  container.appendChild(btn);
+}
+
+async function requestHint(m){
+  const res = await fetch(`/api/games/${gameId}/cr/hint`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, missionId: m.id})
+  }).then(r=>r.json());
+  if(!res.hint){ toast('Keine Hinweise mehr','warning'); return; }
+  // Append, dedupe by index so reveals are stable.
+  if(!revealedHints[m.id]) revealedHints[m.id] = [];
+  // Avoid duplicates if the server returns the same hint twice for some reason.
+  const already = revealedHints[m.id].some(h => h.id === res.hint.id);
+  if(!already) revealedHints[m.id].push(res.hint);
+  refreshPopup();    // re-render so the new hint chip appears and the
+                     // button disappears once exhausted
+}
+
+async function submitAnswer(){
+  if(popupMissionId == null) return;
+  const m = allMissions.find(x=>x.id===popupMissionId);
+  if(!m) return;
+  const inp = document.getElementById('cr-answer-input');
+  const err = document.getElementById('cr-answer-err');
+  const answer = inp?.value?.trim();
+  if(!answer){ if(err) err.textContent='Bitte Antwort eingeben.'; return; }
+  const res = await fetch(`/api/games/${gameId}/cr/answer`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, missionId:m.id, answer})
+  }).then(r=>r.json());
+  if(res.correct){
+    if(err) err.textContent='';
+    toast('✓ Richtig!','success');
+    await completeMission();
+    closeMissionPopup();
+  } else {
+    if(err) err.textContent = res.message || 'Leider falsch. Versuche es erneut!';
+    if(inp){ inp.style.borderColor='var(--red)'; setTimeout(()=>inp.style.borderColor='',1500); }
+  }
+}
+
+function addActionBtn(container, label, cls, fn){
+  const btn = document.createElement('button');
+  btn.className = `btn ${cls} btn-full`;
+  btn.textContent = label;
+  btn.onclick = fn;
+  container.appendChild(btn);
+}
+
+// One-shot tick to populate the timer immediately when the popup opens
+// (the recurring tick runs from startMissionTimer's interval).
+function tickMissionTimerOnce(m){
+  const el = document.getElementById('cr-mission-timer-val');
+  if(!el || !missionStartTime) return;
+  const elapsed = Math.floor((Date.now()-missionStartTime)/1000);
+  const remain  = m.timer_seconds - elapsed;
+  if(remain > 0){
+    el.textContent = `${String(Math.floor(remain/60)).padStart(2,'0')}:${String(remain%60).padStart(2,'0')}`;
+  } else {
+    const over = Math.abs(remain);
+    el.textContent = `+${String(Math.floor(over/60)).padStart(2,'0')}:${String(over%60).padStart(2,'0')}`;
+  }
+}
+
+// ── Mission timer ─────────────────────────────────────────────────────────────
+// The timer DOM only exists while the popup is open, so we resolve elements on
+// each tick. We still drive the interval globally because penalties accrue
+// regardless of whether the player has the popup open.
+function startMissionTimer(m){
+  stopMissionTimer();
+  missionStartTime = Date.now();
+  penalties = 0;
+  missionTimerInterval = setInterval(()=>{
+    const elapsed  = Math.floor((Date.now()-missionStartTime)/1000);
+    const remain   = m.timer_seconds - elapsed;
+    const el  = document.getElementById('cr-mission-timer-val');
+    const inf = document.getElementById('cr-penalty-info');
+    if(remain > 0){
+      if(el){
+        const mm = String(Math.floor(remain/60)).padStart(2,'0');
+        const ss = String(remain%60).padStart(2,'0');
+        el.textContent = `${mm}:${ss}`;
+        el.className   = 'cr-mission-timer-val' + (remain<=30?' warning':'');
+      }
+      if(inf) inf.textContent = `${m.penalty_points} ${t('penalty')} alle ${m.penalty_interval}s`;
+    } else {
+      const over = Math.abs(remain);
+      const newPenalties = Math.floor(over / m.penalty_interval);
+      if(newPenalties > penalties){
+        penalties = newPenalties;
+        toast(`−${m.penalty_points} ${t('penalty')}!`, 'error');
+      }
+      if(el){
+        const mm = String(Math.floor(over/60)).padStart(2,'0');
+        const ss = String(over%60).padStart(2,'0');
+        el.textContent = `+${mm}:${ss}`;
+        el.className   = 'cr-mission-timer-val overtime';
+      }
+      if(inf) inf.textContent = `${penalties} ${t('penalties')} (−${penalties*m.penalty_points}pt)`;
+    }
+  }, 500);
+}
+function stopMissionTimer(){
+  if(missionTimerInterval){ clearInterval(missionTimerInterval); missionTimerInterval=null; }
+}
+
+// ── Complete mission ──────────────────────────────────────────────────────────
+// Track per-mission media-review state so the popup can show "waiting for GM"
+// instead of an action button after upload. {missionId: 'pending'|'rejected'|'accepted'}
+const mediaReviewState = {};
+
+async function completeMission(mediaPath){
+  const actEl = document.getElementById('cr-actions');
+  const btn   = actEl ? actEl.querySelector('button') : null;
+  if(btn){ btn.disabled=true; btn.textContent='Wird gesendet…'; }
+  const res = await fetch(`/api/games/${gameId}/cr/complete`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, missionId:currentMission.id, mediaPath:mediaPath||null})
+  }).then(r=>r.json());
+  // Photo/video missions are now held for GM review and don't advance.
+  if(res.pending){
+    if(currentMission) mediaReviewState[currentMission.id] = 'pending';
+    refreshPopup();
+    toast('Hochgeladen — wird vom Spielleiter geprüft…', 'success');
+    return;
+  }
+  // Otherwise: instant completion (no media or correct answer).
+  stopMissionTimer();
+  if(res.nextMission){
+    missionIndex = res.nextIndex;
+    currentMission = res.nextMission;
+    arrivedAtMissionId = null;
+    if(mediaReviewState[res.nextMission.id]) delete mediaReviewState[res.nextMission.id];
+    renderMission();
+    toast(`+${res.score} Punkte!`, 'success');
+  } else {
+    showFinished((res.score_earned||0));
+  }
+  refreshScore();
+  renderAllMissions();
+  renderAllMissionMarkers();
+}
+
+function onNextMission({mission, missionIndex: idx}){
+  currentMission = mission; missionIndex = idx;
+  arrivedAtMissionId = null;     // allow the popup again for the new mission
+  renderMission();
+  renderAllMissions();
+  renderAllMissionMarkers();
+}
+
+function showFinished(score){
+  stopMissionTimer();
+  document.getElementById('cr-mission-wrap').style.display = 'none';
+  document.getElementById('cr-finished-wrap').style.display = 'block';
+  document.getElementById('cr-final-score').textContent = `Total: ${score} Punkte`;
+}
+function onCrFinished({score_earned}){ showFinished(score_earned||0); }
+
+// ── GPS tracking ──────────────────────────────────────────────────────────────
+function startGpsTracking(){
+  if(!navigator.geolocation){ toast('GPS nicht verfügbar','warning'); return; }
+  // Always-fresh: maximumAge:0 forces the browser to deliver the latest
+  // available fix rather than re-using a 3s-old cached one.
+  // timeout:15s avoids spurious "no_gps" toasts on slow first-fix devices.
+  gpsWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      myLat = pos.coords.latitude;
+      myLng = pos.coords.longitude;
+      gpsAccuracy = pos.coords.accuracy;
+      sendGps(myLat, myLng);
+      updateMyMapMarker(myLat, myLng);
+      if(currentMission && currentMission.use_gps) checkArrival(myLat, myLng);
+    },
+    err => { /* swallow transient errors; watchPosition keeps retrying */ },
+    { enableHighAccuracy:true, maximumAge:0, timeout:15000 }
+  );
+  // Also poll the current position every 8s as a safety net — some Android
+  // browsers stop firing watchPosition while a modal is open.
+  setInterval(() => {
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        myLat = pos.coords.latitude;
+        myLng = pos.coords.longitude;
+        gpsAccuracy = pos.coords.accuracy;
+        updateMyMapMarker(myLat, myLng);
+        if(currentMission && currentMission.use_gps) checkArrival(myLat, myLng);
+      },
+      () => {},
+      { enableHighAccuracy:true, maximumAge:0, timeout:8000 }
+    );
+  }, 8000);
+}
+
+async function sendGps(lat, lng){
+  await fetch(`/api/games/${gameId}/gps`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, lat, lng})
+  }).catch(()=>{});
+}
+
+// Track which mission we already arrived at so the popup doesn't keep firing
+// every GPS tick while the player is standing on the geofence.
+let arrivedAtMissionId = null;
+
+// Haversine distance in meters between two lat/lng pairs.
+function haversineMeters(lat1, lng1, lat2, lng2){
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2
+          + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180)
+          * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function checkArrival(lat, lng){
+  if(!currentMission) return;
+  if(arrivedAtMissionId === currentMission.id) return;
+  if(currentMission.lat == null || currentMission.lng == null) return;
+
+  // Client-side, authoritative arrival decision. The server roundtrip used
+  // to gate this — but a strict server check failed when use_map was set
+  // alongside use_gps because the GM-configured radius was sometimes
+  // tighter than the device's actual GPS accuracy. Computing locally with
+  // an accuracy-aware slack makes the result match what the map shows.
+  const distM   = haversineMeters(lat, lng, currentMission.lat, currentMission.lng);
+  lastDistance  = Math.round(distM);
+  const slack   = Math.max(0, gpsAccuracy || 0) + 5;
+  const radius  = currentMission.radius_meters || 30;
+  const arrived = distM <= radius + slack;
+
+  // Still inform the server (it broadcasts cr_arrived for sound/coordination
+  // and we don't want to lose that). Fire-and-forget; ignore the response.
+  fetch(`/api/games/${gameId}/cr/arrival`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, lat, lng}),
+  }).catch(()=>{});
+
+  const dot = document.getElementById('cr-gps-dot');
+  const txt = document.getElementById('cr-gps-text');
+  if(arrived){
+    if(dot){ dot.className='cr-gps-dot arrived'; }
+    if(txt){ txt.textContent = t('arrived') + ' ✅'; }
+    showArrivedOverlay({missionId: currentMission.id});
+  } else if(lastDistance < 100){
+    if(dot){ dot.className='cr-gps-dot near'; }
+    if(txt){ txt.textContent = `${t('near')} · ${lastDistance}m`; }
+  } else {
+    if(dot){ dot.className='cr-gps-dot searching'; }
+    if(txt){ txt.textContent = `${t('searching')} · ${lastDistance}m`; }
+  }
+}
+
+// (manual arrival override removed — was abusable as a cheat)
+
+function showArrivedOverlay({missionId}){
+  if(!currentMission || currentMission.id !== missionId) return;
+  if(arrivedAtMissionId === missionId) return;       // already shown for this mission
+  arrivedAtMissionId = missionId;
+  playArrivalSound();
+  crShowView('mission');
+  const overlay = document.getElementById('cr-arrived-overlay');
+  document.getElementById('cr-arrived-text').textContent =
+    currentMission[`name_${lang}`] || currentMission.name_de || '';
+  overlay.style.display = 'flex';
+}
+function dismissArrived(){
+  document.getElementById('cr-arrived-overlay').style.display = 'none';
+  // Open (or refresh) the current mission's popup so the action UI is in
+  // front of the player. arrivedAtMissionId stays set so the GPS gate in
+  // renderActions() lets the photo/video/answer/complete buttons through.
+  if(currentMission){
+    openMissionPopup(currentMission.id);
+  }
+}
+
+function playArrivalSound(){
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime+0.1);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.5);
+    osc.start(); osc.stop(ctx.currentTime+0.5);
+  } catch(e){}
+}
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+function initMap(){
+  if(crMap) return;
+  // Put Leaflet's +/- zoom buttons at bottom-left so they don't compete with
+  // the jump-to-me button or the missions topbar at the top of the screen.
+  crMap = L.map('cr-map', {zoomControl:false}).setView([47.3769,8.5417], 14);
+  L.control.zoom({position:'bottomleft'}).addTo(crMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap', maxZoom:19
+  }).addTo(crMap);
+}
+function crShowView(v){
+  document.getElementById('view-mission').style.display = v==='mission'?'flex':'none';
+  document.getElementById('view-map').style.display     = v==='map'?'block':'none';
+  document.getElementById('btn-v-mission').classList.toggle('active', v==='mission');
+  document.getElementById('btn-v-map').classList.toggle('active', v==='map');
+  // The jump-to-me button only makes sense on the map view, and is fixed-
+  // positioned so we have to explicitly hide it on the missions/rules view.
+  const jm = document.getElementById('cr-jump-me');
+  if(jm) jm.style.display = v==='map' ? 'inline-flex' : 'none';
+  if(v==='map'){
+    initMap();
+    setTimeout(()=>crMap.invalidateSize(), 150);
+    if(myLat) updateMyMapMarker(myLat, myLng);
+    renderAllMissionMarkers();
+    if(currentMission && currentMission.use_map && currentMission.lat) centerMapOnMission(currentMission);
+  }
+}
+
+// Draw a marker for every mission that has "show on map" enabled.
+function renderAllMissionMarkers(){
+  if(!crMap || !allMissions.length) return;
+  if(!mapMissionLayer) mapMissionLayer = L.layerGroup().addTo(crMap);
+  mapMissionLayer.clearLayers();
+  allMissions.forEach((m,i)=>{
+    if(!m.use_map || !m.lat || !m.lng) return;
+    const isCurrent = i===missionIndex;
+    const isDone    = i<missionIndex;
+    const bg = isDone ? 'var(--green)' : isCurrent ? 'var(--red)' : 'var(--text-muted)';
+    const icon = L.divIcon({
+      className:'',
+      html:`<div style="background:${bg};color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:.8rem;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5);font-weight:700;">${i+1}</div>`,
+      iconSize:[34,34], iconAnchor:[17,17]
+    });
+    const mk = L.marker([m.lat, m.lng], {icon}).addTo(mapMissionLayer);
+    mk.bindPopup(esc(m[`name_${lang}`]||m.name_de||`Mission ${i+1}`));
+    // Tap → open the full mission popup (read-only for upcoming/done missions).
+    mk.on('click', () => openMissionPopup(m.id));
+    // Always draw the geofence around the current mission so the player can
+    // see the target area. Defaults to 30m if no explicit radius was set.
+    if(isCurrent){
+      const r = Number(m.radius_meters) || 30;
+      L.circle([m.lat,m.lng],{color:'#d42b2b',fillColor:'rgba(212,43,43,.12)',radius:r,weight:2}).addTo(mapMissionLayer);
+    }
+  });
+}
+function makeMarkerIcon(label, isMe){
+  return L.divIcon({
+    className:'',
+    html:`<div class="team-marker ${isMe?'my-marker':''}">${label}</div>`,
+    iconSize:[32,32], iconAnchor:[16,16]
+  });
+}
+function updateMyMapMarker(lat, lng){
+  if(!crMap) return;
+  if(!myMarker){
+    myMarker = L.marker([lat,lng], {icon:makeMarkerIcon('Ich',true)}).addTo(crMap);
+    // Tapping your own marker should zoom the map in on your position —
+    // it shouldn't act as a shortcut to the mission popup (that's what the
+    // missions tab is for).
+    myMarker.on('click', () => {
+      const ll = myMarker.getLatLng();
+      const targetZoom = Math.max(crMap.getZoom(), 17);
+      crMap.setView(ll, targetZoom, {animate:true});
+    });
+  } else {
+    myMarker.setLatLng([lat,lng]);
+  }
+}
+// Re-center the map on the player. Falls back to a soft warning if GPS hasn't fixed yet.
+function jumpToMe(){
+  if(!crMap) return;
+  if(myLat == null || myLng == null){ toast(t('no_gps'),'warning'); return; }
+  crMap.setView([myLat, myLng], 17);
+  if(!myMarker) updateMyMapMarker(myLat, myLng);
+}
+let missionMarkerRef = null;
+function centerMapOnMission(m){
+  // Hard gate: never reveal a mission's location unless the GM ticked "show on map".
+  if(!crMap || !m || !m.use_map || !m.lat) return;
+  crMap.setView([m.lat, m.lng], 16);
+  // Marker drawing is handled by renderAllMissionMarkers; keep this method
+  // focused on viewport panning only.
+}
+function onGpsUpdate({teamId:tid, lat, lng}){
+  if(tid===teamId) return; // skip own
+  if(!crMap) return;
+  initMap();
+  const team = allTeams.find(t=>t.id===tid);
+  const label = team ? team.name.substring(0,3).toUpperCase() : '?';
+  if(teamMarkers[tid]) teamMarkers[tid].setLatLng([lat,lng]);
+  else teamMarkers[tid] = L.marker([lat,lng],{icon:makeMarkerIcon(label,false)}).addTo(crMap)
+    .bindPopup(team?team.name:'Team');
+}
+
+// ── Team capture ──────────────────────────────────────────────────────────────
+// We still cache the other teams so map markers render names correctly, but
+// the user-visible "Team Photo (+5pt)" buttons are intentionally hidden —
+// they were carried over from an older flow that isn't part of the spec.
+async function fetchAllTeams(){
+  const game = await fetch(`/api/games/${gameId}`).then(r=>r.json()).catch(()=>null);
+  if(!game) return;
+  allTeams = (game.teams||[]).filter(t=>t.id!==teamId);
+  const wrap = document.getElementById('cr-capture-section');
+  if(wrap) wrap.style.display = 'none';
+}
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+async function openCrCamera(mode, targetTeamId){
+  captureMode = mode; captureTargetTeamId = targetTeamId||null;
+  capturedBlob = null;
+  capturedIsVideo = false;
+  // Decide whether the active mission needs a video recording.
+  // Team-capture is always a photo; mission completion follows media_required.
+  currentCaptureType = (mode==='mission' && currentMission?.media_required==='video') ? 'video' : 'photo';
+  document.getElementById('cr-shutter-icon').textContent = currentCaptureType==='video' ? '🔴' : '📷';
+  document.getElementById('cr-shutter-btn').classList.remove('recording');
+  document.getElementById('cr-rec-dot').style.display = 'none';
+  document.getElementById('cr-cam-preview').style.display = 'block';
+  document.getElementById('cr-cap-img').style.display = 'none';
+  document.getElementById('cr-cap-vid').style.display = 'none';
+  document.getElementById('cr-cam-bar-capture').style.display = 'flex';
+  document.getElementById('cr-cam-bar-review').style.display = 'none';
+  document.getElementById('cr-camera-modal').style.display = 'flex';
+  await startCrStream();
+}
+async function startCrStream(){
+  if(cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
+  const facingMode = useFrontCamera?'user':'environment';
+  try {
+    if(currentCaptureType==='video'){
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode}, audio:true});
+      } catch(e) {
+        // Fall back to no audio if mic was denied.
+        cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode}, audio:false});
+        toast('Mikrofon nicht verfügbar – kein Ton','warning');
+      }
+    } else {
+      cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode}, audio:false});
+    }
+    document.getElementById('cr-cam-preview').srcObject = cameraStream;
+  } catch(e){ toast('Kamera nicht verfügbar','error'); crCloseCamera(); }
+}
+function crFlip(){ useFrontCamera=!useFrontCamera; startCrStream(); }
+
+function crCapture(){
+  if(currentCaptureType==='video'){
+    const btn = document.getElementById('cr-shutter-btn');
+    if(mediaRecorder && mediaRecorder.state==='recording'){
+      mediaRecorder.stop();
+      return;
+    }
+    recordedChunks = [];
+    const mimes = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+    capturedMimeType = mimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+    try {
+      mediaRecorder = new MediaRecorder(cameraStream, capturedMimeType ? {mimeType:capturedMimeType} : {});
+      mediaRecorder.ondataavailable = e => { if(e.data.size>0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        capturedBlob = new Blob(recordedChunks, {type: capturedMimeType||'video/webm'});
+        capturedIsVideo = true;
+        const url = URL.createObjectURL(capturedBlob);
+        const vid = document.getElementById('cr-cap-vid');
+        vid.src = url; vid.style.display = 'block';
+        document.getElementById('cr-cam-preview').style.display = 'none';
+        document.getElementById('cr-cam-bar-capture').style.display = 'none';
+        document.getElementById('cr-cam-bar-review').style.display = 'flex';
+        document.getElementById('cr-rec-dot').style.display = 'none';
+        btn.classList.remove('recording');
+        document.getElementById('cr-shutter-icon').textContent = '🔴';
+      };
+      mediaRecorder.start();
+      btn.classList.add('recording');
+      document.getElementById('cr-rec-dot').style.display = 'block';
+      document.getElementById('cr-shutter-icon').textContent = '⏹';
+    } catch(e){ toast('Aufnahme nicht möglich: '+e.message,'error'); }
+    return;
+  }
+  // Photo path
+  const video = document.getElementById('cr-cam-preview');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth||1280; canvas.height = video.videoHeight||720;
+  canvas.getContext('2d').drawImage(video,0,0);
+  canvas.toBlob(blob=>{
+    capturedBlob=blob; capturedIsVideo=false;
+    const img=document.getElementById('cr-cap-img');
+    img.src=URL.createObjectURL(blob); img.style.display='block';
+    document.getElementById('cr-cam-preview').style.display='none';
+    document.getElementById('cr-cam-bar-capture').style.display='none';
+    document.getElementById('cr-cam-bar-review').style.display='flex';
+  },'image/jpeg',0.85);
+}
+function crRetake(){
+  capturedBlob=null; capturedIsVideo=false;
+  document.getElementById('cr-cam-preview').style.display='block';
+  document.getElementById('cr-cap-img').style.display='none';
+  document.getElementById('cr-cap-vid').style.display='none';
+  document.getElementById('cr-cam-bar-capture').style.display='flex';
+  document.getElementById('cr-cam-bar-review').style.display='none';
+  document.getElementById('cr-shutter-icon').textContent = currentCaptureType==='video' ? '🔴' : '📷';
+}
+async function crUploadBlob(blob){
+  // Direct upload without camera (gallery selected)
+  const isVid = blob.type.startsWith('video');
+  const ext = isVid ? 'mp4' : 'jpg';
+  const form = new FormData();
+  form.append('media', blob, `capture.${ext}`);
+  if(captureMode==='team' && captureTargetTeamId){
+    form.append('teamId', teamId);
+    form.append('targetTeamId', captureTargetTeamId);
+    const res=await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json());
+    if(res.success) toast('Foto gesendet! +5 Punkte möglich','success');
+  } else {
+    const upRes=await fetch(`/api/games/${gameId}/teams/${teamId}/missions/${currentMission.id}/upload`,{method:'POST',body:form}).then(r=>r.json());
+    await completeMission(upRes.mediaPath||null);
+  }
+}
+
+async function crUpload(){
+  if(!capturedBlob) return;
+  crCloseCamera();
+  const isVid = capturedIsVideo;
+  const ext = isVid ? (capturedMimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
+  const form = new FormData();
+  form.append('media', capturedBlob, `capture.${ext}`);
+
+  if(captureMode==='team' && captureTargetTeamId){
+    form.append('teamId', teamId);
+    form.append('targetTeamId', captureTargetTeamId);
+    const res = await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json());
+    if(res.success) toast('Foto gesendet! +5 Punkte möglich','success');
+  } else {
+    const upRes = await fetch(`/api/games/${gameId}/teams/${teamId}/missions/${currentMission.id}/upload`,
+      {method:'POST',body:form}).then(r=>r.json());
+    await completeMission(upRes.mediaPath||null);
+  }
+}
+function crCloseCamera(){
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  document.getElementById('cr-camera-modal').style.display='none';
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;el.textContent=msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+</script>
+</body>
+</html>

@@ -220,22 +220,40 @@ app.delete('/api/missions/:id', (req,res) => {
 
 // ── Games ─────────────────────────────────────────────────────────────────────
 const creatingLocks = new Set();
-app.get('/api/games', (req,res) => res.json(db.getGames(req.query.location_id)));
+app.get('/api/games', (req,res) => {
+  if(req.query.is_cityrush==='1'){
+    // Return games that have a cr_mode linked
+    const all = db.getGames(null);
+    const crGames = all.filter(g => db.isCrGame(g.id));
+    return res.json(crGames);
+  }
+  res.json(db.getGames(req.query.location_id));
+});
 app.get('/api/games/:id', (req,res) => { const g=db.getGameFull(req.params.id); g?res.json(g):res.status(404).json({error:'Not found'}); });
 
 app.post('/api/games', (req,res) => {
-  const {location_id,mode_id} = req.body;
-  const lock = `${location_id}_${mode_id||1}`;
-  if(creatingLocks.has(lock)) return res.status(429).json({error:'Already creating'});
-  creatingLocks.add(lock); setTimeout(()=>creatingLocks.delete(lock),3000);
-  const location = db.getLocation(location_id);
-  if(!location){ creatingLocks.delete(lock); return res.status(404).json({error:'Location not found'}); }
+  const {location_id, mode_id} = req.body;
+  const isCrGame = !!(req.body.is_cityrush || !location_id);
+  const lockKey  = isCrGame ? `cr_${req.body.cr_mode_id||0}` : `${location_id}_${mode_id||1}`;
+  if(creatingLocks.has(lockKey)) return res.status(429).json({error:'Already creating'});
+  creatingLocks.add(lockKey); setTimeout(()=>creatingLocks.delete(lockKey),3000);
+  const location = location_id ? db.getLocation(location_id) : null;
+  if(!isCrGame && !location){ creatingLocks.delete(lockKey); return res.status(404).json({error:'Location not found'}); }
   const mode       = db.getMode(mode_id||1);
-  const missionIds = db.selectMissions(location, mode_id||1);
+  const missionIds = isCrGame ? [] : db.selectMissions(location, mode_id||1);
+  // CityRush games now have their own default duration on the cr_mode. Falls
+  // back to 60 minutes if the mode doesn't have one set yet (older rows).
+  let timerSecs;
+  if(isCrGame){
+    const crModeRow = req.body.cr_mode_id ? db.getCrMode(req.body.cr_mode_id) : null;
+    timerSecs = ((crModeRow && crModeRow.timer_default) || 60) * 60;
+  } else {
+    timerSecs = ((mode && mode.timer_default) || (location && location.timer_default) || 60) * 60;
+  }
   const gameId     = uuidv4().slice(0,8).toUpperCase();
-  const timerSecs  = ((mode && mode.timer_default) || location.timer_default || 60) * 60;
-  db.createGame({id:gameId, location_id, mode_id:mode_id||1, timer_duration:timerSecs, missions:missionIds});
-  creatingLocks.delete(lock);
+  db.createGame({id:gameId, location_id:location_id||null, mode_id:mode_id||1, timer_duration:timerSecs, missions:missionIds});
+  if(req.body.cr_mode_id) db.linkCrMode(gameId, req.body.cr_mode_id);
+  creatingLocks.delete(lockKey);
   const publicUrl = db.getSetting('public_url')||`http://localhost:${PORT}`;
   const joinUrl   = `${publicUrl}/join.html?game=${gameId}`;
   QRCode.toDataURL(joinUrl,{errorCorrectionLevel:'H',width:400,margin:2},(err,qr)=>{
@@ -246,9 +264,14 @@ app.post('/api/games', (req,res) => {
 
 app.delete('/api/games/:id', (req,res) => {
   if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
-  const dir=path.join(UPLOAD_DIR,req.params.id);
-  if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
-  db.deleteGame(req.params.id); res.json({success:true});
+  try {
+    const dir=path.join(UPLOAD_DIR,req.params.id);
+    if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
+    db.deleteGame(req.params.id);
+    res.json({success:true});
+  } catch(e) {
+    res.status(500).json({error:'Delete failed: '+e.message});
+  }
 });
 
 app.get('/api/games/:id/qr', (req,res) => {
@@ -360,6 +383,341 @@ app.post('/api/games/:gameId/timer', (req,res) => {
   res.json({success:true,state});
 });
 
+
+
+// ── CR Hints ──────────────────────────────────────────────────────────────────
+app.get('/api/cr/hints/:missionId', (req,res) => res.json(db.getCrHints(req.params.missionId)));
+
+// Multer was writing to UPLOAD_DIR/<gameId|misc>/<filename>, but the DB stores
+// `cr_hints/<filename>`. So `/uploads/cr_hints/<filename>` 404'd and the player
+// saw a broken-image icon. Move the file into cr_hints/ after upload.
+function _moveHintFileIntoPlace(req){
+  if(!req.file) return null;
+  const destDir = path.join(UPLOAD_DIR,'cr_hints');
+  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
+  const dest = path.join(destDir, req.file.filename);
+  try { fs.renameSync(req.file.path, dest); }
+  catch(e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+  return `cr_hints/${req.file.filename}`;
+}
+
+app.post('/api/cr/hints/:missionId', upload.single('image'), (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  const imagePath = _moveHintFileIntoPlace(req);
+  const id = db.createCrHint({
+    mission_id: req.params.missionId,
+    order_index: req.body.order_index||0,
+    text_de: req.body.text_de||'', text_en: req.body.text_en||'',
+    text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
+    image_path: imagePath
+  });
+  res.json({id, success:true});
+});
+
+app.put('/api/cr/hints/:id', upload.single('image'), (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  const existing = db.getCrHint(req.params.id);
+  if(!existing) return res.status(404).json({error:'Not found'});
+  const newPath  = _moveHintFileIntoPlace(req);
+  const imagePath = newPath || (req.body.clear_image==='1' ? null : existing.image_path);
+  db.updateCrHint(req.params.id, {
+    order_index: req.body.order_index||0,
+    text_de: req.body.text_de||'', text_en: req.body.text_en||'',
+    text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
+    image_path: imagePath
+  });
+  res.json({success:true});
+});
+
+app.delete('/api/cr/hints/:id', (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  db.deleteCrHint(req.params.id);
+  res.json({success:true});
+});
+
+app.post('/api/cr/hints/reorder/:missionId', (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  db.reorderCrHints(req.params.missionId, req.body.order);
+  res.json({success:true});
+});
+
+// Request next hint
+app.post('/api/games/:gameId/cr/hint', (req,res) => {
+  const {teamId, missionId} = req.body;
+  const hints = db.getCrHints(missionId);
+  if(!hints.length) return res.json({hint:null, index:-1, total:0});
+  const used = db.incrementTeamHints(req.params.gameId, teamId, missionId);
+  const idx = Math.min(used-1, hints.length-1);
+  res.json({hint: hints[idx], index: idx, total: hints.length, allUsed: used >= hints.length});
+});
+
+// Answer submission for question missions
+app.post('/api/games/:gameId/cr/answer', (req,res) => {
+  const {teamId, missionId, answer} = req.body;
+  const mission = db.getCrMission(missionId);
+  if(!mission) return res.status(404).json({error:'Not found'});
+  // Flexible matching: case-insensitive, trim whitespace
+  const correctAnswers = ['answer_de','answer_en','answer_fr','answer_it']
+    .map(f => (mission[f]||'').trim().toLowerCase())
+    .filter(Boolean);
+  const userAnswer = (answer||'').trim().toLowerCase();
+  const correct = correctAnswers.some(a => a === userAnswer || a.includes(userAnswer) || userAnswer.includes(a));
+  res.json({correct, message: correct ? 'Richtig!' : 'Leider falsch. Versuche es erneut!'});
+});
+
+
+// ════════════════════════════════════════════════════════════
+//   CITYRUSH ROUTES
+// ════════════════════════════════════════════════════════════
+
+// ── CR Modes ──────────────────────────────────────────────────────────────────
+app.get('/api/cr/modes', (req,res) => res.json(db.getCrModes()));
+app.post('/api/cr/modes', (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  const {name, allow_photo, allow_video, ruleset_id, timer_default} = req.body;
+  const id = db.createCrMode({name, allow_photo, allow_video, ruleset_id, timer_default});
+  res.json({id, success:true});
+});
+app.put('/api/cr/modes/:id', (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  const {name, allow_photo, allow_video, ruleset_id, timer_default} = req.body;
+  db.updateCrMode(req.params.id, {name, allow_photo, allow_video, ruleset_id, timer_default});
+  res.json({success:true});
+});
+app.delete('/api/cr/modes/:id', (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  try {
+    db.deleteCrMode(req.params.id);
+    io.emit('settings_updated', {type:'cr_modes'});
+    res.json({success:true});
+  } catch(e) {
+    res.status(500).json({error:'Delete failed: '+e.message});
+  }
+});
+
+// ── CR Missions ────────────────────────────────────────────────────────────────
+app.get('/api/cr/missions', (req,res) => res.json(db.getCrMissions(req.query.mode_id)));
+app.post('/api/cr/missions', (req,res) => {
+  const {password,...data} = req.body;
+  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  const id = db.createCrMission(data);
+  io.emit('settings_updated', {type:'cr_missions'});
+  res.json({id, success:true});
+});
+app.put('/api/cr/missions/:id', (req,res) => {
+  const {password,...data} = req.body;
+  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  db.updateCrMission(req.params.id, data);
+  io.emit('settings_updated', {type:'cr_missions'});
+  res.json({success:true});
+});
+app.delete('/api/cr/missions/:id', (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  try {
+    db.deleteCrMission(req.params.id);
+    io.emit('settings_updated', {type:'cr_missions'});
+    res.json({success:true});
+  } catch(e) {
+    res.status(500).json({error:'Delete failed: '+e.message});
+  }
+});
+app.post('/api/cr/missions/reorder', (req,res) => {
+  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  db.reorderCrMissions(req.body.mode_id, req.body.order);
+  res.json({success:true});
+});
+
+// ── CR Game info ──────────────────────────────────────────────────────────────
+app.get('/api/games/:id/cr', (req,res) => {
+  const crMode = db.getGameCrMode(req.params.id);
+  if(!crMode) return res.json({active:false});
+  const missions = db.getCrMissions(crMode.id);
+  const missionsWithHints = missions.map(m => ({...m, hints: db.getCrHints(m.id)}));
+  const progress = db.getAllCrProgress(req.params.id);
+  const gps      = db.getTeamGps(req.params.id);
+  const captures = db.getCrCaptures(req.params.id);
+  // CR submissions waiting for GM review (one row per uploaded media).
+  const submissions = db.listCrSubmissions(req.params.id);
+  res.json({active:true, crMode, missions: missionsWithHints, progress, gps, captures, submissions});
+});
+
+// Pending review counts per team (regular + CR), so the dashboard's
+// notification dot can show a number that only zeroes out when the queue
+// is fully cleared.
+app.get('/api/games/:id/pending-counts', (req,res) => {
+  res.json(db.getPendingCountsByTeam(req.params.id));
+});
+
+// ── GPS updates ───────────────────────────────────────────────────────────────
+app.post('/api/games/:gameId/gps', (req,res) => {
+  const {teamId, lat, lng} = req.body;
+  if(!teamId||lat===undefined||lng===undefined) return res.status(400).json({error:'Missing params'});
+  db.updateTeamGps(req.params.gameId, teamId, lat, lng);
+  // Broadcast to GM and all players in the game
+  io.to(`game_${req.params.gameId}`).emit('gps_update', {teamId, lat, lng, ts: Date.now()});
+  io.to(`gm_${req.params.gameId}`).emit('gps_update', {teamId, lat, lng, ts: Date.now()});
+  res.json({success:true});
+});
+
+// ── CR Team progress ──────────────────────────────────────────────────────────
+app.get('/api/games/:gameId/cr/progress/:teamId', (req,res) => {
+  const prog = db.getCrProgress(req.params.gameId, req.params.teamId);
+  const crMode = db.getGameCrMode(req.params.gameId);
+  if(!crMode) return res.json({active:false});
+  const missions = db.getCrMissions(crMode.id);
+  if(!prog && missions.length > 0) {
+    db.initCrProgress(req.params.gameId, req.params.teamId, missions[0].id);
+  }
+  const progress = db.getCrProgress(req.params.gameId, req.params.teamId) || {mission_index:0};
+  const currentMission = missions[progress.mission_index] || null;
+  res.json({active:true, progress, currentMission, totalMissions: missions.length});
+});
+
+// Compute the score a team would receive for completing the given CR mission
+// right now (after applying time-based penalties).
+function scoreForCrMission(mission, prog) {
+  const elapsed = prog.started_at ? Math.floor((Date.now() - prog.started_at) / 1000) : 0;
+  let score = mission.points;
+  if(mission.is_timed && prog.started_at) {
+    const overtime = Math.max(0, elapsed - mission.timer_seconds);
+    const extraPenalties = Math.floor(overtime / (mission.penalty_interval||60));
+    const totalPenalties = (prog.penalties||0) + extraPenalties;
+    score = Math.max(0, mission.points - totalPenalties * (mission.penalty_points||2));
+  }
+  return score;
+}
+
+// Move a team to the next CR mission after a successful completion. Awards
+// points to the team and emits the appropriate sockets to player + GM.
+function advanceCrTeam(gameId, teamId, mission, missionIndex, score) {
+  const crMode = db.getGameCrMode(gameId);
+  const missions = crMode ? db.getCrMissions(crMode.id) : [];
+  const prog = db.getCrProgress(gameId, teamId);
+  if(!prog) return null;
+  const nextIndex = missionIndex + 1;
+  const nextMission = missions[nextIndex] || null;
+  db.updateCrProgress(gameId, teamId, {
+    mission_index: nextIndex,
+    mission_id: nextMission ? nextMission.id : null,
+    status: nextMission ? 'active' : 'finished',
+    completed_at: Date.now(),
+    score_earned: (prog.score_earned||0) + score,
+  });
+  if(score > 0) db.addTeamScore(teamId, score);
+  io.to(`gm_${gameId}`).emit('cr_mission_completed', {teamId, missionIndex, score, nextMission});
+  io.to(`gm_${gameId}`).emit('rankings_update', db.getRankings(gameId));
+  if(nextMission) {
+    io.to(`team_${teamId}`).emit('cr_next_mission', {mission: nextMission, missionIndex: nextIndex});
+  } else {
+    io.to(`team_${teamId}`).emit('cr_finished', {score_earned: (prog.score_earned||0)+score});
+  }
+  return {nextMission, nextIndex};
+}
+
+app.post('/api/games/:gameId/cr/complete', (req,res) => {
+  const {teamId, missionId, mediaPath} = req.body;
+  const gameId = req.params.gameId;
+  const crMode = db.getGameCrMode(gameId);
+  if(!crMode) return res.status(400).json({error:'No CityRush mode'});
+  const missions = db.getCrMissions(crMode.id);
+  const prog = db.getCrProgress(gameId, teamId);
+  if(!prog) return res.status(404).json({error:'No progress found'});
+  const mission = missions[prog.mission_index];
+  if(!mission) return res.status(400).json({error:'No current mission'});
+
+  // Branch: media-bearing missions need GM approval. Don't advance yet.
+  if(mediaPath) {
+    const subId = db.createCrSubmission(gameId, teamId, mission.id, mediaPath);
+    db.updateCrProgress(gameId, teamId, {
+      media_path: mediaPath,
+      media_status: 'pending',
+    });
+    io.to(`gm_${gameId}`).emit('cr_submission_new', {
+      submissionId: subId, teamId, missionId: mission.id, missionIndex: prog.mission_index, mediaPath,
+    });
+    return res.json({success:true, pending:true});
+  }
+
+  // Otherwise (answer or no-media completion): advance immediately.
+  const score = scoreForCrMission(mission, prog);
+  const result = advanceCrTeam(gameId, teamId, mission, prog.mission_index, score) || {};
+  res.json({success:true, score, nextMission: result.nextMission||null, nextIndex: result.nextIndex||null});
+});
+
+// GM review of a CR media submission. accept → award points and advance the
+// team; reject → wipe the media and let the player retry the same mission.
+app.post('/api/cr/submissions/:id/review', (req,res) => {
+  const {action, message, gameId} = req.body;
+  const sub = db.getCrSubmission(Number(req.params.id));
+  if(!sub) return res.status(404).json({error:'Not found'});
+  const crMode = db.getGameCrMode(sub.game_id);
+  if(!crMode) return res.status(400).json({error:'No CityRush mode'});
+  const missions = db.getCrMissions(crMode.id);
+  // Resolve the index of the mission the submission was for so we award the
+  // right amount even if the team has somehow already moved on.
+  const idx = missions.findIndex(m => m.id === sub.mission_id);
+  if(idx < 0) return res.status(400).json({error:'Mission no longer exists'});
+  const mission = missions[idx];
+
+  if(action === 'accept') {
+    db.acceptCrSubmission(sub.id);
+    const prog = db.getCrProgress(sub.game_id, sub.team_id) || {};
+    const score = scoreForCrMission(mission, prog);
+    advanceCrTeam(sub.game_id, sub.team_id, mission, idx, score);
+    io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:true});
+  } else {
+    db.rejectCrSubmission(sub.id, message);
+    const fp = path.join(UPLOAD_DIR, sub.media_path||'');
+    if(sub.media_path && fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch(e){} }
+    db.updateCrProgress(sub.game_id, sub.team_id, {media_path:null, media_status:'rejected'});
+    io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:false, message});
+  }
+  io.to(`gm_${sub.game_id}`).emit('cr_submission_reviewed', {submissionId: sub.id, teamId: sub.team_id, action});
+  res.json({success:true});
+});
+
+// ── CR GPS arrival check (called by player polling or push) ───────────────────
+app.post('/api/games/:gameId/cr/arrival', (req,res) => {
+  const {teamId, lat, lng} = req.body;
+  const prog = db.getCrProgress(req.params.gameId, teamId);
+  if(!prog) return res.json({arrived:false});
+  const crMode = db.getGameCrMode(req.params.gameId);
+  if(!crMode) return res.json({arrived:false});
+  const missions = db.getCrMissions(crMode.id);
+  const mission = missions[prog.mission_index];
+  if(!mission || !mission.use_gps || !mission.lat || !mission.lng) return res.json({arrived:false});
+  // Haversine distance
+  const R = 6371000;
+  const dLat = (mission.lat - lat) * Math.PI / 180;
+  const dLng = (mission.lng - lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180)*Math.cos(mission.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const arrived = dist <= (mission.radius_meters || 30);
+  if(arrived) {
+    io.to(`team_${teamId}`).emit('cr_arrived', {missionId: mission.id, distance: Math.round(dist)});
+  }
+  res.json({arrived, distance: Math.round(dist)});
+});
+
+// ── CR Team capture (photo of another team) ───────────────────────────────────
+app.post('/api/games/:gameId/cr/capture',
+  upload.single('media'), (req,res) => {
+    const {teamId, targetTeamId} = req.body;
+    const mediaPath = req.file ? `${req.params.gameId}/${req.file.filename}` : null;
+    if(!mediaPath) return res.status(400).json({error:'No media'});
+    const id = db.createCrCapture(req.params.gameId, teamId, targetTeamId, mediaPath);
+    io.to(`gm_${req.params.gameId}`).emit('cr_capture_new', {id, teamId, targetTeamId, mediaPath});
+    res.json({success:true, id});
+  }
+);
+app.post('/api/cr/captures/:id/review', (req,res) => {
+  const {accept, bonusPoints, gameId} = req.body;
+  db.reviewCrCapture(req.params.id, accept, bonusPoints||5);
+  if(gameId) io.to(`gm_${gameId}`).emit('cr_capture_reviewed', {id:Number(req.params.id), accept});
+  res.json({success:true});
+});
+
+
 // ── Socket ────────────────────────────────────────────────────────────────────
 io.on('connection', socket => {
   socket.on('join_game', ({gameId,teamId}) => {
@@ -409,9 +767,10 @@ cron.schedule('0 * * * *', () => {
   });
 });
 
-app.get('/gm*',   (req,res)=>res.sendFile(path.join(__dirname,'public','gm.html')));
-app.get('/join*', (req,res)=>res.sendFile(path.join(__dirname,'public','join.html')));
-app.get('/play*', (req,res)=>res.sendFile(path.join(__dirname,'public','play.html')));
+app.get('/gm*',        (req,res)=>res.sendFile(path.join(__dirname,'public','gm.html')));
+app.get('/join*',      (req,res)=>res.sendFile(path.join(__dirname,'public','join.html')));
+app.get('/play*',      (req,res)=>res.sendFile(path.join(__dirname,'public','play.html')));
+app.get('/cityrush*',  (req,res)=>res.sendFile(path.join(__dirname,'public','cityrush.html')));
 
 server.listen(PORT,'0.0.0.0',()=>{
   console.log(`\n🎮  MiSSiONS running on port ${PORT}`);

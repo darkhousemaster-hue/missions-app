@@ -22,7 +22,15 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .team-name-display {
   font-family:var(--heading); font-size:1.1rem; letter-spacing:.1em;
   text-transform:uppercase; flex:1; text-align:center;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+/* Score chip is its own topbar slot so a long team name can't clip it,
+   and the upper-case styling on team-name-display can't reach it. */
+.team-score-chip {
+  font-family:var(--mono); color:var(--orange); font-size:.95rem;
+  background:rgba(255,107,0,.12); border:1px solid rgba(255,107,0,.4);
+  border-radius:var(--radius); padding:.15rem .5rem; flex-shrink:0;
+  white-space:nowrap;
 }
 .topbar-btn {
   background:var(--surface); border:1px solid var(--border); color:var(--text-dim);
@@ -35,7 +43,11 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 /* ── View switching ── */
 #view-missions { flex:1; overflow-y:auto; padding:.75rem; padding-bottom:calc(env(safe-area-inset-bottom,0px) + 2rem); display:flex; flex-direction:column; -webkit-overflow-scrolling:touch; }
-#view-chat { flex:1; min-height:0; display:none; flex-direction:column; overflow:hidden; }
+/* Use a fixed overlay so the chat input row is always anchored to the
+   real viewport bottom — Android Chrome's keyboard otherwise pushes a
+   flex-based input row off-screen, leaving "no chat bar" for players. */
+#view-chat { position:fixed; left:0; right:0; top:0; bottom:0; background:var(--bg);
+  display:none; flex-direction:column; overflow:hidden; z-index:550; }
 #view-rules { position:fixed; inset:0; background:var(--bg3); z-index:600; display:none; flex-direction:column; }
 
 /* ── Legend ── */
@@ -74,8 +86,13 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 /* ── Chat view ── */
 #chat-messages { flex:1; min-height:0; overflow-y:auto; padding:.75rem; display:flex; flex-direction:column; gap:.4rem; -webkit-overflow-scrolling:touch; }
-#chat-input-row { display:flex; gap:.5rem; padding:.6rem .75rem; padding-bottom:max(.6rem, env(safe-area-inset-bottom, .6rem)); border-top:1px solid var(--border); background:var(--bg2); flex-shrink:0; width:100%; }
-#chat-input-row input { flex:1; }
+#chat-input-row { display:flex; gap:.5rem; padding:.6rem .75rem;
+  padding-bottom:max(.6rem, env(safe-area-inset-bottom, .6rem));
+  border-top:1px solid var(--border); background:var(--bg2);
+  flex-shrink:0; flex:0 0 auto; width:100%;
+  box-sizing:border-box; min-height:60px; }
+#chat-input-row input { flex:1; min-width:0; }
+#chat-input-row .btn { flex-shrink:0; }
 
 /* ── Rules view ── */
 #rules-scroll { flex:1; overflow-y:auto; padding:1rem; }
@@ -139,7 +156,10 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <!-- ── TOPBAR ── -->
 <div class="play-topbar">
   <div class="play-timer" id="player-timer">--:--</div>
-  <div class="team-name-display" id="team-name-display"></div>
+  <div class="team-name-display" id="team-name-display">
+    <span id="team-name-text"></span>
+  </div>
+  <span class="team-score-chip" id="team-score-text">0pt</span>
   <div style="display:flex;gap:.4rem;flex-shrink:0;">
     <button class="topbar-btn" id="btn-missions" onclick="showView('missions')">📋</button>
     <button class="topbar-btn" id="btn-chat" onclick="showView('chat')" style="position:relative;">
@@ -163,9 +183,15 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 <!-- ── CHAT VIEW ── -->
 <div id="view-chat">
+  <div class="topbar" style="flex-shrink:0;">
+    <button class="topbar-btn" onclick="showView('missions')" id="chat-back-btn">← <span id="chat-back-label">Zurück</span></button>
+    <span style="font-family:var(--heading);font-size:1.2rem;letter-spacing:.1em;flex:1;text-align:center;">💬 GM</span>
+    <span style="width:60px;"></span>
+  </div>
   <div id="chat-messages"></div>
   <div id="chat-input-row">
     <input type="text" id="chat-input" class="input" placeholder="Nachricht an Gamemaster…"
+           autocomplete="off" autocorrect="off" autocapitalize="sentences"
            onkeydown="if(event.key==='Enter')sendChat()">
     <button class="btn btn-primary btn-sm" onclick="sendChat()" id="chat-send-btn">Senden</button>
   </div>
@@ -199,6 +225,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 <!-- ── LIGHTBOX ── -->
 <div id="lightbox" onclick="document.getElementById('lightbox').style.display='none'">
+  <button id="lb-rotate" style="position:fixed;top:1rem;right:4rem;z-index:901;background:rgba(0,0,0,.6);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:var(--radius);padding:.35rem .7rem;cursor:pointer;font-size:.85rem;" onclick="event.stopPropagation()">↻</button>
   <img id="lb-img" src="" alt="" style="display:none;">
   <video id="lb-vid" src="" controls style="display:none;"></video>
 </div>
@@ -254,6 +281,7 @@ const T = {
     rej_title:'❌ Abgelehnt', rej_btn:'OK — Erneut versuchen',
     upload:'✓ Hochladen', retake:'↺ Neu aufnehmen', cancel:'✕ Abbrechen',
     awaiting:'⏳ Wird geprüft',
+    gallery_upload:'Aus Galerie hochladen',
   },
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
@@ -266,6 +294,7 @@ const T = {
     rej_title:'❌ Rejected', rej_btn:'OK — Try Again',
     upload:'✓ Upload', retake:'↺ Retake', cancel:'✕ Cancel',
     awaiting:'⏳ Awaiting review',
+    gallery_upload:'Upload from gallery',
   },
   fr: {
     photo:'Mission photo', video:'Mission vidéo', indoor:'Possible en intérieur',
@@ -276,7 +305,8 @@ const T = {
     rej_title:'❌ Refusé', rej_btn:'OK — Réessayer',
     upload:'✓ Envoyer', retake:'↺ Reprendre', cancel:'✕ Annuler',
     awaiting:'⏳ En attente de validation',
-    description:'Description', task:'Aufgabe',
+    description:'Description', task:'Tâche',
+    gallery_upload:'Charger depuis la galerie',
   },
   it: {
     photo:'Missione foto', video:'Missione video', indoor:'Possibile anche al chiuso',
@@ -288,6 +318,7 @@ const T = {
     upload:'✓ Carica', retake:'↺ Riprendi', cancel:'✕ Annulla',
     awaiting:'⏳ In attesa di revisione',
     description:'Descrizione', task:'Compito',
+    gallery_upload:'Carica dalla galleria',
   }
 };
 const LANGS = ['de','en','fr','it'];
@@ -300,6 +331,11 @@ function applyTranslations() {
   document.getElementById('leg-indoor').textContent = t('indoor');
   document.getElementById('rules-title').textContent = t('rules');
   document.getElementById('rules-back-btn').textContent = t('rules_back');
+  const cb = document.getElementById('chat-back-label');
+  if(cb){
+    // Strip any leading arrow from rules_back so "← " from the wrapper isn't doubled.
+    cb.textContent = (t('rules_back')||'Zurück').replace(/^←\s*/,'');
+  }
   document.getElementById('chat-send-btn').textContent = t('send');
   document.getElementById('chat-input').placeholder = t('chat_ph');
   document.getElementById('rej-title').textContent = t('rej_title');
@@ -344,7 +380,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   teamName = sessionStorage.getItem('teamName') || 'Team';
   if (!gameId || !teamId) { window.location.href='/'; return; }
 
-  document.getElementById('team-name-display').textContent = teamName;
+  document.getElementById('team-name-text').textContent = teamName;
   applyTranslations();
   showView('missions');
 
@@ -386,14 +422,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   socket.on('game_ended',   ({ messages, message }) => showGameOver((messages&&messages[lang])||message||''));
   socket.on('settings_updated', () => { loadMissions(); });
 
-  // Fix Android keyboard pushing input off screen
+  // Fix Android keyboard pushing input off screen.
+  // We re-anchor both <body> and the fixed chat overlay to the visual viewport
+  // height so the chat input bar stays visible when the keyboard opens.
   function fixViewportHeight() {
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const vv = window.visualViewport;
+    const h  = vv ? vv.height : window.innerHeight;
     document.body.style.height = h + 'px';
     document.body.style.maxHeight = h + 'px';
+    const chat = document.getElementById('view-chat');
+    if (chat) {
+      chat.style.height = h + 'px';
+      chat.style.top = (vv ? vv.offsetTop : 0) + 'px';
+    }
   }
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', fixViewportHeight);
+    window.visualViewport.addEventListener('scroll', fixViewportHeight);
   }
   window.addEventListener('resize', fixViewportHeight);
   fixViewportHeight();
@@ -415,9 +460,10 @@ async function loadMissions() {
   if (data.name) {
     teamName = data.name;
     sessionStorage.setItem('teamName', data.name);
-    const nameEl = document.getElementById('team-name-display');
+    const nameEl = document.getElementById('team-name-text');
     if (nameEl) nameEl.textContent = data.name;
   }
+  if (typeof data.score === 'number') updateScoreDisplay(data.score);
   const list = document.getElementById('missions-list');
   if (!data.missions || !data.missions.length) {
     list.innerHTML = '<div class="empty"><p>Keine Missionen gefunden.</p></div>';
@@ -437,7 +483,15 @@ function missionCard(m) {
   let footer = '';
   if (status==='open' || status==='rejected') {
     const label = m.media_type==='video' ? t('take_video') : t('take_photo');
-    footer = `<button class="btn btn-primary btn-sm" onclick="openCamera(${m.mission_id},'${m.media_type}')">${label}</button>`;
+    const accept = m.media_type==='video' ? 'video/*' : 'image/*';
+    const galleryIcon = m.media_type==='video' ? '🎞️' : '🖼️';
+    footer = `<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" style="flex:1 1 100%;" onclick="openCamera(${m.mission_id},'${m.media_type}')">${label}</button>
+      <label class="btn btn-secondary btn-sm" style="cursor:pointer;flex:1 1 100%;">
+        ${galleryIcon} ${t('gallery_upload')}
+        <input type="file" accept="${accept}" style="display:none;" onchange="uploadFromGallery(event,${m.mission_id},'${m.media_type}')">
+      </label>
+    </div>`;
     if (status==='rejected' && m.rejection_message) {
       footer += `<div style="width:100%;margin-top:.4rem;padding:.4rem .6rem;background:rgba(212,43,43,.12);border-radius:3px;font-size:.82rem;color:var(--red-light);">${esc(m.rejection_message)}</div>`;
     }
@@ -471,12 +525,24 @@ function missionCard(m) {
   </div>`;
 }
 
+function updateScoreDisplay(score){
+  const el = document.getElementById('team-score-text');
+  if(el) el.textContent = `${score}pt`;
+}
+async function refreshTeamScore(){
+  try {
+    const t = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
+    if(typeof t.score === 'number') updateScoreDisplay(t.score);
+  } catch(e) {}
+}
+
 function onAccepted(missionId) {
   const card = document.getElementById(`mc-${missionId}`); if (!card) return;
   card.className = 'p-mission-card accepted';
   const footer = document.getElementById(`mf-${missionId}`);
   if (footer) footer.innerHTML = `<span class="pill pill-accepted">${t('accepted')}</span>`;
   toast('✓ Mission angenommen!', 'success');
+  refreshTeamScore();
 }
 
 function onRejected(missionId, message) {
@@ -657,9 +723,18 @@ function closeCamera() {
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function openLightbox(url, isVid) {
+  let rotation = 0;
   const lb  = document.getElementById('lightbox');
   const img = document.getElementById('lb-img');
   const vid = document.getElementById('lb-vid');
+  const rotBtnEl = document.getElementById('lb-rotate');
+  if(rotBtnEl) rotBtnEl.onclick = (e) => {
+    e.stopPropagation();
+    rotation = (rotation+90)%360;
+    if(isVid) vid.style.transform=`rotate(${rotation}deg)`;
+    else img.style.transform=`rotate(${rotation}deg)`;
+  };
+  img.style.transform=''; vid.style.transform=''; // reset rotation
   if (isVid) { img.style.display='none'; vid.src=url; vid.style.display='block'; }
   else        { vid.style.display='none'; img.src=url; img.style.display='block'; }
   lb.style.display = 'flex';
@@ -704,6 +779,39 @@ function onChatMessage(msg) {
 function scrollChat() {
   const box = document.getElementById('chat-messages');
   setTimeout(() => { box.scrollTop = box.scrollHeight; }, 30);
+}
+
+async function uploadFromGallery(event, missionId, mediaType) {
+  const file = event.target.files?.[0];
+  if(!file) return;
+  currentMissionId = missionId;
+  const ub   = document.getElementById(`ub-${missionId}`);
+  const fill = document.getElementById(`uf-${missionId}`);
+  if(ub) ub.style.display = 'block';
+  const form = new FormData();
+  form.append('media', file, file.name);
+  const xhr = new XMLHttpRequest();
+  xhr.upload.onprogress = e => { if(e.lengthComputable && fill) fill.style.width = `${(e.loaded/e.total*100).toFixed(0)}%`; };
+  xhr.onload = () => {
+    if(ub) ub.style.display = 'none';
+    if(xhr.status === 200){
+      toast('Hochgeladen! Wird geprüft…', 'success');
+      const card = document.getElementById(`mc-${missionId}`);
+      if(card) card.className = 'p-mission-card pending';
+      const footer = document.getElementById(`mf-${missionId}`);
+      if(footer){
+        const isVid = mediaType==='video';
+        const src = URL.createObjectURL(file);
+        const thumb = isVid
+          ? `<video class="sub-thumb-video" src="${src}" muted></video>`
+          : `<img class="sub-thumb" src="${src}" alt="thumb">`;
+        footer.innerHTML = `<span class="pill pill-pending">${t('pending')}</span>${thumb}`;
+      }
+    } else { toast('Upload fehlgeschlagen', 'error'); }
+  };
+  xhr.onerror = () => { if(ub) ub.style.display='none'; toast('Upload fehlgeschlagen','error'); };
+  xhr.open('POST', `/api/games/${gameId}/teams/${teamId}/missions/${missionId}/upload`);
+  xhr.send(form);
 }
 
 async function sendChat() {

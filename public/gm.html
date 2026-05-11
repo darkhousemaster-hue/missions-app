@@ -49,6 +49,17 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .rule-langs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.5rem;}
 /* Mission tabs */
 .mission-tab-content{display:none;}.mission-tab-content.active{display:block;}
+/* GM CR map fullscreen — used both natively (Fullscreen API styles the
+   ::backdrop) and as a fallback when the API isn't available. */
+#panel-crmap:fullscreen,
+#panel-crmap.fs-fallback {
+  position:fixed; inset:0; z-index:2000; background:var(--bg);
+  display:block; padding:0; margin:0;
+}
+#panel-crmap:fullscreen #gm-cr-map,
+#panel-crmap.fs-fallback #gm-cr-map { width:100%; height:100%; }
+#panel-crmap:fullscreen #btn-cr-fullscreen,
+#panel-crmap.fs-fallback #btn-cr-fullscreen { top:.75rem; right:.75rem; }
 /* Template editor */
 #tpl-canvas-wrap{position:relative;display:inline-block;cursor:crosshair;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-width:100%;}
 #tpl-canvas{display:block;max-width:100%;}
@@ -83,6 +94,12 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
     <div id="mode-select-wrap" style="margin-bottom:1rem;">
       <label class="label" id="gs-mode-label">Spielmodus</label>
       <select id="mode-select" class="select" style="max-width:300px;"></select>
+    </div>
+    <div id="cr-mode-select-wrap" style="margin-bottom:1rem;">
+      <label class="label">CityRush (optional)</label>
+      <select id="cr-mode-select" class="select" style="max-width:300px;">
+        <option value="">— Kein CityRush —</option>
+      </select>
     </div>
     <button class="btn btn-primary btn-full" onclick="createNewGame()" id="btn-new-game" style="margin-bottom:1.5rem;">＋ <span id="gs-new">Neues Spiel</span></button>
     <div class="divider"></div>
@@ -170,6 +187,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
     <div class="tabs">
       <button class="tab active" onclick="switchPanel('chat',this)" id="tab-chat">Chat</button>
       <button class="tab" onclick="switchPanel('broadcast',this)" id="tab-broadcast">Broadcast</button>
+      <button class="tab" onclick="switchPanel('crmap',this)" id="tab-crmap">🗺️</button>
     </div>
     <div id="panel-chat" class="panel-content active">
       <div id="gm-chat-messages" class="chat-messages" style="flex:1;"></div>
@@ -186,6 +204,18 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
       <div style="padding:.75rem;border-top:1px solid var(--border);">
         <button class="btn btn-primary btn-full" onclick="sendBroadcast()">📢 <span id="db-broadcast">An alle senden</span></button>
       </div>
+    </div>
+    <div id="panel-crmap" class="panel-content" style="flex:1;min-height:0;position:relative;">
+      <div id="gm-cr-map" style="width:100%;height:100%;min-height:250px;"></div>
+      <!-- Fullscreen toggle floats above the Leaflet canvas. The button text
+           and behaviour switch when entering/leaving fullscreen. -->
+      <button id="btn-cr-fullscreen" type="button" onclick="toggleGmMapFullscreen()"
+        title="Karte ganzer Bildschirm"
+        style="position:absolute;top:.5rem;right:.5rem;z-index:1100;
+               padding:.4rem .55rem;font-size:.85rem;line-height:1;
+               background:var(--surface);border:1px solid var(--red);color:var(--text);
+               border-radius:var(--radius);cursor:pointer;
+               box-shadow:0 2px 8px rgba(0,0,0,.5);">⛶</button>
     </div>
     <div class="rankings-section">
       <div class="sidebar-title" id="db-rankings">RANGLISTE</div>
@@ -224,6 +254,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
         <button class="tab active" onclick="switchSettingsTab('general',this)" id="st-general">Allgemein</button>
         <button class="tab" onclick="switchSettingsTab('locations',this)" id="st-locations">Standorte</button>
         <button class="tab" onclick="switchSettingsTab('missions',this)" id="st-missions">MiSSiONS</button>
+        <button class="tab" onclick="switchSettingsTab('cityrush',this)" id="st-cityrush">🏃 CityRush</button>
         <button class="tab" onclick="switchSettingsTab('rules',this)" id="st-rules">Regeln</button>
         <button class="tab" onclick="switchSettingsTab('template',this)" id="st-template">QR-Vorlage</button>
         <button class="tab" onclick="switchSettingsTab('security',this)" id="st-security">Sicherheit</button>
@@ -234,16 +265,16 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
       <div id="stab-general" class="stab active">
         <div class="card mb-2">
           <h3 style="margin-bottom:1rem;" id="s-gen-title">Allgemeine Einstellungen</h3>
-          <div class="field">
+          <div class="field" data-tip="public-url">
             <label class="label" id="s-url-label">Öffentliche URL (für QR-Codes)</label>
             <div style="display:flex;gap:.5rem;">
-              <input id="s-public-url" class="input" placeholder="https://xxx.trycloudflare.com">
+              <input id="s-public-url" class="input" placeholder="https://xxx.trycloudflare.com" data-tip="public-url">
               <button class="btn btn-ghost btn-sm" onclick="detectTunnel()">🔍 <span id="s-detect">Erkennen</span></button>
             </div>
             <small id="s-url-hint">Starte start-tunnel-windows.bat, dann klicke Erkennen.</small>
           </div>
-          <div class="field">
-            <label class="label" style="display:flex;justify-content:space-between;">
+          <div class="field" data-tip="timeout">
+            <label class="label" style="display:flex;justify-content:space-between;" data-tip="timeout">
               <span id="s-timeout-label">Timeout-Nachricht</span>
               <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.15rem .4rem;" onclick="autoTranslateTimeout()">🌐 Auto</button>
             </label>
@@ -368,6 +399,36 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
         </div>
       </div>
 
+      <!-- CityRush -->
+      <div id="stab-cityrush" class="stab">
+        <div class="card mb-2">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+            <h3 id="s-cr-title">🏃 CityRush Modi</h3>
+            <button class="btn btn-primary btn-sm" onclick="showAddCrMode()" id="s-cr-add-mode">＋ Modus</button>
+          </div>
+          <p id="s-cr-info" style="font-size:.85rem;color:var(--text-muted);margin-bottom:.75rem;">
+            CityRush nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.
+          </p>
+          <div id="cr-mode-tabs" class="tabs" style="flex-wrap:wrap;border:none;margin-bottom:.5rem;"></div>
+          <div id="cr-mode-panel" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem;">
+              <h4 id="cr-mode-title">Missionen</h4>
+              <div style="display:flex;gap:.4rem;">
+                <button class="btn btn-ghost btn-sm" onclick="showAddCrMission()" id="s-cr-add-mission">＋ Mission</button>
+                <button class="btn btn-ghost btn-sm" onclick="editCurrentCrMode()" id="s-cr-edit-mode">✎ Modus</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCurrentCrMode()">🗑</button>
+              </div>
+            </div>
+            <p id="s-cr-drag-hint" style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">Drag &amp; drop zum Sortieren. Spieler sehen Missionen der Reihe nach.</p>
+            <div id="cr-missions-list"></div>
+          </div>
+          <div id="cr-empty" style="text-align:center;padding:2rem;color:var(--text-muted);">
+            <div style="font-size:2rem;margin-bottom:.5rem;">🏃</div>
+            <p id="s-cr-empty-text">Noch kein CityRush-Modus. Klicke ＋ Modus.</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Security -->
       <div id="stab-security" class="stab">
         <div class="card">
@@ -385,8 +446,8 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 </div><!-- #app -->
 
 <!-- Modals -->
-<div id="modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
-  <div class="modal" onclick="event.stopPropagation()"><div id="modal-content"></div></div>
+<div id="modal-overlay" class="modal-overlay" style="display:none;">
+  <div class="modal"><div id="modal-content"></div></div>
 </div>
 <div id="reject-modal" class="modal-overlay" style="display:none;">
   <div class="modal">
@@ -413,6 +474,8 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 </div>
 <div class="toast-container" id="toast-container"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 'use strict';
@@ -421,13 +484,216 @@ const sel = v => v ? 'selected' : '';
 let gmLang = localStorage.getItem('gm_lang')||'de';
 const LANGS_GM=['de','en','fr','it'];
 const GMT={
-  de:{'ll-select':'Standort wählen','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','db-send':'Senden','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemeine Einstellungen','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen'},
-  en:{'ll-select':'Select a location','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-recent':'Recent Games','gs-new':'New Game','ng-title':'New Game Created','ng-back':'Back','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','db-send':'Send','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General Settings','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove'},
-  fr:{'ll-select':'Choisir un lieu','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','ng-title':'Partie créée','ng-back':'Retour','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','db-send':'Envoyer','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Paramètres généraux','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer'},
-  it:{'ll-select':'Scegli un luogo','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-recent':'Partite recenti','gs-new':'Nuova partita','ng-title':'Partita creata','ng-back':'Indietro','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','db-send':'Invia','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Impostazioni generali','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi'}
+  de:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'CityRush nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein CityRush-Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine CityRush-Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
+  // CR mission modal labels
+  'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (Meter)','cr-m-points':'Punkte',
+  'cr-m-gps':'📍 GPS-Trigger','cr-m-map':'🗺️ Karte anzeigen','cr-m-timed':'⏱ Zeitlimit',
+  'cr-m-gps-hint':'Hinweis für Spieler (GPS-Trigger)','cr-m-time-secs':'Zeit (Sekunden)','cr-m-pen-int':'Penalty alle X Sek.','cr-m-pen-pts':'Penalty (Punkte)',
+  'cr-m-media':'Medientyp','cr-m-media-none':'— Keine —','cr-m-has-answer':'❓ Frage mit Antwort (Spieler müssen die korrekte Antwort tippen)',
+  'cr-m-answer-label':'Korrekte Antwort (mind. eine Sprache)','cr-m-hints-label':'💡 Hinweise (optional)','cr-m-add-hint':'＋ Hinweis','cr-m-no-hints':'Noch keine Hinweise.',
+  'cr-m-tab-desc':'📖 Beschreibung','cr-m-tab-task':'🎯 Aufgabe','cr-m-add-title':'CityRush Mission hinzufügen','cr-m-edit-title':'CityRush Mission bearbeiten','cr-m-create':'Erstellen','cr-m-save':'Speichern','cr-m-cancel':'Abbrechen','cr-m-auto':'🌐 Auto',
+  'cr-m-hide-until-arrival':'🔒 Aufgabe & Beschreibung erst nach Ankunft anzeigen',
+  'cr-m-hide-tip':'Spieler sehen nur den Hinweis, bis sie am GPS-Ziel ankommen. Erst danach werden Beschreibung und Aufgabe sichtbar.',
+  // ── Tooltips (DE) ──────────────────────────────────────────────────────────
+  'tip-public-url':'Die öffentliche URL, mit der Spieler dem Spiel beitreten. Nutze "Erkennen", um den Tunnel automatisch einzulesen.',
+  'tip-timeout':'Diese Nachricht sehen die Spieler, wenn die Spielzeit abgelaufen ist.',
+  'tip-loc-missions':'Wie viele MiSSiONS pro neuem Spiel an diesem Standort gezogen werden.',
+  'tip-loc-min-loc':'Mindestanzahl an Standort-spezifischen MiSSiONS pro Spiel — der Rest wird aus dem Pool gefüllt.',
+  'tip-loc-allow':'Welche Medienarten an diesem Standort erlaubt sind. Nicht erlaubte Typen können nicht ausgewählt werden.',
+  'tip-mode-name':'Anzeigename des Spielmodus.',
+  'tip-mode-ruleset':'Welche Regeln für Spiele in diesem Modus gelten.',
+  'tip-mode-timer':'Standard-Spieldauer in Minuten beim Erstellen eines neuen Spiels in diesem Modus.',
+  'tip-mission-name':'Anzeigename der MiSSiON in allen vier Sprachen.',
+  'tip-mission-loc':'Standort dieser MiSSiON. "Pool" = an jedem Standort möglich.',
+  'tip-mission-mode':'Zu welchem Spielmodus die MiSSiON gehört.',
+  'tip-mission-media':'Welches Medium die Spieler einreichen müssen.',
+  'tip-mission-points':'Punkte bei erfolgreicher Einreichung.',
+  'tip-mission-indoor':'MiSSiON kann auch in Innenräumen erfüllt werden.',
+  'tip-mission-desc':'Hintergrund/Story für die Spieler.',
+  'tip-mission-task':'Was die Spieler konkret tun sollen.',
+  'tip-cr-mode-name':'Anzeigename des CityRush-Modus.',
+  'tip-cr-mode-ruleset':'Regelwerk, das bei diesem CityRush-Modus angezeigt wird.',
+  'tip-cr-mode-allow':'Welche Medienarten in CityRush-Missionen dieses Modus erlaubt sind.',
+  'tip-cr-mode-timer':'Standard-Spieldauer in Minuten, wenn ein neues CityRush-Spiel in diesem Modus erstellt wird.',
+  'cr-mode-timer-label':'Standard-Dauer (Minuten)',
+  'tip-cr-lat':'Geografische Breite des Ziels (Dezimalgrad, z.B. 47.47620).',
+  'tip-cr-lng':'Geografische Länge des Ziels (Dezimalgrad).',
+  'tip-cr-radius':'Wie nah die Spieler am Ziel sein müssen, damit "Angekommen" ausgelöst wird (Meter).',
+  'tip-cr-points':'Maximale Punkte für diese CityRush-Mission (Strafpunkte werden abgezogen).',
+  'tip-cr-gps':'Spieler müssen physisch zum Ziel laufen, bevor sie die Mission lösen können.',
+  'tip-cr-map':'Mission als Markierung auf der Karte zeigen. Ohne diesen Haken wissen die Spieler nicht, wohin sie sollen.',
+  'tip-cr-timed':'Mit Zeitlimit: Strafpunkte fallen an, sobald die Zeit überschritten wird.',
+  'tip-cr-time-secs':'Maximale Zeit in Sekunden, bevor Strafpunkte greifen.',
+  'tip-cr-pen-int':'Alle wie viele Sekunden Überzeit ein neuer Strafpunkt fällig wird.',
+  'tip-cr-pen-pts':'Wie viele Punkte pro Strafe abgezogen werden.',
+  'tip-cr-media':'Foto- oder Video-Pflicht. Foto/Video-Missionen müssen vom Spielleiter freigegeben werden.',
+  'tip-cr-has-answer':'Spieler müssen eine Textantwort eingeben. Schließt Foto/Video aus.',
+  'tip-cr-answer':'Korrekte Antwort(en) — Vergleich ist tolerant gegenüber Groß-/Kleinschreibung und Leerzeichen.',
+  'tip-cr-hint':'Optionaler Text, der angezeigt wird, solange die Spieler noch zum Ziel laufen.',
+  'tip-cr-hide-until-arrival':'Beschreibung und Aufgabe werden erst nach Ankunft am Ziel angezeigt.',
+  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','db-send':'Senden','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemeine Einstellungen','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen'},
+  en:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No CityRush mode yet. Click ＋ Mode.','cr-no-missions':'No CityRush missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
+  'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
+  'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
+  'cr-m-gps-hint':'Hint for players (GPS trigger)','cr-m-time-secs':'Time (seconds)','cr-m-pen-int':'Penalty every X sec.','cr-m-pen-pts':'Penalty (points)',
+  'cr-m-media':'Media type','cr-m-media-none':'— None —','cr-m-has-answer':'❓ Question with answer (players must type the correct answer)',
+  'cr-m-answer-label':'Correct answer (at least one language)','cr-m-hints-label':'💡 Hints (optional)','cr-m-add-hint':'＋ Hint','cr-m-no-hints':'No hints yet.',
+  'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Task','cr-m-add-title':'Add CityRush Mission','cr-m-edit-title':'Edit CityRush Mission','cr-m-create':'Create','cr-m-save':'Save','cr-m-cancel':'Cancel','cr-m-auto':'🌐 Auto',
+  'cr-m-hide-until-arrival':'🔒 Hide task & description until arrival',
+  'cr-m-hide-tip':'Players see only the hint until they reach the GPS target. The description and task are revealed on arrival.',
+  // ── Tooltips (EN) ──────────────────────────────────────────────────────────
+  'tip-public-url':'The public URL players use to join the game. Use "Detect" to read the tunnel URL automatically.',
+  'tip-timeout':'Message shown to players when game time runs out.',
+  'tip-loc-missions':'How many MiSSiONS to draw per new game at this location.',
+  'tip-loc-min-loc':'Minimum number of location-specific MiSSiONS per game — the rest is filled from the pool.',
+  'tip-loc-allow':'Which media types are permitted at this location. Disallowed types can\'t be selected on missions.',
+  'tip-mode-name':'Display name of the game mode.',
+  'tip-mode-ruleset':'Which rules apply to games run in this mode.',
+  'tip-mode-timer':'Default game length in minutes when creating a new game in this mode.',
+  'tip-mission-name':'Display name in all four languages.',
+  'tip-mission-loc':'Location of this mission. "Pool" = available at any location.',
+  'tip-mission-mode':'Which game mode this mission belongs to.',
+  'tip-mission-media':'Which media players must submit.',
+  'tip-mission-points':'Points awarded on accepted submission.',
+  'tip-mission-indoor':'Mission can also be completed indoors.',
+  'tip-mission-desc':'Background story shown to players.',
+  'tip-mission-task':'What players actually have to do.',
+  'tip-cr-mode-name':'Display name of the CityRush mode.',
+  'tip-cr-mode-ruleset':'Ruleset shown to players in this CityRush mode.',
+  'tip-cr-mode-allow':'Which media types are allowed on missions in this mode.',
+  'tip-cr-mode-timer':'Default game duration in minutes when creating a new CityRush game in this mode.',
+  'cr-mode-timer-label':'Default duration (minutes)',
+  'tip-cr-lat':'Target latitude (decimal degrees, e.g. 47.47620).',
+  'tip-cr-lng':'Target longitude (decimal degrees).',
+  'tip-cr-radius':'How close players need to be to count as arrived (meters).',
+  'tip-cr-points':'Max points for this CityRush mission (penalties are deducted from this).',
+  'tip-cr-gps':'Players must physically reach the target before they can complete the mission.',
+  'tip-cr-map':'Show the mission as a marker on the map. Without this, players don\'t know where to go.',
+  'tip-cr-timed':'Time-limited: penalty points start once the limit is exceeded.',
+  'tip-cr-time-secs':'Maximum time in seconds before penalties kick in.',
+  'tip-cr-pen-int':'How often a new penalty is incurred while overtime (seconds).',
+  'tip-cr-pen-pts':'Penalty points deducted per interval.',
+  'tip-cr-media':'Require a photo or video. Media missions need GM approval.',
+  'tip-cr-has-answer':'Players must type a correct text answer. Mutually exclusive with photo/video.',
+  'tip-cr-answer':'The correct answer(s) — matching is case-insensitive and trims whitespace.',
+  'tip-cr-hint':'Optional text shown while players are still walking to the target.',
+  'tip-cr-hide-until-arrival':'Description and task only appear after the player arrives.',
+  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-recent':'Recent Games','gs-new':'New Game','ng-title':'New Game Created','ng-back':'Back','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','db-send':'Send','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General Settings','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove'},
+  fr:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modes CityRush','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode CityRush. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission CityRush. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
+  'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
+  'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
+  'cr-m-gps-hint':'Indice pour les joueurs (GPS)','cr-m-time-secs':'Temps (secondes)','cr-m-pen-int':'Pénalité toutes les X sec.','cr-m-pen-pts':'Pénalité (points)',
+  'cr-m-media':'Type de média','cr-m-media-none':'— Aucun —','cr-m-has-answer':'❓ Question avec réponse (les joueurs doivent saisir la bonne réponse)',
+  'cr-m-answer-label':'Bonne réponse (au moins une langue)','cr-m-hints-label':'💡 Indices (optionnel)','cr-m-add-hint':'＋ Indice','cr-m-no-hints':'Aucun indice.',
+  'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Tâche','cr-m-add-title':'Ajouter une mission CityRush','cr-m-edit-title':'Modifier la mission CityRush','cr-m-create':'Créer','cr-m-save':'Sauvegarder','cr-m-cancel':'Annuler','cr-m-auto':'🌐 Auto',
+  'cr-m-hide-until-arrival':'🔒 Cacher la tâche & description avant l\'arrivée',
+  'cr-m-hide-tip':'Les joueurs ne voient que l\'indice jusqu\'à leur arrivée à la cible GPS. La description et la tâche apparaissent ensuite.',
+  // ── Tooltips (FR) ──────────────────────────────────────────────────────────
+  'tip-public-url':'L\'URL publique utilisée par les joueurs pour rejoindre. "Détecter" lit l\'URL du tunnel automatiquement.',
+  'tip-timeout':'Message affiché aux joueurs quand le temps est écoulé.',
+  'tip-loc-missions':'Nombre de MiSSiONS tirées par partie sur ce lieu.',
+  'tip-loc-min-loc':'Minimum de MiSSiONS spécifiques au lieu par partie — le reste vient du pool.',
+  'tip-loc-allow':'Types de médias autorisés sur ce lieu. Les types non autorisés ne sont pas sélectionnables.',
+  'tip-mode-name':'Nom d\'affichage du mode de jeu.',
+  'tip-mode-ruleset':'Quel jeu de règles s\'applique aux parties dans ce mode.',
+  'tip-mode-timer':'Durée par défaut (minutes) à la création d\'une partie.',
+  'tip-mission-name':'Nom d\'affichage dans les quatre langues.',
+  'tip-mission-loc':'Lieu de cette mission. "Pool" = disponible partout.',
+  'tip-mission-mode':'Le mode de jeu auquel appartient la mission.',
+  'tip-mission-media':'Type de média que les joueurs doivent soumettre.',
+  'tip-mission-points':'Points attribués si la soumission est acceptée.',
+  'tip-mission-indoor':'La mission peut aussi être effectuée en intérieur.',
+  'tip-mission-desc':'Histoire/contexte montré aux joueurs.',
+  'tip-mission-task':'Ce que les joueurs doivent faire.',
+  'tip-cr-mode-name':'Nom d\'affichage du mode CityRush.',
+  'tip-cr-mode-ruleset':'Jeu de règles affiché aux joueurs dans ce mode.',
+  'tip-cr-mode-allow':'Types de médias autorisés sur les missions de ce mode.',
+  'tip-cr-mode-timer':'Durée par défaut (minutes) à la création d\'une partie CityRush dans ce mode.',
+  'cr-mode-timer-label':'Durée par défaut (minutes)',
+  'tip-cr-lat':'Latitude de la cible (degrés décimaux, ex. 47.47620).',
+  'tip-cr-lng':'Longitude de la cible (degrés décimaux).',
+  'tip-cr-radius':'Distance (m) à laquelle l\'arrivée est validée.',
+  'tip-cr-points':'Points max pour cette mission (les pénalités sont déduites).',
+  'tip-cr-gps':'Les joueurs doivent atteindre physiquement la cible avant de pouvoir résoudre la mission.',
+  'tip-cr-map':'Afficher la mission comme marqueur sur la carte. Sans cela, les joueurs ignorent où aller.',
+  'tip-cr-timed':'Limité dans le temps : pénalités après dépassement.',
+  'tip-cr-time-secs':'Temps max (secondes) avant pénalités.',
+  'tip-cr-pen-int':'Intervalle (secondes) entre deux pénalités en dépassement.',
+  'tip-cr-pen-pts':'Points retirés par pénalité.',
+  'tip-cr-media':'Exiger une photo ou une vidéo. Les missions média nécessitent l\'approbation du Gamemaster.',
+  'tip-cr-has-answer':'Les joueurs doivent saisir la bonne réponse. Exclusif avec photo/vidéo.',
+  'tip-cr-answer':'La/les bonne(s) réponse(s) — comparaison insensible à la casse et aux espaces.',
+  'tip-cr-hint':'Texte optionnel affiché pendant que les joueurs marchent vers la cible.',
+  'tip-cr-hide-until-arrival':'Description et tâche n\'apparaissent qu\'après l\'arrivée.',
+  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','ng-title':'Partie créée','ng-back':'Retour','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','db-send':'Envoyer','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Paramètres généraux','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer'},
+  it:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modalità CityRush','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'CityRush usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità CityRush. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione CityRush. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
+  'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
+  'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
+  'cr-m-gps-hint':'Suggerimento per i giocatori (GPS)','cr-m-time-secs':'Tempo (secondi)','cr-m-pen-int':'Penalità ogni X sec.','cr-m-pen-pts':'Penalità (punti)',
+  'cr-m-media':'Tipo di media','cr-m-media-none':'— Nessuno —','cr-m-has-answer':'❓ Domanda con risposta (i giocatori devono inserire la risposta corretta)',
+  'cr-m-answer-label':'Risposta corretta (almeno una lingua)','cr-m-hints-label':'💡 Suggerimenti (opzionale)','cr-m-add-hint':'＋ Suggerimento','cr-m-no-hints':'Nessun suggerimento.',
+  'cr-m-tab-desc':'📖 Descrizione','cr-m-tab-task':'🎯 Compito','cr-m-add-title':'Aggiungi missione CityRush','cr-m-edit-title':'Modifica missione CityRush','cr-m-create':'Crea','cr-m-save':'Salva','cr-m-cancel':'Annulla','cr-m-auto':'🌐 Auto',
+  'cr-m-hide-until-arrival':'🔒 Nascondi compito e descrizione fino all\'arrivo',
+  'cr-m-hide-tip':'I giocatori vedono solo il suggerimento finché non arrivano al punto GPS. Solo allora vengono mostrati descrizione e compito.',
+  // ── Tooltips (IT) ──────────────────────────────────────────────────────────
+  'tip-public-url':'L\'URL pubblico che i giocatori usano per entrare. "Rileva" legge automaticamente l\'URL del tunnel.',
+  'tip-timeout':'Messaggio mostrato ai giocatori quando il tempo è scaduto.',
+  'tip-loc-missions':'Quante MiSSiONS estrarre per partita in questo luogo.',
+  'tip-loc-min-loc':'Minimo di MiSSiONS specifiche del luogo per partita — il resto è dal pool.',
+  'tip-loc-allow':'Tipi di media consentiti in questo luogo. I tipi non consentiti non sono selezionabili nelle missioni.',
+  'tip-mode-name':'Nome visualizzato della modalità.',
+  'tip-mode-ruleset':'Quale set di regole si applica alle partite in questa modalità.',
+  'tip-mode-timer':'Durata predefinita (minuti) creando una nuova partita.',
+  'tip-mission-name':'Nome visualizzato nelle quattro lingue.',
+  'tip-mission-loc':'Luogo di questa missione. "Pool" = disponibile ovunque.',
+  'tip-mission-mode':'A quale modalità appartiene la missione.',
+  'tip-mission-media':'Tipo di media che i giocatori devono inviare.',
+  'tip-mission-points':'Punti assegnati su invio accettato.',
+  'tip-mission-indoor':'La missione può essere svolta anche al chiuso.',
+  'tip-mission-desc':'Sfondo/storia mostrato ai giocatori.',
+  'tip-mission-task':'Cosa devono fare concretamente i giocatori.',
+  'tip-cr-mode-name':'Nome visualizzato della modalità CityRush.',
+  'tip-cr-mode-ruleset':'Set di regole mostrato ai giocatori in questa modalità.',
+  'tip-cr-mode-allow':'Tipi di media consentiti nelle missioni di questa modalità.',
+  'tip-cr-mode-timer':'Durata predefinita (minuti) creando una nuova partita CityRush in questa modalità.',
+  'cr-mode-timer-label':'Durata predefinita (minuti)',
+  'tip-cr-lat':'Latitudine target (gradi decimali, es. 47.47620).',
+  'tip-cr-lng':'Longitudine target (gradi decimali).',
+  'tip-cr-radius':'Distanza (m) a cui scatta l\'arrivo.',
+  'tip-cr-points':'Punti max per questa missione (le penalità vengono sottratte).',
+  'tip-cr-gps':'I giocatori devono raggiungere fisicamente il punto prima di poter completare.',
+  'tip-cr-map':'Mostra la missione come marker sulla mappa. Senza, i giocatori non sanno dove andare.',
+  'tip-cr-timed':'A tempo: le penalità iniziano quando il tempo viene superato.',
+  'tip-cr-time-secs':'Tempo massimo (secondi) prima delle penalità.',
+  'tip-cr-pen-int':'Ogni quanti secondi di extra-time scatta una nuova penalità.',
+  'tip-cr-pen-pts':'Punti tolti per ogni penalità.',
+  'tip-cr-media':'Richiedere foto o video. Le missioni con media richiedono l\'approvazione del Gamemaster.',
+  'tip-cr-has-answer':'I giocatori devono digitare la risposta corretta. Si esclude con foto/video.',
+  'tip-cr-answer':'Le risposte corrette — confronto case-insensitive e con spazi normalizzati.',
+  'tip-cr-hint':'Testo opzionale mostrato mentre i giocatori camminano verso il target.',
+  'tip-cr-hide-until-arrival':'Descrizione e compito appaiono solo dopo l\'arrivo.',
+  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-recent':'Partite recenti','gs-new':'Nuova partita','ng-title':'Partita creata','ng-back':'Indietro','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','db-send':'Invia','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Impostazioni generali','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi'}
 };
 function gmt(key){
   return (GMT[gmLang]||GMT['en']||{})[key] || (GMT['en']||{})[key] || '';
+}
+// Look up the tooltip text for a setting key. Tooltips are stored under
+// `tip-<key>` in the same translation table so a single language switch
+// retranslates them all. Falls back to empty so the title attribute is
+// simply omitted if no tooltip is defined.
+function tip(key){
+  const t = gmt(`tip-${key}`);
+  return t || '';
+}
+// Walk every element with [data-tip="..."] and apply the translated tooltip
+// as a native `title` attribute. Called on language switch and whenever
+// settings markup is (re)rendered.
+function applyTooltips(root){
+  (root||document).querySelectorAll('[data-tip]').forEach(el => {
+    const txt = tip(el.getAttribute('data-tip'));
+    if(txt) el.setAttribute('title', txt);
+    else el.removeAttribute('title');
+  });
 }
 function applyGmLang(){
   const t=GMT[gmLang]||GMT.en;
@@ -438,6 +704,8 @@ function applyGmLang(){
   if(chatInput) chatInput.placeholder=gmt('chat-ph-gm')||'Nachricht…';
   const broadcastInfo=document.getElementById('db-broadcast-info');
   if(broadcastInfo) broadcastInfo.textContent=gmt('db-broadcast-info')||'Nachricht an alle Teams senden.';
+  // Refresh tooltips so a language switch retranslates the title attributes.
+  applyTooltips();
 }
 function cycleGmLang(){
   gmLang=LANGS_GM[(LANGS_GM.indexOf(gmLang)+1)%LANGS_GM.length];
@@ -451,6 +719,7 @@ function cycleGmLang(){
   if(document.getElementById('stab-locations')?.classList.contains('active')) loadLocationsSettings();
   if(document.getElementById('stab-missions')?.classList.contains('active')) loadMissions();
   if(document.getElementById('stab-rules')?.classList.contains('active')) loadRulesetsSettings();
+  if(document.getElementById('stab-cityrush')?.classList.contains('active')) loadCrModes();
   if(document.getElementById('games-grid')&&selectedLocationId) loadGames(selectedLocationId);
   if(document.getElementById('screen-landing')?.style.display!=='none'){loadLanding();}
 }
@@ -468,6 +737,7 @@ const API=(url,o={})=>fetch(url,{headers:{'Content-Type':'application/json'},...
 // ── Init ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',async()=>{
   applyGmLang();
+  applyTooltips();
   await loadLanding();
   showScreen('screen-landing');
   // Show version on landing
@@ -479,26 +749,61 @@ window.addEventListener('DOMContentLoaded',async()=>{
 });
 
 async function loadLanding(){
-  const locs=await API('/api/locations');
+  const [locs, crModes] = await Promise.all([API('/api/locations'), API('/api/cr/modes')]);
   const grid=document.getElementById('location-grid');
-  if(!locs.length){grid.innerHTML='<div class="empty"><div class="empty-icon">📍</div><p>Keine Standorte. Einstellungen → Standorte.</p></div>';return;}
-  grid.innerHTML=locs.map(l=>`<div class="location-card" onclick="selectLocation(${l.id},'${esc(l.name)}')"><h3>${esc(l.name)}</h3></div>`).join('');
+  const cards = locs.map(l=>`<div class="location-card" onclick="selectLocation(${l.id},'${esc(l.name)}')">${esc(l.name)}</div>`);
+  if(crModes.length){
+    cards.push(`<div class="location-card" onclick="selectCityRushLocation()" style="border-color:var(--orange);">
+      <h3>🏃 CityRush</h3>
+      <small style="color:var(--orange);">${crModes.length} ${crModes.length===1?'Modus':'Modi'}</small>
+    </div>`);
+  }
+  if(!cards.length){grid.innerHTML='<div class="empty"><div class="empty-icon">📍</div><p>Keine Standorte.</p></div>';return;}
+  grid.innerHTML=cards.join('');
 }
 
+async function selectCityRushLocation(){
+  selectedLocationId='cityrush';
+  document.getElementById('gs-location-name').textContent='🏃 CityRush';
+  showScreen('screen-game-select');
+  // Show only CR modes, hide normal mode selector
+  const crModes=await API('/api/cr/modes');
+  document.getElementById('mode-select-wrap').style.display='none';
+  document.getElementById('cr-mode-select-wrap').style.display='block';
+  const crSel=document.getElementById('cr-mode-select');
+  if(crSel){
+    crSel.innerHTML='<option value="">— Modus wählen —</option>'+
+      crModes.map(m=>`<option value="${m.id}">🏃 ${esc(m.name)}</option>`).join('');
+  }
+  document.getElementById('btn-new-game').textContent='🏃 CityRush starten';
+  await loadGames('cityrush');
+}
 async function selectLocation(id,name){
   selectedLocationId=id;
   document.getElementById('gs-location-name').textContent=name;
   showScreen('screen-game-select');
+  // Restore normal mode selector
+  document.getElementById('mode-select-wrap').style.display='block';
+  document.getElementById('cr-mode-select-wrap').style.display='none';
+  if(document.getElementById('btn-new-game')) document.getElementById('btn-new-game').textContent='＋ ' + (gmt('gs-new')||'Neues Spiel');
   // Load modes into selector
   const modes=await API('/api/modes');
   const sel=document.getElementById('mode-select');
   sel.innerHTML=modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   sel.value=currentModeId;
+  // Load CityRush modes
+  const crModes=await API('/api/cr/modes');
+  const crSel=document.getElementById('cr-mode-select');
+  if(crSel){
+    crSel.innerHTML='<option value="">— Kein CityRush —</option>'+
+      crModes.map(m=>`<option value="${m.id}">🏃 ${esc(m.name)}</option>`).join('');
+  }
   await loadGames(id);
 }
 
 async function loadGames(locationId){
-  const games=await API(`/api/games?location_id=${locationId}`);
+  const url = locationId==='cityrush' ? '/api/games?is_cityrush=1' : `/api/games?location_id=${locationId}`;
+  const games=await API(url);
   const grid=document.getElementById('games-grid');
   if(!games.length){grid.innerHTML='<p style="color:var(--text-muted);">Noch keine Spiele.</p>';return;}
   grid.innerHTML=games.map(g=>`
@@ -521,15 +826,24 @@ async function createNewGame(){
   const btn=document.getElementById('btn-new-game');
   if(btn.disabled)return;
   btn.disabled=true;
-  const modeId=Number(document.getElementById('mode-select').value)||1;
-  const res=await API('/api/games',{method:'POST',body:{location_id:selectedLocationId,mode_id:modeId}});
+  try{
+  const isCityRush = selectedLocationId==='cityrush';
+  const modeId = isCityRush ? 1 : (Number(document.getElementById('mode-select').value)||1);
+  const crModeId = isCityRush
+    ? Number(document.getElementById('cr-mode-select')?.value)||null
+    : null;
+  if(isCityRush && !crModeId){toast('Bitte CityRush-Modus auswählen','warning');btn.disabled=false;return;}
+  // For CityRush, use a virtual location_id of 0 (no location needed)
+  const locId = isCityRush ? null : selectedLocationId;
+  const res=await API('/api/games',{method:'POST',body:{location_id:locId,mode_id:modeId,cr_mode_id:crModeId,is_cityrush:isCityRush?1:0}});
   btn.disabled=false;
-  if(res.error){toast(res.error,'error');return;}
+  if(res.error){toast(res.error,'error');btn.disabled=false;return;}
   currentGameId=res.id; currentQRData=res.qrCode; currentJoinUrl=res.joinUrl;
   document.getElementById('qr-game-id').textContent=res.id;
   document.getElementById('join-url-display').textContent=res.joinUrl;
   document.getElementById('qr-img').src=res.qrCode;
   showScreen('screen-new-game');
+  }catch(e){toast('Fehler: '+e.message,'error');btn.disabled=false;}
 }
 
 async function showGameQR(gameId){
@@ -601,6 +915,10 @@ async function deleteGame(gameId,e){
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 async function openDashboard(gameId){
+  // Reset any state carried over from a previous game so the new dashboard
+  // can't see stale teams, markers, pending counts, or cached payloads.
+  resetGmDashboardState();
+
   currentGameId=gameId;
   selectedTeamId=null;
   document.getElementById('team-detail').style.display='none';
@@ -613,12 +931,42 @@ async function openDashboard(gameId){
   socket.on('connect',()=>socket.emit('join_gm',{gameId}));
   socket.on('timer_update',updateTimer);
   socket.on('timer_state',updateTimer);
-  socket.on('team_joined',(team)=>{addTeamChip(team);toast(`${team.name} beigetreten!`,'success');});
+  socket.on('team_joined',(team)=>{
+    // Cache the team so subsequent gps_update events can resolve a real name
+    // instead of falling back to "Team <id>".
+    if(currentGame){
+      currentGame.teams = currentGame.teams || [];
+      if(!currentGame.teams.some(t => t.id === team.id)) currentGame.teams.push(team);
+    }
+    addTeamChip(team);
+    refreshGmMarkerLabels();
+    toast(`${team.name} beigetreten!`,'success');
+  });
   socket.on('submission_new',onSubmissionNew);
   socket.on('submission_reviewed',onSubmissionReviewed);
   socket.on('rankings_update',renderRankings);
+  // CityRush: a player uploaded a photo/video that's waiting for GM approval.
+  socket.on('cr_submission_new', ({teamId}) => {
+    bumpPending(teamId, +1);
+    if(teamId === selectedTeamId) selectTeam(teamId);   // re-render team detail
+    toast('📥 CityRush: Neue Einreichung!', 'warning');
+  });
+  socket.on('cr_submission_reviewed', ({teamId}) => {
+    // Use the authoritative count from the server rather than guessing.
+    refreshPendingCounts();
+    if(teamId === selectedTeamId) selectTeam(teamId);
+  });
+  // CityRush: a team auto-completed (no media) — refresh the dashboard so
+  // the team detail and rankings update without a manual reload.
+  socket.on('cr_mission_completed', ({teamId}) => {
+    if(teamId === selectedTeamId) selectTeam(teamId);
+  });
   socket.on('chat_message',onChatMessage);
   socket.on('game_ended',()=>toast('Spiel beendet!'));
+  socket.on('gps_update',({teamId:tid,lat,lng})=>{
+    if(!gmCrMap)return;
+    upsertGmTeamMarker(tid, lat, lng);
+  });
   socket.on('settings_updated',({type})=>{
     if(type==='missions'&&selectedTeamId)selectTeam(selectedTeamId);
   });
@@ -630,11 +978,72 @@ function goToDashboardBack(){
   if(selectedLocationId)loadGames(selectedLocationId);
 }
 
+let currentGame=null;
 async function refreshDashboard(gameId){
-  const game=await API(`/api/games/${gameId}`);
+  currentGame=await API(`/api/games/${gameId}`);
+  const game=currentGame;
   renderTeamsBar(game.teams);
   renderRankings(await API(`/api/games/${gameId}/rankings`));
+  // For CityRush games, seed any cached GPS positions onto the map so the GM
+  // sees teams that haven't broadcast a fresh tick yet. We also cache the
+  // mission list so the GM map can show every mission (regardless of which
+  // teams have reached them yet).
+  if(game.crMode){
+    try {
+      const cr = await API(`/api/games/${gameId}/cr`);
+      window._lastCrPayload = cr;
+      if(cr && Array.isArray(cr.missions)) gmCrMissionsCache = cr.missions;
+      if(cr && Array.isArray(cr.gps)){
+        cr.gps.forEach(g => upsertGmTeamMarker(g.team_id, g.lat, g.lng));
+      }
+      renderGmCrMissionMarkers();
+    } catch(e) {}
+  }
+  // Pull pending counts so the notification dot reflects reality the moment
+  // the dashboard opens (covers refresh / re-open scenarios).
+  await refreshPendingCounts();
   if(game.teams.length>0)selectTeam(game.teams[0].id);
+}
+
+// Pending submission counts per team. The notification dot shows the number
+// and only disappears when the count drops to 0 — so a GM can't lose track
+// of a single un-reviewed photo because they happened to click the chip.
+const pendingCounts = {};
+function setPendingCount(teamId, n){
+  pendingCounts[teamId] = Math.max(0, n|0);
+  paintNotif(teamId);
+}
+function bumpPending(teamId, delta){
+  pendingCounts[teamId] = Math.max(0, (pendingCounts[teamId]||0) + (delta|0));
+  paintNotif(teamId);
+}
+function paintNotif(teamId){
+  const el = document.getElementById(`notif-${teamId}`);
+  if(!el) return;
+  const c = pendingCounts[teamId] || 0;
+  if(c > 0){
+    el.style.display      = 'inline-flex';
+    el.style.minWidth     = '18px';
+    el.style.height       = '18px';
+    el.style.padding      = '0 5px';
+    el.style.borderRadius = '9px';
+    el.style.alignItems   = 'center';
+    el.style.justifyContent = 'center';
+    el.style.fontSize     = '.7rem';
+    el.style.fontWeight   = '700';
+    el.style.color        = '#fff';
+    el.textContent        = String(c);
+  } else {
+    el.style.display = 'none';
+    el.textContent   = '';
+  }
+}
+async function refreshPendingCounts(){
+  if(!currentGameId) return;
+  try {
+    const map = await API(`/api/games/${currentGameId}/pending-counts`);
+    Object.keys(map||{}).forEach(tid => setPendingCount(Number(tid), map[tid]));
+  } catch(e) {}
 }
 
 function renderTeamsBar(teams){
@@ -646,6 +1055,8 @@ function renderTeamsBar(teams){
       <span id="tscore-${t.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--orange);">${t.score}pt</span>
       <span class="notif-dot" id="notif-${t.id}" style="display:none;"></span>
     </div>`).join('');
+  // After the chips render, paint any counts we already know about.
+  teams.forEach(t => paintNotif(t.id));
 }
 
 function addTeamChip(team){
@@ -666,14 +1077,146 @@ async function selectTeam(teamId){
   selectedTeamId=teamId;
   document.querySelectorAll('.team-chip-gm').forEach(el=>el.classList.remove('active'));
   const chip=document.getElementById(`tc-${teamId}`);if(chip)chip.classList.add('active');
-  const notif=document.getElementById(`notif-${teamId}`);if(notif)notif.style.display='none';
+  // The notification dot is no longer cleared by clicking — it stays visible
+  // (with a count) until every pending submission is reviewed.
   document.getElementById('no-team-selected').style.display='none';
   document.getElementById('team-detail').style.display='block';
   const data=await API(`/api/games/${currentGameId}/teams/${teamId}`);
   document.getElementById('detail-team-name').textContent=data.name;
   document.getElementById('detail-team-score').textContent=`${data.score} pts`;
-  renderTeamMissions(data.missions);
+  // If this game has a CityRush mode, render CR missions; otherwise normal missions.
+  if(currentGame && currentGame.crMode){
+    await renderCrTeamMissions(teamId);
+    centerGmMapOnTeam(teamId);     // pan/zoom the CR map to this team's last known fix
+    // Recolor mission markers (done/current/upcoming) for this team's progress.
+    renderGmCrMissionMarkers();
+  } else {
+    renderTeamMissions(data.missions);
+  }
   await loadGmChat(teamId);
+}
+
+// Re-centre the GM CityRush map on a team's most recent GPS marker. If the
+// map isn't ready yet (panel hasn't been opened) we lazily switch it on and
+// invalidate the size first so Leaflet doesn't render at 0×0.
+function centerGmMapOnTeam(teamId){
+  if(!gmCrMap){
+    // Switch to the map panel so the user actually sees the new centre.
+    const tab = document.getElementById('tab-crmap');
+    if(tab) switchPanel('crmap', tab);
+  }
+  if(!gmCrMap) return;
+  const mk = gmCrMarkers[teamId];
+  if(mk){
+    setTimeout(() => {
+      gmCrMap.invalidateSize();
+      gmCrMap.setView(mk.getLatLng(), 17, {animate:true});
+      mk.openPopup();
+    }, 100);
+    return;
+  }
+  // No live marker yet — fall back to the cached GPS fix from the game payload.
+  API(`/api/games/${currentGameId}/cr`).then(cr => {
+    const g = (cr && cr.gps || []).find(x => x.team_id === teamId);
+    if(!g) return;
+    upsertGmTeamMarker(teamId, g.lat, g.lng);
+    setTimeout(() => {
+      gmCrMap.invalidateSize();
+      gmCrMap.setView([g.lat, g.lng], 17, {animate:true});
+    }, 100);
+  }).catch(()=>{});
+}
+
+async function renderCrTeamMissions(teamId){
+  const list=document.getElementById('team-missions-list');
+  const cr=await API(`/api/games/${currentGameId}/cr`);
+  if(!cr.active||!cr.missions||!cr.missions.length){
+    list.innerHTML='<div class="empty"><p>Keine CityRush-Missionen.</p></div>';return;
+  }
+  const prog=(cr.progress||[]).find(p=>p.team_id===teamId)||{mission_index:0,status:'pending'};
+  const idx=prog.mission_index||0;
+  // Pending CR submissions for this team — keyed by mission_id so we can
+  // attach accept/reject controls to the right mission card.
+  const pendingByMission = {};
+  (cr.submissions||[])
+    .filter(s => s.team_id === teamId && s.status === 'pending')
+    .forEach(s => { pendingByMission[s.mission_id] = s; });
+
+  list.innerHTML=cr.missions.map((m,i)=>{
+    const sub = pendingByMission[m.id];
+    let status, bc;
+    if(sub){ status='pending'; bc='orange'; }
+    else if(i<idx){ status='accepted'; bc='green'; }
+    else if(i===idx){ status = prog.status==='finished' ? 'accepted' : 'open'; bc = prog.status==='finished' ? 'green' : 'grey'; }
+    else { status='open'; bc='grey'; }
+    const sc = status==='pending' ? 'has-pending' : status==='accepted' ? 'accepted' : '';
+    const name=m['name_'+gmLang]||m.name_de||'(kein Name)';
+    const desc=m['description_'+gmLang]||m.description_de||'';
+    const task=m['task_'+gmLang]||m.task_de||'';
+    const flags=[
+      m.use_gps?'📍':'',
+      m.use_map?'🗺️':'',
+      m.is_timed?'⏱':'',
+      m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
+      m.has_answer?'❓':'',
+      m.hide_until_arrival?'🔒':''
+    ].filter(Boolean).join(' ');
+    // Media preview + review actions when a submission is waiting.
+    let media = '', actions = '';
+    if(sub && sub.media_path){
+      const src = `/uploads/${sub.media_path}`;
+      const isVideo = m.media_required==='video' || /\.(mp4|webm|mov)$/i.test(sub.media_path);
+      media = isVideo
+        ? `<video src="${src}" onclick="openLightbox('${src}',true)" style="max-width:100%;max-height:200px;border-radius:var(--radius);border:1px solid var(--border);display:block;margin:.5rem 0;cursor:pointer;"></video>`
+        : `<img src="${src}" onclick="openLightbox('${src}',false)" style="max-width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);display:block;margin:.5rem 0;" alt="thumb">`;
+      actions = `<div class="review-actions">
+        <button class="btn btn-success btn-sm" onclick="reviewCrSub(${sub.id},'accept')">✓ Annehmen</button>
+        <button class="btn btn-danger btn-sm" onclick="openCrRejectModal(${sub.id})">✗ Ablehnen</button>
+      </div>`;
+    }
+    return `<div class="mission-card ${sc}">
+      <div class="mission-header">
+        <span style="font-family:var(--mono);color:var(--text-muted);font-size:.8rem;margin-right:.5rem;">${i+1}.</span>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:.9rem;">${esc(name)} <small style="color:var(--text-muted);">${flags}</small></div>
+          ${desc?`<div style="font-size:.85rem;color:var(--text-dim);">${esc(desc)}</div>`:''}
+          ${task?`<div style="font-size:.85rem;color:var(--orange);">→ ${esc(task)}</div>`:''}
+          <small>${m.points} Punkt${m.points!==1?'e':''}</small>
+        </div>
+        <span class="badge badge-${bc}">${status}</span>
+      </div>
+      ${media}${actions}
+    </div>`;
+  }).join('');
+}
+
+// Review actions for CR media submissions. Mirror the regular reject modal
+// flow so the GM has to give a reason on rejection.
+async function reviewCrSub(subId, action){
+  if(action==='reject'){ openCrRejectModal(subId); return; }
+  await API(`/api/cr/submissions/${subId}/review`,{method:'POST',body:{action,gameId:currentGameId}});
+  if(selectedTeamId) selectTeam(selectedTeamId);
+}
+let pendingCrRejectSubId = null;
+function openCrRejectModal(subId){
+  pendingCrRejectSubId = subId;
+  document.getElementById('reject-reason').value='';
+  // Repurpose the existing reject modal but route confirm through the CR path.
+  document.getElementById('reject-modal').style.display='flex';
+  const btn = document.getElementById('rej-confirm');
+  if(btn){ btn.onclick = confirmCrReject; }
+}
+async function confirmCrReject(){
+  const reason = document.getElementById('reject-reason').value.trim();
+  if(!reason){ toast('Bitte Begründung eingeben','error'); return; }
+  await API(`/api/cr/submissions/${pendingCrRejectSubId}/review`,
+    {method:'POST',body:{action:'reject',message:reason,gameId:currentGameId}});
+  document.getElementById('reject-modal').style.display='none';
+  // Reset the confirm handler back to the regular flow.
+  const btn = document.getElementById('rej-confirm');
+  if(btn) btn.onclick = confirmReject;
+  if(selectedTeamId) selectTeam(selectedTeamId);
+  toast('CityRush: Abgelehnt & Team benachrichtigt.','warning');
 }
 
 function renderTeamMissions(missions){
@@ -688,8 +1231,8 @@ function renderTeamMissions(missions){
     if(m.media_path&&(m.status==='pending'||m.status==='accepted')){
       const src=`/uploads/${m.media_path}`;
       media=m.media_type==='video'
-        ?`<video src="${src}" controls style="max-width:100%;max-height:180px;border-radius:var(--radius);border:1px solid var(--border);display:block;margin:.5rem 0;"></video>`
-        :`<img src="${src}" onclick="openLightbox('${src}',false)" style="width:80px;height:60px;object-fit:cover;border-radius:3px;cursor:pointer;border:1px solid var(--border);" alt="thumb">`;
+        ?`<video src="${src}" onclick="openLightbox('${src}',true)" style="max-width:100%;max-height:200px;border-radius:var(--radius);border:1px solid var(--border);display:block;margin:.5rem 0;cursor:pointer;" title="Klicken zum Vergrößern"></video>`
+        :`<img src="${src}" onclick="openLightbox('${src}',false)" style="max-width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);display:block;margin:.5rem 0;" alt="thumb">`;
     }
     let actions='';
     if(m.status==='pending')actions=`<div class="review-actions">
@@ -716,13 +1259,27 @@ function renderTeamMissions(missions){
 
 // Lightbox
 function openLightbox(url,isVid){
+  let rotation=0;
   const d=document.createElement('div');
-  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9000;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9000;display:flex;align-items:center;justify-content:center;';
   d.onclick=()=>d.remove();
+  // Controls
+  const bar=document.createElement('div');
+  bar.style.cssText='position:fixed;top:1rem;right:1rem;display:flex;gap:.5rem;z-index:9001;';
+  const rotBtn=document.createElement('button');
+  rotBtn.className='btn btn-secondary btn-sm';rotBtn.textContent='↻ Drehen';
+  rotBtn.onclick=e=>{e.stopPropagation();rotation=(rotation+90)%360;el.style.transform=`rotate(${rotation}deg)`;};
+  const closeBtn=document.createElement('button');
+  closeBtn.className='btn btn-danger btn-sm';closeBtn.textContent='✕';
+  closeBtn.onclick=e=>{e.stopPropagation();d.remove();};
+  bar.appendChild(rotBtn);bar.appendChild(closeBtn);
+  d.appendChild(bar);
   const el=isVid?document.createElement('video'):document.createElement('img');
-  el.src=url;el.style.cssText='max-width:96vw;max-height:92vh;border-radius:4px;';
+  el.src=url;
+  el.style.cssText='max-width:90vw;max-height:85vh;border-radius:4px;transition:transform .25s;';
   if(isVid){el.controls=true;el.onclick=e=>e.stopPropagation();}
-  d.appendChild(el);document.body.appendChild(d);
+  d.appendChild(el);
+  document.body.appendChild(d);
 }
 
 async function reviewSub(tmId,action){
@@ -754,12 +1311,17 @@ function renderRankings(rankings){
 }
 
 function onSubmissionNew({teamId,missionId}){
-  const notif=document.getElementById(`notif-${teamId}`);
-  if(notif)notif.style.display='inline-block';
+  bumpPending(teamId, +1);
   if(teamId===selectedTeamId)selectTeam(teamId);
   toast('📥 Neue Einreichung!','warning');
 }
-function onSubmissionReviewed({teamId}){if(teamId===selectedTeamId)selectTeam(teamId);}
+function onSubmissionReviewed({teamId}){
+  // Re-pull the authoritative count rather than decrementing locally —
+  // covers the case where the GM accepted from a different tab or a
+  // submission was auto-resolved.
+  refreshPendingCounts();
+  if(teamId===selectedTeamId)selectTeam(teamId);
+}
 
 // ── Timer ──────────────────────────────────────────────────────────────────
 function updateTimer(state){
@@ -833,11 +1395,182 @@ async function sendBroadcast(){
   document.getElementById('broadcast-input').value='';
   toast('Broadcast gesendet!','success');
 }
+let gmCrMap=null, gmCrMarkers={};
+let gmCrMissionLayer = null;     // L.layerGroup holding all CR mission markers
+let gmCrMissionsCache = [];      // last-known cr.missions payload (for re-rendering)
+
+// Fullscreen toggle for the GM CityRush map. Uses the Fullscreen API when
+// available, falls back to a fixed-position CSS class so the feature still
+// works in browsers/contexts where the API is blocked (e.g. some iframes).
+function toggleGmMapFullscreen(){
+  const panel = document.getElementById('panel-crmap');
+  if(!panel) return;
+  const isFs = !!document.fullscreenElement || panel.classList.contains('fs-fallback');
+  const finish = () => {
+    // Leaflet needs to recompute tile boundaries after the container resizes.
+    if(gmCrMap){
+      setTimeout(() => { gmCrMap.invalidateSize(); }, 100);
+    }
+    const btn = document.getElementById('btn-cr-fullscreen');
+    if(btn) btn.textContent = (document.fullscreenElement || panel.classList.contains('fs-fallback')) ? '✕' : '⛶';
+  };
+  if(isFs){
+    if(document.fullscreenElement) {
+      document.exitFullscreen().finally(finish);
+    } else {
+      panel.classList.remove('fs-fallback');
+      finish();
+    }
+    return;
+  }
+  // Enter fullscreen — prefer native; fall back to CSS class.
+  if(panel.requestFullscreen){
+    panel.requestFullscreen().then(finish).catch(() => {
+      panel.classList.add('fs-fallback');
+      finish();
+    });
+  } else {
+    panel.classList.add('fs-fallback');
+    finish();
+  }
+}
+// Sync the button label and invalidate the map when the user presses Esc to
+// exit fullscreen (the API leaves us responsible for cleanup).
+document.addEventListener('fullscreenchange', () => {
+  const panel = document.getElementById('panel-crmap');
+  const btn   = document.getElementById('btn-cr-fullscreen');
+  const active = !!document.fullscreenElement;
+  if(btn) btn.textContent = active ? '✕' : '⛶';
+  if(panel && !active) panel.classList.remove('fs-fallback');
+  if(gmCrMap) setTimeout(() => gmCrMap.invalidateSize(), 100);
+});
+
+// Wipe everything that's specific to the previously-open game. The CR map is
+// kept alive (Leaflet doesn't like being recreated against the same DOM node)
+// but every marker, popup and cached payload tied to the prior game is cleared.
+function resetGmDashboardState(){
+  // Drop cached payloads and per-team state
+  currentGame = null;
+  window._lastCrPayload = null;
+  gmCrMissionsCache = [];
+  Object.keys(pendingCounts).forEach(k => delete pendingCounts[k]);
+
+  // Clear the team chips bar / mission detail / chat so we don't briefly
+  // show another game's data while the new game's payload arrives.
+  const chips = document.getElementById('teams-chips');
+  if(chips) chips.innerHTML = '';
+  const missionsList = document.getElementById('team-missions-list');
+  if(missionsList) missionsList.innerHTML = '';
+  const rankings = document.getElementById('rankings-list');
+  if(rankings) rankings.innerHTML = '';
+
+  // Drop every team marker from the CR map.
+  if(gmCrMap){
+    Object.values(gmCrMarkers).forEach(mk => { try { gmCrMap.removeLayer(mk); } catch(e){} });
+  }
+  gmCrMarkers = {};
+  // Wipe mission markers + geofence circles.
+  if(gmCrMissionLayer){
+    try { gmCrMissionLayer.clearLayers(); } catch(e){}
+  }
+}
+
+// Look up a team by id from the cached game payload — falls back to "Team N"
+// if the team list hasn't loaded yet (which happens when a player sends GPS
+// before the dashboard's first /api/games/:id response lands).
+function gmTeamName(tid){
+  const t = currentGame && currentGame.teams ? currentGame.teams.find(x => x.id === tid) : null;
+  return t ? t.name : `Team ${tid}`;
+}
+function gmTeamInitials(tid){
+  const name = gmTeamName(tid);
+  // Use first letters of the first two words, capped at 3 chars, for the marker.
+  const parts = name.trim().split(/\s+/).slice(0,2);
+  const initials = parts.map(p => p[0]||'').join('') || name.slice(0,2);
+  return initials.toUpperCase().slice(0,3);
+}
+function upsertGmTeamMarker(tid, lat, lng){
+  if(!gmCrMap) return;
+  const label = gmTeamInitials(tid);
+  const name  = gmTeamName(tid);
+  const html  = `<div style="background:var(--red);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">${esc(label)}</div>`;
+  const icon  = L.divIcon({className:'', html, iconSize:[30,30], iconAnchor:[15,15]});
+  let mk = gmCrMarkers[tid];
+  if(mk){
+    mk.setLatLng([lat, lng]);
+    mk.setIcon(icon);
+    if(mk.getPopup()) mk.setPopupContent(name);
+    else mk.bindPopup(name);
+    if(mk.getTooltip()) mk.setTooltipContent(name);
+    else mk.bindTooltip(name, {permanent:false, direction:'top', offset:[0,-16]});
+  } else {
+    mk = L.marker([lat, lng], {icon}).addTo(gmCrMap)
+      .bindPopup(name)
+      .bindTooltip(name, {permanent:false, direction:'top', offset:[0,-16]});
+    gmCrMarkers[tid] = mk;
+  }
+}
+// When a new team joins mid-game, refresh any existing markers so labels and
+// initials reflect the freshly-known name (was previously stuck on "Team").
+function refreshGmMarkerLabels(){
+  Object.keys(gmCrMarkers).forEach(tid => {
+    const mk = gmCrMarkers[tid];
+    if(!mk) return;
+    const ll = mk.getLatLng();
+    upsertGmTeamMarker(Number(tid), ll.lat, ll.lng);
+  });
+}
+
+// Render every CR mission on the GM map, regardless of use_map / progress —
+// the GM should always be able to see where the missions are. Markers are
+// colored relative to the currently selected team's progress (done/current/
+// upcoming) so the dashboard still feels personalized.
+function renderGmCrMissionMarkers(){
+  if(!gmCrMap) return;
+  if(!gmCrMissionsCache.length) return;
+  if(!gmCrMissionLayer) gmCrMissionLayer = L.layerGroup().addTo(gmCrMap);
+  gmCrMissionLayer.clearLayers();
+  // Find the selected team's progress index so we can color appropriately.
+  const cr = window._lastCrPayload;
+  const prog = cr && Array.isArray(cr.progress)
+    ? (cr.progress.find(p => p.team_id === selectedTeamId) || null)
+    : null;
+  const idx = prog ? (prog.mission_index || 0) : -1;
+  gmCrMissionsCache.forEach((m, i) => {
+    if(m.lat == null || m.lng == null) return;
+    const isDone    = idx >= 0 && i <  idx;
+    const isCurrent = idx >= 0 && i === idx;
+    const bg = isDone ? 'var(--green)' : isCurrent ? 'var(--red)' : 'var(--text-muted)';
+    const icon = L.divIcon({
+      className:'',
+      html:`<div style="background:${bg};color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5);">${i+1}</div>`,
+      iconSize:[32,32], iconAnchor:[16,16]
+    });
+    const name = m['name_'+gmLang] || m.name_de || `Mission ${i+1}`;
+    const mk = L.marker([m.lat, m.lng], {icon}).addTo(gmCrMissionLayer);
+    const r = Number(m.radius_meters) || 30;
+    mk.bindPopup(`<strong>${esc(name)}</strong><br><small>${m.points||0} pt · ${r}m</small>`);
+    // Show the configured geofence for the current target so the GM can
+    // sanity-check the radius. Defaults to 30m if not explicitly set.
+    if(isCurrent){
+      L.circle([m.lat, m.lng], {color:'#d42b2b', fillColor:'rgba(212,43,43,.10)',
+        radius:r, weight:1.5}).addTo(gmCrMissionLayer);
+    }
+  });
+}
 function switchPanel(panel,el){
   document.querySelectorAll('#dash-panel .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('panel-chat').classList.toggle('active',panel==='chat');
   document.getElementById('panel-broadcast').classList.toggle('active',panel==='broadcast');
+  document.getElementById('panel-crmap').classList.toggle('active',panel==='crmap');
+  if(panel==='crmap'){
+    if(!gmCrMap){
+      gmCrMap=L.map('gm-cr-map').setView([47.3769,8.5417],13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(gmCrMap);
+    }
+    setTimeout(()=>{ gmCrMap.invalidateSize(); renderGmCrMissionMarkers(); },150);
+  }
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
@@ -853,6 +1586,9 @@ async function verifyGate(){
   if(res.valid){settingsPassword=pw;document.getElementById('gate-err').textContent='';await loadSettings();showScreen('screen-settings');}
   else document.getElementById('gate-err').textContent=gmt('wrong-pw')||'Falsches Passwort. / Incorrect password.';
 }
+
+// Convenience wrapper: apply tooltips after the dynamic settings UI renders.
+function _afterSettingsRender(){ try { applyTooltips(); } catch(e) {} }
 
 async function loadSettings(){
   const s=await API('/api/settings');
@@ -876,6 +1612,7 @@ async function loadSettings(){
     if(vEl) vEl.textContent = v.full || v.version || '';
   } catch(e) {}
   loadTemplate();
+  _afterSettingsRender();
 }
 
 async function detectTunnel(){
@@ -926,10 +1663,10 @@ async function showAddMode(){
   const rsOpts=rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('add-mode')||'Modus / Mode'}</h3>
-    <div class="field"><label class="label">Name</label><input id="mode-name" class="input" placeholder="${gmt('mode-placeholder')||'z.B. ADVANCED'}"></div>
-    <div class="field"><label class="label">${gmt('ruleset')||'Regelwerk / Ruleset'}</label>
-      <select id="mode-ruleset" class="select">${rsOpts}</select></div>
-    <div class="field"><label class="label" id="mode-timer-label">Timer (Minuten / Minutes)</label><input id="mode-timer" type="number" class="input" value="60" min="1"></div>
+    <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="mode-name" class="input" placeholder="${gmt('mode-placeholder')||'z.B. ADVANCED'}" data-tip="mode-name"></div>
+    <div class="field" data-tip="mode-ruleset"><label class="label" data-tip="mode-ruleset">${gmt('ruleset')||'Regelwerk / Ruleset'}</label>
+      <select id="mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
+    <div class="field" data-tip="mode-timer"><label class="label" id="mode-timer-label" data-tip="mode-timer">Timer (Minuten / Minutes)</label><input id="mode-timer" type="number" class="input" value="60" min="1" data-tip="mode-timer"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveNewMode()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
@@ -943,11 +1680,11 @@ async function showEditMode(id){
   const rsOpts=rulesets.map(r=>`<option value="${r.id}" ${sel(r.id===m.ruleset_id)}>${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('edit-mode')||'Modus bearbeiten / Edit Mode'}</h3>
-    <div class="field"><label class="label">Name</label><input id="edit-mode-name" class="input" value="${esc(m.name)}"></div>
-    <div class="field"><label class="label">${gmt('ruleset-label')||'Regelwerk'}</label>
-      <select id="edit-mode-ruleset" class="select">${rsOpts}</select></div>
-    <div class="field"><label class="label">Timer (${gmt('min-label')||'Minuten / Minutes'})</label>
-      <input id="edit-mode-timer" type="number" class="input" value="${m.timer_default||60}" min="1"></div>
+    <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="edit-mode-name" class="input" value="${esc(m.name)}" data-tip="mode-name"></div>
+    <div class="field" data-tip="mode-ruleset"><label class="label" data-tip="mode-ruleset">${gmt('ruleset-label')||'Regelwerk'}</label>
+      <select id="edit-mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
+    <div class="field" data-tip="mode-timer"><label class="label" data-tip="mode-timer">Timer (${gmt('min-label')||'Minuten / Minutes'})</label>
+      <input id="edit-mode-timer" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="mode-timer"></div>
     <div class="modal-footer" style="justify-content:space-between;">
       <div>
         ${m.id!==1?`<button class="btn btn-danger btn-sm" onclick="confirmDeleteMode(${m.id});closeModal()">${gmt('delete')||'Löschen'}</button>`:''}
@@ -1008,9 +1745,9 @@ function showAddLocation(){
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('add-loc')||'Standort hinzufügen / Add Location'}</h3>
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input"></div>
-    <div class="field"><label class="label">MiSSiONS ${gmt('per-game')||'pro Spiel / per game'}</label><input id="loc-max" type="number" class="input" value="10" min="1"></div>
-    <div class="field"><label class="label">Min. ${gmt('loc-spec')||'Standort-MiSSiONS'}</label><input id="loc-min-loc" type="number" class="input" value="3" min="0"></div>
-    <div class="field"><label class="label">Erlaubte Medien</label>
+    <div class="field" data-tip="loc-missions"><label class="label" data-tip="loc-missions">MiSSiONS ${gmt('per-game')||'pro Spiel / per game'}</label><input id="loc-max" type="number" class="input" value="10" min="1" data-tip="loc-missions"></div>
+    <div class="field" data-tip="loc-min-loc"><label class="label" data-tip="loc-min-loc">Min. ${gmt('loc-spec')||'Standort-MiSSiONS'}</label><input id="loc-min-loc" type="number" class="input" value="3" min="0" data-tip="loc-min-loc"></div>
+    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">Erlaubte Medien</label>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" checked style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" checked style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
@@ -1033,13 +1770,13 @@ async function editLocation(id){
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('edit-loc')||'Standort bearbeiten / Edit Location'}</h3>
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input" value="${esc(l.name)}"></div>
-    <div class="field"><label class="label">MiSSiONS</label><input id="loc-max" type="number" class="input" value="${l.missions_count||l.max_missions||10}"></div>
-    <div class="field"><label class="label">Min. Standort</label><input id="loc-min-loc" type="number" class="input" value="${l.min_location_missions}"></div>
-    <div class="field"><label class="label">Erlaubte Medien</label>
+    <div class="field" data-tip="loc-missions"><label class="label" data-tip="loc-missions">MiSSiONS</label><input id="loc-max" type="number" class="input" value="${l.missions_count||l.max_missions||10}" data-tip="loc-missions"></div>
+    <div class="field" data-tip="loc-min-loc"><label class="label" data-tip="loc-min-loc">Min. Standort</label><input id="loc-min-loc" type="number" class="input" value="${l.min_location_missions}" data-tip="loc-min-loc"></div>
+    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">Erlaubte Medien</label>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" ${sel(l.allow_photo!==0)} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" ${sel(l.allow_video!==0)} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" ${sel(l.allow_indoor!==0)} style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" ${l.allow_photo!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" ${l.allow_video!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" ${l.allow_indoor!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
       </div>
     </div>
     <div class="modal-footer">
@@ -1136,19 +1873,19 @@ function missionModal(m,locs){
       </div>
     </div>
     <div class="grid-2">
-      <div class="field"><label class="label">${gmt('loc-label')||'Standort / Location'}</label>
-        <select id="m-loc" class="select"><option value="" ${sel(!m||!m.location_id)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
-      <div class="field"><label class="label">Modus</label>
-        <select id="m-mode" class="select"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
+      <div class="field" data-tip="mission-loc"><label class="label" data-tip="mission-loc">${gmt('loc-label')||'Standort / Location'}</label>
+        <select id="m-loc" class="select" data-tip="mission-loc"><option value="" ${sel(!m||!m.location_id)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
+      <div class="field" data-tip="mission-mode"><label class="label" data-tip="mission-mode">Modus</label>
+        <select id="m-mode" class="select" data-tip="mission-mode"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
     </div>
     <div class="grid-2">
-      <div class="field"><label class="label">${gmt('media-label')||'Media'}</label>
-        <select id="m-type" class="select"><option value="photo" ${sel(!m||m.media_type==='photo')}>📷 Foto</option><option value="video" ${sel(m&&m.media_type==='video')}>🎬 Video</option></select></div>
-      <div class="field"><label class="label">Punkte</label><input id="m-pts" type="number" class="input" value="${m?m.points:1}" min="1"></div>
+      <div class="field" data-tip="mission-media"><label class="label" data-tip="mission-media">${gmt('media-label')||'Media'}</label>
+        <select id="m-type" class="select" data-tip="mission-media"><option value="photo" ${sel(!m||m.media_type==='photo')}>📷 Foto</option><option value="video" ${sel(m&&m.media_type==='video')}>🎬 Video</option></select></div>
+      <div class="field" data-tip="mission-points"><label class="label" data-tip="mission-points">Punkte</label><input id="m-pts" type="number" class="input" value="${m?m.points:1}" min="1" data-tip="mission-points"></div>
     </div>
-    <div class="field" style="display:flex;align-items:center;gap:.5rem;">
-      <input type="checkbox" id="m-indoor" ${m&&m.is_indoor?'checked':''} style="width:18px;height:18px;accent-color:var(--red);">
-      <label for="m-indoor" style="cursor:pointer;font-weight:600;font-size:.9rem;">🏠 ${gmt('indoor-label')||'Auch drinnen möglich'}</label>
+    <div class="field" style="display:flex;align-items:center;gap:.5rem;" data-tip="mission-indoor">
+      <input type="checkbox" id="m-indoor" ${m&&m.is_indoor?'checked':''} style="width:18px;height:18px;accent-color:var(--red);" data-tip="mission-indoor">
+      <label for="m-indoor" style="cursor:pointer;font-weight:600;font-size:.9rem;" data-tip="mission-indoor">🏠 ${gmt('indoor-label')||'Auch drinnen möglich'}</label>
     </div>
     <div class="tabs" style="margin-top:.75rem;">
       <button class="tab active" onclick="switchMissionTab('desc',this)">📖 ${gmt('desc-label')||'Beschreibung / Description'}</button>
@@ -1622,6 +2359,640 @@ async function confirmCopyOneRule(ruleIndex){
   else toast(res.error,'error');
 }
 
+
+// ════════════════════════════════════════════════════════════
+//   CITYRUSH GM FUNCTIONS
+// ════════════════════════════════════════════════════════════
+let currentCrModeId = null;
+let currentCrModeName = '';
+
+async function loadCrModes() {
+  const modes = await API('/api/cr/modes');
+  const bar = document.getElementById('cr-mode-tabs');
+  const empty = document.getElementById('cr-empty');
+  const panel = document.getElementById('cr-mode-panel');
+  if(!bar) return;
+  if(!modes.length) {
+    bar.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    if(panel) panel.style.display = 'none';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  bar.innerHTML = modes.map(m =>
+    `<button class="tab ${m.id===currentCrModeId?'active':''}" onclick="selectCrMode(${m.id},'${esc(m.name)}')">${esc(m.name)}</button>`
+  ).join('');
+  // Also populate cr-mode-select in game creation screen
+  const sel = document.getElementById('cr-mode-select');
+  if(sel) {
+    sel.innerHTML = '<option value="">— Kein CityRush —</option>' +
+      modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  }
+  if(!currentCrModeId && modes.length) selectCrMode(modes[0].id, modes[0].name);
+  else if(currentCrModeId) loadCrMissions();
+}
+
+async function selectCrMode(id, name) {
+  currentCrModeId = id; currentCrModeName = name;
+  document.querySelectorAll('#cr-mode-tabs .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#cr-mode-tabs .tab').forEach(t=>{if(t.textContent===name)t.classList.add('active');});
+  const title = document.getElementById('cr-mode-title');
+  if(title) title.textContent = name + (gmt('cr-missions-suffix')||' — Missionen');
+  const panel = document.getElementById('cr-mode-panel');
+  if(panel) panel.style.display = 'block';
+  await loadCrMissions();
+}
+
+async function loadCrMissions() {
+  if(!currentCrModeId) return;
+  const missions = await API(`/api/cr/missions?mode_id=${currentCrModeId}`);
+  const list = document.getElementById('cr-missions-list');
+  if(!list) return;
+  if(!missions.length) {
+    list.innerHTML = `<div class="empty"><p>${gmt('cr-no-missions')||'Noch keine CityRush-Missionen. Klicke ＋ Mission.'}</p></div>`;
+    return;
+  }
+  list.innerHTML = missions.map((m,i) => {
+    const flags = [
+      m.use_gps  ? '📍 GPS' : '',
+      m.use_map  ? '🗺️ Karte' : '',
+      m.is_timed ? `⏱ ${Math.round(m.timer_seconds/60)}min` : '',
+      m.media_required!=='none' ? (m.media_required==='photo'?'📷':'🎬') : '',
+    ].filter(Boolean).join(' · ');
+    return `<div class="mission-card" id="crmcard-${m.id}" draggable="true"
+      ondragstart="crDragStart(event,${i})" ondragover="crDragOver(event,${i})" ondrop="crDrop(event,${i})" ondragend="crDragEnd()">
+      <div class="mission-header">
+        <span style="font-family:var(--mono);color:var(--text-muted);font-size:.8rem;margin-right:.5rem;">${i+1}.</span>
+        <div style="flex:1;">
+          <div style="font-weight:700;">${esc(m.name_de||'(kein Name)')}</div>
+          ${m.description_de?`<div style="font-size:.8rem;color:var(--text-dim);">${esc(m.description_de)}</div>`:''}
+          ${flags?`<div style="font-size:.75rem;color:var(--orange);margin-top:.2rem;">${flags}</div>`:''}
+          <small style="color:var(--text-muted);">${m.points} Punkte · ${m.lat?`${m.lat.toFixed(5)},${m.lng.toFixed(5)}`:'Keine Koordinaten'}</small>
+        </div>
+        <div style="display:flex;gap:.4rem;">
+          <button class="btn btn-ghost btn-sm" onclick="editCrMission(${m.id})">✎</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCrMission(${m.id})">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  initCrDrag();
+}
+
+// Drag reorder for CR missions
+let crDragIdx=null, crMissionOrder=[];
+function initCrDrag(){
+  crMissionOrder=[];
+  document.querySelectorAll('[id^="crmcard-"]').forEach((el,i)=>{
+    crMissionOrder.push(parseInt(el.id.replace('crmcard-','')));
+  });
+}
+function crDragStart(e,i){crDragIdx=i;e.target.style.opacity='.4';}
+function crDragOver(e,i){e.preventDefault();if(i===crDragIdx)return;
+  document.querySelectorAll('[id^="crmcard-"]').forEach(el=>el.style.borderTop='');
+  const el=document.querySelectorAll('[id^="crmcard-"]')[i];
+  if(el)el.style.borderTop='3px solid var(--red)';
+}
+function crDrop(e,i){
+  e.preventDefault();if(crDragIdx===null)return;
+  const moved=crMissionOrder.splice(crDragIdx,1)[0];
+  crMissionOrder.splice(i,0,moved);
+  API('/api/cr/missions/reorder',{method:'POST',body:{password:settingsPassword,mode_id:currentCrModeId,order:crMissionOrder}});
+  crDragIdx=null; loadCrMissions();
+}
+function crDragEnd(){document.querySelectorAll('[id^="crmcard-"]').forEach(el=>{el.style.opacity='';el.style.borderTop='';});crDragIdx=null;}
+
+async function showAddCrMode(){
+  const rulesets=await API('/api/rulesets');
+  const rsOpts=`<option value="">— Kein Regelwerk —</option>`+rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">CityRush Modus hinzufügen</h3>
+    <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name" class="input" placeholder="z.B. Altstadt-Tour" data-tip="cr-mode-name"></div>
+    <div class="field" data-tip="cr-mode-ruleset"><label class="label" data-tip="cr-mode-ruleset">${gmt('ruleset')||'Regelwerk'}</label>
+      <select id="cr-mode-ruleset" class="select" data-tip="cr-mode-ruleset">${rsOpts}</select></div>
+    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">Erlaubte Medien</label>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-photo" checked style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-video" checked style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
+      </div>
+    </div>
+    <div class="field" data-tip="cr-mode-timer">
+      <label class="label" data-tip="cr-mode-timer">${gmt('cr-mode-timer-label')||'Standard-Dauer (Minuten)'}</label>
+      <input id="cr-mode-timer" type="number" class="input" value="60" min="1" data-tip="cr-mode-timer">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveNewCrMode()">Erstellen</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
+}
+async function saveNewCrMode(){
+  const name=document.getElementById('cr-mode-name').value.trim();
+  if(!name){toast('Name fehlt','error');return;}
+  const body={
+    password:settingsPassword, name,
+    allow_photo: document.getElementById('cr-mode-allow-photo')?.checked?1:0,
+    allow_video: document.getElementById('cr-mode-allow-video')?.checked?1:0,
+    ruleset_id:  Number(document.getElementById('cr-mode-ruleset')?.value)||null,
+    timer_default: Number(document.getElementById('cr-mode-timer')?.value)||60,
+  };
+  const res=await API('/api/cr/modes',{method:'POST',body});
+  if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;await loadCrModes();toast('CityRush Modus erstellt!','success');}
+}
+async function editCurrentCrMode(){
+  const [modes, rulesets] = await Promise.all([API('/api/cr/modes'), API('/api/rulesets')]);
+  const m = modes.find(x=>x.id===currentCrModeId) || {name:currentCrModeName, allow_photo:1, allow_video:1, ruleset_id:null};
+  const rsOpts=`<option value="">— Kein Regelwerk —</option>`+rulesets.map(r=>`<option value="${r.id}" ${r.id===m.ruleset_id?'selected':''}>${esc(r.name)}</option>`).join('');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">Modus bearbeiten</h3>
+    <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name-edit" class="input" value="${esc(m.name||'')}" data-tip="cr-mode-name"></div>
+    <div class="field" data-tip="cr-mode-ruleset"><label class="label" data-tip="cr-mode-ruleset">${gmt('ruleset')||'Regelwerk'}</label>
+      <select id="cr-mode-ruleset-edit" class="select" data-tip="cr-mode-ruleset">${rsOpts}</select></div>
+    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">Erlaubte Medien</label>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-photo-edit" ${m.allow_photo!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-video-edit" ${m.allow_video!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
+      </div>
+    </div>
+    <div class="field" data-tip="cr-mode-timer">
+      <label class="label" data-tip="cr-mode-timer">${gmt('cr-mode-timer-label')||'Standard-Dauer (Minuten)'}</label>
+      <input id="cr-mode-timer-edit" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="cr-mode-timer">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveEditCrMode()">Speichern</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
+}
+async function saveEditCrMode(){
+  const name=document.getElementById('cr-mode-name-edit').value.trim();
+  if(!name)return;
+  const body={
+    password:settingsPassword, name,
+    allow_photo: document.getElementById('cr-mode-allow-photo-edit')?.checked?1:0,
+    allow_video: document.getElementById('cr-mode-allow-video-edit')?.checked?1:0,
+    ruleset_id:  Number(document.getElementById('cr-mode-ruleset-edit')?.value)||null,
+    timer_default: Number(document.getElementById('cr-mode-timer-edit')?.value)||60,
+  };
+  await API(`/api/cr/modes/${currentCrModeId}`,{method:'PUT',body});
+  currentCrModeName=name; closeModal(); loadCrModes();
+}
+async function deleteCurrentCrMode(){
+  if(!confirm(`CityRush Modus "${currentCrModeName}" und alle Missionen löschen?`))return;
+  await API(`/api/cr/modes/${currentCrModeId}`,{method:'DELETE',body:{password:settingsPassword}});
+  currentCrModeId=null; currentCrModeName=''; loadCrModes();
+}
+
+function crMissionModal(m){
+  const v=f=>m?esc(m[f]||''):'';
+  const chk=(f,def=0)=>m?(m[f]?'checked':''):(def?'checked':'');
+  const num=(f,def=0)=>m?m[f]||def:def;
+  // Constrain media options to what the current CR mode allows.
+  const mode = (window._crModesCache||[]).find(x=>x.id===currentCrModeId) || {allow_photo:1, allow_video:1};
+  const photoOpt = mode.allow_photo!==0 ? `<option value="photo" ${m&&m.media_required==='photo'?'selected':''}>📷 Foto</option>` : '';
+  const videoOpt = mode.allow_video!==0 ? `<option value="video" ${m&&m.media_required==='video'?'selected':''}>🎬 Video</option>` : '';
+  return `
+    <!-- Names -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+      <label class="label" style="margin:0;">${gmt('cr-m-name')||'Name'}</label>
+      <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('name')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
+    </div>
+    <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem;">
+      <div><label class="label">DE</label><input id="cr-name-de" class="input" value="${v('name_de')}"></div>
+      <div><label class="label">EN</label><input id="cr-name-en" class="input" value="${v('name_en')}"></div>
+      <div><label class="label">FR</label><input id="cr-name-fr" class="input" value="${v('name_fr')}"></div>
+      <div><label class="label">IT</label><input id="cr-name-it" class="input" value="${v('name_it')}"></div>
+    </div>
+    <!-- Coords & Radius -->
+    <div class="grid-2" style="gap:.4rem;margin-bottom:.75rem;">
+      <div data-tip="cr-lat"><label class="label" data-tip="cr-lat">${gmt('cr-m-lat')||'Latitude'}</label><input id="cr-lat" type="number" step="0.00001" class="input" value="${v('lat')}" placeholder="47.47620" data-tip="cr-lat"></div>
+      <div data-tip="cr-lng"><label class="label" data-tip="cr-lng">${gmt('cr-m-lng')||'Longitude'}</label><input id="cr-lng" type="number" step="0.00001" class="input" value="${v('lng')}" placeholder="8.30700" data-tip="cr-lng"></div>
+      <div data-tip="cr-radius"><label class="label" data-tip="cr-radius">${gmt('cr-m-radius')||'Radius (Meter)'}</label><input id="cr-radius" type="number" class="input" value="${num('radius_meters',30)}" data-tip="cr-radius"></div>
+      <div data-tip="cr-points"><label class="label" data-tip="cr-points">${gmt('cr-m-points')||'Punkte'}</label><input id="cr-points" type="number" class="input" value="${num('points',10)}" data-tip="cr-points"></div>
+    </div>
+    <!-- Flags -->
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;">
+      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;" data-tip="cr-gps">
+        <input type="checkbox" id="cr-use-gps" ${chk('use_gps')} style="accent-color:var(--red);width:16px;height:16px;" onchange="crToggleOptions()" data-tip="cr-gps">
+        ${gmt('cr-m-gps')||'📍 GPS-Trigger'}
+      </label>
+      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;" data-tip="cr-map">
+        <input type="checkbox" id="cr-use-map" ${chk('use_map')} style="accent-color:var(--red);width:16px;height:16px;" data-tip="cr-map">
+        ${gmt('cr-m-map')||'🗺️ Karte anzeigen'}
+      </label>
+      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;" data-tip="cr-timed">
+        <input type="checkbox" id="cr-is-timed" ${chk('is_timed')} style="accent-color:var(--red);width:16px;height:16px;" onchange="crToggleOptions()" data-tip="cr-timed">
+        ${gmt('cr-m-timed')||'⏱ Zeitlimit'}
+      </label>
+    </div>
+    <!-- GPS hint (shown when use_gps checked) -->
+    <div id="cr-gps-section" style="${m&&m.use_gps?'':'display:none;'}">
+      <label class="label" data-tip="cr-hint">${gmt('cr-m-gps-hint')||'Hinweis für Spieler (GPS-Trigger)'}</label>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.2rem;">
+        <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('hint')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem;">
+        <div><label class="label">DE</label><textarea id="cr-hint-de" class="textarea" rows="2">${v('hint_de')}</textarea></div>
+        <div><label class="label">EN</label><textarea id="cr-hint-en" class="textarea" rows="2">${v('hint_en')}</textarea></div>
+        <div><label class="label">FR</label><textarea id="cr-hint-fr" class="textarea" rows="2">${v('hint_fr')}</textarea></div>
+        <div><label class="label">IT</label><textarea id="cr-hint-it" class="textarea" rows="2">${v('hint_it')}</textarea></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;margin-bottom:.5rem;" data-tip="cr-hide-until-arrival">
+        <input type="checkbox" id="cr-hide-until-arrival" ${chk('hide_until_arrival')} style="accent-color:var(--red);width:16px;height:16px;" data-tip="cr-hide-until-arrival">
+        ${gmt('cr-m-hide-until-arrival')||'🔒 Aufgabe & Beschreibung erst nach Ankunft anzeigen'}
+      </label>
+    </div>
+    <!-- Media required: below the checkboxes & GPS, above hints editor. -->
+    <div class="field" data-tip="cr-media">
+      <label class="label" data-tip="cr-media">${gmt('cr-m-media')||'Medientyp'}</label>
+      <select id="cr-media" class="select" onchange="crToggleAnswer()" data-tip="cr-media">
+        <option value="none" ${(!m||m.media_required==='none')?'selected':''}>${gmt('cr-m-media-none')||'— Keine —'}</option>
+        ${photoOpt}
+        ${videoOpt}
+      </select>
+    </div>
+    <!-- Timed options -->
+    <div id="cr-timed-section" style="${m&&m.is_timed?'':'display:none;'}">
+      <div class="divider"></div>
+      <div class="grid-2" style="gap:.4rem;margin-bottom:.75rem;">
+        <div data-tip="cr-time-secs"><label class="label" data-tip="cr-time-secs">${gmt('cr-m-time-secs')||'Zeit (Sekunden)'}</label><input id="cr-timer-secs" type="number" class="input" value="${num('timer_seconds',300)}" data-tip="cr-time-secs"></div>
+        <div data-tip="cr-pen-int"><label class="label" data-tip="cr-pen-int">${gmt('cr-m-pen-int')||'Penalty alle X Sek.'}</label><input id="cr-penalty-interval" type="number" class="input" value="${num('penalty_interval',60)}" data-tip="cr-pen-int"></div>
+        <div data-tip="cr-pen-pts"><label class="label" data-tip="cr-pen-pts">${gmt('cr-m-pen-pts')||'Penalty (Punkte)'}</label><input id="cr-penalty-pts" type="number" class="input" value="${num('penalty_points',2)}" data-tip="cr-pen-pts"></div>
+      </div>
+    </div>
+    <!-- Answer/Question toggle -->
+    <div style="border-top:1px solid var(--border);padding-top:.75rem;margin-bottom:.75rem;">
+      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;margin-bottom:.5rem;" data-tip="cr-has-answer">
+        <input type="checkbox" id="cr-has-answer" ${chk('has_answer')} style="accent-color:var(--red);width:16px;height:16px;" onchange="crToggleAnswer()" data-tip="cr-has-answer">
+        ${gmt('cr-m-has-answer')||'❓ Frage mit Antwort'}
+      </label>
+      <div id="cr-answer-section" style="${m&&m.has_answer?'':'display:none;'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+          <label class="label" style="margin:0;" data-tip="cr-answer">${gmt('cr-m-answer-label')||'Korrekte Antwort (mind. eine Sprache)'}</label>
+          <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('answer')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
+        </div>
+        <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem;">
+          <div><label class="label">DE</label><input id="cr-answer-de" class="input" value="${v('answer_de')}"></div>
+          <div><label class="label">EN</label><input id="cr-answer-en" class="input" value="${v('answer_en')}"></div>
+          <div><label class="label">FR</label><input id="cr-answer-fr" class="input" value="${v('answer_fr')}"></div>
+          <div><label class="label">IT</label><input id="cr-answer-it" class="input" value="${v('answer_it')}"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Hints section (shown for GPS and answer missions) -->
+    <div id="cr-hints-editor" style="${m&&(m.has_answer||m.use_gps)?'':'display:none;'}border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:.75rem;" data-tip="cr-hints">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+        <label class="label" style="margin:0;" data-tip="cr-hints">${gmt('cr-m-hints-label')||'💡 Hinweise (optional)'}</label>
+        <button class="btn btn-ghost btn-sm" onclick="addCrHintInline()">${gmt('cr-m-add-hint')||'＋ Hinweis'}</button>
+      </div>
+      <div id="cr-hints-list"><span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span></div>
+    </div>
+    <!-- Description & Task tabs -->
+    <div class="tabs" style="margin-top:.5rem;">
+      <button class="tab active" onclick="switchMissionTab('desc',this)">${gmt('cr-m-tab-desc')||'📖 Beschreibung'}</button>
+      <button class="tab" onclick="switchMissionTab('task',this)">${gmt('cr-m-tab-task')||'🎯 Aufgabe'}</button>
+    </div>
+    <div id="mtab-desc" class="mission-tab-content active">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.2rem;">
+        <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslateCrField('description')">🌐 Auto</button>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;">
+        <div><label class="label">DE</label><textarea id="cr-desc-de" class="textarea" rows="3">${v('description_de')}</textarea></div>
+        <div><label class="label">EN</label><textarea id="cr-desc-en" class="textarea" rows="3">${v('description_en')}</textarea></div>
+        <div><label class="label">FR</label><textarea id="cr-desc-fr" class="textarea" rows="3">${v('description_fr')}</textarea></div>
+        <div><label class="label">IT</label><textarea id="cr-desc-it" class="textarea" rows="3">${v('description_it')}</textarea></div>
+      </div>
+    </div>
+    <div id="mtab-task" class="mission-tab-content">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.2rem;">
+        <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslateCrField('task')">🌐 Auto</button>
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;">
+        <div><label class="label">DE</label><textarea id="cr-task-de" class="textarea" rows="3">${v('task_de')}</textarea></div>
+        <div><label class="label">EN</label><textarea id="cr-task-en" class="textarea" rows="3">${v('task_en')}</textarea></div>
+        <div><label class="label">FR</label><textarea id="cr-task-fr" class="textarea" rows="3">${v('task_fr')}</textarea></div>
+        <div><label class="label">IT</label><textarea id="cr-task-it" class="textarea" rows="3">${v('task_it')}</textarea></div>
+      </div>
+    </div>`;
+}
+
+// Media and question/answer are mutually exclusive — a player can't both upload
+// a media file and type an answer for the same mission.
+function crSyncMediaAnswerExclusion(){
+  const ansChk = document.getElementById('cr-has-answer');
+  const mediaSel = document.getElementById('cr-media');
+  if(!ansChk || !mediaSel) return;
+  const ansOn   = ansChk.checked;
+  const mediaOn = mediaSel.value && mediaSel.value !== 'none';
+  ansChk.disabled   = mediaOn;
+  mediaSel.disabled = ansOn;
+  // Style hint so the disabled control reads as intentionally locked.
+  ansChk.parentElement && (ansChk.parentElement.style.opacity = mediaOn ? .5 : '');
+  mediaSel.style.opacity = ansOn ? .5 : '';
+}
+function crToggleAnswer(){
+  const chk=document.getElementById('cr-has-answer');
+  const sec=document.getElementById('cr-answer-section');
+  const hintsEd=document.getElementById('cr-hints-editor');
+  if(sec) sec.style.display=chk&&chk.checked?'block':'none';
+  if(hintsEd){
+    const gpschk=document.getElementById('cr-use-gps');
+    hintsEd.style.display=(chk&&chk.checked)||(gpschk&&gpschk.checked)?'block':'none';
+  }
+  crSyncMediaAnswerExclusion();
+}
+function crToggleOptions(){
+  const gpsChk=document.getElementById('cr-use-gps');
+  const timedChk=document.getElementById('cr-is-timed');
+  const answerChk=document.getElementById('cr-has-answer');
+  const gpsSection=document.getElementById('cr-gps-section');
+  const timedSection=document.getElementById('cr-timed-section');
+  const hintsEd=document.getElementById('cr-hints-editor');
+  if(gpsSection) gpsSection.style.display=gpsChk&&gpsChk.checked?'block':'none';
+  if(timedSection) timedSection.style.display=timedChk&&timedChk.checked?'block':'none';
+  if(hintsEd) hintsEd.style.display=(gpsChk&&gpsChk.checked)||(answerChk&&answerChk.checked)?'block':'none';
+  crSyncMediaAnswerExclusion();
+}
+function getCrMissionData(){
+  const ansOn   = document.getElementById('cr-has-answer')?.checked;
+  const mediaSel = document.getElementById('cr-media');
+  // Mutual exclusion enforcement: only one path persists.
+  const hasAnswer = ansOn && (!mediaSel || mediaSel.value === 'none') ? 1 : 0;
+  const mediaReq  = hasAnswer ? 'none' : (mediaSel?.value || 'none');
+  return {
+    mode_id: currentCrModeId,
+    name_de: document.getElementById('cr-name-de')?.value||'',
+    name_en: document.getElementById('cr-name-en')?.value||'',
+    name_fr: document.getElementById('cr-name-fr')?.value||'',
+    name_it: document.getElementById('cr-name-it')?.value||'',
+    lat: parseFloat(document.getElementById('cr-lat')?.value)||null,
+    lng: parseFloat(document.getElementById('cr-lng')?.value)||null,
+    radius_meters: parseInt(document.getElementById('cr-radius')?.value)||30,
+    points: parseInt(document.getElementById('cr-points')?.value)||10,
+    use_gps: document.getElementById('cr-use-gps')?.checked?1:0,
+    use_map: document.getElementById('cr-use-map')?.checked?1:0,
+    is_timed: document.getElementById('cr-is-timed')?.checked?1:0,
+    timer_seconds: parseInt(document.getElementById('cr-timer-secs')?.value)||300,
+    penalty_interval: parseInt(document.getElementById('cr-penalty-interval')?.value)||60,
+    penalty_points: parseInt(document.getElementById('cr-penalty-pts')?.value)||2,
+    media_required: mediaReq,
+    hide_until_arrival: document.getElementById('cr-hide-until-arrival')?.checked?1:0,
+    has_answer: hasAnswer,
+    answer_de: document.getElementById('cr-answer-de')?.value||'',
+    answer_en: document.getElementById('cr-answer-en')?.value||'',
+    answer_fr: document.getElementById('cr-answer-fr')?.value||'',
+    answer_it: document.getElementById('cr-answer-it')?.value||'',
+    hint_de: document.getElementById('cr-hint-de')?.value||'',
+    hint_en: document.getElementById('cr-hint-en')?.value||'',
+    hint_fr: document.getElementById('cr-hint-fr')?.value||'',
+    hint_it: document.getElementById('cr-hint-it')?.value||'',
+    description_de: document.getElementById('cr-desc-de')?.value||'',
+    description_en: document.getElementById('cr-desc-en')?.value||'',
+    description_fr: document.getElementById('cr-desc-fr')?.value||'',
+    description_it: document.getElementById('cr-desc-it')?.value||'',
+    task_de: document.getElementById('cr-task-de')?.value||'',
+    task_en: document.getElementById('cr-task-en')?.value||'',
+    task_fr: document.getElementById('cr-task-fr')?.value||'',
+    task_it: document.getElementById('cr-task-it')?.value||'',
+  };
+}
+
+async function showAddCrMission(){
+  if(!currentCrModeId){toast('Erst einen Modus auswählen','warning');return;}
+  _crTempHints=[];
+  // Refresh the cached mode list so the modal can filter media options
+  // (uses a static cache to avoid awaiting inside the template).
+  window._crModesCache = await API('/api/cr/modes');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('cr-m-add-title')||'CityRush Mission hinzufügen'}</h3>
+    ${crMissionModal(null)}
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cr-m-cancel')||'Abbrechen'}</button>
+      <button class="btn btn-primary" onclick="saveNewCrMission()">${gmt('cr-m-create')||'Erstellen'}</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
+  crSyncMediaAnswerExclusion();
+}
+async function saveNewCrMission(){
+  const data=getCrMissionData();
+  const res=await API('/api/cr/missions',{method:'POST',body:{password:settingsPassword,...data}});
+  if(res.id){
+    if(_crTempHints.length) await saveCrHintsForMission(res.id);
+    _crTempHints=[];
+    closeModal();loadCrMissions();toast('Mission erstellt!','success');
+  } else toast(res.error,'error');
+}
+async function editCrMission(id){
+  const [missions, modes] = await Promise.all([
+    API(`/api/cr/missions?mode_id=${currentCrModeId}`),
+    API('/api/cr/modes'),
+  ]);
+  window._crModesCache = modes;
+  const m=missions.find(x=>x.id===id);if(!m)return;
+  _crTempHints=[];
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${gmt('cr-m-edit-title')||'CityRush Mission bearbeiten'}</h3>
+    ${crMissionModal(m)}
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cr-m-cancel')||'Abbrechen'}</button>
+      <button class="btn btn-primary" onclick="saveEditCrMission(${id})">${gmt('cr-m-save')||'Speichern'}</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
+  crSyncMediaAnswerExclusion();
+  if(m.id) setTimeout(()=>_loadExistingHints(m.id), 100);
+}
+async function saveEditCrMission(id){
+  const data=getCrMissionData();
+  const data2={password:settingsPassword,...getCrMissionData()};
+  const res=await API(`/api/cr/missions/${id}`,{method:'PUT',body:data2});
+  if(res.success){
+    if(_crTempHints.some(h=>h._new||h._imageFile)) await saveCrHintsForMission(id);
+    _crTempHints=[];
+    closeModal();loadCrMissions();toast('Gespeichert!','success');
+  }
+}
+async function deleteCrMission(id){
+  if(!confirm('Mission löschen?'))return;
+  const res=await API(`/api/cr/missions/${id}`,{method:'DELETE',body:{password:settingsPassword}});
+  if(res.success!==false){
+    // Remove card from DOM immediately for instant feedback
+    const card=document.getElementById(`crmcard-${id}`);
+    if(card)card.remove();
+    await loadCrMissions();
+  } else {
+    toast(res.error||'Fehler beim Löschen','error');
+  }
+}
+// Inline hint management - works before and after saving mission
+let _crTempHints = []; // temporary hints array for new missions
+
+function addCrHintInline(){
+  const hintId = 'tmp_' + Date.now();
+  _crTempHints.push({id: hintId, text_de:'', text_en:'', text_fr:'', text_it:'', image_path:null, _new:true});
+  renderCrHintsInline();
+}
+
+function renderCrHintsInline(){
+  const list = document.getElementById('cr-hints-list');
+  if(!list) return;
+  if(!_crTempHints.length){
+    list.innerHTML='<span style="color:var(--text-muted);font-size:.85rem;">Noch keine Hinweise.</span>';
+    return;
+  }
+  list.innerHTML = _crTempHints.map((h,i) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.35rem;" id="hint-row-${h.id}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+        <span style="font-size:.8rem;color:var(--text-muted);font-weight:700;">Hinweis ${i+1}</span>
+        <button class="btn btn-danger btn-sm" onclick="removeCrHintInline('${h.id}')">✕</button>
+      </div>
+      ${h.image_path?`<img src="/uploads/${h.image_path}" onerror="this.style.display='none'" style="max-width:80px;max-height:50px;border-radius:3px;margin-bottom:.35rem;display:block;" alt="">`:''}
+      <div class="field" style="margin-bottom:.35rem;">
+        <label class="label">Bild</label>
+        <input type="file" accept="image/*" onchange="attachCrHintImage(this,'${h.id}')" style="color:var(--text);font-size:.8rem;">
+      </div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.3rem;">
+        <div><label class="label">DE</label><input class="input" id="hint-de-${h.id}" value="${esc(h.text_de||'')}" oninput="_crUpdateHint('${h.id}','text_de',this.value)"></div>
+        <div><label class="label">EN</label><input class="input" id="hint-en-${h.id}" value="${esc(h.text_en||'')}" oninput="_crUpdateHint('${h.id}','text_en',this.value)"></div>
+        <div><label class="label">FR</label><input class="input" id="hint-fr-${h.id}" value="${esc(h.text_fr||'')}" oninput="_crUpdateHint('${h.id}','text_fr',this.value)"></div>
+        <div><label class="label">IT</label><input class="input" id="hint-it-${h.id}" value="${esc(h.text_it||'')}" oninput="_crUpdateHint('${h.id}','text_it',this.value)"></div>
+      </div>
+    </div>`).join('');
+}
+
+function _crUpdateHint(id, field, value){
+  const h = _crTempHints.find(x=>String(x.id)===String(id));
+  if(h) h[field] = value;
+}
+
+function removeCrHintInline(id){
+  _crTempHints = _crTempHints.filter(h=>String(h.id)!==String(id));
+  renderCrHintsInline();
+}
+
+async function attachCrHintImage(input, hintId){
+  const file = input.files?.[0];
+  if(!file) return;
+  const h = _crTempHints.find(x=>String(x.id)===String(hintId));
+  if(!h) return;
+  h._imageFile = file;
+  h._imagePreview = URL.createObjectURL(file);
+  h.image_path = null; // will be set after upload
+  renderCrHintsInline();
+}
+
+async function saveCrHintsForMission(missionId){
+  for(const h of _crTempHints){
+    const form = new FormData();
+    form.append('password', settingsPassword);
+    form.append('text_de', h.text_de||'');
+    form.append('text_en', h.text_en||'');
+    form.append('text_fr', h.text_fr||'');
+    form.append('text_it', h.text_it||'');
+    form.append('order_index', _crTempHints.indexOf(h));
+    if(h._imageFile) form.append('image', h._imageFile);
+    if(!h._new){
+      // Existing hint - update
+      await fetch(`/api/cr/hints/${h.id}`,{method:'PUT',body:form});
+    } else {
+      // New hint - create
+      await fetch(`/api/cr/hints/${missionId}`,{method:'POST',body:form});
+    }
+  }
+}
+
+// Load hints for a mission into the editor
+async function loadCrHintsEditor(missionId){
+  const hints=await API(`/api/cr/hints/${missionId}`);
+  const list=document.getElementById('cr-hints-list');
+  if(!list)return;
+  if(!hints.length){list.innerHTML='<span style="color:var(--text-muted);font-size:.85rem;">Noch keine Hinweise.</span>';return;}
+  list.innerHTML=hints.map((h,i)=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem;margin-bottom:.35rem;display:flex;gap:.5rem;align-items:flex-start;">
+      <span style="font-family:var(--mono);color:var(--text-muted);font-size:.75rem;padding-top:.1rem;">${i+1}.</span>
+      <div style="flex:1;">
+        ${h.image_path?`<img src="/uploads/${h.image_path}" style="max-width:100px;max-height:60px;border-radius:3px;margin-bottom:.3rem;display:block;" alt="hint img">`:''}
+        <div style="font-size:.85rem;">${esc(h.text_de||h.text_en||'(kein Text)')}</div>
+      </div>
+      <div style="display:flex;gap:.3rem;flex-shrink:0;">
+        <button class="btn btn-ghost btn-sm" onclick="editCrHint(${h.id},${missionId})">✎</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCrHintFromEditor(${h.id},${missionId})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addCrHint(missionId){
+  showCrHintModal(null, missionId);
+}
+async function editCrHint(hintId, missionId){
+  const hints=await API(`/api/cr/hints/${missionId}`);
+  const h=hints.find(x=>x.id===hintId);
+  showCrHintModal(h, missionId);
+}
+function showCrHintModal(h, missionId){
+  const v=f=>h?esc(h[f]||''):'';
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">💡 Hinweis ${h?'bearbeiten':'hinzufügen'}</h3>
+    <div class="field"><label class="label">Bild (optional)</label>
+      <input type="file" id="cr-hint-img" accept="image/*" style="color:var(--text);">
+      ${h&&h.image_path?`<img src="/uploads/${h.image_path}" style="max-width:120px;margin-top:.4rem;border-radius:3px;display:block;" alt="current"><label style="display:flex;align-items:center;gap:.35rem;margin-top:.3rem;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="cr-hint-clear-img"> Bild entfernen</label>`:''}
+    </div>
+    <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;">
+      <div><label class="label">DE</label><textarea id="cr-hint-de" class="textarea" rows="2">${v('text_de')}</textarea></div>
+      <div><label class="label">EN</label><textarea id="cr-hint-en" class="textarea" rows="2">${v('text_en')}</textarea></div>
+      <div><label class="label">FR</label><textarea id="cr-hint-fr" class="textarea" rows="2">${v('text_fr')}</textarea></div>
+      <div><label class="label">IT</label><textarea id="cr-hint-it" class="textarea" rows="2">${v('text_it')}</textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveCrHint(${h?h.id:'null'},${missionId})">Speichern</button>
+    </div>`;
+  const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
+}
+async function saveCrHint(hintId, missionId){
+  const imgFile=document.getElementById('cr-hint-img')?.files?.[0];
+  const clearImg=document.getElementById('cr-hint-clear-img')?.checked;
+  const form=new FormData();
+  form.append('password',settingsPassword);
+  form.append('text_de',document.getElementById('cr-hint-de')?.value||'');
+  form.append('text_en',document.getElementById('cr-hint-en')?.value||'');
+  form.append('text_fr',document.getElementById('cr-hint-fr')?.value||'');
+  form.append('text_it',document.getElementById('cr-hint-it')?.value||'');
+  if(imgFile) form.append('image',imgFile);
+  if(clearImg) form.append('clear_image','1');
+  const url=hintId?`/api/cr/hints/${hintId}`:`/api/cr/hints/${missionId}`;
+  const method=hintId?'PUT':'POST';
+  const res=await fetch(url,{method,body:form}).then(r=>r.json());
+  if(res.success||res.id){closeModal();loadCrHintsEditor(missionId);toast('Hinweis gespeichert!','success');}
+  else toast(res.error||'Fehler','error');
+}
+async function deleteCrHintFromEditor(hintId,missionId){
+  if(!confirm('Hinweis löschen?'))return;
+  await API(`/api/cr/hints/${hintId}`,{method:'DELETE',body:{password:settingsPassword}});
+  loadCrHintsEditor(missionId);
+}
+
+// When editing, pre-load existing hints into the temp array
+async function _loadExistingHints(missionId){
+  const hints = await API(`/api/cr/hints/${missionId}`);
+  _crTempHints = hints.map(h=>({...h, _new:false}));
+  renderCrHintsInline();
+}
+
+async function autoTranslateCrField(field){
+  const langs=['de','en','fr','it'];
+  const texts=Object.fromEntries(langs.map(l=>[l,document.getElementById(`cr-${field}-${l}`)?.value||'']));
+  const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
+  if(!filled){toast('Bitte Text eingeben','warning');return;}
+  const [fromLang,text]=filled;
+  const empty=Object.entries(texts).filter(([k,v])=>k!==fromLang&&(!v||!v.trim())).map(([k])=>k);
+  if(!empty.length){toast('Alle Felder ausgefüllt','warning');return;}
+  toast('Übersetze…');
+  const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
+  empty.forEach(l=>{const el=document.getElementById(`cr-${field}-${l}`);if(el&&res[l])el.value=res[l];});
+  toast('Übersetzt!','success');
+}
+
+// Load CR modes when CityRush tab is opened
 // ── Multiselect helpers ──────────────────────────────────────────────────────
 function onMsChange(){
   const boxes=document.querySelectorAll('.ms-checkbox');
@@ -1772,12 +3143,23 @@ function showScreen(id){
 }
 function goBack(){showScreen(_prevScreen);}
 function closeModal(){document.getElementById('modal-overlay').style.display='none';}
+
+// Auto-apply tooltips to anything rendered inside the modal — covers every
+// dynamically-built form (modes, missions, CR mission, hint editor, etc.)
+// without having to remember to call applyTooltips() at each call site.
+(function setupModalTooltipObserver(){
+  const root = document.getElementById('modal-content');
+  if(!root || !window.MutationObserver) return;
+  const obs = new MutationObserver(() => applyTooltips(root));
+  obs.observe(root, {childList:true, subtree:true});
+})();
 function switchSettingsTab(tab,el){
   document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));
   document.getElementById(`stab-${tab}`).classList.add('active');
   document.querySelectorAll('#settings-tabs .tab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
   if(tab==='rules') loadRulesetsSettings();
+  if(tab==='cityrush') loadCrModes();
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast-container').appendChild(el);setTimeout(()=>el.remove(),3500);}
