@@ -42,6 +42,8 @@ jobs:
           body: |
             ## MiSSiONS v${{ steps.version.outputs.version }}
 
+            ${{ github.event.head_commit.message }}
+
             ### Install on Raspberry Pi
             ```bash
             git clone https://github.com/darkhousemaster-hue/missions-app.git
@@ -57,5 +59,6 @@ jobs:
             ```
           draft: false
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

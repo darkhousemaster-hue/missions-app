@@ -30,6 +30,13 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   border-radius:var(--radius); padding:.35rem .6rem; cursor:pointer; font-size:.75rem;
   font-weight:700; text-transform:uppercase; white-space:nowrap; flex-shrink:0; position:relative; }
 .topbar-btn.active { border-color:var(--red); color:var(--red-light); }
+@media (max-width:480px){
+  .cr-topbar { gap:.35rem; padding:.5rem .5rem; }
+  .cr-timer { font-size:1.15rem; }
+  .cr-score-chip { font-size:.8rem; padding:.12rem .4rem; }
+  .topbar-btn { width:38px; padding:.35rem 0; font-size:.7rem; text-align:center; }
+  #btn-v-lang { font-size:.65rem; }
+}
 
 /* ── Views ── */
 #view-mission { flex:1; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
@@ -90,7 +97,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 #view-finished h1 { font-size:3rem; color:var(--green); margin-bottom:.5rem; }
 
 /* ── Camera modal (reused from play.html style) ── */
-#cr-camera-modal { position:fixed; inset:0; background:#000; z-index:500; display:none; flex-direction:column; }
+#cr-camera-modal { position:fixed; inset:0; background:#000; z-index:1500; display:none; flex-direction:column; }
 #cr-cam-preview { flex:1; width:100%; object-fit:cover; display:block; }
 #cr-cap-img { flex:1; width:100%; object-fit:contain; display:none; background:#000; }
 .cr-cam-bar { padding:.75rem 1rem; background:#111; display:flex; gap:.75rem; align-items:center;
@@ -103,6 +110,11 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 #cr-arrived-overlay { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:1000;
   display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem; }
 #cr-arrived-overlay h2 { font-size:2.5rem; color:var(--green); margin-bottom:.75rem; }
+#cr-rejection-overlay { position:fixed; inset:0; background:rgba(0,0,0,.95); z-index:1600;
+  display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:1.5rem; }
+#cr-rejection-overlay h2 { color:var(--red-light); font-size:clamp(1.8rem,9vw,3rem); margin-bottom:1rem; max-width:100%; overflow-wrap:anywhere; }
+#cr-rejection-overlay p { color:var(--text); max-width:380px; margin:0 auto 1.5rem; line-height:1.6; font-size:1.05rem; }
+#cr-rej-btn { max-width:380px; white-space:normal; line-height:1.25; }
 
 @keyframes pulse-red { 0%,100%{opacity:1}50%{opacity:.5} }
 </style>
@@ -240,6 +252,13 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   <button class="btn btn-primary btn-lg" onclick="dismissArrived()">Mission starten →</button>
 </div>
 
+<!-- GM REJECTION OVERLAY -->
+<div id="cr-rejection-overlay">
+  <h2 id="cr-rej-title">Abgelehnt</h2>
+  <p id="cr-rej-reason"></p>
+  <button class="btn btn-primary btn-lg" onclick="closeCrRejection()" id="cr-rej-btn">OK - Erneut versuchen</button>
+</div>
+
 <!-- CAMERA MODAL -->
 <div id="cr-camera-modal">
   <div id="cr-rec-dot" style="position:absolute;top:14px;left:14px;background:var(--red);color:#fff;padding:.15rem .5rem;border-radius:3px;font-size:.8rem;font-weight:700;display:none;z-index:10;">● REC</div>
@@ -291,6 +310,7 @@ let currentCaptureType = 'photo';        // 'photo' or 'video'
 let mapMissionLayer = null;              // L.layerGroup for mission markers (so we can clear)
 let gpsAccuracy   = null;                // last known GPS accuracy in meters (±)
 let lastDistance  = null;                // last computed distance to current mission
+let arrivalCheckInFlight = false;
 
 const T = {
   de: { desc:'Beschreibung', task:'Aufgabe', hint:'Hinweis', mission:'Mission',
@@ -367,6 +387,26 @@ const T = {
         gps_hint:'Suggerimento GPS' },
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
+function toNum(v){
+  if(v === null || v === undefined || v === '') return null;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+function toBool(v){ return v === true || v === 1 || v === '1'; }
+function normalizeCrMission(m){
+  if(!m) return m;
+  return {
+    ...m,
+    lat: toNum(m.lat),
+    lng: toNum(m.lng),
+    radius_meters: toNum(m.radius_meters) || 30,
+    use_map: toBool(m.use_map),
+    use_gps: toBool(m.use_gps),
+    is_timed: toBool(m.is_timed),
+    has_answer: toBool(m.has_answer),
+    is_special: toBool(m.is_special),
+  };
+}
 function crCycleLang(){
   const LANGS=['de','en','fr','it'];
   lang=LANGS[(LANGS.indexOf(lang)+1)%LANGS.length];
@@ -416,7 +456,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
       mediaReviewState[missionId] = 'rejected';
       mediaReviewState[`${missionId}_msg`] = message || '';
-      toast('❌ ' + (t('rejected')||'Abgelehnt'), 'error');
+      showCrRejection(message);
       // Re-render the popup so the rejection message + retry buttons show.
       if(popupMissionId === missionId) refreshPopup();
     }
@@ -494,8 +534,9 @@ async function loadProgress(){
   try {
     const cr = await fetch(`/api/games/${gameId}/cr`).then(r=>r.json());
     if(cr.active && Array.isArray(cr.missions)){
-      allMissions     = cr.missions.filter(m => !m.is_special);
-      specialMissions = cr.missions.filter(m =>  m.is_special);
+      const normalized = cr.missions.map(normalizeCrMission);
+      allMissions     = normalized.filter(m => !m.is_special);
+      specialMissions = normalized.filter(m =>  m.is_special);
     }
   } catch(e) {}
   // Sticky team arrival: if any teammate already triggered arrival for the
@@ -510,7 +551,7 @@ async function loadProgress(){
   (data.specialProgress || []).forEach(p => { specialProgress[p.mission_id] = p; });
   // Also pull specials returned alongside progress if /cr wasn't reachable.
   if(!specialMissions.length && Array.isArray(data.specialMissions)){
-    specialMissions = data.specialMissions;
+    specialMissions = data.specialMissions.map(normalizeCrMission);
   }
 
   totalMissions = data.totalMissions;
@@ -519,7 +560,7 @@ async function loadProgress(){
     showFinished(data.progress.score_earned);
     return;
   }
-  currentMission = data.currentMission;
+  currentMission = normalizeCrMission(data.currentMission);
   document.getElementById('cr-loading').style.display = 'none';
   document.getElementById('cr-mission-wrap').style.display = 'block';
   renderMission();
@@ -686,6 +727,7 @@ function renderActionsForSpecial(m){
     lbl.querySelector('input').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f)return;
       _specialMissionForUpload = m;
+      closeMissionPopup();
       capturedBlob=f; captureMode='special'; capturedIsVideo=(m.media_required==='video');
       crUploadBlob(f);
     });
@@ -801,6 +843,16 @@ function openMissionPopup(missionId){
 function closeMissionPopup(){
   popupMissionId = null;
   document.getElementById('cr-mission-popup').style.display = 'none';
+}
+function showCrRejection(message){
+  const reason = document.getElementById('cr-rej-reason');
+  const overlay = document.getElementById('cr-rejection-overlay');
+  if(reason) reason.textContent = message || '';
+  if(overlay) overlay.style.display = 'flex';
+}
+function closeCrRejection(){
+  const overlay = document.getElementById('cr-rejection-overlay');
+  if(overlay) overlay.style.display = 'none';
 }
 function refreshPopup(){
   if(popupMissionId == null) return;
@@ -929,6 +981,7 @@ function renderActions(m){
     lbl.innerHTML=`${galleryIcon} ${t('gallery_upload')}<input type="file" accept="${accept}" style="display:none;">`;
     lbl.querySelector('input').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f)return;
+      closeMissionPopup();
       capturedBlob=f; captureMode='mission'; capturedIsVideo=(m.media_required==='video');
       crUploadBlob(f);
     });
@@ -1188,7 +1241,7 @@ async function completeMission(mediaPath){
 }
 
 function onNextMission({mission, missionIndex: idx}){
-  currentMission = mission; missionIndex = idx;
+  currentMission = normalizeCrMission(mission); missionIndex = idx;
   arrivedAtMissionId = null;     // allow the popup again for the new mission
   renderMission();
   renderAllMissions();
@@ -1218,7 +1271,9 @@ function startGpsTracking(){
       updateMyMapMarker(myLat, myLng);
       if(currentMission && currentMission.use_gps) checkArrival(myLat, myLng);
     },
-    err => { /* swallow transient errors; watchPosition keeps retrying */ },
+    err => {
+      setGpsStatus(gpsErrorMessage(err), 'searching');
+    },
     { enableHighAccuracy:true, maximumAge:0, timeout:15000 }
   );
   // Also poll the current position every 8s as a safety net — some Android
@@ -1237,6 +1292,20 @@ function startGpsTracking(){
       { enableHighAccuracy:true, maximumAge:0, timeout:8000 }
     );
   }, 8000);
+}
+
+function gpsErrorMessage(err){
+  if(!err) return 'GPS wird gesucht...';
+  if(err.code === 1) return 'GPS blockiert - Standort erlauben';
+  if(err.code === 2) return 'GPS nicht verfügbar';
+  if(err.code === 3) return 'GPS braucht länger...';
+  return 'GPS wird gesucht...';
+}
+function setGpsStatus(message, state='searching'){
+  const dot = document.getElementById('cr-gps-dot');
+  const txt = document.getElementById('cr-gps-text');
+  if(dot) dot.className = `cr-gps-dot ${state}`;
+  if(txt) txt.textContent = message;
 }
 
 async function sendGps(lat, lng){
@@ -1271,25 +1340,46 @@ async function checkArrival(lat, lng){
   // alongside use_gps because the GM-configured radius was sometimes
   // tighter than the device's actual GPS accuracy. Computing locally with
   // an accuracy-aware slack makes the result match what the map shows.
-  const distM   = haversineMeters(lat, lng, currentMission.lat, currentMission.lng);
+  const distM   = haversineMeters(Number(lat), Number(lng), currentMission.lat, currentMission.lng);
+  if(!Number.isFinite(distM)) {
+    setGpsStatus('GPS-Koordinaten ungültig', 'searching');
+    return;
+  }
   lastDistance  = Math.round(distM);
-  const slack   = Math.max(0, gpsAccuracy || 0) + 5;
+  const slack   = Math.min(Math.max(Number(gpsAccuracy)||10, 10), 75) + 5;
   const radius  = currentMission.radius_meters || 30;
-  const arrived = distM <= radius + slack;
+  const clientArrived = distM <= radius + slack;
 
-  // Still inform the server (it broadcasts cr_arrived for sound/coordination
-  // and we don't want to lose that). Fire-and-forget; ignore the response.
-  fetch(`/api/games/${gameId}/cr/arrival`, {
+  const sendArrivalCheck = () => fetch(`/api/games/${gameId}/cr/arrival`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, lat, lng, accuracy: gpsAccuracy||null}),
-  }).catch(()=>{});
+  });
+
+  let serverResult = null;
+  if(clientArrived){
+    sendArrivalCheck().catch(()=>{});
+  } else if(!arrivalCheckInFlight){
+    arrivalCheckInFlight = true;
+    try {
+      const r = await sendArrivalCheck();
+      serverResult = await r.json().catch(()=>null);
+    } catch(e) {
+      serverResult = null;
+    } finally {
+      arrivalCheckInFlight = false;
+    }
+  }
+  const arrived = clientArrived || !!serverResult?.arrived;
+  if(Number.isFinite(serverResult?.distance)) {
+    lastDistance = Math.min(lastDistance, Math.round(serverResult.distance));
+  }
 
   const dot = document.getElementById('cr-gps-dot');
   const txt = document.getElementById('cr-gps-text');
   if(arrived){
     if(dot){ dot.className='cr-gps-dot arrived'; }
     if(txt){ txt.textContent = t('arrived') + ' ✅'; }
-    showArrivedOverlay({missionId: currentMission.id});
+    showArrivedOverlay({missionId: currentMission.id, sticky: !!serverResult?.sticky});
   } else if(lastDistance < 100){
     if(dot){ dot.className='cr-gps-dot near'; }
     if(txt){ txt.textContent = `${t('near')} · ${lastDistance}m`; }
@@ -1464,12 +1554,14 @@ async function fetchAllTeams(){
 
 // ── Camera ────────────────────────────────────────────────────────────────────
 async function openCrCamera(mode, targetTeamId){
+  closeMissionPopup();
   captureMode = mode; captureTargetTeamId = targetTeamId||null;
   capturedBlob = null;
   capturedIsVideo = false;
   // Decide whether the active mission needs a video recording.
   // Team-capture is always a photo; mission completion follows media_required.
-  currentCaptureType = (mode==='mission' && currentMission?.media_required==='video') ? 'video' : 'photo';
+  const captureMission = mode === 'special' ? _specialMissionForUpload : currentMission;
+  currentCaptureType = (mode !== 'team' && captureMission?.media_required === 'video') ? 'video' : 'photo';
   document.getElementById('cr-shutter-icon').textContent = currentCaptureType==='video' ? '🔴' : '📷';
   document.getElementById('cr-shutter-btn').classList.remove('recording');
   document.getElementById('cr-rec-dot').style.display = 'none';
@@ -1562,8 +1654,7 @@ function crRetake(){
 // failures don't silently swallow the player's tap. Returns null on failure.
 async function _crSendMedia(form){
   try {
-    const r = await fetch(`/api/games/${gameId}/teams/${teamId}/missions/${currentMission?.id||0}/upload`,
-      {method:'POST', body:form});
+    const r = await fetch(`/api/games/${gameId}/media/upload`, {method:'POST', body:form});
     if(!r.ok){
       let msg = `Upload fehlgeschlagen (${r.status})`;
       try { const j = await r.json(); if(j && j.error) msg = `${msg}: ${j.error}`; } catch(e){}
@@ -1581,8 +1672,9 @@ async function crUploadBlob(blob){
   // Direct upload without camera (gallery selected)
   const isVid = blob.type.startsWith('video');
   const ext = isVid ? 'mp4' : 'jpg';
+  const filename = blob.name || `capture.${ext}`;
   const form = new FormData();
-  form.append('media', blob, `capture.${ext}`);
+  form.append('media', blob, filename);
   if(captureMode==='team' && captureTargetTeamId){
     form.append('teamId', teamId);
     form.append('targetTeamId', captureTargetTeamId);

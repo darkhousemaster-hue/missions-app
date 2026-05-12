@@ -305,6 +305,13 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
 app.get('/api/games/:gameId/rankings', (req,res) => res.json(db.getRankings(req.params.gameId)));
 
 // ── Upload ────────────────────────────────────────────────────────────────────
+app.post('/api/games/:gameId/media/upload',
+  upload.single('media'), (req,res) => {
+    if(!req.file) return res.status(400).json({error:'No file'});
+    res.json({success:true, mediaPath:`${req.params.gameId}/${req.file.filename}`});
+  }
+);
+
 app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
   upload.single('media'), (req,res) => {
     const {gameId,teamId,missionId}=req.params;
@@ -312,6 +319,7 @@ app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
     const mediaPath=`${gameId}/${req.file.filename}`;
     db.submitMission({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
     const sub=db.getSubmission(Number(teamId),Number(missionId));
+    if(!sub) return res.status(400).json({error:'Mission is not assigned to this team'});
     io.to(`gm_${gameId}`).emit('submission_new',{submissionId:sub.id,teamId:Number(teamId),missionId:Number(missionId),mediaPath});
     res.json({success:true,mediaPath});
   }
@@ -728,6 +736,9 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
 // unlocks across every device.
 app.post('/api/games/:gameId/cr/arrival', (req,res) => {
   const {teamId, lat, lng, accuracy} = req.body;
+  const latN = Number(lat);
+  const lngN = Number(lng);
+  if(!Number.isFinite(latN) || !Number.isFinite(lngN)) return res.json({arrived:false});
   const prog = db.getCrProgress(req.params.gameId, teamId);
   if(!prog) return res.json({arrived:false});
   const crMode = db.getGameCrMode(req.params.gameId);
@@ -748,11 +759,14 @@ app.post('/api/games/:gameId/cr/arrival', (req,res) => {
   // Haversine distance, with a GPS-accuracy slack (15-30m phone error is
   // typical and would otherwise reject a player visibly on the target).
   const R = 6371000;
-  const dLat = (mission.lat - lat) * Math.PI / 180;
-  const dLng = (mission.lng - lng) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180)*Math.cos(mission.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  const missionLat = Number(mission.lat);
+  const missionLng = Number(mission.lng);
+  if(!Number.isFinite(missionLat) || !Number.isFinite(missionLng)) return res.json({arrived:false});
+  const dLat = (missionLat - latN) * Math.PI / 180;
+  const dLng = (missionLng - lngN) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(latN*Math.PI/180)*Math.cos(missionLat*Math.PI/180)*Math.sin(dLng/2)**2;
   const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const slack  = Math.max(0, Number(accuracy)||0) + 5;
+  const slack  = Math.min(Math.max(Number(accuracy)||10, 10), 75) + 5;
   const radius = mission.radius_meters || 30;
   const arrived = dist <= radius + slack;
   if(arrived) {
