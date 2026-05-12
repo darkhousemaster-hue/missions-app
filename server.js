@@ -356,7 +356,11 @@ app.post('/api/games/:gameId/teams', (req,res) => {
   const existingTeams=db.getTeams(req.params.gameId);
   const nameTaken=existingTeams.some(t=>t.name.toLowerCase()===req.body.name.toLowerCase());
   if(nameTaken) return res.status(400).json({error:'Team name already taken. Please choose a different name.'});
-  const teamId=db.createTeam({game_id:req.params.gameId, name:req.body.name});
+  const teamId=db.createTeam({
+    game_id:req.params.gameId,
+    name:req.body.name,
+    gps_anchor_key: req.body.gps_anchor_key || req.body.gpsAnchorKey || null,
+  });
   const team=db.getTeam(teamId);
   io.to(`gm_${req.params.gameId}`).emit('team_joined',team);
   res.json(team);
@@ -551,6 +555,16 @@ app.post('/api/games/:gameId/cr/answer', (req,res) => {
 //   CITYRUSH ROUTES
 // ════════════════════════════════════════════════════════════
 
+function crMediaMatchesMission(mission, mediaPath) {
+  const req = mission.media_required || 'none';
+  if (!mediaPath || req === 'none') return true;
+  const p = String(mediaPath).toLowerCase();
+  const looksVideo = /\.(mp4|webm|mov|m4v|mkv)$/i.test(p);
+  if (req === 'photo' && looksVideo) return false;
+  if (req === 'video' && !looksVideo) return false;
+  return true;
+}
+
 // ── CR Modes ──────────────────────────────────────────────────────────────────
 app.get('/api/cr/modes', (req,res) => res.json(db.getCrModes()));
 app.post('/api/cr/modes', (req,res) => {
@@ -638,13 +652,14 @@ app.get('/api/games/:id/pending-counts', (req,res) => {
 
 // ── GPS updates ───────────────────────────────────────────────────────────────
 app.post('/api/games/:gameId/gps', (req,res) => {
-  const {teamId, lat, lng} = req.body;
+  const {teamId, lat, lng, playerKey} = req.body;
   if(!teamId||lat===undefined||lng===undefined) return res.status(400).json({error:'Missing params'});
-  db.updateTeamGps(req.params.gameId, teamId, lat, lng);
-  // Broadcast to GM and all players in the game
-  io.to(`game_${req.params.gameId}`).emit('gps_update', {teamId, lat, lng, ts: Date.now()});
-  io.to(`gm_${req.params.gameId}`).emit('gps_update', {teamId, lat, lng, ts: Date.now()});
-  res.json({success:true});
+  const updatedDb = db.updateTeamGps(req.params.gameId, teamId, lat, lng, playerKey||null);
+  const payload = {teamId, lat, lng, playerKey: playerKey||null, ts: Date.now()};
+  // Broadcast to GM and all players in the game (playerKey lets teammates see each other on the map)
+  io.to(`game_${req.params.gameId}`).emit('gps_update', payload);
+  io.to(`gm_${req.params.gameId}`).emit('gps_update', payload);
+  res.json({success:true, persisted: updatedDb !== false});
 });
 
 // ── CR Team progress ──────────────────────────────────────────────────────────
@@ -819,7 +834,7 @@ function advanceCrTeam(gameId, teamId, mission, missionIndex, score) {
 }
 
 app.post('/api/games/:gameId/cr/complete', (req,res) => {
-  const {teamId, missionId, mediaPath} = req.body;
+  const {teamId, missionId, mediaPath, playerKey} = req.body;
   const gameId = req.params.gameId;
   const crMode = db.getGameCrMode(gameId);
   if(!crMode) return res.status(400).json({error:'No CityRush mode'});
@@ -842,7 +857,14 @@ app.post('/api/games/:gameId/cr/complete', (req,res) => {
 
   // Branch: media-bearing missions need GM approval. Don't advance yet.
   if(mediaPath) {
-    const subId = db.createCrSubmission(gameId, teamId, mission.id, mediaPath);
+    if (!crMediaMatchesMission(mission, mediaPath)) {
+      return res.status(400).json({error:'Media type does not match mission (photo vs video)'});
+    }
+    const sub = db.createCrSubmission(gameId, teamId, mission.id, mediaPath, playerKey||null);
+    if (sub.conflict) {
+      return res.status(409).json({error:'Teammate submission pending', code:'submission_conflict'});
+    }
+    const subId = sub.id;
     db.upsertCrMissionProgress(gameId, teamId, mission.id, {
       status: 'pending',
       media_path: mediaPath,
@@ -1002,7 +1024,7 @@ app.post('/api/games/:gameId/cr/skip', (req,res) => {
 // Special-mission completion. Independent of the linear progress; obeys its
 // own cooldown. Photo/video specials still go through GM review.
 app.post('/api/games/:gameId/cr/special/complete', (req,res) => {
-  const {teamId, missionId, mediaPath} = req.body;
+  const {teamId, missionId, mediaPath, playerKey} = req.body;
   const gameId = req.params.gameId;
   const mission = db.getCrMission(missionId);
   if(!mission || !mission.is_special) return res.status(400).json({error:'Not a special mission'});
@@ -1019,7 +1041,14 @@ app.post('/api/games/:gameId/cr/special/complete', (req,res) => {
   }
   // Media branch → pending GM review (no instant award).
   if(mediaPath){
-    const subId = db.createCrSubmission(gameId, teamId, mission.id, mediaPath);
+    if (!crMediaMatchesMission(mission, mediaPath)) {
+      return res.status(400).json({error:'Media type does not match mission (photo vs video)'});
+    }
+    const sub = db.createCrSubmission(gameId, teamId, mission.id, mediaPath, playerKey||null);
+    if (sub.conflict) {
+      return res.status(409).json({error:'Teammate submission pending', code:'submission_conflict'});
+    }
+    const subId = sub.id;
     db.upsertCrSpecialProgress(gameId, teamId, mission.id, {last_attempt: now});
     io.to(`gm_${gameId}`).emit('cr_submission_new', {
       submissionId: subId, teamId, missionId: mission.id, missionIndex: -1, mediaPath, isSpecial: true,

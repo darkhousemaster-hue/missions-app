@@ -62,7 +62,8 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id TEXT REFERENCES games(id) ON DELETE CASCADE,
     name TEXT NOT NULL, score INTEGER DEFAULT 0,
-    joined_at INTEGER DEFAULT (unixepoch()*1000));
+    joined_at INTEGER DEFAULT (unixepoch()*1000),
+    gps_anchor_key TEXT);
   CREATE TABLE IF NOT EXISTS team_missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
@@ -225,6 +226,8 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN hide_until_arrival INTEGER DEF
 // ignored for gating purposes.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_special INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN repeat_minutes INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Per-team progress for special missions — separate from the linear team
 // progress so repeat cooldown can be tracked without disturbing the main
 // mission_index. last_attempt = ms epoch of last attempt (accepted or pending).
@@ -420,8 +423,8 @@ function selectMissions(location, modeId) {
 // ── Teams ─────────────────────────────────────────────────────────────────────
 const getTeam  = id => db.prepare('SELECT * FROM teams WHERE id=?').get(id);
 const getTeams = gameId => db.prepare('SELECT * FROM teams WHERE game_id=? ORDER BY joined_at').all(gameId);
-const createTeam = ({game_id, name}) => {
-  const teamId=num(db.prepare('INSERT INTO teams(game_id,name) VALUES(?,?)').run(game_id,name).lastInsertRowid);
+const createTeam = ({game_id, name, gps_anchor_key=null}) => {
+  const teamId=num(db.prepare('INSERT INTO teams(game_id,name,gps_anchor_key) VALUES(?,?,?)').run(game_id,name,gps_anchor_key||null).lastInsertRowid);
   const gms=db.prepare('SELECT id,mission_id FROM game_missions WHERE game_id=?').all(game_id);
   const ins=db.prepare('INSERT INTO team_missions(team_id,mission_id,game_mission_id) VALUES(?,?,?)');
   runTx(()=>gms.forEach(gm=>ins.run(teamId,gm.mission_id,gm.id)));
@@ -625,10 +628,16 @@ const upsertCrMissionProgress = (gameId, teamId, missionId, fields={}) => {
   return getCrMissionProgress(gameId, teamId, missionId);
 };
 
-// GPS tracking
-const updateTeamGps = (gameId, teamId, lat, lng) =>
+// GPS tracking — only the team's anchor device (first creator, see gps_anchor_key)
+// updates the row the GM map seeds from; other devices still broadcast live via socket.
+const updateTeamGps = (gameId, teamId, lat, lng, playerKey) => {
+  const team = getTeam(teamId);
+  const anchor = team?.gps_anchor_key || null;
+  if (anchor && playerKey && String(playerKey) !== String(anchor)) return false;
   db.prepare('INSERT OR REPLACE INTO team_gps(game_id,team_id,lat,lng,updated_at) VALUES(?,?,?,?,?)')
     .run(gameId, teamId, lat, lng, Date.now());
+  return true;
+};
 const getTeamGps = gameId =>
   db.prepare('SELECT * FROM team_gps WHERE game_id=?').all(gameId);
 
@@ -673,13 +682,22 @@ const incrementTeamHints = (gameId,teamId,missionId,hintType='answer') => {
 };
 
 // CR Submissions (photo/video that needs GM approval)
-const createCrSubmission = (gameId, teamId, missionId, mediaPath) => {
-  // Replace any prior pending/rejected submission for this team+mission so
-  // the queue stays clean when a player retries.
-  db.prepare('DELETE FROM cr_submissions WHERE game_id=? AND team_id=? AND mission_id=? AND status<>?')
-    .run(gameId, teamId, missionId, 'accepted');
-  return num(db.prepare('INSERT INTO cr_submissions(game_id,team_id,mission_id,media_path,status) VALUES(?,?,?,?,?)')
-    .run(gameId, teamId, missionId, mediaPath, 'pending').lastInsertRowid);
+const createCrSubmission = (gameId, teamId, missionId, mediaPath, playerKey=null) => {
+  const pending = db.prepare(`SELECT * FROM cr_submissions WHERE game_id=? AND team_id=? AND mission_id=? AND status='pending'`)
+    .get(gameId, teamId, missionId);
+  if (pending) {
+    const pk = playerKey ? String(playerKey) : '';
+    const oldPk = pending.player_key ? String(pending.player_key) : '';
+    // Another teammate already has a submission in review — keep the first one for the GM.
+    if (pk && oldPk && pk !== oldPk) return { conflict: true };
+    db.prepare('DELETE FROM cr_submissions WHERE id=?').run(pending.id);
+  } else {
+    db.prepare('DELETE FROM cr_submissions WHERE game_id=? AND team_id=? AND mission_id=? AND status<>?')
+      .run(gameId, teamId, missionId, 'accepted');
+  }
+  const id = num(db.prepare('INSERT INTO cr_submissions(game_id,team_id,mission_id,media_path,status,player_key) VALUES(?,?,?,?,?,?)')
+    .run(gameId, teamId, missionId, mediaPath, 'pending', playerKey||null).lastInsertRowid);
+  return { id };
 };
 const getCrSubmission   = id => db.prepare('SELECT * FROM cr_submissions WHERE id=?').get(id);
 const getCrSubmissionFor = (gameId, teamId, missionId) =>

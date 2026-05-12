@@ -41,6 +41,10 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 /* ── Views ── */
 #view-mission { flex:1; min-height:0; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
   padding-bottom:calc(env(safe-area-inset-bottom,0px) + 1.5rem); }
+#view-chat { flex:1; min-height:0; display:none; flex-direction:column; }
+#view-chat .cr-chat-scroll { flex:1; overflow-y:auto; padding:.75rem; }
+#view-chat .chat-input-row { display:flex; gap:.5rem; padding:.75rem; border-top:1px solid var(--border);
+  background:var(--bg2); flex-shrink:0; }
 #view-map     { flex:1; display:none; position:relative; }
 #cr-map       { width:100%; height:100%; }
 
@@ -130,6 +134,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   <div style="display:flex;gap:.35rem;flex-shrink:0;">
     <button class="topbar-btn active" id="btn-v-mission" onclick="crShowView('mission')">📋</button>
     <button class="topbar-btn" id="btn-v-map" onclick="crShowView('map')">🗺️</button>
+    <button class="topbar-btn" id="btn-v-chat" onclick="crShowView('chat')">💬
+      <span id="cr-chat-dot" style="position:absolute;top:1px;right:1px;width:8px;height:8px;border-radius:50%;background:var(--orange);display:none;"></span>
+    </button>
     <button class="topbar-btn" id="btn-v-rules" onclick="showRulesView()">📖</button>
     <button class="topbar-btn" id="btn-v-lang" onclick="crCycleLang()">DE</button>
   </div>
@@ -162,6 +169,21 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
     <div style="font-size:3rem;">🏁</div>
     <h2 style="color:var(--green);margin:.5rem 0;">Alle Missionen geschafft!</h2>
     <p id="cr-final-score" style="color:var(--orange);font-family:var(--mono);font-size:1.3rem;"></p>
+  </div>
+</div>
+
+<!-- CHAT VIEW -->
+<div id="view-chat">
+  <div class="cr-topbar" style="border-bottom:1px solid var(--border);">
+    <button class="topbar-btn" type="button" onclick="crShowView('mission')" id="cr-chat-back-btn">←</button>
+    <span style="font-family:var(--heading);font-size:1.1rem;letter-spacing:.08em;flex:1;text-align:center;">💬 GM</span>
+    <span style="width:48px;"></span>
+  </div>
+  <div id="cr-chat-messages" class="chat-messages cr-chat-scroll"></div>
+  <div class="chat-input-row">
+    <input type="text" id="cr-chat-input" class="input" style="flex:1;" autocomplete="off" autocorrect="off"
+      onkeydown="if(event.key==='Enter')crSendChat()">
+    <button type="button" class="btn btn-primary btn-sm" onclick="crSendChat()" id="cr-chat-send">OK</button>
   </div>
 </div>
 
@@ -294,6 +316,8 @@ const teamName = sessionStorage.getItem('teamName') || 'Team';
 let lang       = localStorage.getItem('cr_lang') || 'de';
 let socket;
 let crMap = null, myMarker = null, teamMarkers = {};
+let crActiveView = 'mission';
+let _crUploadMissionId = null;   // linear mission id for in-flight media (stable after closing popup)
 let currentMission = null, missionIndex = 0, totalMissions = 0;
 let missionTimerInterval = null, missionStartTime = null;
 let penalties = 0;
@@ -337,7 +361,8 @@ const T = {
         accepted:'Angenommen!', rejected:'Abgelehnt',
         skip_mission:'Mission überspringen', skip_confirm:'Mission überspringen? Es gibt keine Punkte dafür.', skipped:'Übersprungen',
         special:'Spezial', special_missions:'Spezial-Missionen', available:'Verfügbar', cooldown_wait:'Bitte warten:',
-        gps_hint:'GPS-Hinweis' },
+        gps_hint:'GPS-Hinweis', chat_ph:'Nachricht an Spielleiter…', chat_send:'Senden', chat_back:'Zurück',
+        teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
   en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
         searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
         penalty:'Penalty', penalties:'Penalties', overtime:'Overtime',
@@ -355,7 +380,8 @@ const T = {
         accepted:'Accepted!', rejected:'Rejected',
         skip_mission:'Skip mission', skip_confirm:'Skip this mission? You will not get any points.', skipped:'Skipped',
         special:'Special', special_missions:'Special missions', available:'Available', cooldown_wait:'Please wait:',
-        gps_hint:'GPS hint' },
+        gps_hint:'GPS hint', chat_ph:'Message to Gamemaster…', chat_send:'Send', chat_back:'Back',
+        teammate_pending:'A teammate already submitted — waiting for GM review.' },
   fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
         searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
         penalty:'Pénalité', penalties:'Pénalités', overtime:'Dépassement',
@@ -373,7 +399,8 @@ const T = {
         accepted:'Accepté!', rejected:'Refusé',
         skip_mission:'Passer la mission', skip_confirm:'Passer cette mission ? Vous n\'aurez aucun point.', skipped:'Passée',
         special:'Spécial', special_missions:'Missions spéciales', available:'Disponible', cooldown_wait:'Veuillez attendre :',
-        gps_hint:'Indice GPS' },
+        gps_hint:'Indice GPS', chat_ph:'Message au Gamemaster…', chat_send:'Envoyer', chat_back:'Retour',
+        teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
   it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
         searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
         penalty:'Penalità', penalties:'Penalità', overtime:'Tempo extra',
@@ -391,7 +418,8 @@ const T = {
         accepted:'Accettato!', rejected:'Rifiutato',
         skip_mission:'Salta missione', skip_confirm:'Saltare la missione? Non riceverai punti.', skipped:'Saltata',
         special:'Speciale', special_missions:'Missioni speciali', available:'Disponibile', cooldown_wait:'Attendi:',
-        gps_hint:'Suggerimento GPS' },
+        gps_hint:'Suggerimento GPS', chat_ph:'Messaggio al Gamemaster…', chat_send:'Invia', chat_back:'Indietro',
+        teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
 function toNum(v){
@@ -401,7 +429,20 @@ function toNum(v){
 }
 function toBool(v){ return v === true || v === 1 || v === '1'; }
 function hasCrCoords(m){
-  return m && Number.isFinite(Number(m.lat)) && Number.isFinite(Number(m.lng));
+  if(!m) return false;
+  const la = Number(m.lat), ln = Number(m.lng);
+  if(!Number.isFinite(la) || !Number.isFinite(ln)) return false;
+  if(la === 0 && ln === 0) return false;
+  return true;
+}
+function getCrPlayerKey(){
+  let k = sessionStorage.getItem('crPlayerKey');
+  if(!k){
+    k = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+      : 'pk_'+Math.random().toString(36).slice(2)+Date.now();
+    sessionStorage.setItem('crPlayerKey', k);
+  }
+  return k;
 }
 function missionRadiusMeters(m){
   const r = Number(String(m && m.radius_meters).replace(',', '.'));
@@ -465,6 +506,7 @@ function crCycleLang(){
   if(currentMission) renderMission();
   if(popupMissionId != null) refreshPopup();
   loadRules();   // re-render rules in the new language
+  loadCrChatHistory();
 }
 
 // Localise static labels (back button, jump-to-me, popup close, rules title).
@@ -474,6 +516,12 @@ function applyCrTranslations(){
   set('cr-rules-back', t('back').replace(/^←\s*/,''));
   set('cr-rules-title', t('rules'));
   set('cr-popup-close', t('back'));
+  const ci = document.getElementById('cr-chat-input');
+  if(ci) ci.placeholder = t('chat_ph');
+  const cs = document.getElementById('cr-chat-send');
+  if(cs) cs.textContent = t('chat_send');
+  const cb = document.getElementById('cr-chat-back-btn');
+  if(cb) cb.textContent = '← ' + (t('chat_back').replace(/^←\s*/, '') || '');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -517,10 +565,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       if(popupMissionId === missionId) refreshPopup();
     }
   });
+  socket.on('chat_message', crOnChatMessage);
 
   applyCrTranslations();
+  getCrPlayerKey();
   await loadProgress();
   await loadRules();
+  await loadCrChatHistory();
   startGpsTracking();
   // Map is the default view
   crShowView('map');
@@ -561,9 +612,59 @@ function showRulesView(){
 function closeRulesView(){
   document.getElementById('cr-view-rules').style.display = 'none';
   // Restore the jump-to-me visibility based on the underlying view.
-  const onMap = document.getElementById('view-map').style.display !== 'none';
+  const onMap = crActiveView === 'map';
   const jm = document.getElementById('cr-jump-me');
   if(jm) jm.style.display = onMap ? 'inline-flex' : 'none';
+}
+
+// ── Chat (GM replies + broadcast to all teams) ───────────────────────────────
+async function loadCrChatHistory(){
+  try {
+    const msgs = await fetch(`/api/games/${gameId}/chat?teamId=${teamId}`).then(r=>r.json());
+    const box = document.getElementById('cr-chat-messages');
+    if(!box) return;
+    box.innerHTML = (msgs||[]).map(crChatBubble).join('');
+    crScrollChat();
+  } catch(e){}
+}
+function crChatBubble(m){
+  const fromGm = m.from_gm===1 || m.from_gm===true;
+  const time = new Date(m.created_at||m.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}"><div class="chat-meta">${fromGm?'GM':(esc(teamName)||'Team')} · ${time}</div>${esc(m.content)}</div>`;
+}
+function crScrollChat(){
+  const box = document.getElementById('cr-chat-messages');
+  if(box) setTimeout(()=>{ box.scrollTop = box.scrollHeight; }, 30);
+}
+function crOnChatMessage(msg){
+  if(!msg) return;
+  const fromGm = msg.fromGm===1 || msg.fromGm===true;
+  if(!fromGm) return;
+  const box = document.getElementById('cr-chat-messages');
+  if(!box) return;
+  const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm"><div class="chat-meta">GM · ${time}</div>${esc(msg.content)}</div>`);
+  crScrollChat();
+  if(crActiveView !== 'chat'){
+    const dot = document.getElementById('cr-chat-dot');
+    if(dot) dot.style.display = 'block';
+  }
+}
+async function crSendChat(){
+  const input = document.getElementById('cr-chat-input');
+  const content = (input && input.value || '').trim();
+  if(!content) return;
+  if(input) input.value = '';
+  const box = document.getElementById('cr-chat-messages');
+  const now = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(box){
+    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-player"><div class="chat-meta">Du · ${now}</div>${esc(content)}</div>`);
+    crScrollChat();
+  }
+  await fetch(`/api/games/${gameId}/chat`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({teamId, content, fromGm:false}),
+  }).catch(()=>{ toast('Chat senden fehlgeschlagen','error'); });
 }
 
 // ── Game timer ────────────────────────────────────────────────────────────────
@@ -784,6 +885,7 @@ function renderActionsForSpecial(m){
     lbl.querySelector('input').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f)return;
       _specialMissionForUpload = m;
+      _crUploadMissionId = null;
       closeMissionPopup();
       capturedBlob=f; captureMode='special'; capturedIsVideo=(m.media_required==='video');
       crUploadBlob(f);
@@ -821,8 +923,12 @@ async function submitSpecialAnswer(m){
 async function completeSpecialMission(m, mediaPath){
   const res = await fetch(`/api/games/${gameId}/cr/special/complete`,{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamId, missionId:m.id, mediaPath:mediaPath||null}),
+    body: JSON.stringify({teamId, missionId:m.id, mediaPath:mediaPath||null, playerKey: getCrPlayerKey()}),
   }).then(r=>r.json()).catch(()=>({error:'network'}));
+  if(res.code === 'submission_conflict'){
+    toast(t('teammate_pending') || 'Teammate already submitted.', 'warning');
+    return;
+  }
   if(res.error === 'Cooldown'){
     toast(`⏳ ${t('cooldown_wait')||'Bitte warten:'} ${Math.ceil((res.waitSeconds||0)/60)} min`, 'warning');
     return;
@@ -883,19 +989,20 @@ function renderTiles(){
 // the current mission gets the full action UI.
 function openMissionPopup(missionId){
   const mission = allMissions.find(x => x.id === missionId);
-  if(mission) setFocusedMission(mission);
+  // Do not call setFocusedMission here — browsing tiles must not reroute
+  // uploads or GPS state away from the server's current mission.
   popupMissionId = missionId;
   document.getElementById('cr-mission-popup').style.display = 'flex';
   refreshPopup();
   // Don't make the player wait for the next watchPosition tick to see GPS
   // status — fire an immediate check using the freshest fix we have.
-  if(currentMission && currentMission.id === missionId && currentMission.use_gps){
+  if(mission && mission.id === missionId && mission.use_gps){
     if(myLat != null && myLng != null){
-      checkArrival(myLat, myLng, currentMission);
+      checkArrival(myLat, myLng, mission);
     } else if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(
         pos => { myLat = pos.coords.latitude; myLng = pos.coords.longitude;
-                 updateMyMapMarker(myLat, myLng); checkArrival(myLat, myLng, currentMission); },
+                 updateMyMapMarker(myLat, myLng); checkArrival(myLat, myLng, mission); },
         () => {},
         { enableHighAccuracy:true, maximumAge:0, timeout:5000 }
       );
@@ -1039,13 +1146,14 @@ function renderActions(m){
     const label = m.media_required==='photo' ? t('photo') : t('video');
     const galleryIcon = m.media_required==='video' ? '🎞️' : '🖼️';
     const accept = m.media_required==='video' ? 'video/*' : 'image/*';
-    addActionBtn(actEl, label, 'btn-primary', ()=>openCrCamera('mission'));
+    addActionBtn(actEl, label, 'btn-primary', ()=>{ _crUploadMissionId = m.id; openCrCamera('mission'); });
     const lbl = document.createElement('label');
     lbl.className='btn btn-secondary btn-full';
     lbl.style.cursor='pointer';
     lbl.innerHTML=`${galleryIcon} ${t('gallery_upload')}<input type="file" accept="${accept}" style="display:none;">`;
     lbl.querySelector('input').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f)return;
+      _crUploadMissionId = m.id;
       closeMissionPopup();
       capturedBlob=f; captureMode='mission'; capturedIsVideo=(m.media_required==='video');
       crUploadBlob(f);
@@ -1272,15 +1380,32 @@ async function completeMission(mediaPath){
   const actEl = document.getElementById('cr-actions');
   const btn   = actEl ? actEl.querySelector('button') : null;
   if(btn){ btn.disabled=true; btn.textContent='Wird gesendet…'; }
+  const mid = _crUploadMissionId || (currentMission && currentMission.id);
+  if(!mid){
+    if(btn){ btn.disabled=false; }
+    toast('Keine Mission gewählt','error');
+    return;
+  }
   const res = await fetch(`/api/games/${gameId}/cr/complete`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamId, missionId:currentMission.id, mediaPath:mediaPath||null})
-  }).then(r=>r.json());
+    body: JSON.stringify({teamId, missionId: mid, mediaPath:mediaPath||null, playerKey: getCrPlayerKey()}),
+  }).then(r=>r.json()).catch(()=>({}));
+  _crUploadMissionId = null;
+  if(res.code === 'submission_conflict'){
+    if(btn){ btn.disabled=false; btn.textContent = t('complete'); }
+    toast(t('teammate_pending') || 'Teammate already submitted.', 'warning');
+    return;
+  }
+  if(res.error && !res.pending && !res.success){
+    if(btn){ btn.disabled=false; btn.textContent = t('complete'); }
+    toast(res.error,'error');
+    return;
+  }
   // Photo/video missions are now held for GM review and don't advance.
   if(res.pending){
     if(currentMission) {
-      mediaReviewState[currentMission.id] = 'pending';
-      pendingMissionIds.add(Number(currentMission.id));
+      mediaReviewState[mid] = 'pending';
+      pendingMissionIds.add(Number(mid));
     }
     applyProgressPayload(res);
     refreshPopup();
@@ -1369,7 +1494,7 @@ function setGpsStatus(message, state='searching'){
 async function sendGps(lat, lng){
   await fetch(`/api/games/${gameId}/gps`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamId, lat, lng})
+    body: JSON.stringify({teamId, lat, lng, playerKey: getCrPlayerKey()}),
   }).catch(()=>{});
 }
 
@@ -1503,10 +1628,20 @@ function initMap(){
   }).addTo(crMap);
 }
 function crShowView(v){
+  crActiveView = v;
   document.getElementById('view-mission').style.display = v==='mission'?'flex':'none';
   document.getElementById('view-map').style.display     = v==='map'?'block':'none';
+  const vc = document.getElementById('view-chat');
+  if(vc) vc.style.display = v==='chat' ? 'flex' : 'none';
   document.getElementById('btn-v-mission').classList.toggle('active', v==='mission');
   document.getElementById('btn-v-map').classList.toggle('active', v==='map');
+  const btnChat = document.getElementById('btn-v-chat');
+  if(btnChat) btnChat.classList.toggle('active', v==='chat');
+  if(v==='chat'){
+    const dot = document.getElementById('cr-chat-dot');
+    if(dot) dot.style.display = 'none';
+    crScrollChat();
+  }
   // The jump-to-me button only makes sense on the map view, and is fixed-
   // positioned so we have to explicitly hide it on the missions/rules view.
   const jm = document.getElementById('cr-jump-me');
@@ -1527,6 +1662,7 @@ function renderAllMissionMarkers(){
   if(!mapMissionLayer) mapMissionLayer = L.layerGroup().addTo(crMap);
   mapMissionLayer.clearLayers();
   allMissions.forEach((m,i)=>{
+    if(m.is_special) return;
     const isCurrent = currentMission && currentMission.id === m.id;
     const showTarget = hasCrCoords(m) && (m.use_map || (isCurrent && m.use_gps));
     if(!showTarget) return;
@@ -1591,14 +1727,16 @@ function centerMapOnMission(m){
   // Marker drawing is handled by renderAllMissionMarkers; keep this method
   // focused on viewport panning only.
 }
-function onGpsUpdate({teamId:tid, lat, lng}){
-  if(tid===teamId) return; // skip own
+function onGpsUpdate({teamId:tid, lat, lng, playerKey}){
+  const myKey = getCrPlayerKey();
+  if(tid===teamId && (!playerKey || playerKey === myKey)) return;
   if(!crMap) return;
   initMap();
+  const markerKey = `${tid}_${playerKey || 'legacy'}`;
   const team = allTeams.find(t=>t.id===tid);
   const label = team ? team.name.substring(0,3).toUpperCase() : '?';
-  if(teamMarkers[tid]) teamMarkers[tid].setLatLng([lat,lng]);
-  else teamMarkers[tid] = L.marker([lat,lng],{icon:makeMarkerIcon(label,false)}).addTo(crMap)
+  if(teamMarkers[markerKey]) teamMarkers[markerKey].setLatLng([lat,lng]);
+  else teamMarkers[markerKey] = L.marker([lat,lng],{icon:makeMarkerIcon(label,false)}).addTo(crMap)
     .bindPopup(team?team.name:'Team');
 }
 
@@ -1618,6 +1756,8 @@ async function fetchAllTeams(){
 async function openCrCamera(mode, targetTeamId){
   closeMissionPopup();
   captureMode = mode; captureTargetTeamId = targetTeamId||null;
+  if(mode === 'mission' && currentMission) _crUploadMissionId = currentMission.id;
+  else _crUploadMissionId = null;
   capturedBlob = null;
   capturedIsVideo = false;
   // Decide whether the active mission needs a video recording.
@@ -1633,6 +1773,7 @@ async function openCrCamera(mode, targetTeamId){
   document.getElementById('cr-cam-bar-capture').style.display = 'flex';
   document.getElementById('cr-cam-bar-review').style.display = 'none';
   document.getElementById('cr-camera-modal').style.display = 'flex';
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   await startCrStream();
 }
 async function startCrStream(){
@@ -1651,6 +1792,8 @@ async function startCrStream(){
       cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode}, audio:false});
     }
     document.getElementById('cr-cam-preview').srcObject = cameraStream;
+    const pv = document.getElementById('cr-cam-preview');
+    if(pv && pv.play) await pv.play().catch(()=>{});
   } catch(e){ toast('Kamera nicht verfügbar','error'); crCloseCamera(); }
 }
 function crFlip(){ useFrontCamera=!useFrontCamera; startCrStream(); }

@@ -185,7 +185,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   </div>
   <div id="dash-panel">
     <div class="tabs">
-      <button class="tab active" onclick="switchPanel('chat',this)" id="tab-chat">Chat</button>
+      <button class="tab active" onclick="switchPanel('chat',this)" id="tab-chat" type="button" style="position:relative;">Chat<span id="gm-chat-tab-dot" style="display:none;position:absolute;top:2px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px var(--bg2);"></span></button>
       <button class="tab" onclick="switchPanel('broadcast',this)" id="tab-broadcast">Broadcast</button>
       <button class="tab" onclick="switchPanel('crmap',this)" id="tab-crmap">🗺️</button>
     </div>
@@ -967,7 +967,7 @@ async function openDashboard(gameId){
   socket.on('chat_message',onChatMessage);
   socket.on('game_ended',()=>toast('Spiel beendet!'));
   socket.on('gps_update',({teamId:tid,lat,lng})=>{
-    if(!gmCrMap)return;
+    ensureGmCrMap();
     upsertGmTeamMarker(tid, lat, lng);
   });
   socket.on('settings_updated',({type})=>{
@@ -993,6 +993,7 @@ async function refreshDashboard(gameId){
   // teams have reached them yet).
   if(game.crMode){
     try {
+      ensureGmCrMap();
       const cr = await API(`/api/games/${gameId}/cr`);
       window._lastCrPayload = cr;
       if(cr && Array.isArray(cr.missions)) gmCrMissionsCache = cr.missions;
@@ -1103,6 +1104,7 @@ async function selectTeam(teamId){
 // map isn't ready yet (panel hasn't been opened) we lazily switch it on and
 // invalidate the size first so Leaflet doesn't render at 0×0.
 function centerGmMapOnTeam(teamId){
+  ensureGmCrMap();
   if(!gmCrMap){
     // Switch to the map panel so the user actually sees the new centre.
     const tab = document.getElementById('tab-crmap');
@@ -1388,6 +1390,11 @@ function onChatMessage(msg){
     const notif=document.getElementById(`notif-${msg.teamId}`);
     if(notif)notif.style.display='inline-block';
   }
+  const chatPanel=document.getElementById('panel-chat');
+  const chatActive=chatPanel && chatPanel.classList.contains('active');
+  const wrongTeam=msg.teamId!==selectedTeamId;
+  const dot=document.getElementById('gm-chat-tab-dot');
+  if(dot && !fromGm && (wrongTeam || !chatActive)) dot.style.display='block';
 }
 async function sendGmChat(){
   const input=document.getElementById('gm-chat-input');
@@ -1410,7 +1417,15 @@ let gmCrMap=null, gmCrMarkers={};
 let gmCrMissionLayer = null;     // L.layerGroup holding all CR mission markers
 let gmCrMissionsCache = [];      // last-known cr.missions payload (for re-rendering)
 
-// Fullscreen toggle for the GM CityRush map. Uses the Fullscreen API when
+/** Initialise GM CityRush Leaflet map once (hidden panel ok). */
+function ensureGmCrMap(){
+  if(gmCrMap) return gmCrMap;
+  const el = document.getElementById('gm-cr-map');
+  if(!el) return null;
+  gmCrMap = L.map('gm-cr-map').setView([47.3769,8.5417],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(gmCrMap);
+  return gmCrMap;
+}
 // available, falls back to a fixed-position CSS class so the feature still
 // works in browsers/contexts where the API is blocked (e.g. some iframes).
 function toggleGmMapFullscreen(){
@@ -1484,6 +1499,8 @@ function resetGmDashboardState(){
   if(gmCrMissionLayer){
     try { gmCrMissionLayer.clearLayers(); } catch(e){}
   }
+  const chatDot = document.getElementById('gm-chat-tab-dot');
+  if(chatDot) chatDot.style.display = 'none';
 }
 
 // Look up a team by id from the cached game payload — falls back to "Team N"
@@ -1556,8 +1573,11 @@ function renderGmCrMissionMarkers(){
       .filter(p => p.team_id === selectedTeamId)
       .forEach(p => { progressByMission[p.mission_id] = p; });
   }
-  gmCrMissionsCache.forEach((m, i) => {
+  let dispIdx = 0;
+  gmCrMissionsCache.forEach((m) => {
+    if(m.is_special===1||m.is_special===true) return;
     if(!gmHasMissionCoords(m)) return;
+    dispIdx++;
     const p = progressByMission[m.id];
     const isDone    = p && (p.status === 'completed' || p.status === 'skipped');
     const isPending = p && p.status === 'pending';
@@ -1565,10 +1585,10 @@ function renderGmCrMissionMarkers(){
     const stroke = isDone ? '#1f9d55' : isPending ? '#ff8a1c' : '#888';
     const icon = L.divIcon({
       className:'',
-      html:`<div style="background:${bg};color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5);">${i+1}</div>`,
+      html:`<div style="background:${bg};color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5);">${dispIdx}</div>`,
       iconSize:[32,32], iconAnchor:[16,16]
     });
-    const name = m['name_'+gmLang] || m.name_de || `Mission ${i+1}`;
+    const name = m['name_'+gmLang] || m.name_de || `Mission ${dispIdx}`;
     const mk = L.marker([m.lat, m.lng], {icon}).addTo(gmCrMissionLayer);
     const r = gmMissionRadiusMeters(m);
     mk.bindPopup(`<strong>${esc(name)}</strong><br><small>${m.points||0} pt · ${r}m</small>`);
@@ -1587,11 +1607,12 @@ function switchPanel(panel,el){
   document.getElementById('panel-chat').classList.toggle('active',panel==='chat');
   document.getElementById('panel-broadcast').classList.toggle('active',panel==='broadcast');
   document.getElementById('panel-crmap').classList.toggle('active',panel==='crmap');
+  if(panel==='chat'){
+    const d=document.getElementById('gm-chat-tab-dot');
+    if(d) d.style.display='none';
+  }
   if(panel==='crmap'){
-    if(!gmCrMap){
-      gmCrMap=L.map('gm-cr-map').setView([47.3769,8.5417],13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(gmCrMap);
-    }
+    ensureGmCrMap();
     setTimeout(()=>{ gmCrMap.invalidateSize(); renderGmCrMissionMarkers(); },150);
   }
 }
@@ -2391,6 +2412,7 @@ let currentCrModeName = '';
 
 async function loadCrModes() {
   const modes = await API('/api/cr/modes');
+  window._gmCrModesCache = modes;
   const bar = document.getElementById('cr-mode-tabs');
   const empty = document.getElementById('cr-empty');
   const panel = document.getElementById('cr-mode-panel');
@@ -2403,7 +2425,7 @@ async function loadCrModes() {
   }
   if(empty) empty.style.display = 'none';
   bar.innerHTML = modes.map(m =>
-    `<button class="tab ${m.id===currentCrModeId?'active':''}" onclick="selectCrMode(${m.id},'${esc(m.name)}')">${esc(m.name)}</button>`
+    `<button type="button" class="tab ${m.id===currentCrModeId?'active':''}" data-cr-mode-id="${m.id}" onclick="selectCrMode(${m.id})">${esc(m.name)}</button>`
   ).join('');
   // Also populate cr-mode-select in game creation screen
   const sel = document.getElementById('cr-mode-select');
@@ -2411,16 +2433,21 @@ async function loadCrModes() {
     sel.innerHTML = '<option value="">— Kein CityRush —</option>' +
       modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   }
-  if(!currentCrModeId && modes.length) selectCrMode(modes[0].id, modes[0].name);
-  else if(currentCrModeId) loadCrMissions();
+  if(!currentCrModeId && modes.length) await selectCrMode(modes[0].id);
+  else if(currentCrModeId) await loadCrMissions();
 }
 
-async function selectCrMode(id, name) {
-  currentCrModeId = id; currentCrModeName = name;
-  document.querySelectorAll('#cr-mode-tabs .tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('#cr-mode-tabs .tab').forEach(t=>{if(t.textContent===name)t.classList.add('active');});
+async function selectCrMode(id) {
+  const modes = window._gmCrModesCache || [];
+  const m = modes.find(x => x.id === id);
+  if(!m) return;
+  currentCrModeId = id;
+  currentCrModeName = m.name;
+  document.querySelectorAll('#cr-mode-tabs .tab').forEach(t=>{
+    t.classList.toggle('active', Number(t.dataset.crModeId) === id);
+  });
   const title = document.getElementById('cr-mode-title');
-  if(title) title.textContent = name + (gmt('cr-missions-suffix')||' — Missionen');
+  if(title) title.textContent = m.name + (gmt('cr-missions-suffix')||' — Missionen');
   const panel = document.getElementById('cr-mode-panel');
   if(panel) panel.style.display = 'block';
   await loadCrMissions();

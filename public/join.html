@@ -89,16 +89,26 @@ const params = new URLSearchParams(window.location.search);
 const gameId = params.get('game');
 let existingTeams = [];
 
+function ensureCrPlayerKey() {
+  if (sessionStorage.getItem('crPlayerKey')) return;
+  var k = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+    : 'pk_' + Math.random().toString(36).slice(2) + Date.now();
+  sessionStorage.setItem('crPlayerKey', k);
+}
+
 document.getElementById('game-id-display').textContent = gameId ? '#' + gameId : '';
 
 window.addEventListener('DOMContentLoaded', async () => {
   if (!gameId) { show('error'); return; }
 
-  // Already joined this exact game — go straight to play
+  // Already joined this exact game — go straight to play / CityRush
   const storedGame = sessionStorage.getItem('gameId');
   const storedTeam = sessionStorage.getItem('teamId');
   if (storedGame === gameId && storedTeam) {
-    window.location.href = '/play.html?game=' + gameId + '&team=' + storedTeam;
+    ensureCrPlayerKey();
+    var g = await fetch('/api/games/' + gameId).then(function(r) { return r.json(); }).catch(function() { return null; });
+    var pg = (g && g.crMode) ? '/cityrush.html' : '/play.html';
+    window.location.href = pg + '?game=' + gameId + '&team=' + storedTeam;
     return;
   }
 
@@ -190,10 +200,12 @@ async function joinAsNew() {
   err.textContent = '';
 
   try {
+    ensureCrPlayerKey();
+    var anchor = sessionStorage.getItem('crPlayerKey');
     const res = await fetch('/api/games/' + gameId + '/teams', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name })
+      body: JSON.stringify({ name: name, gps_anchor_key: anchor })
     }).then(function(r) { return r.json(); });
 
     if (res.id) {
@@ -217,6 +229,7 @@ async function joinAsNew() {
 }
 
 async function joinExisting(teamId, teamName) {
+  ensureCrPlayerKey();
   sessionStorage.setItem('teamId',   String(teamId));
   sessionStorage.setItem('teamName', teamName);
   sessionStorage.setItem('gameId',   gameId);
