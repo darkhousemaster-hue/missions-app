@@ -39,7 +39,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 }
 
 /* ── Views ── */
-#view-mission { flex:1; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
+#view-mission { flex:1; min-height:0; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
   padding-bottom:calc(env(safe-area-inset-bottom,0px) + 1.5rem); }
 #view-map     { flex:1; display:none; position:relative; }
 #cr-map       { width:100%; height:100%; }
@@ -173,6 +173,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   }
   .cr-tile:hover { border-color:var(--red-dim); }
   .cr-tile.current { border-color:var(--red); box-shadow:0 0 12px rgba(212,43,43,.3); }
+  .cr-tile.pending { border-color:var(--orange); opacity:.9; }
   .cr-tile.done    { border-color:#006628; opacity:.85; }
   .cr-tile .num { font-family:var(--mono); font-size:.7rem; color:var(--text-muted); }
   .cr-tile .name { font-weight:700; font-size:.95rem; line-height:1.2; }
@@ -183,7 +184,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
     padding:.1rem .4rem; border-radius:2px;
   }
   .cr-tile.done    .status-pill { background:#003318; color:var(--green); }
+  .cr-tile.pending .status-pill { background:#4a2000; color:var(--orange); }
   .cr-tile.current .status-pill { background:#4a2000; color:var(--orange); }
+  .cr-tile.available .status-pill { background:var(--surface2); color:var(--text-muted); }
   .cr-tile.upcoming .status-pill { background:var(--surface2); color:var(--text-muted); }
   /* Inline hint chip inside the popup so revealed hints persist visibly. */
   .cr-hint-chip { background:rgba(255,107,0,.08); border-left:3px solid var(--orange);
@@ -301,6 +304,10 @@ let useFrontCamera = false;
 let gameEnded = false;
 let allTeams = [];
 let allMissions = [];                    // all CR missions in this mode
+let completedMissionIds = new Set();      // regular CityRush missions cleared by this team
+let pendingMissionIds = new Set();        // regular missions waiting for GM review
+let skippedMissionIds = new Set();        // regular missions skipped for 0 points
+let arrivedMissionIds = new Set();        // GPS arrivals unlocked for this team
 let myScore = 0;                         // team's current score
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -414,6 +421,40 @@ function normalizeCrMission(m){
     is_special: toBool(m.is_special),
   };
 }
+function _idSet(values){
+  return new Set((values||[]).map(Number).filter(Number.isFinite));
+}
+function updateLinearMissionState(data={}){
+  const rows = Array.isArray(data.missionProgress) ? data.missionProgress : [];
+  const cleared = data.completedMissionIds || rows
+    .filter(r => r.status === 'completed' || r.status === 'skipped')
+    .map(r => r.mission_id);
+  completedMissionIds = _idSet(cleared);
+  pendingMissionIds = _idSet(data.pendingMissionIds || rows.filter(r => r.status === 'pending').map(r => r.mission_id));
+  skippedMissionIds = _idSet(data.skippedMissionIds || rows.filter(r => r.status === 'skipped').map(r => r.mission_id));
+  pendingMissionIds.forEach(id => { mediaReviewState[id] = 'pending'; });
+}
+function isMissionCleared(m){ return !!m && completedMissionIds.has(Number(m.id)); }
+function isMissionPending(m){ return !!m && pendingMissionIds.has(Number(m.id)); }
+function hasArrivedFor(m){ return !!m && arrivedMissionIds.has(Number(m.id)); }
+function firstAvailableMission(){
+  return allMissions.find(m => !isMissionCleared(m) && !isMissionPending(m)) || null;
+}
+function setFocusedMission(m){
+  currentMission = m || null;
+  missionIndex = currentMission ? Math.max(0, allMissions.findIndex(x => x.id === currentMission.id)) : 0;
+}
+function completedCount(){
+  return allMissions.filter(m => isMissionCleared(m)).length;
+}
+function applyProgressPayload(data={}){
+  updateLinearMissionState(data);
+  totalMissions = data.totalMissions || allMissions.length || totalMissions;
+  if(data.currentMission) setFocusedMission(normalizeCrMission(data.currentMission));
+  else if(!currentMission || isMissionCleared(currentMission) || isMissionPending(currentMission)) setFocusedMission(firstAvailableMission());
+  renderMission();
+  renderAllMissionMarkers();
+}
 function crCycleLang(){
   const LANGS=['de','en','fr','it'];
   lang=LANGS[(LANGS.indexOf(lang)+1)%LANGS.length];
@@ -448,6 +489,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   socket.on('timer_state',  updateGameTimer);
   socket.on('gps_update',   onGpsUpdate);
   socket.on('cr_next_mission', onNextMission);
+  socket.on('cr_progress_updated', payload => {
+    applyProgressPayload(payload);
+    refreshScore();
+  });
   socket.on('cr_arrived',   showArrivedOverlay);
   socket.on('cr_finished',  onCrFinished);
   socket.on('game_ended',   () => { gameEnded=true; });
@@ -458,10 +503,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     if(accepted){
       delete mediaReviewState[missionId];
       delete mediaReviewState[`${missionId}_msg`];
+      pendingMissionIds.delete(Number(missionId));
+      completedMissionIds.add(Number(missionId));
       toast('✓ ' + (t('accepted')||'Angenommen!'), 'success');
       refreshScore();
+      loadProgress();
     } else {
       mediaReviewState[missionId] = 'rejected';
+      pendingMissionIds.delete(Number(missionId));
       mediaReviewState[`${missionId}_msg`] = message || '';
       showCrRejection(message);
       // Re-render the popup so the rejection message + retry buttons show.
@@ -546,13 +595,8 @@ async function loadProgress(){
       specialMissions = normalized.filter(m =>  m.is_special);
     }
   } catch(e) {}
-  // Sticky team arrival: if any teammate already triggered arrival for the
-  // current mission, treat it as arrived locally too so the action UI unlocks.
-  if(Array.isArray(data.arrivedMissionIds) && data.currentMission){
-    if(data.arrivedMissionIds.includes(data.currentMission.id)){
-      arrivedAtMissionId = data.currentMission.id;
-    }
-  }
+  updateLinearMissionState(data);
+  arrivedMissionIds = _idSet(data.arrivedMissionIds);
   // Server-known special cooldowns for this team — used to disable buttons.
   specialProgress = {};
   (data.specialProgress || []).forEach(p => { specialProgress[p.mission_id] = p; });
@@ -561,15 +605,15 @@ async function loadProgress(){
     specialMissions = data.specialMissions.map(normalizeCrMission);
   }
 
-  totalMissions = data.totalMissions;
-  missionIndex  = data.progress?.mission_index || 0;
-  if(data.progress?.status === 'finished'){
-    showFinished(data.progress.score_earned);
+  totalMissions = data.totalMissions || allMissions.length;
+  document.getElementById('cr-loading').style.display = 'none';
+  if(data.progress?.status === 'finished' || (totalMissions > 0 && completedCount() >= totalMissions)){
+    showFinished(data.progress?.score_earned || myScore || 0);
     return;
   }
-  currentMission = normalizeCrMission(data.currentMission);
-  document.getElementById('cr-loading').style.display = 'none';
+  setFocusedMission(normalizeCrMission(data.currentMission) || firstAvailableMission());
   document.getElementById('cr-mission-wrap').style.display = 'block';
+  document.getElementById('cr-finished-wrap').style.display = 'none';
   renderMission();
   renderAllMissions();
   renderSpecialTiles();
@@ -605,16 +649,22 @@ const revealedHints = { gps: {}, answer: {} };   // {type: {missionId: [hintObj]
 let popupMissionId = null;                       // which mission's popup is open
 
 function renderMission(){
-  if(!currentMission) return;
-  const m = currentMission;
   // Progress bar (shared header)
-  const pct = totalMissions > 0 ? ((missionIndex)/totalMissions*100) : 0;
+  const done = completedCount();
+  const pct = totalMissions > 0 ? (done/totalMissions*100) : 0;
   document.getElementById('cr-progress-text').textContent =
-    `${t('mission')} ${missionIndex+1} / ${totalMissions}`;
+    `${done} / ${totalMissions} ${t('completed')}`;
   document.getElementById('cr-progress-fill').style.width = pct + '%';
+  if(!currentMission){
+    stopMissionTimer();
+    renderTiles();
+    renderAllMissionMarkers();
+    return;
+  }
+  const m = currentMission;
   // Mission timer — only start ticking once the player has arrived (for GPS
   // missions). For non-GPS missions it starts immediately as before.
-  const timerActive = m.is_timed && (!m.use_gps || arrivedAtMissionId === m.id);
+  const timerActive = m.is_timed && !isMissionCleared(m) && !isMissionPending(m) && (!m.use_gps || hasArrivedFor(m));
   if(timerActive) startMissionTimer(m); else stopMissionTimer();
   // Map gating: only auto-pan if GM ticked "show on map".
   if(m.use_map && m.lat && m.lng){ setTimeout(()=>centerMapOnMission(m), 300); }
@@ -805,10 +855,13 @@ function renderTiles(){
   if(!grid) return;
   if(!allMissions.length){ grid.innerHTML=''; return; }
   grid.innerHTML = allMissions.map((m,i) => {
-    const status = i<missionIndex ? 'done' : i===missionIndex ? 'current' : 'upcoming';
-    const pill = status==='done' ? `✓ ${t('completed')}`
-               : status==='current' ? `▶ ${t('current')}`
-               : `· ${t('upcoming')}`;
+    const status = isMissionCleared(m) ? 'done'
+                 : isMissionPending(m) ? 'pending'
+                 : currentMission && currentMission.id === m.id ? 'current'
+                 : 'available';
+    const pill = status==='done' ? `✓ ${skippedMissionIds.has(Number(m.id)) ? (t('skipped')||'Skipped') : t('completed')}`
+               : status==='pending' ? `⏳ ${t('pending_review')||'Pending'}`
+               : `· ${t('available')||'Available'}`;
     const name = m[`name_${lang}`] || m.name_de || `${t('mission')} ${i+1}`;
     const icons = [
       m.use_gps?'📍':'',
@@ -829,6 +882,8 @@ function renderTiles(){
 // Open the popup for a given mission. Upcoming/done missions are read-only;
 // the current mission gets the full action UI.
 function openMissionPopup(missionId){
+  const mission = allMissions.find(x => x.id === missionId);
+  if(mission) setFocusedMission(mission);
   popupMissionId = missionId;
   document.getElementById('cr-mission-popup').style.display = 'flex';
   refreshPopup();
@@ -836,11 +891,11 @@ function openMissionPopup(missionId){
   // status — fire an immediate check using the freshest fix we have.
   if(currentMission && currentMission.id === missionId && currentMission.use_gps){
     if(myLat != null && myLng != null){
-      checkArrival(myLat, myLng);
+      checkArrival(myLat, myLng, currentMission);
     } else if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(
         pos => { myLat = pos.coords.latitude; myLng = pos.coords.longitude;
-                 updateMyMapMarker(myLat, myLng); checkArrival(myLat, myLng); },
+                 updateMyMapMarker(myLat, myLng); checkArrival(myLat, myLng, currentMission); },
         () => {},
         { enableHighAccuracy:true, maximumAge:0, timeout:5000 }
       );
@@ -866,9 +921,9 @@ function refreshPopup(){
   const m   = allMissions.find(x => x.id === popupMissionId);
   if(!m) return;
   const idx = allMissions.indexOf(m);
-  const isCurrent = (idx === missionIndex);
-  const isDone    = (idx <  missionIndex);
-  const isLocked  = !isCurrent && !isDone;
+  const isDone    = isMissionCleared(m);
+  const isPending = isMissionPending(m);
+  const isCurrent = !isDone && !isPending;
   const name = m[`name_${lang}`] || m.name_de || '';
   const desc = m[`description_${lang}`] || m.description_de || '';
   let task   = m[`task_${lang}`] || m.task_de || '';
@@ -876,14 +931,14 @@ function refreshPopup(){
   // The task is the "solve me" step — keep it hidden for GPS missions until
   // the player physically arrives. The description (background/story) is
   // always shown so the player has context while navigating.
-  if(m.use_gps && isCurrent && arrivedAtMissionId !== m.id){
+  if(m.use_gps && isCurrent && !hasArrivedFor(m)){
     task = '';
   }
   // GPS status (only meaningful for the current mission with use_gps).
   const gpsHtml = (isCurrent && m.use_gps)
     ? `<div class="cr-gps-status" style="display:flex;">
-         <div class="cr-gps-dot ${arrivedAtMissionId===m.id?'arrived':'searching'}" id="cr-gps-dot"></div>
-         <span id="cr-gps-text">${arrivedAtMissionId===m.id ? t('arrived')+' ✅' : t('searching')}</span>
+         <div class="cr-gps-dot ${hasArrivedFor(m)?'arrived':'searching'}" id="cr-gps-dot"></div>
+         <span id="cr-gps-text">${hasArrivedFor(m) ? t('arrived')+' ✅' : t('searching')}</span>
        </div>` : '';
   // Mission timer block (only for current + is_timed).
   const timerHtml = (isCurrent && m.is_timed)
@@ -898,8 +953,8 @@ function refreshPopup(){
         <div class="cr-mission-name">${esc(name)}</div>
         <div class="cr-mission-pts">+${m.points} ${t('points')}</div>
       </div>
-      <span class="status-pill" style="position:static;${isDone?'background:#003318;color:var(--green);':isCurrent?'background:#4a2000;color:var(--orange);':'background:var(--surface2);color:var(--text-muted);'}font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.2rem .5rem;border-radius:2px;">
-        ${isDone?'✓ '+t('completed'):isCurrent?'▶ '+t('current'):'· '+t('upcoming')}
+      <span class="status-pill" style="position:static;${isDone?'background:#003318;color:var(--green);':isPending?'background:#4a2000;color:var(--orange);':'background:var(--surface2);color:var(--text-muted);'}font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.2rem .5rem;border-radius:2px;">
+        ${isDone?'✓ '+(skippedMissionIds.has(Number(m.id))?(t('skipped')||'Skipped'):t('completed')):isPending?'⏳ '+(t('pending_review')||'Pending'):'· '+(t('available')||'Available')}
       </span>
     </div>
     ${gpsHtml}${timerHtml}
@@ -917,12 +972,15 @@ function refreshPopup(){
                border-radius:var(--radius);cursor:pointer;align-self:center;">
         ⏭ ${t('skip_mission')||'Mission überspringen'}
       </button>` : ''}
-    ${isLocked ? `<p style="color:var(--text-muted);font-style:italic;margin-top:.5rem;">${t('mission_locked')}</p>` : ''}
   `;
   // Render any previously-revealed hints (persistent visibility).
   renderRevealedHints(m);
   // Action buttons live only on the current mission's popup.
   if(isCurrent) renderActions(m);
+  else if(isPending){
+    const actEl = document.getElementById('cr-actions');
+    if(actEl) actEl.innerHTML = `<div style="padding:.6rem .75rem;background:rgba(255,107,0,.08);border-left:3px solid var(--orange);border-radius:0 var(--radius) var(--radius) 0;font-size:.9rem;">⏳ ${t('pending_review')||'Wird vom Spielleiter geprüft…'}</div>`;
+  }
   // Tick the mission timer text immediately so the user doesn't see "--:--".
   if(isCurrent && m.is_timed) tickMissionTimerOnce(m);
 }
@@ -935,7 +993,7 @@ function renderActions(m){
   // (answer / photo / video / complete) is hidden. The GPS-hint reveal
   // button is allowed pre-arrival because that's exactly what GPS hints are
   // for — helping the player find the spot.
-  const gpsBlocks = m.use_gps && arrivedAtMissionId !== m.id;
+  const gpsBlocks = m.use_gps && !hasArrivedFor(m);
   if(gpsBlocks){
     addHintButton(actEl, m, 'gps');
     return;
@@ -1008,7 +1066,7 @@ function renderActions(m){
 function renderRevealedHints(m){
   const box = document.getElementById('cr-revealed-hints');
   if(!box) return;
-  const phase = (m.use_gps && arrivedAtMissionId !== m.id) ? 'gps' : 'answer';
+  const phase = (m.use_gps && !hasArrivedFor(m)) ? 'gps' : 'answer';
   const list = (revealedHints[phase] && revealedHints[phase][m.id]) || [];
   if(!list.length){ box.innerHTML=''; return; }
   const labelText = phase === 'gps' ? (t('gps_hint')||t('hint')) : t('hint');
@@ -1063,7 +1121,7 @@ function closeLightbox(e){
 // Hidden once the relevant stream is exhausted.
 function addHintButton(container, m, phase){
   // Auto-detect the phase if the caller didn't supply one.
-  if(!phase) phase = (m.use_gps && arrivedAtMissionId !== m.id) ? 'gps' : 'answer';
+  if(!phase) phase = (m.use_gps && !hasArrivedFor(m)) ? 'gps' : 'answer';
   // Prefer the per-type lists from the server payload, but fall back to the
   // flat `hints` list (older payloads) so things keep working.
   const pool = phase === 'gps'
@@ -1082,7 +1140,7 @@ function addHintButton(container, m, phase){
 }
 
 async function requestHint(m, phase){
-  if(!phase) phase = (m.use_gps && arrivedAtMissionId !== m.id) ? 'gps' : 'answer';
+  if(!phase) phase = (m.use_gps && !hasArrivedFor(m)) ? 'gps' : 'answer';
   const res = await fetch(`/api/games/${gameId}/cr/hint`,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, missionId: m.id, type: phase})
@@ -1127,27 +1185,22 @@ function addActionBtn(container, label, cls, fn){
   container.appendChild(btn);
 }
 
-// Skip the current linear mission. Awards no points and advances the team.
+// Skip the selected mission. Awards no points and leaves the rest available.
 async function confirmSkipMission(){
   if(!currentMission) return;
   const ok = confirm(t('skip_confirm') || 'Mission überspringen? Es gibt keine Punkte dafür.');
   if(!ok) return;
   const res = await fetch(`/api/games/${gameId}/cr/skip`,{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamId}),
+    body: JSON.stringify({teamId, missionId:currentMission.id}),
   }).then(r=>r.json()).catch(()=>({error:'network'}));
   if(res.success){
     stopMissionTimer();
-    if(res.nextMission){
-      missionIndex = res.nextIndex;
-      currentMission = res.nextMission;
-      arrivedAtMissionId = null;
-      renderMission();
-      closeMissionPopup();
-      toast(t('skipped') || 'Übersprungen','warning');
-    } else {
-      showFinished(0);
-    }
+    skippedMissionIds.add(Number(currentMission.id));
+    applyProgressPayload(res);
+    closeMissionPopup();
+    toast(t('skipped') || 'Übersprungen','warning');
+    if(res.finished) showFinished(res.score_earned||myScore);
   } else {
     toast(res.error || 'Fehler', 'error');
   }
@@ -1225,31 +1278,29 @@ async function completeMission(mediaPath){
   }).then(r=>r.json());
   // Photo/video missions are now held for GM review and don't advance.
   if(res.pending){
-    if(currentMission) mediaReviewState[currentMission.id] = 'pending';
+    if(currentMission) {
+      mediaReviewState[currentMission.id] = 'pending';
+      pendingMissionIds.add(Number(currentMission.id));
+    }
+    applyProgressPayload(res);
     refreshPopup();
     toast('Hochgeladen — wird vom Spielleiter geprüft…', 'success');
     return;
   }
   // Otherwise: instant completion (no media or correct answer).
   stopMissionTimer();
-  if(res.nextMission){
-    missionIndex = res.nextIndex;
-    currentMission = res.nextMission;
-    arrivedAtMissionId = null;
-    if(mediaReviewState[res.nextMission.id]) delete mediaReviewState[res.nextMission.id];
-    renderMission();
-    toast(`+${res.score} Punkte!`, 'success');
-  } else {
-    showFinished((res.score_earned||0));
-  }
+  if(currentMission) completedMissionIds.add(Number(currentMission.id));
+  applyProgressPayload(res);
+  toast(`+${res.score} Punkte!`, 'success');
+  closeMissionPopup();
+  if(res.finished) showFinished((res.score_earned||0));
   refreshScore();
   renderAllMissions();
   renderAllMissionMarkers();
 }
 
 function onNextMission({mission, missionIndex: idx}){
-  currentMission = normalizeCrMission(mission); missionIndex = idx;
-  arrivedAtMissionId = null;     // allow the popup again for the new mission
+  setFocusedMission(normalizeCrMission(mission)); missionIndex = idx;
   renderMission();
   renderAllMissions();
   renderAllMissionMarkers();
@@ -1276,7 +1327,7 @@ function startGpsTracking(){
       gpsAccuracy = pos.coords.accuracy;
       sendGps(myLat, myLng);
       updateMyMapMarker(myLat, myLng);
-      if(currentMission && currentMission.use_gps) checkArrival(myLat, myLng);
+      if(currentMission && currentMission.use_gps) checkArrival(myLat, myLng, currentMission);
     },
     err => {
       setGpsStatus(gpsErrorMessage(err), 'searching');
@@ -1293,7 +1344,7 @@ function startGpsTracking(){
         myLng = pos.coords.longitude;
         gpsAccuracy = pos.coords.accuracy;
         updateMyMapMarker(myLat, myLng);
-        if(currentMission && currentMission.use_gps) checkArrival(myLat, myLng);
+        if(currentMission && currentMission.use_gps) checkArrival(myLat, myLng, currentMission);
       },
       () => {},
       { enableHighAccuracy:true, maximumAge:0, timeout:8000 }
@@ -1322,10 +1373,6 @@ async function sendGps(lat, lng){
   }).catch(()=>{});
 }
 
-// Track which mission we already arrived at so the popup doesn't keep firing
-// every GPS tick while the player is standing on the geofence.
-let arrivedAtMissionId = null;
-
 // Haversine distance in meters between two lat/lng pairs.
 function haversineMeters(lat1, lng1, lat2, lng2){
   const R = 6371000;
@@ -1337,29 +1384,30 @@ function haversineMeters(lat1, lng1, lat2, lng2){
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-async function checkArrival(lat, lng){
-  if(!currentMission) return;
-  if(arrivedAtMissionId === currentMission.id) return;
-  if(currentMission.lat == null || currentMission.lng == null) return;
+async function checkArrival(lat, lng, mission=currentMission){
+  const m = mission || currentMission;
+  if(!m) return;
+  if(hasArrivedFor(m)) return;
+  if(m.lat == null || m.lng == null) return;
 
   // Client-side, authoritative arrival decision. The server roundtrip used
   // to gate this — but a strict server check failed when use_map was set
   // alongside use_gps because the GM-configured radius was sometimes
   // tighter than the device's actual GPS accuracy. Computing locally with
   // an accuracy-aware slack makes the result match what the map shows.
-  const distM   = haversineMeters(Number(lat), Number(lng), currentMission.lat, currentMission.lng);
+  const distM   = haversineMeters(Number(lat), Number(lng), m.lat, m.lng);
   if(!Number.isFinite(distM)) {
     setGpsStatus('GPS-Koordinaten ungültig', 'searching');
     return;
   }
   lastDistance  = Math.round(distM);
   const slack   = Math.min(Math.max(Number(gpsAccuracy)||10, 10), 75) + 5;
-  const radius  = missionRadiusMeters(currentMission);
+  const radius  = missionRadiusMeters(m);
   const clientArrived = distM <= radius + slack;
 
   const sendArrivalCheck = () => fetch(`/api/games/${gameId}/cr/arrival`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamId, lat, lng, accuracy: gpsAccuracy||null}),
+    body: JSON.stringify({teamId, missionId:m.id, lat, lng, accuracy: gpsAccuracy||null}),
   });
 
   let serverResult = null;
@@ -1386,7 +1434,7 @@ async function checkArrival(lat, lng){
   if(arrived){
     if(dot){ dot.className='cr-gps-dot arrived'; }
     if(txt){ txt.textContent = t('arrived') + ' ✅'; }
-    showArrivedOverlay({missionId: currentMission.id, sticky: !!serverResult?.sticky});
+    showArrivedOverlay({missionId: m.id, sticky: !!serverResult?.sticky});
   } else if(lastDistance < 100){
     if(dot){ dot.className='cr-gps-dot near'; }
     if(txt){ txt.textContent = `${t('near')} · ${lastDistance}m`; }
@@ -1399,12 +1447,14 @@ async function checkArrival(lat, lng){
 // (manual arrival override removed — was abusable as a cheat)
 
 function showArrivedOverlay({missionId, sticky}){
-  if(!currentMission || currentMission.id !== missionId) return;
-  if(arrivedAtMissionId === missionId) return;       // already shown for this mission
-  arrivedAtMissionId = missionId;
+  const mission = allMissions.find(m => m.id === missionId) || currentMission;
+  if(!mission || mission.id !== missionId) return;
+  if(arrivedMissionIds.has(Number(missionId))) return;
+  arrivedMissionIds.add(Number(missionId));
+  setFocusedMission(mission);
   // Start the mission timer now (it was deferred while the player was
   // navigating). Non-GPS missions don't take this path.
-  if(currentMission.is_timed) startMissionTimer(currentMission);
+  if(mission.is_timed) startMissionTimer(mission);
   // If this arrival is sticky (a teammate already triggered it), skip the
   // splash overlay & sound — just unlock the UI silently.
   if(sticky){
@@ -1415,14 +1465,13 @@ function showArrivedOverlay({missionId, sticky}){
   crShowView('mission');
   const overlay = document.getElementById('cr-arrived-overlay');
   document.getElementById('cr-arrived-text').textContent =
-    currentMission[`name_${lang}`] || currentMission.name_de || '';
+    mission[`name_${lang}`] || mission.name_de || '';
   overlay.style.display = 'flex';
 }
 function dismissArrived(){
   document.getElementById('cr-arrived-overlay').style.display = 'none';
   // Open (or refresh) the current mission's popup so the action UI is in
-  // front of the player. arrivedAtMissionId stays set so the GPS gate in
-  // renderActions() lets the photo/video/answer/complete buttons through.
+  // front of the player.
   if(currentMission){
     openMissionPopup(currentMission.id);
   }
@@ -1478,12 +1527,13 @@ function renderAllMissionMarkers(){
   if(!mapMissionLayer) mapMissionLayer = L.layerGroup().addTo(crMap);
   mapMissionLayer.clearLayers();
   allMissions.forEach((m,i)=>{
-    const isCurrent = i===missionIndex;
+    const isCurrent = currentMission && currentMission.id === m.id;
     const showTarget = hasCrCoords(m) && (m.use_map || (isCurrent && m.use_gps));
     if(!showTarget) return;
-    const isDone    = i<missionIndex;
-    const bg = isDone ? 'var(--green)' : isCurrent ? 'var(--red)' : 'var(--text-muted)';
-    const stroke = isDone ? '#1f9d55' : isCurrent ? '#d42b2b' : '#888';
+    const isDone    = isMissionCleared(m);
+    const isPending = isMissionPending(m);
+    const bg = isDone ? 'var(--green)' : isPending ? 'var(--orange)' : isCurrent ? 'var(--red)' : 'var(--text-muted)';
+    const stroke = isDone ? '#1f9d55' : isPending ? '#ff8a1c' : isCurrent ? '#d42b2b' : '#888';
     const icon = L.divIcon({
       className:'',
       html:`<div style="background:${bg};color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:.8rem;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5);font-weight:700;">${i+1}</div>`,
@@ -1491,7 +1541,7 @@ function renderAllMissionMarkers(){
     });
     const mk = L.marker([m.lat, m.lng], {icon}).addTo(mapMissionLayer);
     mk.bindPopup(esc(m[`name_${lang}`]||m.name_de||`Mission ${i+1}`));
-    // Tap → open the full mission popup (read-only for upcoming/done missions).
+    // Tap → open the full mission popup.
     mk.on('click', () => openMissionPopup(m.id));
     L.circle([m.lat,m.lng],{
       color:stroke,
@@ -1535,8 +1585,8 @@ function jumpToMe(){
 let missionMarkerRef = null;
 function centerMapOnMission(m){
   if(!crMap || !m || !hasCrCoords(m)) return;
-  const idx = allMissions.findIndex(x => x.id === m.id);
-  if(!m.use_map && !(idx === missionIndex && m.use_gps)) return;
+  const isFocused = currentMission && currentMission.id === m.id;
+  if(!m.use_map && !(isFocused && m.use_gps)) return;
   crMap.setView([m.lat, m.lng], 16);
   // Marker drawing is handled by renderAllMissionMarkers; keep this method
   // focused on viewport panning only.

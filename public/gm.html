@@ -1136,8 +1136,14 @@ async function renderCrTeamMissions(teamId){
   if(!cr.active||!cr.missions||!cr.missions.length){
     list.innerHTML='<div class="empty"><p>Keine CityRush-Missionen.</p></div>';return;
   }
-  const prog=(cr.progress||[]).find(p=>p.team_id===teamId)||{mission_index:0,status:'pending'};
-  const idx=prog.mission_index||0;
+  const progressByMission = {};
+  (cr.missionProgress||[])
+    .filter(p => p.team_id === teamId)
+    .forEach(p => { progressByMission[p.mission_id] = p; });
+  const specialByMission = {};
+  (cr.specialProgress||[])
+    .filter(p => p.team_id === teamId)
+    .forEach(p => { specialByMission[p.mission_id] = p; });
   // Pending CR submissions for this team — keyed by mission_id so we can
   // attach accept/reject controls to the right mission card.
   const pendingByMission = {};
@@ -1149,8 +1155,10 @@ async function renderCrTeamMissions(teamId){
     const sub = pendingByMission[m.id];
     let status, bc;
     if(sub){ status='pending'; bc='orange'; }
-    else if(i<idx){ status='accepted'; bc='green'; }
-    else if(i===idx){ status = prog.status==='finished' ? 'accepted' : 'open'; bc = prog.status==='finished' ? 'green' : 'grey'; }
+    else if(m.is_special && (specialByMission[m.id]?.completed_count||0) > 0){ status='accepted'; bc='green'; }
+    else if(progressByMission[m.id]?.status === 'pending'){ status='pending'; bc='orange'; }
+    else if(progressByMission[m.id]?.status === 'completed'){ status='accepted'; bc='green'; }
+    else if(progressByMission[m.id]?.status === 'skipped'){ status='skipped'; bc='grey'; }
     else { status='open'; bc='grey'; }
     const sc = status==='pending' ? 'has-pending' : status==='accepted' ? 'accepted' : '';
     const name=m['name_'+gmLang]||m.name_de||'(kein Name)';
@@ -1540,18 +1548,21 @@ function renderGmCrMissionMarkers(){
   if(!gmCrMissionsCache.length) return;
   if(!gmCrMissionLayer) gmCrMissionLayer = L.layerGroup().addTo(gmCrMap);
   gmCrMissionLayer.clearLayers();
-  // Find the selected team's progress index so we can color appropriately.
+  // Color markers from the selected team's per-mission progress.
   const cr = window._lastCrPayload;
-  const prog = cr && Array.isArray(cr.progress)
-    ? (cr.progress.find(p => p.team_id === selectedTeamId) || null)
-    : null;
-  const idx = prog ? (prog.mission_index || 0) : -1;
+  const progressByMission = {};
+  if(cr && Array.isArray(cr.missionProgress)){
+    cr.missionProgress
+      .filter(p => p.team_id === selectedTeamId)
+      .forEach(p => { progressByMission[p.mission_id] = p; });
+  }
   gmCrMissionsCache.forEach((m, i) => {
     if(!gmHasMissionCoords(m)) return;
-    const isDone    = idx >= 0 && i <  idx;
-    const isCurrent = idx >= 0 && i === idx;
-    const bg = isDone ? 'var(--green)' : isCurrent ? 'var(--red)' : 'var(--text-muted)';
-    const stroke = isDone ? '#1f9d55' : isCurrent ? '#d42b2b' : '#888';
+    const p = progressByMission[m.id];
+    const isDone    = p && (p.status === 'completed' || p.status === 'skipped');
+    const isPending = p && p.status === 'pending';
+    const bg = isDone ? 'var(--green)' : isPending ? 'var(--orange)' : 'var(--text-muted)';
+    const stroke = isDone ? '#1f9d55' : isPending ? '#ff8a1c' : '#888';
     const icon = L.divIcon({
       className:'',
       html:`<div style="background:${bg};color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5);">${i+1}</div>`,
@@ -1564,9 +1575,9 @@ function renderGmCrMissionMarkers(){
     L.circle([m.lat, m.lng], {
       color: stroke,
       fillColor: stroke,
-      fillOpacity: isCurrent ? .10 : .045,
+      fillOpacity: isPending ? .10 : .045,
       radius: r,
-      weight: isCurrent ? 1.5 : 1
+      weight: isPending ? 1.5 : 1
     }).addTo(gmCrMissionLayer);
   });
 }

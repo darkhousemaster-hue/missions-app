@@ -114,6 +114,18 @@ db.exec(`
     media_path TEXT,
     media_status TEXT DEFAULT 'none',
     UNIQUE(game_id, team_id));
+  CREATE TABLE IF NOT EXISTS cr_mission_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL,
+    team_id INTEGER NOT NULL,
+    mission_id INTEGER NOT NULL REFERENCES cr_missions(id) ON DELETE CASCADE,
+    status TEXT DEFAULT 'open',
+    started_at INTEGER,
+    completed_at INTEGER,
+    score_earned INTEGER DEFAULT 0,
+    media_path TEXT,
+    media_status TEXT DEFAULT 'none',
+    UNIQUE(game_id, team_id, mission_id));
   CREATE TABLE IF NOT EXISTS team_gps (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id TEXT NOT NULL, team_id INTEGER NOT NULL,
@@ -373,6 +385,7 @@ const deleteGame = id => {
   runTx(() => {
     db.prepare('DELETE FROM team_gps WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_team_progress WHERE game_id=?').run(id);
+    db.prepare('DELETE FROM cr_mission_progress WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_team_hints WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_team_captures WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_submissions WHERE game_id=?').run(id);
@@ -503,6 +516,7 @@ const deleteCrMode  = id => {
     if (mIds.length) {
       const placeholders = mIds.map(()=>'?').join(',');
       db.prepare(`DELETE FROM cr_team_progress WHERE mission_id IN (${placeholders})`).run(...mIds);
+      db.prepare(`DELETE FROM cr_mission_progress WHERE mission_id IN (${placeholders})`).run(...mIds);
       db.prepare(`DELETE FROM cr_team_hints WHERE mission_id IN (${placeholders})`).run(...mIds);
     }
     db.prepare('DELETE FROM cr_game_links WHERE cr_mode_id=?').run(id);
@@ -558,6 +572,7 @@ const updateCrMission  = (id, data) => {
 const deleteCrMission  = id => {
   runTx(() => {
     db.prepare('DELETE FROM cr_team_progress WHERE mission_id=?').run(id);
+    db.prepare('DELETE FROM cr_mission_progress WHERE mission_id=?').run(id);
     db.prepare('DELETE FROM cr_team_hints WHERE mission_id=?').run(id);
     db.prepare('DELETE FROM cr_missions WHERE id=?').run(id);
   });
@@ -590,6 +605,24 @@ const updateCrProgress = (gameId, teamId, fields) => {
   const sets = Object.keys(fields).map(k=>`${k}=?`).join(',');
   db.prepare(`UPDATE cr_team_progress SET ${sets} WHERE game_id=? AND team_id=?`)
     .run(...Object.values(fields), gameId, teamId);
+};
+const getCrMissionProgress = (gameId, teamId, missionId) =>
+  db.prepare('SELECT * FROM cr_mission_progress WHERE game_id=? AND team_id=? AND mission_id=?')
+    .get(gameId, teamId, missionId);
+const getCrMissionProgressForTeam = (gameId, teamId) =>
+  db.prepare('SELECT * FROM cr_mission_progress WHERE game_id=? AND team_id=? ORDER BY completed_at, id')
+    .all(gameId, teamId);
+const listCrMissionProgressForGame = gameId =>
+  db.prepare('SELECT * FROM cr_mission_progress WHERE game_id=? ORDER BY id').all(gameId);
+const upsertCrMissionProgress = (gameId, teamId, missionId, fields={}) => {
+  db.prepare('INSERT OR IGNORE INTO cr_mission_progress(game_id,team_id,mission_id) VALUES(?,?,?)')
+    .run(gameId, teamId, missionId);
+  if(fields && Object.keys(fields).length){
+    const sets = Object.keys(fields).map(k=>`${k}=?`).join(',');
+    db.prepare(`UPDATE cr_mission_progress SET ${sets} WHERE game_id=? AND team_id=? AND mission_id=?`)
+      .run(...Object.values(fields), gameId, teamId, missionId);
+  }
+  return getCrMissionProgress(gameId, teamId, missionId);
 };
 
 // GPS tracking
@@ -768,6 +801,7 @@ module.exports = {
   linkCrMode,getGameCrMode,isCrGame,
   getCrHints,getCrHint,createCrHint,updateCrHint,deleteCrHint,reorderCrHints,getTeamHintsUsed,incrementTeamHints,
   getCrProgress,getAllCrProgress,initCrProgress,updateCrProgress,
+  getCrMissionProgress,getCrMissionProgressForTeam,listCrMissionProgressForGame,upsertCrMissionProgress,
   updateTeamGps,getTeamGps,
   createCrCapture,getCrCaptures,reviewCrCapture,
   createCrSubmission,getCrSubmission,getCrSubmissionFor,

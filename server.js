@@ -624,8 +624,9 @@ app.get('/api/games/:id/cr', (req,res) => {
   const captures = db.getCrCaptures(req.params.id);
   const submissions = db.listCrSubmissions(req.params.id);
   const arrivals = db.listCrArrivalsForGame(req.params.id);
+  const missionProgress = db.listCrMissionProgressForGame(req.params.id);
   const specialProgress = db.listCrSpecialProgressForGame(req.params.id);
-  res.json({active:true, crMode, missions: missionsWithHints, progress, gps, captures, submissions, arrivals, specialProgress});
+  res.json({active:true, crMode, missions: missionsWithHints, progress, missionProgress, gps, captures, submissions, arrivals, specialProgress});
 });
 
 // Pending review counts per team (regular + CR), so the dashboard's
@@ -648,7 +649,7 @@ app.post('/api/games/:gameId/gps', (req,res) => {
 
 // ── CR Team progress ──────────────────────────────────────────────────────────
 app.get('/api/games/:gameId/cr/progress/:teamId', (req,res) => {
-  const prog = db.getCrProgress(req.params.gameId, req.params.teamId);
+  let prog = db.getCrProgress(req.params.gameId, req.params.teamId);
   const crMode = db.getGameCrMode(req.params.gameId);
   if(!crMode) return res.json({active:false});
   // mission_index tracks the linear sequence only — special missions are
@@ -657,12 +658,20 @@ app.get('/api/games/:gameId/cr/progress/:teamId', (req,res) => {
   const special = db.getSpecialCrMissions(crMode.id);
   if(!prog && linear.length > 0) {
     db.initCrProgress(req.params.gameId, req.params.teamId, linear[0].id);
+    prog = db.getCrProgress(req.params.gameId, req.params.teamId);
   }
-  const progress = db.getCrProgress(req.params.gameId, req.params.teamId) || {mission_index:0};
-  const currentMission = linear[progress.mission_index] || null;
+  let state = crMissionState(req.params.gameId, req.params.teamId, linear);
+  const progress = syncCrAggregateProgress(req.params.gameId, req.params.teamId, linear, state)
+    || prog
+    || {mission_index:state.nextIndex,status:state.finished?'finished':'active',score_earned:state.scoreEarned};
+  state = crMissionState(req.params.gameId, req.params.teamId, linear);
   res.json({
-    active:true, progress, currentMission,
+    active:true, progress, currentMission: state.nextMission,
     totalMissions: linear.length,
+    missionProgress: state.rows,
+    completedMissionIds: state.completedMissionIds,
+    pendingMissionIds: state.pendingMissionIds,
+    skippedMissionIds: state.skippedMissionIds,
     specialMissions: special,
     arrivedMissionIds: db.listCrArrivals(req.params.gameId, Number(req.params.teamId)),
     specialProgress:  db.getCrSpecialProgressForTeam(req.params.gameId, Number(req.params.teamId)),
@@ -681,6 +690,103 @@ function scoreForCrMission(mission, prog) {
     score = Math.max(0, mission.points - totalPenalties * (mission.penalty_points||2));
   }
   return score;
+}
+
+function crMissionState(gameId, teamId, missions) {
+  const rows = db.getCrMissionProgressForTeam(gameId, teamId);
+  const cleared = new Set();
+  const pending = new Set();
+  const skipped = new Set();
+  rows.forEach(r => {
+    if(r.status === 'completed' || r.status === 'skipped') cleared.add(r.mission_id);
+    if(r.status === 'pending') pending.add(r.mission_id);
+    if(r.status === 'skipped') skipped.add(r.mission_id);
+  });
+  const nextIndex = missions.findIndex(m => !cleared.has(m.id) && !pending.has(m.id));
+  const finished = missions.length > 0 && missions.every(m => cleared.has(m.id));
+  return {
+    rows,
+    completedMissionIds: missions.filter(m => cleared.has(m.id)).map(m => m.id),
+    pendingMissionIds: missions.filter(m => pending.has(m.id)).map(m => m.id),
+    skippedMissionIds: missions.filter(m => skipped.has(m.id)).map(m => m.id),
+    nextIndex: nextIndex < 0 ? missions.length : nextIndex,
+    nextMission: nextIndex < 0 ? null : missions[nextIndex],
+    finished,
+    scoreEarned: rows
+      .filter(r => r.status === 'completed' || r.status === 'skipped')
+      .reduce((sum, r) => sum + (Number(r.score_earned) || 0), 0),
+  };
+}
+
+function syncCrAggregateProgress(gameId, teamId, missions, state) {
+  if(!db.getCrProgress(gameId, teamId) && missions.length > 0) {
+    db.initCrProgress(gameId, teamId, state.nextMission ? state.nextMission.id : null);
+  }
+  const prog = db.getCrProgress(gameId, teamId);
+  if(!prog) return null;
+  db.updateCrProgress(gameId, teamId, {
+    mission_index: state.nextIndex,
+    mission_id: state.nextMission ? state.nextMission.id : null,
+    status: state.finished ? 'finished' : 'active',
+    completed_at: state.finished ? Date.now() : null,
+    score_earned: state.scoreEarned,
+    media_path: null,
+    media_status: 'none',
+  });
+  return db.getCrProgress(gameId, teamId);
+}
+
+function crProgressPayload(gameId, teamId, missions, state) {
+  return {
+    teamId: Number(teamId),
+    missionProgress: state.rows,
+    completedMissionIds: state.completedMissionIds,
+    pendingMissionIds: state.pendingMissionIds,
+    skippedMissionIds: state.skippedMissionIds,
+    currentMission: state.nextMission,
+    missionIndex: state.nextIndex,
+    totalMissions: missions.length,
+    finished: state.finished,
+    score_earned: state.scoreEarned,
+  };
+}
+
+function completeCrTeamMission(gameId, teamId, mission, score, opts={}) {
+  const crMode = db.getGameCrMode(gameId);
+  const missions = crMode ? db.getLinearCrMissions(crMode.id) : [];
+  const existing = db.getCrMissionProgress(gameId, teamId, mission.id);
+  if(existing && (existing.status === 'completed' || existing.status === 'skipped')) {
+    const state = crMissionState(gameId, teamId, missions);
+    syncCrAggregateProgress(gameId, teamId, missions, state);
+    return {alreadyCompleted:true, state};
+  }
+  const status = opts.status || 'completed';
+  db.upsertCrMissionProgress(gameId, teamId, mission.id, {
+    status,
+    completed_at: Date.now(),
+    score_earned: score || 0,
+    media_path: opts.mediaPath || null,
+    media_status: opts.mediaStatus || 'none',
+  });
+  if(score > 0) db.addTeamScore(teamId, score);
+  const state = crMissionState(gameId, teamId, missions);
+  syncCrAggregateProgress(gameId, teamId, missions, state);
+  const missionIndex = missions.findIndex(m => m.id === mission.id);
+  io.to(`gm_${gameId}`).emit('cr_mission_completed', {
+    teamId: Number(teamId),
+    missionId: mission.id,
+    missionIndex,
+    score,
+    finished: state.finished,
+    completedMissionIds: state.completedMissionIds,
+    pendingMissionIds: state.pendingMissionIds,
+  });
+  io.to(`gm_${gameId}`).emit('rankings_update', db.getRankings(gameId));
+  io.to(`team_${teamId}`).emit('cr_progress_updated', crProgressPayload(gameId, teamId, missions, state));
+  if(state.finished) {
+    io.to(`team_${teamId}`).emit('cr_finished', {score_earned: state.scoreEarned});
+  }
+  return {state};
 }
 
 // Move a team to the next CR mission after a successful completion. Awards
@@ -719,28 +825,43 @@ app.post('/api/games/:gameId/cr/complete', (req,res) => {
   if(!crMode) return res.status(400).json({error:'No CityRush mode'});
   // Linear sequence only — special missions are completed via their own route.
   const missions = db.getLinearCrMissions(crMode.id);
-  const prog = db.getCrProgress(gameId, teamId);
-  if(!prog) return res.status(404).json({error:'No progress found'});
-  const mission = missions[prog.mission_index];
-  if(!mission) return res.status(400).json({error:'No current mission'});
+  let prog = db.getCrProgress(gameId, teamId);
+  if(!prog && missions.length > 0) {
+    db.initCrProgress(gameId, teamId, missions[0].id);
+    prog = db.getCrProgress(gameId, teamId);
+  }
+  const requestedMissionId = Number(missionId);
+  const missionIndex = missions.findIndex(m => m.id === requestedMissionId);
+  const mission = missions[missionIndex];
+  if(!mission) return res.status(400).json({error:'Mission is not available in this CityRush game'});
+  const existing = db.getCrMissionProgress(gameId, teamId, mission.id);
+  if(existing && (existing.status === 'completed' || existing.status === 'skipped')) {
+    const state = crMissionState(gameId, teamId, missions);
+    return res.json({success:true, alreadyCompleted:true, ...crProgressPayload(gameId, teamId, missions, state)});
+  }
 
   // Branch: media-bearing missions need GM approval. Don't advance yet.
   if(mediaPath) {
     const subId = db.createCrSubmission(gameId, teamId, mission.id, mediaPath);
-    db.updateCrProgress(gameId, teamId, {
+    db.upsertCrMissionProgress(gameId, teamId, mission.id, {
+      status: 'pending',
       media_path: mediaPath,
       media_status: 'pending',
     });
+    const state = crMissionState(gameId, teamId, missions);
+    syncCrAggregateProgress(gameId, teamId, missions, state);
     io.to(`gm_${gameId}`).emit('cr_submission_new', {
-      submissionId: subId, teamId, missionId: mission.id, missionIndex: prog.mission_index, mediaPath,
+      submissionId: subId, teamId, missionId: mission.id, missionIndex, mediaPath,
     });
-    return res.json({success:true, pending:true});
+    io.to(`team_${teamId}`).emit('cr_progress_updated', crProgressPayload(gameId, teamId, missions, state));
+    return res.json({success:true, pending:true, ...crProgressPayload(gameId, teamId, missions, state)});
   }
 
-  // Otherwise (answer or no-media completion): advance immediately.
-  const score = scoreForCrMission(mission, prog);
-  const result = advanceCrTeam(gameId, teamId, mission, prog.mission_index, score) || {};
-  res.json({success:true, score, nextMission: result.nextMission||null, nextIndex: result.nextIndex||null});
+  // Otherwise (answer or no-media completion): award immediately. Mission
+  // order no longer matters; completion is tracked per mission.
+  const score = scoreForCrMission(mission, existing || prog || {});
+  const result = completeCrTeamMission(gameId, teamId, mission, score, {status:'completed'}) || {};
+  res.json({success:true, score, ...crProgressPayload(gameId, teamId, missions, result.state)});
 });
 
 // GM review of a CR media submission. accept → award points and advance the
@@ -771,9 +892,15 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
       });
       io.to(`gm_${sub.game_id}`).emit('rankings_update', db.getRankings(sub.game_id));
     } else {
-      const prog = db.getCrProgress(sub.game_id, sub.team_id) || {};
+      const prog = db.getCrMissionProgress(sub.game_id, sub.team_id, mission.id)
+        || db.getCrProgress(sub.game_id, sub.team_id)
+        || {};
       const score = scoreForCrMission(mission, prog);
-      advanceCrTeam(sub.game_id, sub.team_id, mission, idx, score);
+      completeCrTeamMission(sub.game_id, sub.team_id, mission, score, {
+        status: 'completed',
+        mediaPath: sub.media_path,
+        mediaStatus: 'accepted',
+      });
     }
     io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:true});
   } else {
@@ -785,7 +912,15 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
       // player can retake immediately.
       db.clearCrSpecialCooldown(sub.game_id, sub.team_id, mission.id);
     } else {
-      db.updateCrProgress(sub.game_id, sub.team_id, {media_path:null, media_status:'rejected'});
+      db.upsertCrMissionProgress(sub.game_id, sub.team_id, mission.id, {
+        status: 'open',
+        media_path: null,
+        media_status: 'rejected',
+      });
+      const linear = db.getLinearCrMissions(crMode.id);
+      const state = crMissionState(sub.game_id, sub.team_id, linear);
+      syncCrAggregateProgress(sub.game_id, sub.team_id, linear, state);
+      io.to(`team_${sub.team_id}`).emit('cr_progress_updated', crProgressPayload(sub.game_id, sub.team_id, linear, state));
     }
     io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:false, message});
   }
@@ -799,18 +934,22 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
 // short-circuit immediately and re-emit the cr_arrived event so the action UI
 // unlocks across every device.
 app.post('/api/games/:gameId/cr/arrival', (req,res) => {
-  const {teamId, lat, lng, accuracy} = req.body;
+  const {teamId, missionId, lat, lng, accuracy} = req.body;
   const latN = Number(lat);
   const lngN = Number(lng);
   if(!Number.isFinite(latN) || !Number.isFinite(lngN)) return res.json({arrived:false});
-  const prog = db.getCrProgress(req.params.gameId, teamId);
-  if(!prog) return res.json({arrived:false});
+  let prog = db.getCrProgress(req.params.gameId, teamId);
   const crMode = db.getGameCrMode(req.params.gameId);
   if(!crMode) return res.json({arrived:false});
-  const missions = db.getCrMissions(crMode.id);
-  // Linear missions only — special missions don't use GPS gating.
-  const linear = missions.filter(m => !m.is_special);
-  const mission = linear[prog.mission_index];
+  const linear = db.getLinearCrMissions(crMode.id);
+  if(!prog && linear.length > 0) {
+    db.initCrProgress(req.params.gameId, teamId, linear[0].id);
+    prog = db.getCrProgress(req.params.gameId, teamId);
+  }
+  const requestedMissionId = Number(missionId);
+  const mission = Number.isFinite(requestedMissionId) && requestedMissionId > 0
+    ? linear.find(m => m.id === requestedMissionId)
+    : linear[prog?.mission_index || 0];
   const missionLat = Number(mission?.lat);
   const missionLng = Number(mission?.lng);
   if(!mission || !mission.use_gps || !Number.isFinite(missionLat) || !Number.isFinite(missionLng)) return res.json({arrived:false});
@@ -842,17 +981,22 @@ app.post('/api/games/:gameId/cr/arrival', (req,res) => {
 
 // Skip current CR mission — forfeits its points, advances the team.
 app.post('/api/games/:gameId/cr/skip', (req,res) => {
-  const {teamId} = req.body;
+  const {teamId, missionId} = req.body;
   const crMode = db.getGameCrMode(req.params.gameId);
   if(!crMode) return res.status(400).json({error:'No CityRush mode'});
   const linear = db.getLinearCrMissions(crMode.id);
-  const prog = db.getCrProgress(req.params.gameId, teamId);
-  if(!prog) return res.status(404).json({error:'No progress found'});
-  const mission = linear[prog.mission_index];
-  if(!mission) return res.status(400).json({error:'No current mission'});
-  // Award 0 points but advance the same way an accept does.
-  const result = advanceCrTeam(req.params.gameId, teamId, mission, prog.mission_index, 0) || {};
-  res.json({success:true, score:0, nextMission: result.nextMission||null, nextIndex: result.nextIndex||null});
+  let prog = db.getCrProgress(req.params.gameId, teamId);
+  if(!prog && linear.length > 0) {
+    db.initCrProgress(req.params.gameId, teamId, linear[0].id);
+    prog = db.getCrProgress(req.params.gameId, teamId);
+  }
+  const requestedMissionId = Number(missionId);
+  const mission = Number.isFinite(requestedMissionId) && requestedMissionId > 0
+    ? linear.find(m => m.id === requestedMissionId)
+    : linear[prog?.mission_index || 0];
+  if(!mission) return res.status(400).json({error:'Mission is not available in this CityRush game'});
+  const result = completeCrTeamMission(req.params.gameId, teamId, mission, 0, {status:'skipped'}) || {};
+  res.json({success:true, score:0, ...crProgressPayload(req.params.gameId, teamId, linear, result.state)});
 });
 
 // Special-mission completion. Independent of the linear progress; obeys its
