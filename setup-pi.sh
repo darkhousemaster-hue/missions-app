@@ -120,9 +120,23 @@ set -e
 APP_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
 echo "[update] Pulling from GitHub..."
 cd "\$APP_DIR"
-git pull origin main
+if [ -n "\$(git status --porcelain --untracked-files=no)" ]; then
+  echo "[update] Local tracked changes detected; saving them to git stash..."
+  git stash push -m "missions-app auto-update \$(date -Is)"
+fi
+git fetch --prune origin main
+if git rev-parse --verify main >/dev/null 2>&1; then
+  git checkout main
+else
+  git checkout -B main origin/main
+fi
+git merge --ff-only origin/main
 echo "[update] Installing dependencies..."
-npm install --production
+if [ -f package-lock.json ]; then
+  npm ci --omit=dev
+else
+  npm install --omit=dev
+fi
 echo "[update] Restarting service..."
 sudo systemctl restart ${SERVICE_NAME}
 echo "[update] Done! Check logs: sudo journalctl -u ${SERVICE_NAME} -f"

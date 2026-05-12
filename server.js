@@ -8,7 +8,6 @@ const path       = require('path');
 const fs         = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const cron       = require('node-cron');
-const { exec }   = require('child_process');
 const db         = require('./db/database');
 
 const app    = express();
@@ -108,21 +107,86 @@ app.post('/api/translate', async (req,res) => {
 app.post('/api/update', async (req,res) => {
   const { password } = req.body;
   if (!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
-  const { exec } = require('child_process');
+  const { execFile } = require('child_process');
   const appDir = __dirname;
   const log = [];
-  const run = (cmd) => new Promise((resolve) => {
-    exec(cmd, {cwd: appDir}, (err, stdout, stderr) => {
-      log.push(`$ ${cmd}`);
-      if (stdout) log.push(stdout.trim());
-      if (stderr) log.push(stderr.trim());
-      resolve(!err);
+
+  const quoteArg = v => /\s/.test(String(v)) ? JSON.stringify(String(v)) : String(v);
+  const run = (cmd, args = [], opts = {}) => new Promise((resolve) => {
+    log.push(`$ ${[cmd, ...args].map(quoteArg).join(' ')}`);
+    execFile(cmd, args, {
+      cwd: appDir,
+      timeout: opts.timeout || 10 * 60 * 1000,
+      maxBuffer: 10 * 1024 * 1024
+    }, (err, stdout, stderr) => {
+      if (stdout && stdout.trim()) log.push(stdout.trim());
+      if (stderr && stderr.trim()) log.push(stderr.trim());
+      resolve({ ok: !err, stdout: stdout || '', stderr: stderr || '', err });
     });
   });
+
+  const fail = (msg) => {
+    log.push(msg);
+    return res.json({success:false, log:log.join('\n')});
+  };
+
+  const normalizeRepoUrl = (url) => {
+    const value = String(url || '').trim();
+    if (!value) return null;
+    if (/^git@github\.com:[^/\s]+\/[^/\s]+(?:\.git)?$/i.test(value)) return value;
+    const match = value.match(/^https:\/\/github\.com\/([^/\s]+)\/([^/\s#?]+?)(?:\.git)?\/?$/i);
+    if (!match) return false;
+    return `https://github.com/${match[1]}/${match[2].replace(/\.git$/i, '')}.git`;
+  };
+
   log.push('Starting update...');
-  const gitOk = await run('git pull origin main');
-  if (!gitOk) { return res.json({success:false, log:log.join('\n')}); }
-  await run('npm install --production');
+
+  const insideRepo = await run('git', ['rev-parse', '--is-inside-work-tree']);
+  if (!insideRepo.ok || insideRepo.stdout.trim() !== 'true') {
+    return fail('Update failed: this installation is not a Git checkout. Install with git clone or set up a Git remote first.');
+  }
+
+  const settings = db.getSettings();
+  const configuredRepo = normalizeRepoUrl(settings.github_url);
+  if (configuredRepo === false) {
+    return fail('Update failed: the configured GitHub repository URL is invalid. Use https://github.com/user/repo.git');
+  }
+  if (configuredRepo) {
+    const remotes = await run('git', ['remote']);
+    if (!remotes.ok) return fail('Update failed: could not read Git remotes.');
+    const remoteArgs = remotes.stdout.split(/\r?\n/).includes('origin')
+      ? ['remote', 'set-url', 'origin', configuredRepo]
+      : ['remote', 'add', 'origin', configuredRepo];
+    const remoteOk = await run('git', remoteArgs);
+    if (!remoteOk.ok) return fail('Update failed: could not configure the GitHub remote.');
+  }
+
+  const dirty = await run('git', ['status', '--porcelain', '--untracked-files=no']);
+  if (!dirty.ok) return fail('Update failed: could not inspect the local Git status.');
+  if (dirty.stdout.trim()) {
+    log.push('Local tracked changes detected. Saving them to git stash before updating.');
+    const stash = await run('git', ['stash', 'push', '-m', `missions-app auto-update ${new Date().toISOString()}`]);
+    if (!stash.ok) return fail('Update failed: could not stash local tracked changes.');
+  }
+
+  const fetch = await run('git', ['fetch', '--prune', 'origin', 'main'], {timeout: 15 * 60 * 1000});
+  if (!fetch.ok) return fail('Update failed: could not fetch origin/main from GitHub.');
+
+  const hasMain = await run('git', ['rev-parse', '--verify', 'main']);
+  const checkoutArgs = hasMain.ok ? ['checkout', 'main'] : ['checkout', '-B', 'main', 'origin/main'];
+  const checkout = await run('git', checkoutArgs);
+  if (!checkout.ok) return fail('Update failed: could not switch to the main branch.');
+
+  const merge = await run('git', ['merge', '--ff-only', 'origin/main']);
+  if (!merge.ok) return fail('Update failed: local main has diverged from origin/main. Resolve the Git history manually, then try again.');
+
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const npmArgs = fs.existsSync(path.join(appDir, 'package-lock.json'))
+    ? ['ci', '--omit=dev']
+    : ['install', '--omit=dev'];
+  const npm = await run(npmCmd, npmArgs, {timeout: 20 * 60 * 1000});
+  if (!npm.ok) return fail('Update failed: dependencies could not be installed.');
+
   log.push('Update complete. Restarting...');
   res.json({success:true, log:log.join('\n')});
   // Restart gracefully after response sent
