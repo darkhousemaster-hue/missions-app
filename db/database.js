@@ -245,6 +245,7 @@ try { db.exec("ALTER TABLE cr_hints ADD COLUMN hint_type TEXT DEFAULT 'answer'")
 // Track per-team GPS hint usage on the same cr_team_hints row as the answer
 // hint usage — avoids changing the existing UNIQUE(game,team,mission) key.
 try { db.exec("ALTER TABLE cr_team_hints ADD COLUMN gps_hints_used INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("UPDATE cr_missions SET radius_meters=30 WHERE radius_meters IS NULL OR radius_meters<=0"); } catch(e) {}
 
 // One-shot back-fill: missions created before the multi-hint editor only had
 // the single hint_de/en/fr/it columns on cr_missions. Migrate that text into
@@ -520,14 +521,38 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'has_answer','answer_de','answer_en','answer_fr','answer_it',
   'hide_until_arrival',
   'is_special','repeat_minutes'];
+const toNullableNumber = v => {
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+};
+const toPositiveInt = (v, fallback) => {
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : fallback;
+};
+const toFlag = v => (v === true || v === 1 || v === '1') ? 1 : 0;
+const normalizeCrMissionData = (data = {}) => {
+  const out = {...data};
+  if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
+  if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
+  out.radius_meters = toPositiveInt(out.radius_meters, 30);
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special'].forEach(f => {
+    if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
+  });
+  return out;
+};
 const createCrMission  = (data) => {
+  const cleaned = normalizeCrMissionData(data);
   const fields = ['mode_id', ...CR_MISSION_EDIT_FIELDS];
-  const vals = fields.map(f => data[f] !== undefined ? data[f] : null);
+  const vals = fields.map(f => cleaned[f] !== undefined ? cleaned[f] : null);
   return num(db.prepare(`INSERT INTO cr_missions(${fields.join(',')}) VALUES(${fields.map(()=>'?').join(',')})`).run(...vals).lastInsertRowid);
 };
 const updateCrMission  = (id, data) => {
+  const existing = getCrMission(id) || {};
+  const cleaned = normalizeCrMissionData({...existing, ...data});
   const sets = CR_MISSION_EDIT_FIELDS.map(f=>`${f}=?`).join(',');
-  const vals = [...CR_MISSION_EDIT_FIELDS.map(f => data[f] !== undefined ? data[f] : null), id];
+  const vals = [...CR_MISSION_EDIT_FIELDS.map(f => cleaned[f] !== undefined ? cleaned[f] : null), id];
   db.prepare(`UPDATE cr_missions SET ${sets} WHERE id=?`).run(...vals);
 };
 const deleteCrMission  = id => {

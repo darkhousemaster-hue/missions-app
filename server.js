@@ -811,7 +811,9 @@ app.post('/api/games/:gameId/cr/arrival', (req,res) => {
   // Linear missions only — special missions don't use GPS gating.
   const linear = missions.filter(m => !m.is_special);
   const mission = linear[prog.mission_index];
-  if(!mission || !mission.use_gps || !mission.lat || !mission.lng) return res.json({arrived:false});
+  const missionLat = Number(mission?.lat);
+  const missionLng = Number(mission?.lng);
+  if(!mission || !mission.use_gps || !Number.isFinite(missionLat) || !Number.isFinite(missionLng)) return res.json({arrived:false});
 
   // Sticky: if any team member already arrived, report arrived without
   // re-running the geofence.
@@ -823,15 +825,13 @@ app.post('/api/games/:gameId/cr/arrival', (req,res) => {
   // Haversine distance, with a GPS-accuracy slack (15-30m phone error is
   // typical and would otherwise reject a player visibly on the target).
   const R = 6371000;
-  const missionLat = Number(mission.lat);
-  const missionLng = Number(mission.lng);
-  if(!Number.isFinite(missionLat) || !Number.isFinite(missionLng)) return res.json({arrived:false});
   const dLat = (missionLat - latN) * Math.PI / 180;
   const dLng = (missionLng - lngN) * Math.PI / 180;
   const a = Math.sin(dLat/2)**2 + Math.cos(latN*Math.PI/180)*Math.cos(missionLat*Math.PI/180)*Math.sin(dLng/2)**2;
   const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   const slack  = Math.min(Math.max(Number(accuracy)||10, 10), 75) + 5;
-  const radius = mission.radius_meters || 30;
+  const configuredRadius = Number(mission.radius_meters);
+  const radius = Number.isFinite(configuredRadius) && configuredRadius > 0 ? configuredRadius : 30;
   const arrived = dist <= radius + slack;
   if(arrived) {
     db.recordCrArrival(req.params.gameId, teamId, mission.id);

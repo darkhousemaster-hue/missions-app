@@ -1528,6 +1528,13 @@ function refreshGmMarkerLabels(){
 // the GM should always be able to see where the missions are. Markers are
 // colored relative to the currently selected team's progress (done/current/
 // upcoming) so the dashboard still feels personalized.
+function gmMissionRadiusMeters(m){
+  const r = Number(String(m && m.radius_meters).replace(',', '.'));
+  return Number.isFinite(r) && r > 0 ? r : 30;
+}
+function gmHasMissionCoords(m){
+  return m && Number.isFinite(Number(m.lat)) && Number.isFinite(Number(m.lng));
+}
 function renderGmCrMissionMarkers(){
   if(!gmCrMap) return;
   if(!gmCrMissionsCache.length) return;
@@ -1540,10 +1547,11 @@ function renderGmCrMissionMarkers(){
     : null;
   const idx = prog ? (prog.mission_index || 0) : -1;
   gmCrMissionsCache.forEach((m, i) => {
-    if(m.lat == null || m.lng == null) return;
+    if(!gmHasMissionCoords(m)) return;
     const isDone    = idx >= 0 && i <  idx;
     const isCurrent = idx >= 0 && i === idx;
     const bg = isDone ? 'var(--green)' : isCurrent ? 'var(--red)' : 'var(--text-muted)';
+    const stroke = isDone ? '#1f9d55' : isCurrent ? '#d42b2b' : '#888';
     const icon = L.divIcon({
       className:'',
       html:`<div style="background:${bg};color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5);">${i+1}</div>`,
@@ -1551,14 +1559,15 @@ function renderGmCrMissionMarkers(){
     });
     const name = m['name_'+gmLang] || m.name_de || `Mission ${i+1}`;
     const mk = L.marker([m.lat, m.lng], {icon}).addTo(gmCrMissionLayer);
-    const r = Number(m.radius_meters) || 30;
+    const r = gmMissionRadiusMeters(m);
     mk.bindPopup(`<strong>${esc(name)}</strong><br><small>${m.points||0} pt · ${r}m</small>`);
-    // Show the configured geofence for the current target so the GM can
-    // sanity-check the radius. Defaults to 30m if not explicitly set.
-    if(isCurrent){
-      L.circle([m.lat, m.lng], {color:'#d42b2b', fillColor:'rgba(212,43,43,.10)',
-        radius:r, weight:1.5}).addTo(gmCrMissionLayer);
-    }
+    L.circle([m.lat, m.lng], {
+      color: stroke,
+      fillColor: stroke,
+      fillOpacity: isCurrent ? .10 : .045,
+      radius: r,
+      weight: isCurrent ? 1.5 : 1
+    }).addTo(gmCrMissionLayer);
   });
 }
 function switchPanel(panel,el){
