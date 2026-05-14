@@ -40,6 +40,26 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 }
 .topbar-btn:hover { border-color:var(--text-dim); color:var(--text); }
 .topbar-btn.active { border-color:var(--red); color:var(--red-light); }
+/* Back buttons inside the chat/rules overlays share a row with a 1.2rem
+   heading. Match its size and undo the narrow-viewport fixed-width rule
+   (otherwise "← Zurück" gets clipped to 36px wide). */
+#chat-back-btn, #rules-back-btn {
+  width:auto !important;
+  padding:.5rem .9rem !important;
+  font-size:1.05rem !important;
+  display:inline-flex; align-items:center; gap:.3rem;
+}
+#chat-back-btn > *, #rules-back-btn > * { font-size:inherit; }
+/* On narrow phones the timer + name + score + 4 buttons would otherwise
+   overflow and clip the language button. Tighten everything and let the
+   buttons sit on a square footprint. */
+@media (max-width:480px){
+  .play-topbar { gap:.3rem; padding:.5rem .4rem; }
+  .play-timer  { font-size:1.15rem; }
+  .team-score-chip { font-size:.8rem; padding:.1rem .35rem; }
+  .topbar-btn  { width:36px; padding:.35rem 0; font-size:.7rem; text-align:center; }
+  #btn-lang    { font-size:.65rem; }
+}
 
 /* ── View switching ── */
 #view-missions { flex:1; min-height:0; overflow-y:auto; padding:.75rem; padding-bottom:calc(env(safe-area-inset-bottom,0px) + 2rem); display:flex; flex-direction:column; -webkit-overflow-scrolling:touch; }

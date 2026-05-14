@@ -31,7 +31,8 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #dash-teams{grid-area:teams;border-bottom:1px solid var(--border);background:var(--bg2);padding:.5rem .75rem;overflow-x:auto;display:flex;align-items:center;gap:.4rem;flex-shrink:0;}
 #dash-main{grid-area:main;overflow-y:auto;padding:1rem;}
 #dash-panel{grid-area:panel;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.team-chip-gm{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .8rem;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:600;font-size:.85rem;text-transform:uppercase;flex-shrink:0;}
+.team-chip-gm{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .6rem .3rem .35rem;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:600;font-size:.85rem;text-transform:uppercase;flex-shrink:0;}
+.team-chip-selfie{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0;}
 .team-chip-gm:hover{border-color:var(--text-dim);}
 .team-chip-gm.active{border-color:var(--red);background:rgba(212,43,43,.1);color:var(--red-light);}
 #dash-panel .tabs{padding:0 .75rem;margin-bottom:0;flex-shrink:0;}
@@ -176,9 +177,16 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   <div id="dash-main">
     <div id="no-team-selected" class="empty"><div class="empty-icon">👥</div><p id="db-select-team">Team auswählen</p></div>
     <div id="team-detail" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <h2 id="detail-team-name"></h2>
-        <span class="badge badge-orange" id="detail-team-score" style="font-size:.95rem;padding:.25rem .75rem;"></span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:.75rem;min-width:0;">
+          <img id="detail-team-selfie" alt="" style="display:none;width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--border);cursor:zoom-in;flex-shrink:0;" onclick="openGmSelfieLightbox(this.src)">
+          <h2 id="detail-team-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;"></h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <span class="badge badge-orange" id="detail-team-score" style="font-size:.95rem;padding:.25rem .75rem;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="openFreezeModal()" id="btn-freeze-team" title="Team einfrieren">❄ <span id="btn-freeze-team-lbl">Freeze</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="thawTeam()" id="btn-thaw-team" style="display:none;" title="Team auftauen">🔥 <span id="btn-thaw-team-lbl">Auftauen</span></button>
+        </div>
       </div>
       <div id="team-missions-list"></div>
     </div>
@@ -475,6 +483,35 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
     </div>
   </div>
 </div>
+<!-- GM freeze picker. Triggered from a team's dashboard panel: that team is
+     the freezer (recorded in team_freezes.freezer_team_id) and the GM picks
+     which rival to freeze. UNIQUE constraint on (game,freezer,frozen) enforces
+     "each team can only freeze each rival once". -->
+<div id="gm-freeze-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1500;display:none;align-items:center;justify-content:center;padding:1.25rem;">
+  <div style="background:var(--bg3);border:2px solid var(--red);border-radius:var(--radius);padding:1.25rem;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
+    <h3 style="color:var(--red-light);margin-bottom:.4rem;">❄ <span id="gm-freeze-title">Rival einfrieren</span></h3>
+    <p id="gm-freeze-help" style="color:var(--text-dim);font-size:.85rem;margin-bottom:.75rem;line-height:1.4;">
+      Wählt das gegnerische Team und eine Dauer. Jedes Team kann jedes andere
+      nur einmal einfrieren.
+    </p>
+    <div class="sidebar-title" id="gm-freeze-from-lbl" style="margin-bottom:.4rem;">Freezer</div>
+    <div id="gm-freeze-from" style="font-weight:700;margin-bottom:.75rem;color:var(--orange);"></div>
+    <div class="sidebar-title" id="gm-freeze-target-lbl" style="margin-bottom:.4rem;">Ziel</div>
+    <div id="gm-freeze-target-list" style="display:flex;flex-direction:column;gap:.35rem;margin-bottom:.75rem;"></div>
+    <div class="sidebar-title" id="gm-freeze-duration-lbl" style="margin-bottom:.4rem;">Dauer</div>
+    <div id="gm-freeze-duration-list" style="display:grid;grid-template-columns:repeat(2,1fr);gap:.4rem;margin-bottom:.75rem;"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem;">
+      <button class="btn btn-ghost" onclick="closeFreezeModal()" id="gm-freeze-cancel">Abbrechen</button>
+      <button class="btn btn-primary" onclick="submitFreeze()" id="gm-freeze-submit">Einfrieren</button>
+    </div>
+  </div>
+</div>
+<!-- Fullscreen selfie viewer. -->
+<div id="gm-selfie-lightbox" onclick="closeGmSelfieLightbox(event)"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:2000;display:none;align-items:center;justify-content:center;padding:1rem;cursor:zoom-out;">
+  <button onclick="closeGmSelfieLightbox(event)" style="position:fixed;top:.75rem;right:.75rem;z-index:2001;padding:.5rem .75rem;font-size:1rem;font-weight:700;background:var(--surface);border:1px solid var(--red);color:var(--text);border-radius:var(--radius);cursor:pointer;">✕</button>
+  <img id="gm-selfie-lightbox-img" src="" alt="" style="max-width:96vw;max-height:92vh;object-fit:contain;border-radius:4px;">
+</div>
 <div class="toast-container" id="toast-container"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -534,7 +571,7 @@ const GMT={
   'tip-cr-answer':'Korrekte Antwort(en) — Vergleich ist tolerant gegenüber Groß-/Kleinschreibung und Leerzeichen.',
   'tip-cr-hint':'Optionaler Text, der angezeigt wird, solange die Spieler noch zum Ziel laufen.',
   'tip-cr-hide-until-arrival':'Beschreibung und Aufgabe werden erst nach Ankunft am Ziel angezeigt.',
-  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','db-send':'Senden','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemeine Einstellungen','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen'},
+  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','db-send':'Senden','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemeine Einstellungen','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','updating':'Aktualisiere…','selfie-uploaded':'Selfie hochgeladen','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen'},
   en:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No CityRush mode yet. Click ＋ Mode.','cr-no-missions':'No CityRush missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
@@ -581,7 +618,7 @@ const GMT={
   'tip-cr-answer':'The correct answer(s) — matching is case-insensitive and trims whitespace.',
   'tip-cr-hint':'Optional text shown while players are still walking to the target.',
   'tip-cr-hide-until-arrival':'Description and task only appear after the player arrives.',
-  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-recent':'Recent Games','gs-new':'New Game','ng-title':'New Game Created','ng-back':'Back','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','db-send':'Send','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General Settings','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove'},
+  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-recent':'Recent Games','gs-new':'New Game','ng-title':'New Game Created','ng-back':'Back','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','db-send':'Send','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General Settings','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','updating':'Updating…','selfie-uploaded':'Selfie uploaded','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove'},
   fr:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modes CityRush','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode CityRush. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission CityRush. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
@@ -628,7 +665,7 @@ const GMT={
   'tip-cr-answer':'La/les bonne(s) réponse(s) — comparaison insensible à la casse et aux espaces.',
   'tip-cr-hint':'Texte optionnel affiché pendant que les joueurs marchent vers la cible.',
   'tip-cr-hide-until-arrival':'Description et tâche n\'apparaissent qu\'après l\'arrivée.',
-  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','ng-title':'Partie créée','ng-back':'Retour','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','db-send':'Envoyer','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Paramètres généraux','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer'},
+  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','ng-title':'Partie créée','ng-back':'Retour','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','db-send':'Envoyer','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Paramètres généraux','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','updating':'Mise à jour…','selfie-uploaded':'Selfie envoyé','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer'},
   it:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modalità CityRush','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'CityRush usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità CityRush. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione CityRush. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
@@ -675,7 +712,7 @@ const GMT={
   'tip-cr-answer':'Le risposte corrette — confronto case-insensitive e con spazi normalizzati.',
   'tip-cr-hint':'Testo opzionale mostrato mentre i giocatori camminano verso il target.',
   'tip-cr-hide-until-arrival':'Descrizione e compito appaiono solo dopo l\'arrivo.',
-  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-recent':'Partite recenti','gs-new':'Nuova partita','ng-title':'Partita creata','ng-back':'Indietro','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','db-send':'Invia','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Impostazioni generali','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi'}
+  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-recent':'Partite recenti','gs-new':'Nuova partita','ng-title':'Partita creata','ng-back':'Indietro','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','db-send':'Invia','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Impostazioni generali','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','updating':'Aggiornamento…','selfie-uploaded':'Selfie caricato','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi'}
 };
 function gmt(key){
   return (GMT[gmLang]||GMT['en']||{})[key] || (GMT['en']||{})[key] || '';
@@ -934,6 +971,45 @@ async function openDashboard(gameId){
   socket.on('connect',()=>socket.emit('join_gm',{gameId}));
   socket.on('timer_update',updateTimer);
   socket.on('timer_state',updateTimer);
+  // Team selfie was just uploaded — refresh the chip + detail header live.
+  // Re-rendering the chip (rather than prepend-ing an <img>) makes sure the
+  // template's click-to-zoom handler is wired even on chips that were created
+  // before the selfie existed.
+  socket.on('team_selfie_updated', ({teamId, selfiePath}) => {
+    // Update cached team so any subsequent renderTeamsBar() picks it up.
+    if(currentGame && currentGame.teams){
+      const t = currentGame.teams.find(x => x.id === teamId);
+      if(t) t.selfie_path = selfiePath;
+    }
+    // Repaint the affected chip in-place. We don't full-rerender the bar
+    // because that would lose hover/focus state on other chips.
+    const chip = document.getElementById(`tc-${teamId}`);
+    const team = currentGame && currentGame.teams && currentGame.teams.find(x => x.id === teamId);
+    if(chip && team){
+      chip.innerHTML = _teamChipInner(team);
+      paintNotif(team.id);
+      paintFrozenTag(team.id);
+    }
+    // If the GM has this team open in the detail panel, swap the big avatar.
+    if(selectedTeamId === teamId){
+      const el = document.getElementById('detail-team-selfie');
+      if(el){
+        el.src = `/uploads/${selfiePath}?t=${Date.now()}`;
+        el.style.display = 'inline-block';
+      }
+    }
+    // Toast so the GM notices the new face without having to click anything.
+    const name = team ? team.name : `Team ${teamId}`;
+    toast(`📸 ${name}: ${gmt('selfie-uploaded')||'Selfie hochgeladen'}`,'success');
+  });
+  // Any freeze change refreshes the cached `freezes` list and repaints chips.
+  socket.on('freezes_updated', async () => {
+    try {
+      const list = await API(`/api/games/${gameId}/freezes`);
+      gmFreezes = list || [];
+    } catch(e) { gmFreezes = []; }
+    if(currentGame && currentGame.teams) currentGame.teams.forEach(t => paintFrozenTag(t.id));
+  });
   socket.on('team_joined',(team)=>{
     // Cache the team so subsequent gps_update events can resolve a real name
     // instead of falling back to "Team <id>".
@@ -1006,6 +1082,11 @@ async function refreshDashboard(gameId){
   // Pull pending counts so the notification dot reflects reality the moment
   // the dashboard opens (covers refresh / re-open scenarios).
   await refreshPendingCounts();
+  // Pull the freeze log once so chips can paint the ❄️ remaining-time tag.
+  try {
+    gmFreezes = await API(`/api/games/${gameId}/freezes`) || [];
+  } catch(e) { gmFreezes = []; }
+  if(currentGame && currentGame.teams) currentGame.teams.forEach(t => paintFrozenTag(t.id));
   if(game.teams.length>0)selectTeam(game.teams[0].id);
 }
 
@@ -1050,17 +1131,30 @@ async function refreshPendingCounts(){
   } catch(e) {}
 }
 
+// Build the inner markup of a team chip — selfie thumbnail, name, score,
+// frozen indicator and notification dot. Pulled out of renderTeamsBar so the
+// "team_selfie_updated"/"team_frozen" events can refresh a single chip.
+function _teamChipInner(t){
+  // Clicking the selfie thumbnail (rather than the chip body) opens the
+  // fullscreen lightbox without re-triggering the chip's selectTeam().
+  const selfie = t.selfie_path
+    ? `<img class="team-chip-selfie" id="tselfie-${t.id}" src="/uploads/${t.selfie_path}" alt="" style="cursor:zoom-in;" onerror="this.style.display='none'" onclick="event.stopPropagation();openGmSelfieLightbox(this.src)">`
+    : '';
+  return `
+    ${selfie}<span class="tname">${esc(t.name)}</span>
+    <span id="tscore-${t.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--orange);">${t.score||0}pt</span>
+    <span class="cr-frozen-tag" id="tfrozen-${t.id}" style="display:none;background:#0d3a59;color:#9fd6ff;padding:.1rem .35rem;border-radius:2px;font-size:.65rem;letter-spacing:.05em;">❄️ <span class="rem"></span></span>
+    <span class="notif-dot" id="notif-${t.id}" style="display:none;"></span>`;
+}
+
 function renderTeamsBar(teams){
   const bar=document.getElementById('teams-chips');
   if(!teams.length){bar.innerHTML='<span style="font-size:.8rem;color:var(--text-muted);">Warten auf Spieler…</span>';return;}
   bar.innerHTML=teams.map(t=>`
     <div class="team-chip-gm ${t.id===selectedTeamId?'active':''}" id="tc-${t.id}" onclick="selectTeam(${t.id})">
-      ${esc(t.name)}
-      <span id="tscore-${t.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--orange);">${t.score}pt</span>
-      <span class="notif-dot" id="notif-${t.id}" style="display:none;"></span>
+      ${_teamChipInner(t)}
     </div>`).join('');
-  // After the chips render, paint any counts we already know about.
-  teams.forEach(t => paintNotif(t.id));
+  teams.forEach(t => { paintNotif(t.id); paintFrozenTag(t.id); });
 }
 
 function addTeamChip(team){
@@ -1071,7 +1165,7 @@ function addTeamChip(team){
   if(document.getElementById('tc-'+team.id))return;
   const div=document.createElement('div');
   div.className='team-chip-gm';div.id=`tc-${team.id}`;
-  div.innerHTML=`${esc(team.name)}<span id="tscore-${team.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--orange);">0pt</span><span class="notif-dot" id="notif-${team.id}" style="display:none;"></span>`;
+  div.innerHTML = _teamChipInner(team);
   div.onclick=()=>selectTeam(team.id);
   bar.appendChild(div);
   if(!selectedTeamId)selectTeam(team.id);
@@ -1088,6 +1182,19 @@ async function selectTeam(teamId){
   const data=await API(`/api/games/${currentGameId}/teams/${teamId}`);
   document.getElementById('detail-team-name').textContent=data.name;
   document.getElementById('detail-team-score').textContent=`${data.score} pts`;
+  // Selfie thumbnail next to the team name; clicking opens the lightbox.
+  const selfieEl = document.getElementById('detail-team-selfie');
+  if(selfieEl){
+    if(data.selfie_path){
+      selfieEl.src = `/uploads/${data.selfie_path}?t=${Date.now()}`;
+      selfieEl.style.display = 'inline-block';
+    } else {
+      selfieEl.removeAttribute('src');
+      selfieEl.style.display = 'none';
+    }
+  }
+  // Toggle freeze/thaw buttons based on current frozen state.
+  paintTeamDetailFreezeButtons(teamId);
   // If this game has a CityRush mode, render CR missions; otherwise normal missions.
   if(currentGame && currentGame.crMode){
     await renderCrTeamMissions(teamId);
@@ -1414,6 +1521,152 @@ async function sendBroadcast(){
   toast('Broadcast gesendet!','success');
 }
 let gmCrMap=null, gmCrMarkers={};
+// Cached freeze rows for the active game. The chips show a ❄️ tag with
+// remaining time while `until_ms` is in the future.
+let gmFreezes = [];
+function paintFrozenTag(teamId){
+  const tag = document.getElementById(`tfrozen-${teamId}`);
+  if(!tag) return;
+  const now = Date.now();
+  // Most-recent active freeze targeting this team.
+  const f = gmFreezes.filter(x => x.frozen_team_id === teamId && x.until_ms > now)
+    .sort((a,b) => b.until_ms - a.until_ms)[0];
+  if(!f){ tag.style.display='none'; return; }
+  const rem = Math.max(0, Math.ceil((f.until_ms - now)/1000));
+  const mm  = String(Math.floor(rem/60)).padStart(2,'0');
+  const ss  = String(rem%60).padStart(2,'0');
+  const remEl = tag.querySelector('.rem');
+  if(remEl) remEl.textContent = `${mm}:${ss}`;
+  tag.style.display = 'inline-flex';
+}
+// Repaint frozen tags every second so countdowns tick smoothly.
+setInterval(() => {
+  if(currentGame && currentGame.teams) currentGame.teams.forEach(t => paintFrozenTag(t.id));
+  if(selectedTeamId) paintTeamDetailFreezeButtons(selectedTeamId);
+}, 1000);
+
+// Helper: is this team currently frozen (via the cached gmFreezes list)?
+function isTeamFrozenNow(teamId){
+  const now = Date.now();
+  return gmFreezes.some(f => f.frozen_team_id === teamId && f.until_ms > now);
+}
+function paintTeamDetailFreezeButtons(teamId){
+  const frozen = isTeamFrozenNow(teamId);
+  const freezeBtn = document.getElementById('btn-freeze-team');
+  const thawBtn   = document.getElementById('btn-thaw-team');
+  if(freezeBtn) freezeBtn.style.display = frozen ? 'none' : 'inline-flex';
+  if(thawBtn)   thawBtn.style.display   = frozen ? 'inline-flex' : 'none';
+}
+
+// ── GM freeze controls ──────────────────────────────────────────────────────
+// Opened from the currently-selected team's dashboard panel. That team is the
+// freezer; the GM picks which OTHER team to freeze. The picker greys out
+// rivals the freezer has already used their once-per-pair shot on.
+const GM_FREEZE_PRESETS_SEC = [
+  {sec:  1*60, label:'1 min'},
+  {sec:  3*60, label:'3 min'},
+  {sec:  5*60, label:'5 min'},
+  {sec: 10*60, label:'10 min'},
+];
+let _gmFreezePickedSeconds = 5*60;
+let _gmFreezePickedTargetId = null;
+
+function openFreezeModal(){
+  if(!selectedTeamId || !currentGame || !currentGame.teams) return;
+  const freezer = currentGame.teams.find(t => t.id === selectedTeamId);
+  if(!freezer) return;
+  document.getElementById('gm-freeze-from').textContent = freezer.name;
+  // Targets are every team except the freezer. Greyed out if the freezer has
+  // already issued a freeze against that target (matches the server's UNIQUE rule).
+  const usedTargets = new Set(
+    gmFreezes
+      .filter(f => f.freezer_team_id === selectedTeamId)
+      .map(f => f.frozen_team_id)
+  );
+  const targets = currentGame.teams.filter(t => t.id !== selectedTeamId);
+  _gmFreezePickedTargetId = null;
+  const targetList = document.getElementById('gm-freeze-target-list');
+  if(!targets.length){
+    targetList.innerHTML = `<p style="color:var(--text-muted);">Keine anderen Teams.</p>`;
+  } else {
+    targetList.innerHTML = targets.map(t => {
+      const used = usedTargets.has(t.id);
+      return `<button type="button" class="btn btn-ghost"
+        style="${used?'opacity:.4;pointer-events:none;':''}text-align:left;justify-content:flex-start;"
+        data-team="${t.id}" onclick="pickFreezeTarget(${t.id})">
+        ${esc(t.name)} ${used ? '· <small style="color:var(--text-muted);">bereits eingefroren</small>' : ''}
+      </button>`;
+    }).join('');
+  }
+  // Duration presets
+  _gmFreezePickedSeconds = 5*60;
+  const list = document.getElementById('gm-freeze-duration-list');
+  list.innerHTML = GM_FREEZE_PRESETS_SEC.map(p => `
+    <button type="button" class="btn ${p.sec===_gmFreezePickedSeconds?'btn-primary':'btn-ghost'}"
+      data-sec="${p.sec}" onclick="pickFreezeSeconds(${p.sec})" id="gm-freeze-dur-${p.sec}">
+      ${p.label}
+    </button>`).join('');
+  document.getElementById('gm-freeze-modal').style.display = 'flex';
+}
+function pickFreezeTarget(id){
+  _gmFreezePickedTargetId = Number(id);
+  document.querySelectorAll('#gm-freeze-target-list [data-team]').forEach(btn => {
+    const sel = Number(btn.dataset.team) === _gmFreezePickedTargetId;
+    btn.classList.toggle('btn-primary', sel);
+    btn.classList.toggle('btn-ghost',  !sel);
+  });
+}
+function pickFreezeSeconds(sec){
+  _gmFreezePickedSeconds = Number(sec);
+  document.querySelectorAll('#gm-freeze-duration-list [data-sec]').forEach(btn => {
+    const sel = Number(btn.dataset.sec) === _gmFreezePickedSeconds;
+    btn.classList.toggle('btn-primary', sel);
+    btn.classList.toggle('btn-ghost',  !sel);
+  });
+}
+function closeFreezeModal(){ document.getElementById('gm-freeze-modal').style.display = 'none'; }
+async function submitFreeze(){
+  if(!selectedTeamId) return;
+  if(!_gmFreezePickedTargetId){ toast('Bitte ein Team wählen','warning'); return; }
+  const r = await API(`/api/games/${currentGameId}/freeze`,{
+    method:'POST',
+    body:{
+      freezerTeamId: selectedTeamId,
+      frozenTeamId:  _gmFreezePickedTargetId,
+      durationSeconds: _gmFreezePickedSeconds,
+    },
+  });
+  if(r && r.success){ closeFreezeModal(); toast('❄ Eingefroren','success'); return; }
+  if(r && r.error === 'already-frozen'){
+    toast('Dieses Team wurde bereits eingefroren','warning'); return;
+  }
+  toast(r && r.error || 'Fehler', 'error');
+}
+async function thawTeam(){
+  if(!selectedTeamId) return;
+  // Thaw means: clear any active freeze targeting the currently-selected team.
+  const r = await API(`/api/games/${currentGameId}/thaw`,{
+    method:'POST',
+    body:{frozenTeamId: selectedTeamId},
+  });
+  if(r && r.success) toast('🔥 Aufgetaut','success');
+  else toast(r && r.error || 'Fehler', 'error');
+}
+
+// ── Selfie lightbox ─────────────────────────────────────────────────────────
+function openGmSelfieLightbox(url){
+  const lb  = document.getElementById('gm-selfie-lightbox');
+  const img = document.getElementById('gm-selfie-lightbox-img');
+  if(!lb || !img || !url) return;
+  img.src = url;
+  lb.style.display = 'flex';
+}
+function closeGmSelfieLightbox(e){
+  // Don't dismiss when clicking the image itself; only the dark surround / ✕.
+  if(e && e.target && e.target.id === 'gm-selfie-lightbox-img') return;
+  const lb = document.getElementById('gm-selfie-lightbox');
+  if(lb) lb.style.display = 'none';
+}
 let gmCrMissionLayer = null;     // L.layerGroup holding all CR mission markers
 let gmCrMissionsCache = [];      // last-known cr.missions payload (for re-rendering)
 
@@ -2214,7 +2467,9 @@ async function runUpdate(){
   btn.disabled=true;
   log.style.display='block';
   log.textContent='Starting update...';
-  toast(gmt('translating')||'Aktualisierung...');
+  // Use a dedicated 'updating' key — previously this reused 'translating'
+  // which (correctly) renders as "Übersetze…".
+  toast(gmt('updating')||'Aktualisiere…');
   try {
     const res=await API('/api/update',{method:'POST',body:{password:settingsPassword}});
     log.textContent=res.log||'';

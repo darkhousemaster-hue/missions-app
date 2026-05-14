@@ -228,6 +228,23 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_special INTEGER DEFAULT 0")
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN repeat_minutes INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
+// Team selfie taken at the start of the game so the GM can see who's who.
+// `selfie_path` is the uploads-relative path; stays NULL until uploaded.
+try { db.exec("ALTER TABLE teams ADD COLUMN selfie_path TEXT"); } catch(e) {}
+// Rival-team freeze. One row per (game, freezer, frozen). UNIQUE constraint
+// enforces "each team can only freeze each rival once". `until_ms` is the
+// absolute epoch when the freeze ends; rows are kept forever (used to grey
+// out already-frozen teams in the freezer's picker even after expiry).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS team_freezes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL,
+    freezer_team_id INTEGER NOT NULL,
+    frozen_team_id INTEGER NOT NULL,
+    started_at INTEGER DEFAULT (unixepoch()*1000),
+    until_ms INTEGER NOT NULL,
+    UNIQUE(game_id, freezer_team_id, frozen_team_id));
+`);
 // Per-team progress for special missions — separate from the linear team
 // progress so repeat cooldown can be tracked without disturbing the main
 // mission_index. last_attempt = ms epoch of last attempt (accepted or pending).
@@ -391,6 +408,7 @@ const deleteGame = id => {
     db.prepare('DELETE FROM cr_mission_progress WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_team_hints WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_team_captures WHERE game_id=?').run(id);
+    db.prepare('DELETE FROM team_freezes WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_submissions WHERE game_id=?').run(id);
     db.prepare('DELETE FROM cr_game_links WHERE game_id=?').run(id);
     db.prepare('DELETE FROM games WHERE id=?').run(id);
@@ -803,6 +821,40 @@ const reviewCrCapture = (id, accept, bonusPoints) => {
 };
 
 
+// ── Team selfies ─────────────────────────────────────────────────────────────
+const setTeamSelfie = (teamId, path) =>
+  db.prepare('UPDATE teams SET selfie_path=? WHERE id=?').run(path, teamId);
+
+// ── Team freezes ─────────────────────────────────────────────────────────────
+// Insert a freeze row. Throws on UNIQUE conflict (same freezer→frozen pair
+// already exists) so the route can surface "already frozen" to the caller.
+const createTeamFreeze = (gameId, freezerId, frozenId, durationSec) => {
+  const until = Date.now() + Math.max(1, durationSec|0)*1000;
+  db.prepare('INSERT INTO team_freezes(game_id,freezer_team_id,frozen_team_id,until_ms) VALUES(?,?,?,?)')
+    .run(gameId, freezerId, frozenId, until);
+  return until;
+};
+
+// End every active freeze targeting `frozenId` (regardless of freezer) by
+// expiring their until_ms. Used by the GM's thaw button.
+const expireActiveFreezesForTeam = (gameId, frozenId) =>
+  db.prepare('UPDATE team_freezes SET until_ms=? WHERE game_id=? AND frozen_team_id=? AND until_ms>?')
+    .run(Date.now()-1, gameId, frozenId, Date.now());
+// All freezes the given team has issued (used for "already frozen" greying).
+const listFreezesByFreezer = (gameId, freezerId) =>
+  db.prepare('SELECT * FROM team_freezes WHERE game_id=? AND freezer_team_id=? ORDER BY id').all(gameId, freezerId);
+// All active freezes targeting `frozenId` right now.
+const activeFreezeFor = (gameId, frozenId) => {
+  const now = Date.now();
+  return db.prepare('SELECT * FROM team_freezes WHERE game_id=? AND frozen_team_id=? AND until_ms>? ORDER BY until_ms DESC LIMIT 1')
+    .get(gameId, frozenId, now);
+};
+// Quick boolean: is this team currently frozen?
+const isTeamFrozen = (gameId, frozenId) => !!activeFreezeFor(gameId, frozenId);
+// Full freeze log for a game (used by GM dashboard).
+const listFreezesForGame = gameId =>
+  db.prepare('SELECT * FROM team_freezes WHERE game_id=? ORDER BY id').all(gameId);
+
 module.exports = {
   getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
@@ -829,4 +881,7 @@ module.exports = {
   getSpecialCrMissions,getLinearCrMissions,
   getCrSpecialProgress,getCrSpecialProgressForTeam,upsertCrSpecialProgress,clearCrSpecialCooldown,
   listCrSpecialProgressForGame,
+  setTeamSelfie,
+  createTeamFreeze,listFreezesByFreezer,activeFreezeFor,isTeamFrozen,listFreezesForGame,
+  expireActiveFreezesForTeam,
 };

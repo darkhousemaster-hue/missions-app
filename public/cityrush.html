@@ -30,21 +30,72 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   border-radius:var(--radius); padding:.35rem .6rem; cursor:pointer; font-size:.75rem;
   font-weight:700; text-transform:uppercase; white-space:nowrap; flex-shrink:0; position:relative; }
 .topbar-btn.active { border-color:var(--red); color:var(--red-light); }
+/* Inside the chat / rules overlays the back button shares a row with a
+   1.2–1.3rem heading. Match that size and undo the narrow-viewport
+   fixed-width rule (otherwise "← Zurück" gets clipped to 34px wide). */
+#cr-chat-back-btn, #cr-rules-back-btn {
+  width:auto !important;
+  padding:.5rem .9rem !important;
+  font-size:1.05rem !important;
+  display:inline-flex; align-items:center; gap:.3rem;
+}
+#cr-chat-back-btn > *, #cr-rules-back-btn > * { font-size:inherit; }
 @media (max-width:480px){
-  .cr-topbar { gap:.35rem; padding:.5rem .5rem; }
-  .cr-timer { font-size:1.15rem; }
-  .cr-score-chip { font-size:.8rem; padding:.12rem .4rem; }
-  .topbar-btn { width:38px; padding:.35rem 0; font-size:.7rem; text-align:center; }
+  .cr-topbar { gap:.25rem; padding:.45rem .35rem; }
+  .cr-timer { font-size:1.05rem; }
+  .cr-score-chip { font-size:.75rem; padding:.1rem .35rem; }
+  .topbar-btn { width:34px; padding:.35rem 0; font-size:.7rem; text-align:center; }
   #btn-v-lang { font-size:.65rem; }
+  /* On very narrow phones (e.g. iPhone SE) the row of 5 buttons + timer +
+     score + team name is the tightest line. Allow the team name to shrink
+     to zero width so the language button doesn't fall off the right edge. */
+  .team-name-cr { font-size:.85rem; }
+}
+@media (max-width:380px){
+  .cr-topbar { gap:.2rem; padding:.4rem .25rem; }
+  .topbar-btn { width:30px; font-size:.65rem; }
+  .cr-timer { font-size:.95rem; }
+  /* Hide the score chip on truly tiny screens — it's still visible inside
+     the mission view. The lang button must remain reachable. */
+  .cr-score-chip { display:none; }
 }
 
 /* ── Views ── */
 #view-mission { flex:1; min-height:0; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 1.5rem); }
-#view-chat { flex:1; min-height:0; display:none; flex-direction:column; }
-#view-chat .cr-chat-scroll { flex:1; overflow-y:auto; padding:.75rem; }
-#view-chat .chat-input-row { display:flex; gap:.5rem; padding:.75rem; border-top:1px solid var(--border);
-  background:var(--bg2); flex-shrink:0; }
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 1.5rem);
+  padding-left:max(.5rem, env(safe-area-inset-left,0px));
+  padding-right:max(.5rem, env(safe-area-inset-right,0px));
+  box-sizing:border-box; }
+@media (max-width:480px){
+  #view-mission { padding:.5rem .5rem calc(env(safe-area-inset-bottom,0px) + 1.5rem); }
+}
+/* While the team is frozen, give the mission tiles + popup a chilly look so
+   the state is obvious even when the overlay has been dismissed. The page
+   also reserves room for the persistent #cr-frozen-banner at the top. */
+body.is-frozen #view-mission, body.is-frozen #view-map { filter: hue-rotate(180deg) saturate(.8) brightness(.85); }
+body.is-frozen .cr-tile { background:#162a3a; border-color:#3a6f96; }
+body.is-frozen .cr-tile .name { color:#cfe9ff; }
+body.is-frozen .cr-tile .badges { color:#9fd6ff; }
+body.is-frozen .cr-tile.current { box-shadow:0 0 10px rgba(159,214,255,.25); border-color:#9fd6ff; }
+body.is-frozen .cr-tile::after {
+  content:'❄'; position:absolute; top:.4rem; right:.4rem; font-size:.9rem; color:#bce0ff; opacity:.65;
+}
+body.is-frozen { padding-top:38px; transition:padding-top .15s; }
+
+/* Fixed overlay so the chat input row is always anchored to the real
+   viewport bottom — Android Chrome's keyboard otherwise pushes a flex-based
+   input row off-screen, leaving the player with no chat box. */
+#view-chat { position:fixed; left:0; right:0; top:0; bottom:0; background:var(--bg);
+  display:none; flex-direction:column; overflow:hidden; z-index:1100; }
+#view-chat .cr-chat-scroll { flex:1; min-height:0; overflow-y:auto; padding:.75rem; }
+#view-chat .chat-input-row { display:flex; gap:.5rem;
+  padding:.75rem;
+  padding-bottom:max(.75rem, env(safe-area-inset-bottom, .75rem));
+  border-top:1px solid var(--border);
+  background:var(--bg2); flex:0 0 auto; flex-shrink:0; width:100%;
+  box-sizing:border-box; min-height:60px; }
+#view-chat .chat-input-row .input { flex:1; min-width:0; }
+#view-chat .chat-input-row .btn { flex-shrink:0; }
 #view-map     { flex:1; display:none; position:relative; }
 #cr-map       { width:100%; height:100%; }
 
@@ -152,13 +203,15 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
       <div class="cr-progress-bar"><div class="cr-progress-fill" id="cr-progress-fill"></div></div>
     </div>
     <!-- Special missions (always-available, parallel) — appear above the
-         linear roster. Hidden block when there are none. -->
+         linear roster. Hidden block when there are none.
+         Two equal columns; `minmax(0, 1fr)` lets each tile shrink so its
+         content can never spill out of the viewport edge. -->
     <div id="cr-special-section" style="display:none;margin-top:.5rem;">
       <div class="cr-section-label" id="cr-lbl-special" style="color:var(--orange);">⭐ Spezial-Missionen</div>
-      <div id="cr-special-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin-bottom:.75rem;"></div>
+      <div id="cr-special-tiles" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:.5rem;margin-bottom:.75rem;"></div>
     </div>
-    <!-- Linear mission tiles. Each tile = one mission; click to open full popup. -->
-    <div id="cr-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin-top:.5rem;"></div>
+    <!-- Linear mission tiles. Two columns, full-bleed-safe. -->
+    <div id="cr-tiles" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:.5rem;margin-top:.5rem;"></div>
     <!-- Capture a team -->
     <div id="cr-capture-section" style="margin-top:1rem;display:none;">
       <div class="cr-section-label">Team fotografieren (+5 Punkte)</div>
@@ -169,6 +222,77 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
     <div style="font-size:3rem;">🏁</div>
     <h2 style="color:var(--green);margin:.5rem 0;">Alle Missionen geschafft!</h2>
     <p id="cr-final-score" style="color:var(--orange);font-family:var(--mono);font-size:1.3rem;"></p>
+  </div>
+</div>
+
+<!-- SELFIE-AT-START OVERLAY. Blocks the rest of the UI until the team has
+     uploaded a selfie so the GM can identify them at a glance. -->
+<div id="cr-selfie-overlay"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:1700;
+         display:none;flex-direction:column;align-items:center;justify-content:center;
+         text-align:center;padding:1.25rem;">
+  <h2 style="color:var(--red-light);font-size:1.6rem;margin-bottom:.5rem;">📸 Team-Selfie</h2>
+  <p id="cr-selfie-help" style="color:var(--text-dim);max-width:340px;line-height:1.5;margin-bottom:1rem;">
+    Bevor das Spiel startet: Bitte ein Gruppenfoto eures Teams machen. Der Spielleiter sieht
+    dieses Foto, um euch zu erkennen.
+  </p>
+  <video id="cr-selfie-video" autoplay muted playsinline
+    style="width:100%;max-width:360px;max-height:50vh;background:#000;border-radius:var(--radius);object-fit:cover;"></video>
+  <img id="cr-selfie-preview" alt=""
+    style="display:none;width:100%;max-width:360px;max-height:50vh;background:#000;border-radius:var(--radius);object-fit:contain;">
+  <div id="cr-selfie-bar" style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-primary btn-lg" id="cr-selfie-shutter" onclick="crSelfieCapture()">📷 <span id="cr-selfie-shoot-lbl">Foto machen</span></button>
+    <button class="btn btn-ghost" id="cr-selfie-flip" onclick="crSelfieFlip()">🔄 Flip</button>
+  </div>
+  <div id="cr-selfie-bar-review" style="display:none;gap:.5rem;margin-top:1rem;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-ghost" onclick="crSelfieRetake()">↺ <span id="cr-selfie-retake-lbl">Erneut</span></button>
+    <button class="btn btn-success btn-lg" onclick="crSelfieUpload()" id="cr-selfie-upload-btn">✓ <span id="cr-selfie-upload-lbl">Hochladen & weiter</span></button>
+  </div>
+</div>
+
+<!-- FROZEN OVERLAY. Shown to a team that has just been frozen. The X button
+     lets them dismiss it so they can still browse missions while frozen;
+     the timer banner (below) stays visible until the freeze expires. -->
+<div id="cr-frozen-overlay"
+  style="position:fixed;inset:0;background:linear-gradient(rgba(0,40,90,.92),rgba(0,10,40,.97));z-index:1600;
+         display:none;flex-direction:column;align-items:center;justify-content:center;
+         text-align:center;padding:2rem;color:#cfe9ff;">
+  <button id="cr-frozen-close" onclick="crDismissFrozenOverlay()" type="button"
+    style="position:absolute;top:.75rem;right:.75rem;padding:.5rem .75rem;font-size:1rem;font-weight:700;
+           background:rgba(255,255,255,.08);border:1px solid #9fd6ff;color:#cfe9ff;
+           border-radius:var(--radius);cursor:pointer;">✕</button>
+  <div style="font-size:4rem;">❄️</div>
+  <h1 style="color:#9fd6ff;font-size:2.2rem;letter-spacing:.1em;margin:.5rem 0;">CAUGHT</h1>
+  <p id="cr-frozen-sub" style="max-width:340px;line-height:1.5;color:#bcd9ee;">Ein gegnerisches Team hat euch erwischt!</p>
+  <div id="cr-frozen-countdown" style="font-family:var(--mono);font-size:3rem;margin-top:1rem;color:#cfe9ff;">--:--</div>
+  <small id="cr-frozen-hint" style="color:#7faecf;margin-top:.5rem;">Schließen, um die Missionen zu sehen — abgeben ist aber gesperrt.</small>
+</div>
+
+<!-- FROZEN BANNER. Anchored to the top of the viewport while the freeze
+     is active. Persists after the player dismisses the overlay, so they
+     can browse missions but always see how long they're locked out. -->
+<div id="cr-frozen-banner"
+  style="position:fixed;top:0;left:0;right:0;z-index:1500;display:none;
+         padding:.5rem .75rem;background:linear-gradient(180deg,#0d3a59,#06243a);
+         color:#cfe9ff;border-bottom:2px solid #9fd6ff;
+         font-family:var(--body);font-size:.95rem;font-weight:700;
+         letter-spacing:.05em;text-align:center;
+         box-shadow:0 4px 18px rgba(0,80,160,.45);">
+  <span>❄️ FROZEN</span>
+  <span id="cr-frozen-banner-time" style="font-family:var(--mono);margin-left:.5rem;">--:--</span>
+</div>
+
+<!-- GM BROADCAST/CHAT POPUP — same UX as play.html so a broadcast surfaces
+     on whatever view the player is currently on. -->
+<div id="cr-msg-popup"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1400;
+         display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:var(--bg3);border:2px solid var(--red);border-radius:var(--radius);
+              padding:1.5rem;max-width:400px;width:100%;text-align:center;
+              box-shadow:0 0 40px rgba(212,43,43,.4);">
+    <h3 style="color:var(--red-light);margin-bottom:.75rem;font-size:1.4rem;">📨 Gamemaster</h3>
+    <p id="cr-msg-popup-text" style="color:var(--text);margin-bottom:1.25rem;line-height:1.6;"></p>
+    <button class="btn btn-primary btn-full" onclick="crClosePopup()">OK</button>
   </div>
 </div>
 
@@ -190,20 +314,36 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <style>
   .cr-tile {
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:.85rem .75rem; cursor:pointer; transition:all .15s; min-height:100px;
-    display:flex; flex-direction:column; gap:.3rem; position:relative;
+    padding:.85rem .8rem; cursor:pointer; transition:all .15s; min-height:128px;
+    display:flex; flex-direction:column; gap:.35rem;
+    min-width:0;            /* allow shrinking inside the 2-col grid track    */
+    overflow:hidden;        /* hard guard against any inner overflow          */
+    box-sizing:border-box;
   }
   .cr-tile:hover { border-color:var(--red-dim); }
   .cr-tile.current { border-color:var(--red); box-shadow:0 0 12px rgba(212,43,43,.3); }
   .cr-tile.pending { border-color:var(--orange); opacity:.9; }
   .cr-tile.done    { border-color:#006628; opacity:.85; }
   .cr-tile .num { font-family:var(--mono); font-size:.7rem; color:var(--text-muted); }
-  .cr-tile .name { font-weight:700; font-size:.95rem; line-height:1.2; }
-  .cr-tile .badges { font-size:.75rem; color:var(--orange); margin-top:auto; }
+  /* Long mission names clamp at 2 lines + ellipsis so the tile can't grow. */
+  .cr-tile .name {
+    font-weight:700; font-size:.95rem; line-height:1.25;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2;
+    -webkit-box-orient:vertical; word-break:break-word;
+  }
+  .cr-tile .badges {
+    font-size:.72rem; color:var(--orange); margin-top:auto;
+    overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+  }
+  /* Status pill sits on its own row at the very top of the tile so it can't
+     overlap the number, name, or badges. Block layout (no absolute position)
+     guarantees the rest of the tile flows below it. */
   .cr-tile .status-pill {
-    position:absolute; top:.4rem; right:.4rem;
+    align-self:flex-start;
+    display:inline-block;
     font-size:.62rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
-    padding:.1rem .4rem; border-radius:2px;
+    padding:.15rem .45rem; border-radius:2px;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .cr-tile.done    .status-pill { background:#003318; color:var(--green); }
   .cr-tile.pending .status-pill { background:#4a2000; color:var(--orange); }
@@ -235,7 +375,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <!-- RULES VIEW (full-screen overlay so it stays out of the keyboard's way) -->
 <div id="cr-view-rules" style="position:fixed;inset:0;background:var(--bg3);z-index:600;display:none;flex-direction:column;">
   <div class="cr-topbar">
-    <button class="topbar-btn" onclick="closeRulesView()">← <span id="cr-rules-back">Zurück</span></button>
+    <button class="topbar-btn" id="cr-rules-back-btn" onclick="closeRulesView()">← <span id="cr-rules-back">Zurück</span></button>
     <span id="cr-rules-title" style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;flex:1;text-align:center;">REGELN</span>
     <span style="width:60px;"></span>
   </div>
@@ -362,6 +502,9 @@ const T = {
         skip_mission:'Mission überspringen', skip_confirm:'Mission überspringen? Es gibt keine Punkte dafür.', skipped:'Übersprungen',
         special:'Spezial', special_missions:'Spezial-Missionen', available:'Verfügbar', cooldown_wait:'Bitte warten:',
         gps_hint:'GPS-Hinweis', chat_ph:'Nachricht an Spielleiter…', chat_send:'Senden', chat_back:'Zurück',
+        freeze_title:'Rival einfrieren', freeze_no_teams:'Keine anderen Teams.', freeze_pick_team:'Bitte ein Team wählen',
+        freeze_already:'bereits eingefroren', freeze_done:'Team eingefroren!', freeze_failed:'Einfrieren fehlgeschlagen',
+        frozen_toast:'Ihr wurdet gefangen genommen!',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
   en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
         searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
@@ -381,6 +524,9 @@ const T = {
         skip_mission:'Skip mission', skip_confirm:'Skip this mission? You will not get any points.', skipped:'Skipped',
         special:'Special', special_missions:'Special missions', available:'Available', cooldown_wait:'Please wait:',
         gps_hint:'GPS hint', chat_ph:'Message to Gamemaster…', chat_send:'Send', chat_back:'Back',
+        freeze_title:'Freeze a rival', freeze_no_teams:'No other teams.', freeze_pick_team:'Please pick a team',
+        freeze_already:'already frozen', freeze_done:'Team frozen!', freeze_failed:'Freeze failed',
+        frozen_toast:'You have been caught!',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
   fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
         searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
@@ -400,6 +546,9 @@ const T = {
         skip_mission:'Passer la mission', skip_confirm:'Passer cette mission ? Vous n\'aurez aucun point.', skipped:'Passée',
         special:'Spécial', special_missions:'Missions spéciales', available:'Disponible', cooldown_wait:'Veuillez attendre :',
         gps_hint:'Indice GPS', chat_ph:'Message au Gamemaster…', chat_send:'Envoyer', chat_back:'Retour',
+        freeze_title:'Geler une équipe', freeze_no_teams:'Aucune autre équipe.', freeze_pick_team:'Choisis une équipe',
+        freeze_already:'déjà gelée', freeze_done:'Équipe gelée !', freeze_failed:'Échec du gel',
+        frozen_toast:'Vous avez été attrapés !',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
   it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
         searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
@@ -419,6 +568,9 @@ const T = {
         skip_mission:'Salta missione', skip_confirm:'Saltare la missione? Non riceverai punti.', skipped:'Saltata',
         special:'Speciale', special_missions:'Missioni speciali', available:'Disponibile', cooldown_wait:'Attendi:',
         gps_hint:'Suggerimento GPS', chat_ph:'Messaggio al Gamemaster…', chat_send:'Invia', chat_back:'Indietro',
+        freeze_title:'Congela una rivale', freeze_no_teams:'Nessun\'altra squadra.', freeze_pick_team:'Scegli una squadra',
+        freeze_already:'già congelata', freeze_done:'Squadra congelata!', freeze_failed:'Congelamento fallito',
+        frozen_toast:'Siete stati catturati!',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
@@ -531,6 +683,26 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('cr-team-name-text').textContent = teamName;
   document.getElementById('btn-v-lang').textContent = lang.toUpperCase();
 
+  // Anchor <body> and the fixed chat overlay to the visual viewport so the
+  // Android Chrome soft keyboard doesn't push the chat input off-screen.
+  function fixCrViewportHeight(){
+    const vv = window.visualViewport;
+    const h  = vv ? vv.height : window.innerHeight;
+    document.body.style.height = h + 'px';
+    document.body.style.maxHeight = h + 'px';
+    const chat = document.getElementById('view-chat');
+    if(chat){
+      chat.style.height = h + 'px';
+      chat.style.top    = (vv ? vv.offsetTop : 0) + 'px';
+    }
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', fixCrViewportHeight);
+    window.visualViewport.addEventListener('scroll', fixCrViewportHeight);
+  }
+  window.addEventListener('resize', fixCrViewportHeight);
+  fixCrViewportHeight();
+
   socket = io({ reconnection:true });
   socket.on('connect', () => socket.emit('join_game', {gameId, teamId}));
   socket.on('timer_update', updateGameTimer);
@@ -544,6 +716,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   socket.on('cr_arrived',   showArrivedOverlay);
   socket.on('cr_finished',  onCrFinished);
   socket.on('game_ended',   () => { gameEnded=true; });
+  // GM froze us — show the blocking overlay with a countdown.
+  socket.on('team_frozen', ({until}) => {
+    crShowFrozen(until);
+    // Pop up an attention toast even if the player is on a different view.
+    toast('❄️ ' + (t('frozen_toast')||'Ihr wurdet gefangen genommen!'),'warning');
+  });
+  socket.on('team_thawed', () => { crHideFrozen(); });
   // GM accepted/rejected a CR media submission. On accept the server has
   // already advanced us via cr_next_mission/cr_finished; on reject we
   // unblock the action buttons so the player can try again.
@@ -569,6 +748,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   applyCrTranslations();
   getCrPlayerKey();
+  // Selfie-at-start gate (non-blocking for everything else — the rest of the
+  // init keeps running; the overlay just covers the UI until uploaded).
+  crEnsureSelfie().catch(()=>{});
+  // Hydrate the frozen overlay if we reloaded while a freeze is active.
+  fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json()).then(d => {
+    if(d && d.freeze && d.freeze.until_ms && d.freeze.until_ms > Date.now()){
+      crShowFrozen(d.freeze.until_ms);
+    }
+  }).catch(()=>{});
   await loadProgress();
   await loadRules();
   await loadCrChatHistory();
@@ -641,14 +829,148 @@ function crOnChatMessage(msg){
   const fromGm = msg.fromGm===1 || msg.fromGm===true;
   if(!fromGm) return;
   const box = document.getElementById('cr-chat-messages');
-  if(!box) return;
-  const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm"><div class="chat-meta">GM · ${time}</div>${esc(msg.content)}</div>`);
-  crScrollChat();
+  if(box){
+    const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm"><div class="chat-meta">GM · ${time}</div>${esc(msg.content)}</div>`);
+    crScrollChat();
+  }
+  // When the player isn't already in the chat view, surface the message as
+  // an overlay popup (same UX as the missions app) plus the orange dot.
   if(crActiveView !== 'chat'){
     const dot = document.getElementById('cr-chat-dot');
     if(dot) dot.style.display = 'block';
+    const popupTxt = document.getElementById('cr-msg-popup-text');
+    const popup    = document.getElementById('cr-msg-popup');
+    if(popupTxt && popup){
+      popupTxt.textContent = msg.content || '';
+      popup.style.display = 'flex';
+    }
   }
+}
+function crClosePopup(){
+  const p = document.getElementById('cr-msg-popup');
+  if(p) p.style.display = 'none';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Selfie-at-start flow. The overlay shows immediately on first load if the
+// team has no selfie yet; uploads through the dedicated /selfie route and
+// then unlocks the rest of the UI.
+// ─────────────────────────────────────────────────────────────────────────────
+let _selfieStream = null;
+let _selfieBlob   = null;
+let _selfieFront  = true;
+let _selfieDone   = false;
+
+async function _startSelfieCamera(){
+  try {
+    if(_selfieStream) _selfieStream.getTracks().forEach(t => t.stop());
+    _selfieStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode: _selfieFront ? 'user' : 'environment'}, audio:false,
+    });
+    document.getElementById('cr-selfie-video').srcObject = _selfieStream;
+  } catch(e){
+    toast('Kamera nicht verfügbar — bitte erlauben','error');
+  }
+}
+function crSelfieFlip(){ _selfieFront = !_selfieFront; _startSelfieCamera(); }
+function crSelfieCapture(){
+  const v = document.getElementById('cr-selfie-video');
+  const canvas = document.createElement('canvas');
+  canvas.width  = v.videoWidth || 720;
+  canvas.height = v.videoHeight || 720;
+  canvas.getContext('2d').drawImage(v, 0, 0);
+  canvas.toBlob(b => {
+    _selfieBlob = b;
+    document.getElementById('cr-selfie-preview').src = URL.createObjectURL(b);
+    document.getElementById('cr-selfie-preview').style.display = 'block';
+    v.style.display = 'none';
+    document.getElementById('cr-selfie-bar').style.display = 'none';
+    document.getElementById('cr-selfie-bar-review').style.display = 'flex';
+  }, 'image/jpeg', 0.88);
+}
+function crSelfieRetake(){
+  _selfieBlob = null;
+  document.getElementById('cr-selfie-preview').style.display = 'none';
+  document.getElementById('cr-selfie-video').style.display = 'block';
+  document.getElementById('cr-selfie-bar').style.display = 'flex';
+  document.getElementById('cr-selfie-bar-review').style.display = 'none';
+}
+async function crSelfieUpload(){
+  if(!_selfieBlob) return;
+  const btn = document.getElementById('cr-selfie-upload-btn');
+  btn.disabled = true;
+  const form = new FormData();
+  form.append('media', _selfieBlob, 'selfie.jpg');
+  try {
+    const r = await fetch(`/api/games/${gameId}/teams/${teamId}/selfie`, {method:'POST', body: form});
+    if(!r.ok) throw new Error(r.statusText);
+    _selfieDone = true;
+    if(_selfieStream){ _selfieStream.getTracks().forEach(t=>t.stop()); _selfieStream = null; }
+    document.getElementById('cr-selfie-overlay').style.display = 'none';
+  } catch(e){
+    toast('Selfie-Upload fehlgeschlagen — bitte erneut versuchen','error');
+    btn.disabled = false;
+  }
+}
+async function crEnsureSelfie(){
+  // Pull the team record once to see if a selfie is already on file.
+  try {
+    const data = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
+    if(data && data.selfie_path){ _selfieDone = true; return; }
+  } catch(e){}
+  document.getElementById('cr-selfie-overlay').style.display = 'flex';
+  await _startSelfieCamera();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Frozen state. The player gets:
+//   - a big "CAUGHT" overlay on the moment they are frozen (with an X to
+//     dismiss it so they can still look at the mission list);
+//   - a persistent banner at the top of the screen showing the remaining
+//     time, anchored above all views;
+//   - a "frozen" body class that re-skins the missions until the timer ends.
+// Server-side: every submit/upload route returns 423 while frozen, so the
+// player browsing the UI can't accidentally cheat.
+// ─────────────────────────────────────────────────────────────────────────────
+let _frozenUntilMs = 0;
+let _frozenTick    = null;
+function crIsFrozen(){ return _frozenUntilMs > Date.now(); }
+
+function crShowFrozen(untilMs){
+  _frozenUntilMs = Number(untilMs)||0;
+  if(!crIsFrozen()){ crHideFrozen(); return; }
+  document.body.classList.add('is-frozen');
+  const overlay = document.getElementById('cr-frozen-overlay');
+  const banner  = document.getElementById('cr-frozen-banner');
+  if(overlay) overlay.style.display = 'flex';
+  if(banner)  banner.style.display  = 'block';
+  if(_frozenTick) clearInterval(_frozenTick);
+  const cd = document.getElementById('cr-frozen-countdown');
+  const bt = document.getElementById('cr-frozen-banner-time');
+  const update = () => {
+    const rem = Math.max(0, Math.ceil((_frozenUntilMs - Date.now())/1000));
+    const txt = `${String(Math.floor(rem/60)).padStart(2,'0')}:${String(rem%60).padStart(2,'0')}`;
+    if(cd) cd.textContent = txt;
+    if(bt) bt.textContent = txt;
+    if(rem <= 0) crHideFrozen();
+  };
+  update();
+  _frozenTick = setInterval(update, 500);
+}
+// Close just the splash overlay — the banner + frozen visual stay in place.
+function crDismissFrozenOverlay(){
+  const overlay = document.getElementById('cr-frozen-overlay');
+  if(overlay) overlay.style.display = 'none';
+}
+function crHideFrozen(){
+  _frozenUntilMs = 0;
+  document.body.classList.remove('is-frozen');
+  const overlay = document.getElementById('cr-frozen-overlay');
+  const banner  = document.getElementById('cr-frozen-banner');
+  if(overlay) overlay.style.display = 'none';
+  if(banner)  banner.style.display  = 'none';
+  if(_frozenTick){ clearInterval(_frozenTick); _frozenTick = null; }
 }
 async function crSendChat(){
   const input = document.getElementById('cr-chat-input');
@@ -976,6 +1298,8 @@ function renderTiles(){
       m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
       m.has_answer?'❓':''
     ].filter(Boolean).join(' ');
+    // Status pill is now the first child (top of tile) — separate row so it
+    // never overlaps the title.
     return `<div class="cr-tile ${status}" onclick="openMissionPopup(${m.id})">
       <span class="status-pill">${pill}</span>
       <div class="num">${i+1} / ${allMissions.length}</div>

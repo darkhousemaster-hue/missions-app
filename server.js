@@ -368,7 +368,10 @@ app.post('/api/games/:gameId/teams', (req,res) => {
 app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   const team=db.getTeam(req.params.teamId);
   if(!team) return res.status(404).json({error:'Not found'});
-  res.json({...team, missions:db.getTeamMissions(req.params.teamId)});
+  // Include the current freeze (if any) so the player UI can decide whether
+  // to show the frozen overlay on reload.
+  const freeze = db.activeFreezeFor(req.params.gameId, Number(req.params.teamId));
+  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze});
 });
 app.get('/api/games/:gameId/rankings', (req,res) => res.json(db.getRankings(req.params.gameId)));
 
@@ -380,9 +383,64 @@ app.post('/api/games/:gameId/media/upload',
   }
 );
 
+// ── Team selfie (snapped at the start of the game) ────────────────────────────
+// One-shot upload — POST overwrites any previous selfie for the team.
+// The GM sees the latest selfie permanently in the dashboard.
+app.post('/api/games/:gameId/teams/:teamId/selfie',
+  upload.single('media'), (req,res) => {
+    const {gameId, teamId} = req.params;
+    if(!req.file) return res.status(400).json({error:'No file'});
+    const path = `${gameId}/${req.file.filename}`;
+    db.setTeamSelfie(Number(teamId), path);
+    io.to(`gm_${gameId}`).emit('team_selfie_updated', {teamId: Number(teamId), selfiePath: path});
+    res.json({success:true, selfiePath: path});
+  }
+);
+
+// ── Freeze ────────────────────────────────────────────────────────────────────
+// Initiated by the GM from a team's dashboard panel. The team whose panel is
+// open is the *freezer*; the GM picks the *frozen* target from the list.
+// Recording (freezer, frozen) lets the dashboard show which team froze whom
+// and enforces "each team can freeze each rival only once" via the UNIQUE
+// constraint on team_freezes(game_id, freezer_team_id, frozen_team_id).
+app.post('/api/games/:gameId/freeze', (req,res) => {
+  const {gameId} = req.params;
+  const {freezerTeamId, frozenTeamId, durationSeconds} = req.body;
+  if(!freezerTeamId || !frozenTeamId) return res.status(400).json({error:'Missing teams'});
+  if(Number(freezerTeamId) === Number(frozenTeamId)) return res.status(400).json({error:'self-freeze'});
+  const dur = Math.max(30, Math.min(60*60, Number(durationSeconds)||0)); // clamp 30s–60min
+  try {
+    const until = db.createTeamFreeze(gameId, Number(freezerTeamId), Number(frozenTeamId), dur);
+    io.to(`team_${Number(frozenTeamId)}`).emit('team_frozen', {until, freezerTeamId: Number(freezerTeamId)});
+    io.to(`gm_${gameId}`).emit('freezes_updated');
+    res.json({success:true, until});
+  } catch(e) {
+    // UNIQUE conflict → this freezer has already used their one-shot on the target.
+    if(String(e.message||'').includes('UNIQUE')) return res.status(409).json({error:'already-frozen'});
+    res.status(500).json({error: e.message || 'freeze-failed'});
+  }
+});
+// GM thaw — end the active freeze on this team early (regardless of freezer).
+app.post('/api/games/:gameId/thaw', (req,res) => {
+  const {frozenTeamId} = req.body;
+  if(!frozenTeamId) return res.status(400).json({error:'Missing team'});
+  db.expireActiveFreezesForTeam(req.params.gameId, Number(frozenTeamId));
+  io.to(`team_${Number(frozenTeamId)}`).emit('team_thawed');
+  io.to(`gm_${req.params.gameId}`).emit('freezes_updated');
+  res.json({success:true});
+});
+app.get('/api/games/:gameId/freezes', (req,res) => {
+  // Full log for the GM dashboard (incl. expired rows).
+  res.json(db.listFreezesForGame(req.params.gameId));
+});
+
 app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
   upload.single('media'), (req,res) => {
     const {gameId,teamId,missionId}=req.params;
+    // Server-side anti-cheat: a frozen team cannot submit anything.
+    if(db.isTeamFrozen(gameId, Number(teamId))){
+      return res.status(423).json({error:'frozen'});
+    }
     if(!req.file) return res.status(400).json({error:'No file'});
     const mediaPath=`${gameId}/${req.file.filename}`;
     db.submitMission({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
@@ -640,7 +698,8 @@ app.get('/api/games/:id/cr', (req,res) => {
   const arrivals = db.listCrArrivalsForGame(req.params.id);
   const missionProgress = db.listCrMissionProgressForGame(req.params.id);
   const specialProgress = db.listCrSpecialProgressForGame(req.params.id);
-  res.json({active:true, crMode, missions: missionsWithHints, progress, missionProgress, gps, captures, submissions, arrivals, specialProgress});
+  const freezes  = db.listFreezesForGame(req.params.id);
+  res.json({active:true, crMode, missions: missionsWithHints, progress, missionProgress, gps, captures, submissions, arrivals, specialProgress, freezes});
 });
 
 // Pending review counts per team (regular + CR), so the dashboard's
@@ -836,6 +895,8 @@ function advanceCrTeam(gameId, teamId, mission, missionIndex, score) {
 app.post('/api/games/:gameId/cr/complete', (req,res) => {
   const {teamId, missionId, mediaPath, playerKey} = req.body;
   const gameId = req.params.gameId;
+  // Frozen teams cannot complete anything until their freeze expires.
+  if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
   const crMode = db.getGameCrMode(gameId);
   if(!crMode) return res.status(400).json({error:'No CityRush mode'});
   // Linear sequence only — special missions are completed via their own route.
@@ -1004,6 +1065,7 @@ app.post('/api/games/:gameId/cr/arrival', (req,res) => {
 // Skip current CR mission — forfeits its points, advances the team.
 app.post('/api/games/:gameId/cr/skip', (req,res) => {
   const {teamId, missionId} = req.body;
+  if(db.isTeamFrozen(req.params.gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
   const crMode = db.getGameCrMode(req.params.gameId);
   if(!crMode) return res.status(400).json({error:'No CityRush mode'});
   const linear = db.getLinearCrMissions(crMode.id);
@@ -1026,6 +1088,7 @@ app.post('/api/games/:gameId/cr/skip', (req,res) => {
 app.post('/api/games/:gameId/cr/special/complete', (req,res) => {
   const {teamId, missionId, mediaPath, playerKey} = req.body;
   const gameId = req.params.gameId;
+  if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
   const mission = db.getCrMission(missionId);
   if(!mission || !mission.is_special) return res.status(400).json({error:'Not a special mission'});
   const prog = db.getCrSpecialProgress(gameId, teamId, missionId);
