@@ -38,8 +38,12 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   padding:.5rem .9rem !important;
   font-size:1.05rem !important;
   display:inline-flex; align-items:center; gap:.3rem;
+  line-height:1;          /* keep both glyphs on the same visual centre */
 }
-#cr-chat-back-btn > *, #cr-rules-back-btn > * { font-size:inherit; }
+#cr-chat-back-btn > *, #cr-rules-back-btn > * { font-size:inherit; line-height:1; }
+/* The "←" Unicode glyph sits a touch below the text baseline in most fonts.
+   Bump it back up so it visually sits on the centre of "ZURÜCK". */
+.back-arrow { display:inline-block; line-height:1; transform:translateY(-1px); }
 @media (max-width:480px){
   .cr-topbar { gap:.25rem; padding:.45rem .35rem; }
   .cr-timer { font-size:1.05rem; }
@@ -325,7 +329,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 <!-- CHAT VIEW -->
 <div id="view-chat">
   <div class="cr-topbar" style="border-bottom:1px solid var(--border);">
-    <button class="topbar-btn" type="button" onclick="crShowView('mission')" id="cr-chat-back-btn">←</button>
+    <button class="topbar-btn" type="button" onclick="crShowView('mission')" id="cr-chat-back-btn"><span class="back-arrow">←</span></button>
     <span style="font-family:var(--heading);font-size:1.1rem;letter-spacing:.08em;flex:1;text-align:center;">💬 GM</span>
     <span style="width:48px;"></span>
   </div>
@@ -401,7 +405,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 <!-- RULES VIEW (full-screen overlay so it stays out of the keyboard's way) -->
 <div id="cr-view-rules" style="position:fixed;inset:0;background:var(--bg3);z-index:600;display:none;flex-direction:column;">
   <div class="cr-topbar">
-    <button class="topbar-btn" id="cr-rules-back-btn" onclick="closeRulesView()">← <span id="cr-rules-back">Zurück</span></button>
+    <button class="topbar-btn" id="cr-rules-back-btn" onclick="closeRulesView()"><span class="back-arrow">←</span> <span id="cr-rules-back">Zurück</span></button>
     <span id="cr-rules-title" style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;flex:1;text-align:center;">REGELN</span>
     <span style="width:60px;"></span>
   </div>
@@ -555,6 +559,7 @@ const T = {
         selfie_shoot:'Foto machen', selfie_retake:'Erneut',
         selfie_upload:'Hochladen & weiter',
         answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
+        broadcast:'Rundruf',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
   en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
         searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
@@ -599,6 +604,7 @@ const T = {
         selfie_shoot:'Take photo', selfie_retake:'Retake',
         selfie_upload:'Upload & continue',
         answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
+        broadcast:'Broadcast',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
   fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
         searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
@@ -643,6 +649,7 @@ const T = {
         selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
         selfie_upload:'Envoyer & continuer',
         answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
+        broadcast:'Annonce',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
   it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
         searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
@@ -687,6 +694,7 @@ const T = {
         selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
         selfie_upload:'Carica & continua',
         answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
+        broadcast:'Annuncio',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
@@ -796,8 +804,9 @@ function applyCrTranslations(){
   if(ci) ci.placeholder = t('chat_ph');
   const cs = document.getElementById('cr-chat-send');
   if(cs) cs.textContent = t('chat_send');
-  const cb = document.getElementById('cr-chat-back-btn');
-  if(cb) cb.textContent = '← ' + (t('chat_back').replace(/^←\s*/, '') || '');
+  // cr-chat-back-btn shows only the back-arrow glyph (no label) — leaving its
+  // markup alone preserves the <span class="back-arrow"> wrapper that centres
+  // the arrow vertically against neighbouring text.
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -939,10 +948,20 @@ async function loadCrChatHistory(){
     crScrollChat();
   } catch(e){}
 }
+// `team_id`/`teamId` is NULL on broadcast messages (sent to /game_<id>) and a
+// number on team-targeted DMs. Tag broadcasts so the player can tell at a
+// glance whether the GM addressed them directly or sent to everyone.
+function _crIsBroadcast(m){
+  const tid = m.teamId !== undefined ? m.teamId : m.team_id;
+  return tid == null;
+}
 function crChatBubble(m){
   const fromGm = m.from_gm===1 || m.from_gm===true;
+  const broadcast = fromGm && _crIsBroadcast(m);
   const time = new Date(m.created_at||m.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}"><div class="chat-meta">${fromGm?'GM':(esc(teamName)||'Team')} · ${time}</div>${esc(m.content)}</div>`;
+  const sender = fromGm ? 'GM' : (esc(teamName)||'Team');
+  const tag = broadcast ? '<span class="chat-tag chat-tag-broadcast">📢 ' + (t('broadcast')||'Broadcast') + '</span>' : '';
+  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}${broadcast?' broadcast':''}"><div class="chat-meta">${sender} · ${time} ${tag}</div>${esc(m.content)}</div>`;
 }
 function crScrollChat(){
   const box = document.getElementById('cr-chat-messages');
@@ -955,7 +974,9 @@ function crOnChatMessage(msg){
   const box = document.getElementById('cr-chat-messages');
   if(box){
     const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm"><div class="chat-meta">GM · ${time}</div>${esc(msg.content)}</div>`);
+    const broadcast = _crIsBroadcast(msg);
+    const tag = broadcast ? '<span class="chat-tag chat-tag-broadcast">📢 ' + (t('broadcast')||'Broadcast') + '</span>' : '';
+    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm${broadcast?' broadcast':''}"><div class="chat-meta">GM · ${time} ${tag}</div>${esc(msg.content)}</div>`);
     crScrollChat();
   }
   // When the player isn't already in the chat view, surface the message as

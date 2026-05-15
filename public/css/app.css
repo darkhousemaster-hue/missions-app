@@ -103,6 +103,13 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
 .chat-bubble.from-gm{background:var(--red-dim);color:#fff;align-self:flex-end;border-bottom-right-radius:2px;}
 .chat-bubble.from-player{background:var(--surface2);color:var(--text);align-self:flex-start;border-bottom-left-radius:2px;}
 .chat-bubble .chat-meta{font-size:.7rem;color:rgba(255,255,255,.5);margin-bottom:.1rem;}
+/* Broadcast tag inside the chat-meta row — small chip so the player can tell
+   a "to everyone" message apart from a direct team-targeted one. */
+.chat-bubble.broadcast{border-left:3px solid var(--orange);}
+.chat-tag{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;padding:.05rem .4rem;border-radius:2px;margin-left:.25rem;
+  vertical-align:middle;}
+.chat-tag-broadcast{background:rgba(255,107,0,.18);color:var(--orange);border:1px solid rgba(255,107,0,.45);}
 .chat-input-row{display:flex;gap:.5rem;padding:.75rem;border-top:1px solid var(--border);}
 
 /* Rankings */
