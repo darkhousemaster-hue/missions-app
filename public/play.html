@@ -302,6 +302,12 @@ const T = {
     upload:'✓ Hochladen', retake:'↺ Neu aufnehmen', cancel:'✕ Abbrechen',
     awaiting:'⏳ Wird geprüft',
     gallery_upload:'Aus Galerie hochladen',
+    mission_accepted:'✓ Mission angenommen!',
+    no_mic:'Mikrofon nicht verfügbar – kein Ton',
+    cam_denied:'Kamerazugriff verweigert',
+    capture_failed:'Aufnahme nicht möglich:',
+    uploading_review:'Hochgeladen! Wird geprüft…',
+    upload_failed:'Upload fehlgeschlagen',
   },
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
@@ -315,6 +321,12 @@ const T = {
     upload:'✓ Upload', retake:'↺ Retake', cancel:'✕ Cancel',
     awaiting:'⏳ Awaiting review',
     gallery_upload:'Upload from gallery',
+    mission_accepted:'✓ Mission accepted!',
+    no_mic:'Microphone unavailable – no audio',
+    cam_denied:'Camera access denied',
+    capture_failed:'Recording failed:',
+    uploading_review:'Uploaded! Awaiting review…',
+    upload_failed:'Upload failed',
   },
   fr: {
     photo:'Mission photo', video:'Mission vidéo', indoor:'Possible en intérieur',
@@ -327,6 +339,12 @@ const T = {
     awaiting:'⏳ En attente de validation',
     description:'Description', task:'Tâche',
     gallery_upload:'Charger depuis la galerie',
+    mission_accepted:'✓ Mission acceptée !',
+    no_mic:'Micro indisponible – pas de son',
+    cam_denied:'Accès caméra refusé',
+    capture_failed:'Échec de l\'enregistrement :',
+    uploading_review:'Envoyé ! En attente de validation…',
+    upload_failed:'Échec de l\'envoi',
   },
   it: {
     photo:'Missione foto', video:'Missione video', indoor:'Possibile anche al chiuso',
@@ -339,6 +357,12 @@ const T = {
     awaiting:'⏳ In attesa di revisione',
     description:'Descrizione', task:'Compito',
     gallery_upload:'Carica dalla galleria',
+    mission_accepted:'✓ Missione accettata!',
+    no_mic:'Microfono non disponibile – nessun audio',
+    cam_denied:'Accesso fotocamera negato',
+    capture_failed:'Registrazione non riuscita:',
+    uploading_review:'Caricato! In attesa di revisione…',
+    upload_failed:'Caricamento fallito',
   }
 };
 const LANGS = ['de','en','fr','it'];
@@ -561,7 +585,7 @@ function onAccepted(missionId) {
   card.className = 'p-mission-card accepted';
   const footer = document.getElementById(`mf-${missionId}`);
   if (footer) footer.innerHTML = `<span class="pill pill-accepted">${t('accepted')}</span>`;
-  toast('✓ Mission angenommen!', 'success');
+  toast(t('mission_accepted')||'✓ Mission angenommen!', 'success');
   refreshTeamScore();
 }
 
@@ -608,9 +632,9 @@ async function startStream() {
     } catch(e) {
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
-        toast('Mikrofon nicht verfügbar – kein Ton', 'warning');
+        toast(t('no_mic')||'Mikrofon nicht verfügbar – kein Ton', 'warning');
       } catch(e2) {
-        toast('Kamerazugriff verweigert', 'error');
+        toast(t('cam_denied')||'Kamerazugriff verweigert', 'error');
         closeCamera();
         return;
       }
@@ -619,7 +643,7 @@ async function startStream() {
     try {
       cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
     } catch(e) {
-      toast('Kamerazugriff verweigert', 'error');
+      toast(t('cam_denied')||'Kamerazugriff verweigert', 'error');
       closeCamera();
       return;
     }
@@ -660,7 +684,7 @@ async function doCapture() {
         document.getElementById('rec-dot').style.display = 'block';
         document.getElementById('shutter-icon').textContent = '⏹';
       } catch(e) {
-        toast('Aufnahme nicht möglich: ' + e.message, 'error');
+        toast((t('capture_failed')||'Aufnahme nicht möglich:') + ' ' + e.message, 'error');
       }
     }
   } else {
@@ -714,7 +738,7 @@ async function doUpload() {
   xhr.onload = () => {
     if (ub) ub.style.display = 'none';
     if (xhr.status === 200) {
-      toast('Hochgeladen! Wird geprüft…', 'success');
+      toast(t('uploading_review')||'Hochgeladen! Wird geprüft…', 'success');
       // Update card to pending with thumbnail
       const card = document.getElementById(`mc-${currentMissionId}`);
       if (card) card.className = 'p-mission-card pending';
@@ -727,10 +751,10 @@ async function doUpload() {
         footer.innerHTML = `<span class="pill pill-pending">${t('pending')}</span>${thumbHtml}`;
       }
     } else {
-      toast('Upload fehlgeschlagen', 'error');
+      toast(t('upload_failed')||'Upload fehlgeschlagen', 'error');
     }
   };
-  xhr.onerror = () => { if(ub) ub.style.display='none'; toast('Upload fehlgeschlagen','error'); };
+  xhr.onerror = () => { if(ub) ub.style.display='none'; toast(t('upload_failed')||'Upload fehlgeschlagen','error'); };
   xhr.open('POST', `/api/games/${gameId}/teams/${teamId}/missions/${currentMissionId}/upload`);
   xhr.send(form);
 }
@@ -815,7 +839,7 @@ async function uploadFromGallery(event, missionId, mediaType) {
   xhr.onload = () => {
     if(ub) ub.style.display = 'none';
     if(xhr.status === 200){
-      toast('Hochgeladen! Wird geprüft…', 'success');
+      toast(t('uploading_review')||'Hochgeladen! Wird geprüft…', 'success');
       const card = document.getElementById(`mc-${missionId}`);
       if(card) card.className = 'p-mission-card pending';
       const footer = document.getElementById(`mf-${missionId}`);
@@ -827,9 +851,9 @@ async function uploadFromGallery(event, missionId, mediaType) {
           : `<img class="sub-thumb" src="${src}" alt="thumb">`;
         footer.innerHTML = `<span class="pill pill-pending">${t('pending')}</span>${thumb}`;
       }
-    } else { toast('Upload fehlgeschlagen', 'error'); }
+    } else { toast(t('upload_failed')||'Upload fehlgeschlagen', 'error'); }
   };
-  xhr.onerror = () => { if(ub) ub.style.display='none'; toast('Upload fehlgeschlagen','error'); };
+  xhr.onerror = () => { if(ub) ub.style.display='none'; toast(t('upload_failed')||'Upload fehlgeschlagen','error'); };
   xhr.open('POST', `/api/games/${gameId}/teams/${teamId}/missions/${missionId}/upload`);
   xhr.send(form);
 }

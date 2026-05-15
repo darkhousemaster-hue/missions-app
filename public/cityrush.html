@@ -73,14 +73,36 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
    the state is obvious even when the overlay has been dismissed. The page
    also reserves room for the persistent #cr-frozen-banner at the top. */
 body.is-frozen #view-mission, body.is-frozen #view-map { filter: hue-rotate(180deg) saturate(.8) brightness(.85); }
-body.is-frozen .cr-tile { background:#162a3a; border-color:#3a6f96; }
+body.is-frozen .cr-tile { background-color:#162a3a; border-color:#3a6f96;
+  /* Inline SVG row of icicles dripping from the top edge of each tile. */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='14' viewBox='0 0 44 14'><polygon points='2,0 9,0 5.5,12' fill='%23cfe9ff' opacity='.95'/><polygon points='15,0 22,0 18.5,9' fill='%23a3cce8' opacity='.9'/><polygon points='28,0 35,0 31.5,13' fill='%23cfe9ff' opacity='.95'/><polygon points='41,0 47,0 44,8' fill='%23a3cce8' opacity='.9'/></svg>");
+  background-repeat: repeat-x;
+  background-position: top left;
+  background-size: 44px 14px;
+  padding-top: 1.4rem;
+}
 body.is-frozen .cr-tile .name { color:#cfe9ff; }
 body.is-frozen .cr-tile .badges { color:#9fd6ff; }
 body.is-frozen .cr-tile.current { box-shadow:0 0 10px rgba(159,214,255,.25); border-color:#9fd6ff; }
+body.is-frozen .cr-tile .status-pill { margin-top:.2rem; }   /* sit clear of the icicles row */
 body.is-frozen .cr-tile::after {
-  content:'❄'; position:absolute; top:.4rem; right:.4rem; font-size:.9rem; color:#bce0ff; opacity:.65;
+  content:'❄'; position:absolute; top:1rem; right:.4rem; font-size:.9rem; color:#bce0ff; opacity:.65;
 }
 body.is-frozen { padding-top:38px; transition:padding-top .15s; }
+
+/* Locked buttons inside the mission popup while a freeze is active. Frosty
+   blue so the state is unmistakable; pointer-events disabled so even taps
+   on a label-wrapped <input type="file"> can't open the file picker. */
+.cr-frozen-btn {
+  background:#3a6f96 !important;
+  color:#cfe9ff !important;
+  border-color:#9fd6ff !important;
+  box-shadow: 0 0 0 1px #2a5a78 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+  opacity:1 !important;
+}
+.cr-frozen-btn input[type="file"] { pointer-events:none; }
 
 /* Fixed overlay so the chat input row is always anchored to the real
    viewport bottom — Android Chrome's keyboard otherwise pushes a flex-based
@@ -220,7 +242,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
   </div>
   <div id="cr-finished-wrap" style="display:none;text-align:center;padding:2rem;">
     <div style="font-size:3rem;">🏁</div>
-    <h2 style="color:var(--green);margin:.5rem 0;">Alle Missionen geschafft!</h2>
+    <h2 id="cr-finished-title" style="color:var(--green);margin:.5rem 0;">Alle Missionen geschafft!</h2>
     <p id="cr-final-score" style="color:var(--orange);font-family:var(--mono);font-size:1.3rem;"></p>
   </div>
 </div>
@@ -231,7 +253,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
   style="position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:1700;
          display:none;flex-direction:column;align-items:center;justify-content:center;
          text-align:center;padding:1.25rem;">
-  <h2 style="color:var(--red-light);font-size:1.6rem;margin-bottom:.5rem;">📸 Team-Selfie</h2>
+  <h2 id="cr-selfie-title" style="color:var(--red-light);font-size:1.6rem;margin-bottom:.5rem;">📸 Team-Selfie</h2>
   <p id="cr-selfie-help" style="color:var(--text-dim);max-width:340px;line-height:1.5;margin-bottom:1rem;">
     Bevor das Spiel startet: Bitte ein Gruppenfoto eures Teams machen. Der Spielleiter sieht
     dieses Foto, um euch zu erkennen.
@@ -271,8 +293,12 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 <!-- FROZEN BANNER. Anchored to the top of the viewport while the freeze
      is active. Persists after the player dismisses the overlay, so they
      can browse missions but always see how long they're locked out. -->
+<!-- Banner z-index intentionally LOW (590): high enough to sit above the
+     mission/map view (which has no stacking context), low enough to be
+     hidden behind the chat overlay (z:1100) and rules overlay (z:600) so
+     it can't block their back buttons. -->
 <div id="cr-frozen-banner"
-  style="position:fixed;top:0;left:0;right:0;z-index:1500;display:none;
+  style="position:fixed;top:0;left:0;right:0;z-index:590;display:none;
          padding:.5rem .75rem;background:linear-gradient(180deg,#0d3a59,#06243a);
          color:#cfe9ff;border-bottom:2px solid #9fd6ff;
          font-family:var(--body);font-size:.95rem;font-weight:700;
@@ -505,6 +531,30 @@ const T = {
         freeze_title:'Rival einfrieren', freeze_no_teams:'Keine anderen Teams.', freeze_pick_team:'Bitte ein Team wählen',
         freeze_already:'bereits eingefroren', freeze_done:'Team eingefroren!', freeze_failed:'Einfrieren fehlgeschlagen',
         frozen_toast:'Ihr wurdet gefangen genommen!',
+        frozen_banner:'EINGEFROREN', caught_title:'GEFANGEN',
+        caught_sub:'Ein gegnerisches Team hat euch erwischt!',
+        caught_hint:'Schließen, um die Missionen zu sehen — abgeben ist aber gesperrt.',
+        frozen_locked:'Aktion gesperrt — Team eingefroren',
+        // Toasts and inline UI strings
+        all_done:'Alle Missionen geschafft!', total:'Total',
+        no_camera:'Kamera nicht verfügbar — bitte erlauben',
+        no_mic:'Mikrofon nicht verfügbar – kein Ton',
+        capture_failed:'Aufnahme nicht möglich:',
+        upload_failed:'Upload fehlgeschlagen', upload_failed_net:'Upload fehlgeschlagen — Netzwerk/Verbindung',
+        selfie_upload_failed:'Selfie-Upload fehlgeschlagen — bitte erneut versuchen',
+        chat_send_failed:'Chat senden fehlgeschlagen',
+        no_hints_left:'Keine Hinweise mehr',
+        no_mission_picked:'Keine Mission gewählt',
+        no_gps_signal:'GPS nicht verfügbar',
+        capture_team_msg:'Foto gesendet! +5 Punkte möglich',
+        upload_pending_review:'Hochgeladen — wird vom Spielleiter geprüft…',
+        right_answer:'✓ Richtig!',
+        // Selfie overlay
+        selfie_title:'Team-Selfie',
+        selfie_help:'Bevor das Spiel startet: Bitte ein Gruppenfoto eures Teams machen. Der Spielleiter sieht dieses Foto, um euch zu erkennen.',
+        selfie_shoot:'Foto machen', selfie_retake:'Erneut',
+        selfie_upload:'Hochladen & weiter',
+        answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
   en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
         searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
@@ -527,6 +577,28 @@ const T = {
         freeze_title:'Freeze a rival', freeze_no_teams:'No other teams.', freeze_pick_team:'Please pick a team',
         freeze_already:'already frozen', freeze_done:'Team frozen!', freeze_failed:'Freeze failed',
         frozen_toast:'You have been caught!',
+        frozen_banner:'FROZEN', caught_title:'CAUGHT',
+        caught_sub:'A rival team caught you!',
+        caught_hint:'Close to browse the missions — submitting is locked though.',
+        frozen_locked:'Locked — your team is frozen',
+        all_done:'All missions complete!', total:'Total',
+        no_camera:'Camera unavailable — please grant permission',
+        no_mic:'Microphone unavailable – no audio',
+        capture_failed:'Recording failed:',
+        upload_failed:'Upload failed', upload_failed_net:'Upload failed — network/connection',
+        selfie_upload_failed:'Selfie upload failed — please try again',
+        chat_send_failed:'Couldn\'t send chat',
+        no_hints_left:'No more hints',
+        no_mission_picked:'No mission selected',
+        no_gps_signal:'GPS unavailable',
+        capture_team_msg:'Photo sent! +5 points possible',
+        upload_pending_review:'Uploaded — awaiting Gamemaster review…',
+        right_answer:'✓ Correct!',
+        selfie_title:'Team selfie',
+        selfie_help:'Before the game starts: please take a group photo of your team. The Gamemaster sees this photo to identify you.',
+        selfie_shoot:'Take photo', selfie_retake:'Retake',
+        selfie_upload:'Upload & continue',
+        answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
   fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
         searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
@@ -549,6 +621,28 @@ const T = {
         freeze_title:'Geler une équipe', freeze_no_teams:'Aucune autre équipe.', freeze_pick_team:'Choisis une équipe',
         freeze_already:'déjà gelée', freeze_done:'Équipe gelée !', freeze_failed:'Échec du gel',
         frozen_toast:'Vous avez été attrapés !',
+        frozen_banner:'GELÉS', caught_title:'ATTRAPÉS',
+        caught_sub:'Une équipe rivale vous a attrapés !',
+        caught_hint:'Fermez pour voir les missions — l\'envoi reste bloqué.',
+        frozen_locked:'Verrouillé — votre équipe est gelée',
+        all_done:'Toutes les missions terminées !', total:'Total',
+        no_camera:'Caméra indisponible — autorisez l\'accès',
+        no_mic:'Micro indisponible – pas de son',
+        capture_failed:'Échec de l\'enregistrement :',
+        upload_failed:'Échec de l\'envoi', upload_failed_net:'Échec de l\'envoi — réseau/connexion',
+        selfie_upload_failed:'Échec du selfie — réessayez',
+        chat_send_failed:'Impossible d\'envoyer le message',
+        no_hints_left:'Plus d\'indices',
+        no_mission_picked:'Aucune mission choisie',
+        no_gps_signal:'GPS indisponible',
+        capture_team_msg:'Photo envoyée ! +5 points possibles',
+        upload_pending_review:'Envoyé — en attente de validation du Gamemaster…',
+        right_answer:'✓ Correct !',
+        selfie_title:'Selfie d\'équipe',
+        selfie_help:'Avant le début : prenez une photo de groupe de votre équipe. Le Gamemaster s\'en sert pour vous reconnaître.',
+        selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
+        selfie_upload:'Envoyer & continuer',
+        answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
   it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
         searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
@@ -571,6 +665,28 @@ const T = {
         freeze_title:'Congela una rivale', freeze_no_teams:'Nessun\'altra squadra.', freeze_pick_team:'Scegli una squadra',
         freeze_already:'già congelata', freeze_done:'Squadra congelata!', freeze_failed:'Congelamento fallito',
         frozen_toast:'Siete stati catturati!',
+        frozen_banner:'CONGELATI', caught_title:'CATTURATI',
+        caught_sub:'Una squadra rivale vi ha catturati!',
+        caught_hint:'Chiudi per vedere le missioni — l\'invio è comunque bloccato.',
+        frozen_locked:'Bloccato — la squadra è congelata',
+        all_done:'Tutte le missioni completate!', total:'Totale',
+        no_camera:'Fotocamera non disponibile — concedi i permessi',
+        no_mic:'Microfono non disponibile – nessun audio',
+        capture_failed:'Registrazione non riuscita:',
+        upload_failed:'Caricamento fallito', upload_failed_net:'Caricamento fallito — rete/connessione',
+        selfie_upload_failed:'Caricamento selfie non riuscito — riprova',
+        chat_send_failed:'Impossibile inviare il messaggio',
+        no_hints_left:'Nessun altro suggerimento',
+        no_mission_picked:'Nessuna missione selezionata',
+        no_gps_signal:'GPS non disponibile',
+        capture_team_msg:'Foto inviata! +5 punti possibili',
+        upload_pending_review:'Caricato — in attesa della revisione del Gamemaster…',
+        right_answer:'✓ Corretto!',
+        selfie_title:'Selfie della squadra',
+        selfie_help:'Prima dell\'inizio: scattate una foto di gruppo della vostra squadra. Il Gamemaster la usa per riconoscervi.',
+        selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
+        selfie_upload:'Carica & continua',
+        answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
@@ -668,6 +784,14 @@ function applyCrTranslations(){
   set('cr-rules-back', t('back').replace(/^←\s*/,''));
   set('cr-rules-title', t('rules'));
   set('cr-popup-close', t('back'));
+  // Game-finished screen
+  set('cr-finished-title', t('all_done'));
+  // Selfie overlay labels (id'd so we don't lose translations on language switch)
+  set('cr-selfie-title', '📸 ' + (t('selfie_title')||'Team-Selfie'));
+  set('cr-selfie-help',  t('selfie_help'));
+  set('cr-selfie-shoot-lbl',  t('selfie_shoot'));
+  set('cr-selfie-retake-lbl', t('selfie_retake'));
+  set('cr-selfie-upload-lbl', t('selfie_upload'));
   const ci = document.getElementById('cr-chat-input');
   if(ci) ci.placeholder = t('chat_ph');
   const cs = document.getElementById('cr-chat-send');
@@ -870,7 +994,7 @@ async function _startSelfieCamera(){
     });
     document.getElementById('cr-selfie-video').srcObject = _selfieStream;
   } catch(e){
-    toast('Kamera nicht verfügbar — bitte erlauben','error');
+    toast(t('no_camera')||'Kamera nicht verfügbar — bitte erlauben','error');
   }
 }
 function crSelfieFlip(){ _selfieFront = !_selfieFront; _startSelfieCamera(); }
@@ -909,7 +1033,7 @@ async function crSelfieUpload(){
     if(_selfieStream){ _selfieStream.getTracks().forEach(t=>t.stop()); _selfieStream = null; }
     document.getElementById('cr-selfie-overlay').style.display = 'none';
   } catch(e){
-    toast('Selfie-Upload fehlgeschlagen — bitte erneut versuchen','error');
+    toast(t('selfie_upload_failed')||'Selfie-Upload fehlgeschlagen — bitte erneut versuchen','error');
     btn.disabled = false;
   }
 }
@@ -943,6 +1067,16 @@ function crShowFrozen(untilMs){
   document.body.classList.add('is-frozen');
   const overlay = document.getElementById('cr-frozen-overlay');
   const banner  = document.getElementById('cr-frozen-banner');
+  // Translate the overlay heading/help text every time we (re)show in case
+  // the player switched language since the last freeze.
+  const cap = document.querySelector('#cr-frozen-overlay h1');
+  if(cap) cap.textContent = t('caught_title') || 'CAUGHT';
+  const sub = document.getElementById('cr-frozen-sub');
+  if(sub) sub.textContent = t('caught_sub') || 'Ein gegnerisches Team hat euch erwischt!';
+  const hint = document.getElementById('cr-frozen-hint');
+  if(hint) hint.textContent = t('caught_hint') || 'Schließen, um die Missionen zu sehen — abgeben ist aber gesperrt.';
+  const bannerLbl = document.querySelector('#cr-frozen-banner span:first-child');
+  if(bannerLbl) bannerLbl.textContent = '❄️ ' + (t('frozen_banner') || 'FROZEN');
   if(overlay) overlay.style.display = 'flex';
   if(banner)  banner.style.display  = 'block';
   if(_frozenTick) clearInterval(_frozenTick);
@@ -957,6 +1091,11 @@ function crShowFrozen(untilMs){
   };
   update();
   _frozenTick = setInterval(update, 500);
+  // If a mission popup is currently open, repaint it so the lock kicks in.
+  if(popupMissionId != null){
+    if(specialMissions.find(m => m.id === popupMissionId)) refreshSpecialPopup();
+    else refreshPopup();
+  }
 }
 // Close just the splash overlay — the banner + frozen visual stay in place.
 function crDismissFrozenOverlay(){
@@ -971,6 +1110,11 @@ function crHideFrozen(){
   if(overlay) overlay.style.display = 'none';
   if(banner)  banner.style.display  = 'none';
   if(_frozenTick){ clearInterval(_frozenTick); _frozenTick = null; }
+  // Restore action buttons in any open popup.
+  if(popupMissionId != null){
+    if(specialMissions.find(m => m.id === popupMissionId)) refreshSpecialPopup();
+    else refreshPopup();
+  }
 }
 async function crSendChat(){
   const input = document.getElementById('cr-chat-input');
@@ -986,7 +1130,7 @@ async function crSendChat(){
   await fetch(`/api/games/${gameId}/chat`,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, content, fromGm:false}),
-  }).catch(()=>{ toast('Chat senden fehlgeschlagen','error'); });
+  }).catch(()=>{ toast(t('chat_send_failed')||'Chat senden fehlgeschlagen','error'); });
 }
 
 // ── Game timer ────────────────────────────────────────────────────────────────
@@ -1167,6 +1311,7 @@ function refreshSpecialPopup(){
   // Specials have no GPS gate — render their action UI directly.
   renderActionsForSpecial(m);
   renderRevealedHints(m);
+  crLockActionsIfFrozen();
 }
 function renderActionsForSpecial(m){
   const actEl = document.getElementById('cr-actions');
@@ -1226,18 +1371,18 @@ async function submitSpecialAnswer(m){
   const inp = document.getElementById('cr-answer-input');
   const err = document.getElementById('cr-answer-err');
   const answer = inp?.value?.trim();
-  if(!answer){ if(err) err.textContent='Bitte Antwort eingeben.'; return; }
+  if(!answer){ if(err) err.textContent=t('answer_required')||'Bitte Antwort eingeben.'; return; }
   const res = await fetch(`/api/games/${gameId}/cr/answer`,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, missionId:m.id, answer}),
   }).then(r=>r.json());
   if(res.correct){
     if(err) err.textContent='';
-    toast('✓ Richtig!','success');
+    toast(t('right_answer')||'✓ Richtig!','success');
     await completeSpecialMission(m, null);
     closeMissionPopup();
   } else {
-    if(err) err.textContent = res.message || 'Leider falsch. Versuche es erneut!';
+    if(err) err.textContent = res.message || t('answer_wrong') || 'Leider falsch. Versuche es erneut!';
     if(inp){ inp.style.borderColor='var(--red)'; setTimeout(()=>inp.style.borderColor='',1500); }
   }
 }
@@ -1258,7 +1403,7 @@ async function completeSpecialMission(m, mediaPath){
   if(res.pending){
     mediaReviewState[m.id] = 'pending';
     refreshSpecialPopup();
-    toast('Hochgeladen — wird vom Spielleiter geprüft…','success');
+    toast(t('upload_pending_review')||'Hochgeladen — wird vom Spielleiter geprüft…','success');
     // Locally bump cooldown so UI reflects the new last_attempt.
     specialProgress[m.id] = {...(specialProgress[m.id]||{}), last_attempt: Date.now()};
     renderSpecialTiles();
@@ -1414,6 +1559,7 @@ function refreshPopup(){
   }
   // Tick the mission timer text immediately so the user doesn't see "--:--".
   if(isCurrent && m.is_timed) tickMissionTimerOnce(m);
+  crLockActionsIfFrozen();
 }
 
 function renderActions(m){
@@ -1577,7 +1723,7 @@ async function requestHint(m, phase){
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, missionId: m.id, type: phase})
   }).then(r=>r.json());
-  if(!res.hint){ toast('Keine Hinweise mehr','warning'); return; }
+  if(!res.hint){ toast(t('no_hints_left')||'Keine Hinweise mehr','warning'); return; }
   // Persist into the correct stream and dedupe by hint id.
   if(!revealedHints[phase][m.id]) revealedHints[phase][m.id] = [];
   const already = revealedHints[phase][m.id].some(h => h.id === res.hint.id);
@@ -1593,18 +1739,18 @@ async function submitAnswer(){
   const inp = document.getElementById('cr-answer-input');
   const err = document.getElementById('cr-answer-err');
   const answer = inp?.value?.trim();
-  if(!answer){ if(err) err.textContent='Bitte Antwort eingeben.'; return; }
+  if(!answer){ if(err) err.textContent=t('answer_required')||'Bitte Antwort eingeben.'; return; }
   const res = await fetch(`/api/games/${gameId}/cr/answer`,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, missionId:m.id, answer})
   }).then(r=>r.json());
   if(res.correct){
     if(err) err.textContent='';
-    toast('✓ Richtig!','success');
+    toast(t('right_answer')||'✓ Richtig!','success');
     await completeMission();
     closeMissionPopup();
   } else {
-    if(err) err.textContent = res.message || 'Leider falsch. Versuche es erneut!';
+    if(err) err.textContent = res.message || t('answer_wrong') || 'Leider falsch. Versuche es erneut!';
     if(inp){ inp.style.borderColor='var(--red)'; setTimeout(()=>inp.style.borderColor='',1500); }
   }
 }
@@ -1615,6 +1761,30 @@ function addActionBtn(container, label, cls, fn){
   btn.textContent = label;
   btn.onclick = fn;
   container.appendChild(btn);
+}
+
+// Disable + frosty-blue every interactive control inside the action area
+// while the team is frozen. Catches both real <button>s and the gallery
+// upload <label> wrapping a hidden file input. Idempotent: safe to call
+// after every render. The Skip button is also locked since players
+// shouldn't be able to forfeit while frozen either.
+function crLockActionsIfFrozen(){
+  if(!crIsFrozen()) return;
+  const root = document.getElementById('cr-actions');
+  if(root){
+    root.querySelectorAll('button, label.btn').forEach(el => {
+      el.classList.add('cr-frozen-btn');
+      if(el.tagName === 'BUTTON') el.disabled = true;
+      const file = el.querySelector('input[type="file"]');
+      if(file) file.disabled = true;
+    });
+    // Answer text input — block typing too so the form can't be submitted.
+    const ans = document.getElementById('cr-answer-input');
+    if(ans){ ans.disabled = true; }
+  }
+  // The "skip mission" button lives outside #cr-actions in the popup body.
+  const skip = document.getElementById('cr-skip-btn');
+  if(skip){ skip.classList.add('cr-frozen-btn'); skip.disabled = true; }
 }
 
 // Skip the selected mission. Awards no points and leaves the rest available.
@@ -1707,7 +1877,7 @@ async function completeMission(mediaPath){
   const mid = _crUploadMissionId || (currentMission && currentMission.id);
   if(!mid){
     if(btn){ btn.disabled=false; }
-    toast('Keine Mission gewählt','error');
+    toast(t('no_mission_picked')||'Keine Mission gewählt','error');
     return;
   }
   const res = await fetch(`/api/games/${gameId}/cr/complete`, {
@@ -1733,7 +1903,7 @@ async function completeMission(mediaPath){
     }
     applyProgressPayload(res);
     refreshPopup();
-    toast('Hochgeladen — wird vom Spielleiter geprüft…', 'success');
+    toast(t('upload_pending_review')||'Hochgeladen — wird vom Spielleiter geprüft…', 'success');
     return;
   }
   // Otherwise: instant completion (no media or correct answer).
@@ -1759,13 +1929,13 @@ function showFinished(score){
   stopMissionTimer();
   document.getElementById('cr-mission-wrap').style.display = 'none';
   document.getElementById('cr-finished-wrap').style.display = 'block';
-  document.getElementById('cr-final-score').textContent = `Total: ${score} Punkte`;
+  document.getElementById('cr-final-score').textContent = `${t('total')||'Total'}: ${score} ${t('points')||'Punkte'}`;
 }
 function onCrFinished({score_earned}){ showFinished(score_earned||0); }
 
 // ── GPS tracking ──────────────────────────────────────────────────────────────
 function startGpsTracking(){
-  if(!navigator.geolocation){ toast('GPS nicht verfügbar','warning'); return; }
+  if(!navigator.geolocation){ toast(t('no_gps_signal')||'GPS nicht verfügbar','warning'); return; }
   // Always-fresh: maximumAge:0 forces the browser to deliver the latest
   // available fix rather than re-using a 3s-old cached one.
   // timeout:15s avoids spurious "no_gps" toasts on slow first-fix devices.
@@ -2110,7 +2280,7 @@ async function startCrStream(){
       } catch(e) {
         // Fall back to no audio if mic was denied.
         cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode}, audio:false});
-        toast('Mikrofon nicht verfügbar – kein Ton','warning');
+        toast(t('no_mic')||'Mikrofon nicht verfügbar – kein Ton','warning');
       }
     } else {
       cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode}, audio:false});
@@ -2118,7 +2288,7 @@ async function startCrStream(){
     document.getElementById('cr-cam-preview').srcObject = cameraStream;
     const pv = document.getElementById('cr-cam-preview');
     if(pv && pv.play) await pv.play().catch(()=>{});
-  } catch(e){ toast('Kamera nicht verfügbar','error'); crCloseCamera(); }
+  } catch(e){ toast(t('no_camera')||'Kamera nicht verfügbar','error'); crCloseCamera(); }
 }
 function crFlip(){ useFrontCamera=!useFrontCamera; startCrStream(); }
 
@@ -2152,7 +2322,7 @@ function crCapture(){
       btn.classList.add('recording');
       document.getElementById('cr-rec-dot').style.display = 'block';
       document.getElementById('cr-shutter-icon').textContent = '⏹';
-    } catch(e){ toast('Aufnahme nicht möglich: '+e.message,'error'); }
+    } catch(e){ toast((t('capture_failed')||'Aufnahme nicht möglich:')+' '+e.message,'error'); }
     return;
   }
   // Photo path
@@ -2192,7 +2362,7 @@ async function _crSendMedia(form){
     }
     return await r.json();
   } catch(e) {
-    toast('Upload fehlgeschlagen — Netzwerk/Verbindung', 'error');
+    toast(t('upload_failed_net')||'Upload fehlgeschlagen — Netzwerk/Verbindung', 'error');
     return null;
   }
 }
@@ -2208,8 +2378,8 @@ async function crUploadBlob(blob){
     form.append('teamId', teamId);
     form.append('targetTeamId', captureTargetTeamId);
     const res=await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json()).catch(()=>null);
-    if(res && res.success) toast('Foto gesendet! +5 Punkte möglich','success');
-    else toast('Upload fehlgeschlagen','error');
+    if(res && res.success) toast(t('capture_team_msg')||'Foto gesendet! +5 Punkte möglich','success');
+    else toast(t('upload_failed')||'Upload fehlgeschlagen','error');
   } else if(captureMode==='special' && _specialMissionForUpload){
     // Special-mission upload → goes through cr/special/complete (with GM review).
     const upRes = await _crSendMedia(form);
@@ -2232,8 +2402,8 @@ async function crUpload(){
     form.append('teamId', teamId);
     form.append('targetTeamId', captureTargetTeamId);
     const res = await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json()).catch(()=>null);
-    if(res && res.success) toast('Foto gesendet! +5 Punkte möglich','success');
-    else toast('Upload fehlgeschlagen','error');
+    if(res && res.success) toast(t('capture_team_msg')||'Foto gesendet! +5 Punkte möglich','success');
+    else toast(t('upload_failed')||'Upload fehlgeschlagen','error');
   } else if(captureMode==='special' && _specialMissionForUpload){
     const upRes = await _crSendMedia(form);
     if(upRes) await completeSpecialMission(_specialMissionForUpload, upRes.mediaPath||null);
