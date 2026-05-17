@@ -548,6 +548,7 @@ app.post('/api/cr/hints/:missionId', upload.single('image'), (req,res) => {
     order_index: req.body.order_index||0,
     text_de: req.body.text_de||'', text_en: req.body.text_en||'',
     text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
+    text_es: req.body.text_es||'',
     image_path: imagePath,
     hint_type: req.body.hint_type === 'gps' ? 'gps' : 'answer',
   });
@@ -564,6 +565,7 @@ app.put('/api/cr/hints/:id', upload.single('image'), (req,res) => {
     order_index: req.body.order_index||0,
     text_de: req.body.text_de||'', text_en: req.body.text_en||'',
     text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
+    text_es: req.body.text_es||'',
     image_path: imagePath,
     hint_type: req.body.hint_type === 'gps' ? 'gps' : 'answer',
   });
@@ -600,7 +602,7 @@ app.post('/api/games/:gameId/cr/answer', (req,res) => {
   const mission = db.getCrMission(missionId);
   if(!mission) return res.status(404).json({error:'Not found'});
   // Flexible matching: case-insensitive, trim whitespace
-  const correctAnswers = ['answer_de','answer_en','answer_fr','answer_it']
+  const correctAnswers = ['answer_de','answer_en','answer_fr','answer_it','answer_es']
     .map(f => (mission[f]||'').trim().toLowerCase())
     .filter(Boolean);
   const userAnswer = (answer||'').trim().toLowerCase();
@@ -1173,11 +1175,15 @@ setInterval(() => {
       // Pick timeout message for the game's language (fallback chain)
       const lang_key = 'timeout_text'; // base key
       const msg = db.getSetting('timeout_text_de') || db.getSetting('timeout_text') || 'Die Zeit ist abgelaufen!';
+      // Per-language broadcast so each player sees the message in their selected UI language.
+      // Falls back to the German text (or the hardcoded default) when an es/fr/it/en
+      // setting was never customised by the GM.
       const langMsgs = {
         de: db.getSetting('timeout_text_de')||db.getSetting('timeout_text')||'Die Zeit ist abgelaufen!',
         en: db.getSetting('timeout_text_en')||'Time is up!',
         fr: db.getSetting('timeout_text_fr')||'Temps écoulé!',
-        it: db.getSetting('timeout_text_it')||'Il tempo è scaduto!'
+        it: db.getSetting('timeout_text_it')||'Il tempo è scaduto!',
+        es: db.getSetting('timeout_text_es')||'¡Se acabó el tiempo!'
       };
       io.to(`game_${game.id}`).emit('game_ended',{messages:langMsgs, message:msg});
       io.to(`gm_${game.id}`).emit('game_ended',{});

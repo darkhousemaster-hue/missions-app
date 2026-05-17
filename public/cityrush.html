@@ -37,13 +37,14 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   width:auto !important;
   padding:.5rem .9rem !important;
   font-size:1.05rem !important;
-  display:inline-flex; align-items:center; gap:.3rem;
+  display:inline-flex; align-items:center; gap:.4rem;
   line-height:1;          /* keep both glyphs on the same visual centre */
 }
 #cr-chat-back-btn > *, #cr-rules-back-btn > * { font-size:inherit; line-height:1; }
-/* The "←" Unicode glyph sits a touch below the text baseline in most fonts.
-   Bump it back up so it visually sits on the centre of "ZURÜCK". */
-.back-arrow { display:inline-block; line-height:1; transform:translateY(-1px); }
+/* SVG back arrow — natively centred by viewBox geometry, no glyph baseline
+   weirdness like the "←" Unicode character. Sized to the text height. */
+.back-arrow { width:.95em; height:.95em; flex-shrink:0; display:inline-block; }
+.back-arrow svg { display:block; width:100%; height:100%; }
 @media (max-width:480px){
   .cr-topbar { gap:.25rem; padding:.45rem .35rem; }
   .cr-timer { font-size:1.05rem; }
@@ -329,7 +330,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 <!-- CHAT VIEW -->
 <div id="view-chat">
   <div class="cr-topbar" style="border-bottom:1px solid var(--border);">
-    <button class="topbar-btn" type="button" onclick="crShowView('mission')" id="cr-chat-back-btn"><span class="back-arrow">←</span></button>
+    <button class="topbar-btn" type="button" onclick="crShowView('mission')" id="cr-chat-back-btn"><span class="back-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></span> <span id="cr-chat-back-label">Zurück</span></button>
     <span style="font-family:var(--heading);font-size:1.1rem;letter-spacing:.08em;flex:1;text-align:center;">💬 GM</span>
     <span style="width:48px;"></span>
   </div>
@@ -405,7 +406,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 <!-- RULES VIEW (full-screen overlay so it stays out of the keyboard's way) -->
 <div id="cr-view-rules" style="position:fixed;inset:0;background:var(--bg3);z-index:600;display:none;flex-direction:column;">
   <div class="cr-topbar">
-    <button class="topbar-btn" id="cr-rules-back-btn" onclick="closeRulesView()"><span class="back-arrow">←</span> <span id="cr-rules-back">Zurück</span></button>
+    <button class="topbar-btn" id="cr-rules-back-btn" onclick="closeRulesView()"><span class="back-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></span> <span id="cr-rules-back">Zurück</span></button>
     <span id="cr-rules-title" style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;flex:1;text-align:center;">REGELN</span>
     <span style="width:60px;"></span>
   </div>
@@ -560,6 +561,7 @@ const T = {
         selfie_upload:'Hochladen & weiter',
         answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
         broadcast:'Rundruf',
+        error_generic:'Fehler',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
   en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
         searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
@@ -605,6 +607,7 @@ const T = {
         selfie_upload:'Upload & continue',
         answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
         broadcast:'Broadcast',
+        error_generic:'Error',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
   fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
         searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
@@ -650,6 +653,7 @@ const T = {
         selfie_upload:'Envoyer & continuer',
         answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
         broadcast:'Annonce',
+        error_generic:'Erreur',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
   it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
         searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
@@ -695,7 +699,54 @@ const T = {
         selfie_upload:'Carica & continua',
         answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
         broadcast:'Annuncio',
+        error_generic:'Errore',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
+  es: { desc:'Descripción', task:'Tarea', hint:'Pista', mission:'Misión',
+        searching:'Buscando GPS…', near:'Estás cerca…', arrived:'¡Has llegado!',
+        penalty:'Penalización', penalties:'Penalizaciones', overtime:'Tiempo extra',
+        complete:'Completar misión', photo:'📷 Hacer foto', video:'🎬 Grabar vídeo',
+        capture_team:'Fotografía a un equipo', no_gps:'Sin señal GPS',
+        timer_up:'¡Se acabó el tiempo!', next:'Próxima misión', finished:'¡Terminado!',
+        all_missions:'Todas las misiones', completed:'Hecho', current:'Actual', upcoming:'Próximas',
+        gallery_upload:'Subir desde galería', show_hint:'💡 Mostrar pista',
+        rules:'REGLAS', rules_back:'← Volver', back:'← Volver', close:'Cerrar',
+        jump_to_me:'📍 Ir a mí', answer_ph:'Escribe la respuesta…', answer_btn:'✓ Responder',
+        points:'puntos', mission_locked:'Camina primero hasta el destino…',
+        time_left:'Tiempo restante', no_rules:'No hay reglas.',
+        pending_review:'A la espera de la revisión del Gamemaster…',
+        rejected_retry:'Rechazado — vuelve a intentarlo.',
+        accepted:'¡Aceptado!', rejected:'Rechazado',
+        skip_mission:'Saltar misión', skip_confirm:'¿Saltar la misión? No recibirás puntos.', skipped:'Saltada',
+        special:'Especial', special_missions:'Misiones especiales', available:'Disponible', cooldown_wait:'Espera:',
+        gps_hint:'Pista GPS', chat_ph:'Mensaje al Gamemaster…', chat_send:'Enviar', chat_back:'Volver',
+        freeze_title:'Congelar a un rival', freeze_no_teams:'No hay otros equipos.', freeze_pick_team:'Elige un equipo',
+        freeze_already:'ya congelado', freeze_done:'¡Equipo congelado!', freeze_failed:'Fallo al congelar',
+        frozen_toast:'¡Os han atrapado!',
+        frozen_banner:'CONGELADOS', caught_title:'ATRAPADOS',
+        caught_sub:'¡Un equipo rival os ha atrapado!',
+        caught_hint:'Cierra para ver las misiones — el envío sigue bloqueado.',
+        frozen_locked:'Bloqueado — vuestro equipo está congelado',
+        all_done:'¡Todas las misiones completadas!', total:'Total',
+        no_camera:'Cámara no disponible — concede los permisos',
+        no_mic:'Micrófono no disponible – sin sonido',
+        capture_failed:'Grabación fallida:',
+        upload_failed:'Subida fallida', upload_failed_net:'Subida fallida — red/conexión',
+        selfie_upload_failed:'Subida del selfie fallida — inténtalo de nuevo',
+        chat_send_failed:'No se pudo enviar el mensaje',
+        no_hints_left:'No quedan más pistas',
+        no_mission_picked:'Ninguna misión seleccionada',
+        no_gps_signal:'GPS no disponible',
+        capture_team_msg:'¡Foto enviada! +5 puntos posibles',
+        upload_pending_review:'Subido — a la espera de la revisión del Gamemaster…',
+        right_answer:'✓ ¡Correcto!',
+        selfie_title:'Selfie del equipo',
+        selfie_help:'Antes de empezar: haced una foto de grupo de vuestro equipo. El Gamemaster la usa para reconoceros.',
+        selfie_shoot:'Hacer foto', selfie_retake:'Repetir',
+        selfie_upload:'Subir y continuar',
+        answer_required:'Por favor, escribe tu respuesta.', answer_wrong:'Incorrecto — inténtalo de nuevo.',
+        broadcast:'Anuncio',
+        error_generic:'Error',
+        teammate_pending:'Un compañero ya ha enviado — esperando al Gamemaster.' },
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
 function toNum(v){
@@ -773,14 +824,18 @@ function applyProgressPayload(data={}){
   renderAllMissionMarkers();
 }
 function crCycleLang(){
-  const LANGS=['de','en','fr','it'];
+  const LANGS=['de','en','fr','it','es'];
   lang=LANGS[(LANGS.indexOf(lang)+1)%LANGS.length];
   localStorage.setItem('cr_lang',lang);
   document.getElementById('btn-v-lang').textContent=lang.toUpperCase();
   applyCrTranslations();
   renderTiles();
+  renderSpecialTiles();   // special section label + tile pills depend on t()
   if(currentMission) renderMission();
-  if(popupMissionId != null) refreshPopup();
+  if(popupMissionId != null){
+    if(specialMissions.find(m => m.id === popupMissionId)) refreshSpecialPopup();
+    else refreshPopup();
+  }
   loadRules();   // re-render rules in the new language
   loadCrChatHistory();
 }
@@ -804,9 +859,9 @@ function applyCrTranslations(){
   if(ci) ci.placeholder = t('chat_ph');
   const cs = document.getElementById('cr-chat-send');
   if(cs) cs.textContent = t('chat_send');
-  // cr-chat-back-btn shows only the back-arrow glyph (no label) — leaving its
-  // markup alone preserves the <span class="back-arrow"> wrapper that centres
-  // the arrow vertically against neighbouring text.
+  // Update just the cr-chat-back label so the SVG arrow span stays intact.
+  const cbl = document.getElementById('cr-chat-back-label');
+  if(cbl) cbl.textContent = (t('chat_back')||t('back')||'Zurück').replace(/^←\s*/,'');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1825,7 +1880,7 @@ async function confirmSkipMission(){
     toast(t('skipped') || 'Übersprungen','warning');
     if(res.finished) showFinished(res.score_earned||myScore);
   } else {
-    toast(res.error || 'Fehler', 'error');
+    toast(res.error || t('error_generic') || 'Fehler', 'error');
   }
 }
 
@@ -1913,7 +1968,7 @@ async function completeMission(mediaPath){
   }
   if(res.error && !res.pending && !res.success){
     if(btn){ btn.disabled=false; btn.textContent = t('complete'); }
-    toast(res.error,'error');
+    toast(res.error || t('error_generic') || 'Fehler', 'error');
     return;
   }
   // Photo/video missions are now held for GM review and don't advance.

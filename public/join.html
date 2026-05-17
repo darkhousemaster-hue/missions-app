@@ -89,6 +89,26 @@ const params = new URLSearchParams(window.location.search);
 const gameId = params.get('game');
 let existingTeams = [];
 
+// Minimal i18n. join.html has no language picker — auto-detect from the
+// browser language and fall back to German (the original UI language).
+// localStorage carries the language pick made on /play or /cityrush so a
+// returning player sees join.html in the same language they last used.
+const JOIN_LANGS = ['de','en','fr','it','es'];
+function _detectJoinLang() {
+  const stored = localStorage.getItem('m_lang') || localStorage.getItem('cr_lang');
+  if (stored && JOIN_LANGS.includes(stored)) return stored;
+  const nav = (navigator.language || navigator.userLanguage || 'de').slice(0,2).toLowerCase();
+  return JOIN_LANGS.includes(nav) ? nav : 'de';
+}
+const joinLang = _detectJoinLang();
+const JOIN_T = {
+  de: {loading:'Laden…', error:'Fehler', invalid:'Ungültiger Code oder Spiel beendet.', ask_gm:'Bitte den Spielleiter um einen neuen Code.', game_ended:'Dieses Spiel ist bereits beendet.', create_team:'Neues Team erstellen', join_team:'Team beitreten', back:'← Zurück', teamname:'Teamname', teamname_ph:'Teamname eingeben…', start:'MiSSiON starten →', team_hint:'Du siehst dieselben MiSSiONS und kannst unabhängig Medien einreichen.', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.', waiting:'Warte…', join_btn:'Beitreten', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.'},
+  en: {loading:'Loading…', error:'Error', invalid:'Invalid code or game ended.', ask_gm:'Please ask the Gamemaster for a new code.', game_ended:'This game has already ended.', create_team:'Create new team', join_team:'Join team', back:'← Back', teamname:'Team name', teamname_ph:'Enter team name…', start:'Start MiSSiON →', team_hint:'You see the same MiSSiONS and can submit media independently.', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.', waiting:'Waiting…', join_btn:'Join', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.'},
+  fr: {loading:'Chargement…', error:'Erreur', invalid:'Code invalide ou partie terminée.', ask_gm:'Demande un nouveau code au Gamemaster.', game_ended:'Cette partie est déjà terminée.', create_team:'Créer une nouvelle équipe', join_team:'Rejoindre une équipe', back:'← Retour', teamname:'Nom d\'équipe', teamname_ph:'Saisir le nom de l\'équipe…', start:'Commencer la MiSSiON →', team_hint:'Tu vois les mêmes MiSSiONS et peux envoyer des médias indépendamment.', enter_name:'Veuillez saisir un nom d\'équipe.', min_chars:'Le nom doit faire au moins 2 caractères.', waiting:'Attente…', join_btn:'Rejoindre', conn_err:'Erreur de connexion. Réessaie.', err_default:'Erreur. Réessaie.'},
+  it: {loading:'Caricamento…', error:'Errore', invalid:'Codice non valido o partita terminata.', ask_gm:'Chiedi al Gamemaster un nuovo codice.', game_ended:'Questa partita è già terminata.', create_team:'Crea una nuova squadra', join_team:'Unisciti a una squadra', back:'← Indietro', teamname:'Nome squadra', teamname_ph:'Inserisci il nome della squadra…', start:'Avvia MiSSiON →', team_hint:'Vedi le stesse MiSSiONS e puoi inviare media in modo indipendente.', enter_name:'Inserisci il nome della squadra.', min_chars:'Il nome deve avere almeno 2 caratteri.', waiting:'Attendi…', join_btn:'Unisciti', conn_err:'Errore di connessione. Riprova.', err_default:'Errore. Riprova.'},
+  es: {loading:'Cargando…', error:'Error', invalid:'Código no válido o partida finalizada.', ask_gm:'Pide al Gamemaster un nuevo código.', game_ended:'Esta partida ya ha terminado.', create_team:'Crear nuevo equipo', join_team:'Unirse a un equipo', back:'← Volver', teamname:'Nombre del equipo', teamname_ph:'Escribe el nombre del equipo…', start:'Iniciar MiSSiON →', team_hint:'Verás las mismas MiSSiONS y podrás enviar contenido de forma independiente.', enter_name:'Introduce el nombre del equipo.', min_chars:'El nombre debe tener al menos 2 caracteres.', waiting:'Esperando…', join_btn:'Unirse', conn_err:'Error de conexión. Inténtalo de nuevo.', err_default:'Error. Inténtalo de nuevo.'},
+};
+function jt(k) { return (JOIN_T[joinLang] || JOIN_T.de)[k] || k; }
 function ensureCrPlayerKey() {
   if (sessionStorage.getItem('crPlayerKey')) return;
   var k = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
@@ -96,7 +116,33 @@ function ensureCrPlayerKey() {
   sessionStorage.setItem('crPlayerKey', k);
 }
 
+document.documentElement.lang = joinLang;
 document.getElementById('game-id-display').textContent = gameId ? '#' + gameId : '';
+// Translate the static strings sitting in the markup. Done here so the
+// DOMContentLoaded handler doesn't have to know about every label.
+(function _applyJoinTranslations(){
+  const loading = document.querySelector('#screen-loading p');
+  if(loading) loading.textContent = jt('loading');
+  const errH = document.querySelector('#screen-error h2');
+  if(errH) errH.textContent = jt('error');
+  const errDetail = document.getElementById('error-detail');
+  if(errDetail) errDetail.textContent = jt('invalid');
+  const askGm = document.querySelector('#screen-error p:last-of-type');
+  if(askGm) askGm.textContent = jt('ask_gm');
+  const btnNewLbl = document.querySelector('#btn-go-new span:not(.icon)');
+  if(btnNewLbl) btnNewLbl.textContent = jt('create_team');
+  const btnJoinLbl = document.querySelector('#btn-go-join > span:not(.icon)');
+  if(btnJoinLbl) btnJoinLbl.textContent = jt('join_team');
+  document.querySelectorAll('.back-link').forEach(b => b.textContent = jt('back'));
+  const teamLabel = document.querySelector('#panel-new .label');
+  if(teamLabel) teamLabel.textContent = jt('teamname');
+  const teamInput = document.getElementById('team-name');
+  if(teamInput) teamInput.placeholder = jt('teamname_ph');
+  const startBtn = document.getElementById('btn-join');
+  if(startBtn) startBtn.textContent = jt('start');
+  const teamHint = document.querySelector('#panel-join p');
+  if(teamHint) teamHint.textContent = jt('team_hint');
+})();
 
 window.addEventListener('DOMContentLoaded', async () => {
   if (!gameId) { show('error'); return; }
@@ -118,7 +164,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const game = await res.json();
 
     if (game.status === 'ended') {
-      document.getElementById('error-detail').textContent = 'Dieses Spiel ist bereits beendet.';
+      document.getElementById('error-detail').textContent = jt('game_ended');
       show('error'); return;
     }
 
@@ -154,7 +200,7 @@ function renderTeamsList() {
       '<span class="team-row-pts">' + t.score + ' pt</span>';
     const btn = document.createElement('button');
     btn.className = 'btn btn-secondary btn-sm';
-    btn.textContent = 'Beitreten';
+    btn.textContent = jt('join_btn');
     btn.addEventListener('click', function() { joinExisting(t.id, t.name); });
     row.appendChild(btn);
     list.appendChild(row);
@@ -193,10 +239,10 @@ async function joinAsNew() {
   const name = document.getElementById('team-name').value.trim();
   const err  = document.getElementById('error-msg');
   const btn  = document.getElementById('btn-join');
-  if (!name) { err.textContent = 'Bitte Teamnamen eingeben.'; return; }
-  if (name.length < 2) { err.textContent = 'Name muss mind. 2 Zeichen haben.'; return; }
+  if (!name) { err.textContent = jt('enter_name'); return; }
+  if (name.length < 2) { err.textContent = jt('min_chars'); return; }
   btn.disabled = true;
-  btn.textContent = 'Warte…';
+  btn.textContent = jt('waiting');
   err.textContent = '';
 
   try {
@@ -217,14 +263,14 @@ async function joinAsNew() {
       const targetPage = (gameInfo && gameInfo.crMode) ? '/cityrush.html' : '/play.html';
       window.location.href = targetPage + '?game=' + gameId + '&team=' + res.id;
     } else {
-      err.textContent = res.error || 'Fehler. Bitte erneut versuchen.';
+      err.textContent = res.error || jt('err_default');
       btn.disabled = false;
-      btn.textContent = 'MiSSiON starten →';
+      btn.textContent = jt('start');
     }
   } catch(e) {
-    err.textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+    err.textContent = jt('conn_err');
     btn.disabled = false;
-    btn.textContent = 'MiSSiON starten →';
+    btn.textContent = jt('start');
   }
 }
 

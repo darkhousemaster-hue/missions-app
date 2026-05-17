@@ -47,13 +47,14 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   width:auto !important;
   padding:.5rem .9rem !important;
   font-size:1.05rem !important;
-  display:inline-flex; align-items:center; gap:.3rem;
+  display:inline-flex; align-items:center; gap:.4rem;
   line-height:1;          /* keep both glyphs on the same visual centre */
 }
 #chat-back-btn > *, #rules-back-btn > * { font-size:inherit; line-height:1; }
-/* The "←" Unicode glyph sits a touch below the text baseline in most fonts.
-   Bump it back up so it visually sits on the centre of "ZURÜCK". */
-.back-arrow { display:inline-block; line-height:1; transform:translateY(-1px); }
+/* SVG back arrow — natively centred by viewBox geometry, no glyph baseline
+   weirdness like the "←" Unicode character. */
+.back-arrow { width:.95em; height:.95em; flex-shrink:0; display:inline-block; }
+.back-arrow svg { display:block; width:100%; height:100%; }
 /* On narrow phones the timer + name + score + 4 buttons would otherwise
    overflow and clip the language button. Tighten everything and let the
    buttons sit on a square footprint. */
@@ -210,7 +211,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <!-- ── CHAT VIEW ── -->
 <div id="view-chat">
   <div class="topbar" style="flex-shrink:0;">
-    <button class="topbar-btn" onclick="showView('missions')" id="chat-back-btn"><span class="back-arrow">←</span> <span id="chat-back-label">Zurück</span></button>
+    <button class="topbar-btn" onclick="showView('missions')" id="chat-back-btn"><span class="back-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></span> <span id="chat-back-label">Zurück</span></button>
     <span style="font-family:var(--heading);font-size:1.2rem;letter-spacing:.1em;flex:1;text-align:center;">💬 GM</span>
     <span style="width:60px;"></span>
   </div>
@@ -226,7 +227,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <!-- ── RULES VIEW (full screen overlay) ── -->
 <div id="view-rules">
   <div class="topbar" style="flex-shrink:0;">
-    <button class="topbar-btn" onclick="showView('missions')" id="rules-back-btn"><span class="back-arrow">←</span> <span id="rules-back-label">Zurück</span></button>
+    <button class="topbar-btn" onclick="showView('missions')" id="rules-back-btn"><span class="back-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></span> <span id="rules-back-label">Zurück</span></button>
     <span id="rules-title" style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;">REGELN</span>
   </div>
   <div id="rules-scroll"><div id="rules-text"></div></div>
@@ -236,15 +237,15 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <div id="camera-modal">
   <div id="rec-dot">● REC</div>
   <video id="cam-preview" autoplay muted playsinline></video>
-  <img   id="cap-img" alt="Aufnahme">
+  <img   id="cap-img" alt="">
   <video id="cap-vid" controls playsinline></video>
   <div class="cam-bar" id="cam-bar-capture">
-    <button class="topbar-btn" onclick="closeCamera()">✕ Abbrechen</button>
+    <button class="topbar-btn" id="cam-cancel-btn" onclick="closeCamera()">✕ Abbrechen</button>
     <button class="shutter" id="shutter-btn" onclick="doCapture()"><span id="shutter-icon">📷</span></button>
-    <button class="topbar-btn" onclick="flipCam()">🔄 Flip</button>
+    <button class="topbar-btn" id="cam-flip-btn" onclick="flipCam()">🔄 Flip</button>
   </div>
   <div class="cam-bar" id="cam-bar-review" style="display:none;">
-    <button class="btn btn-danger" onclick="retake()">↺ Neu aufnehmen</button>
+    <button class="btn btn-danger" id="cam-retake-btn" onclick="retake()">↺ Neu aufnehmen</button>
     <button class="btn btn-success btn-lg" onclick="doUpload()" id="upload-btn">✓ Hochladen</button>
   </div>
 </div>
@@ -315,6 +316,7 @@ const T = {
     uploading_review:'Hochgeladen! Wird geprüft…',
     upload_failed:'Upload fehlgeschlagen',
     broadcast:'Rundruf',
+    flip:'🔄 Flip', you:'Du', no_missions:'Keine Missionen gefunden.', no_rules:'Keine Regeln vorhanden.',
   },
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
@@ -335,6 +337,7 @@ const T = {
     uploading_review:'Uploaded! Awaiting review…',
     upload_failed:'Upload failed',
     broadcast:'Broadcast',
+    flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
   fr: {
     photo:'Mission photo', video:'Mission vidéo', indoor:'Possible en intérieur',
@@ -354,6 +357,7 @@ const T = {
     uploading_review:'Envoyé ! En attente de validation…',
     upload_failed:'Échec de l\'envoi',
     broadcast:'Annonce',
+    flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
   it: {
     photo:'Missione foto', video:'Missione video', indoor:'Possibile anche al chiuso',
@@ -373,9 +377,31 @@ const T = {
     uploading_review:'Caricato! In attesa di revisione…',
     upload_failed:'Caricamento fallito',
     broadcast:'Annuncio',
+    flip:'🔄 Ribalta', you:'Io', no_missions:'Nessuna missione trovata.', no_rules:'Nessuna regola.',
+  },
+  es: {
+    times_up:'¡Se acabó el tiempo! Volved al punto de encuentro acordado.',
+    description:'Descripción', task:'Tarea',
+    photo:'Misión foto', video:'Misión vídeo', indoor:'También posible en interior',
+    rules:'REGLAS', rules_back:'← Volver', send:'Enviar', chat_ph:'Mensaje al Gamemaster…',
+    pending:'⏳ Pendiente de revisión', accepted:'✓ Aceptado',
+    take_photo:'📷 Hacer foto', take_video:'🎬 Grabar vídeo',
+    redo:'↺ Reintentar', go:'¡SE ACABÓ EL TIEMPO!',
+    rej_title:'❌ Rechazado', rej_btn:'OK — Reintentar',
+    upload:'✓ Subir', retake:'↺ Repetir', cancel:'✕ Cancelar',
+    awaiting:'⏳ Pendiente de revisión',
+    gallery_upload:'Subir desde galería',
+    mission_accepted:'✓ ¡Misión aceptada!',
+    no_mic:'Micrófono no disponible – sin sonido',
+    cam_denied:'Acceso a la cámara denegado',
+    capture_failed:'Grabación fallida:',
+    uploading_review:'¡Subido! Pendiente de revisión…',
+    upload_failed:'Subida fallida',
+    broadcast:'Anuncio',
+    flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
   }
 };
-const LANGS = ['de','en','fr','it'];
+const LANGS = ['de','en','fr','it','es'];
 function t(k) { return (T[lang]||T.de)[k]||k; }
 
 function applyTranslations() {
@@ -400,6 +426,11 @@ function applyTranslations() {
   if(ci) ci.placeholder=t('chat_ph');
   const ub = document.getElementById('upload-btn');
   if (ub) ub.textContent = t('upload');
+  // Camera modal buttons — `applyTranslations` runs on every language cycle
+  // so the camera bar refreshes even if the modal is closed.
+  const c1 = document.getElementById('cam-cancel-btn'); if(c1) c1.textContent = t('cancel');
+  const c2 = document.getElementById('cam-flip-btn');   if(c2) c2.textContent = t('flip');
+  const c3 = document.getElementById('cam-retake-btn'); if(c3) c3.textContent = t('retake');
 }
 
 function cycleLang() {
@@ -521,7 +552,7 @@ async function loadMissions() {
   if (typeof data.score === 'number') updateScoreDisplay(data.score);
   const list = document.getElementById('missions-list');
   if (!data.missions || !data.missions.length) {
-    list.innerHTML = '<div class="empty"><p>Keine Missionen gefunden.</p></div>';
+    list.innerHTML = `<div class="empty"><p>${t('no_missions')||'Keine Missionen gefunden.'}</p></div>`;
     return;
   }
   list.innerHTML = data.missions.map(m => missionCard(m)).join('');
@@ -814,7 +845,7 @@ function bubble(m) {
   const fromGm = m.from_gm===1 || m.from_gm===true;
   const broadcast = fromGm && _isBroadcast(m);
   const time   = new Date(m.created_at||m.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  const sender = fromGm ? 'Gamemaster' : 'Du';
+  const sender = fromGm ? 'Gamemaster' : (t('you')||'Du');
   const tag = broadcast ? `<span class="chat-tag chat-tag-broadcast">📢 ${t('broadcast')||'Broadcast'}</span>` : '';
   return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}${broadcast?' broadcast':''}">
     <div class="chat-meta">${sender} · ${time} ${tag}</div>
@@ -891,7 +922,7 @@ async function sendChat() {
   const box = document.getElementById('chat-messages');
   const now  = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   box.insertAdjacentHTML('beforeend',
-    `<div class="chat-bubble from-player"><div class="chat-meta">Du · ${now}</div>${esc(content)}</div>`);
+    `<div class="chat-bubble from-player"><div class="chat-meta">${t('you')||'Du'} · ${now}</div>${esc(content)}</div>`);
   scrollChat();
 
   await fetch(`/api/games/${gameId}/chat`, {
@@ -927,7 +958,7 @@ async function loadRules() {
       return `<div class="rule-entry"><strong style="color:var(--text-muted);margin-right:.4rem;">${i+1}.</strong>${esc(txt)}</div>`;
     }).join('');
   } else {
-    box.innerHTML = '<p style="color:var(--text-muted);">Keine Regeln vorhanden.</p>';
+    box.innerHTML = `<p style="color:var(--text-muted);">${t('no_rules')||'Keine Regeln vorhanden.'}</p>`;
   }
 }
 

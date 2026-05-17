@@ -291,6 +291,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
               <div class="field" style="margin:0;"><label class="label">EN</label><textarea id="s-timeout-en" class="textarea" rows="2"></textarea></div>
               <div class="field" style="margin:0;"><label class="label">FR</label><textarea id="s-timeout-fr" class="textarea" rows="2"></textarea></div>
               <div class="field" style="margin:0;"><label class="label">IT</label><textarea id="s-timeout-it" class="textarea" rows="2"></textarea></div>
+              <div class="field" style="margin:0;"><label class="label">ES</label><textarea id="s-timeout-es" class="textarea" rows="2"></textarea></div>
             </div>
           </div>
           <button class="btn btn-primary" onclick="saveGeneralSettings()" id="s-save">Speichern</button>
@@ -318,7 +319,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
               <option value="">Alle</option>
               <option value="null">Pool</option>
             </select>
-            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file-input').click()">⬆ Import</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file-input').click()" id="s-import-btn">⬆ Import</button>
             <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="importMissions(this.files[0])">
             <button class="btn btn-primary btn-sm" onclick="showAddMission()" id="s-add-mission">＋ MiSSiON</button>
           </div>
@@ -363,6 +364,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
               <button class="tab" id="tpl-lang-en" onclick="switchTplLang('en',this)">EN</button>
               <button class="tab" id="tpl-lang-fr" onclick="switchTplLang('fr',this)">FR</button>
               <button class="tab" id="tpl-lang-it" onclick="switchTplLang('it',this)">IT</button>
+              <button class="tab" id="tpl-lang-es" onclick="switchTplLang('es',this)">ES</button>
             </div>
             <span id="tpl-lang-hint" style="font-size:.8rem;color:var(--text-muted);">DE-Vorlage</span>
           </div>
@@ -522,7 +524,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 const sel = v => v ? 'selected' : '';
 // ── GM Language ────────────────────────────────────────────────────────────
 let gmLang = localStorage.getItem('gm_lang')||'de';
-const LANGS_GM=['de','en','fr','it'];
+const LANGS_GM=['de','en','fr','it','es'];
 const GMT={
   de:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'CityRush nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein CityRush-Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine CityRush-Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
   // CR mission modal labels
@@ -588,7 +590,36 @@ const GMT={
   'cr-m-gps-hints-label':'GPS-Hinweise (vor Ankunft)',
   'cr-m-gps-hints-help':'Werden vor der Ankunft einzeln aufgedeckt. Helfen, das Ziel zu finden.',
   'cr-m-answer-hints-label':'Aufgaben-Hinweise (nach Ankunft)',
-  'cr-m-answer-hints-help':'Werden nach Ankunft einzeln aufgedeckt. Helfen, die Aufgabe zu lösen.','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen'},
+  'cr-m-answer-hints-help':'Werden nach Ankunft einzeln aufgedeckt. Helfen, die Aufgabe zu lösen.','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen',
+  // Toasts, tooltips, confirms — added in the i18n-coverage sweep.
+  'freeze-team-tip':'Team einfrieren','thaw-team-tip':'Team auftauen','thaw-label':'Auftauen','freeze-label':'Einfrieren',
+  'pick-cr-mode':'Bitte CityRush-Modus auswählen','error-prefix':'Fehler:','no-qr-yet':'Noch kein QR-Code',
+  'deleted':'Gelöscht','game-ended-toast':'Spiel beendet!','enter-reason':'Bitte Begründung eingeben',
+  'cr-rejected-notified':'CityRush: Abgelehnt & Team benachrichtigt.','accepted-toast':'Angenommen!',
+  'rejected-notified':'Abgelehnt & Team benachrichtigt.','enter-minutes':'Minuten eingeben',
+  'broadcast-sent':'Broadcast gesendet!','pick-team':'Bitte ein Team wählen',
+  'already-frozen-team':'Dieses Team wurde bereits eingefroren','tunnel-detected':'Tunnel erkannt:',
+  'name-required':'Name erforderlich','cannot-del-default-mode':'Standard-Modus kann nicht gelöscht werden.',
+  'mode-created':'Modus erstellt!','mission-created':'MiSSiON erstellt!','tpl-deleted':'Vorlage gelöscht',
+  'update-ok':'Update erfolgreich! App startet neu…','update-failed':'Update fehlgeschlagen.',
+  'ruleset-created':'Regelwerk erstellt!','cannot-del-default-rs':'Standard-Regelwerk kann nicht gelöscht werden.',
+  'cr-mode-created':'CityRush Modus erstellt!','pick-mode-first':'Erst einen Modus auswählen',
+  'cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
+  'hint-saved':'Hinweis gespeichert!','c-del-hint':'Hinweis löschen?','hint-not-found':'Hinweis nicht gefunden',
+  'invalid-json':'Ungültige JSON-Datei','invalid-format':'Kein gültiges Format (missions-Array fehlt)',
+  'pick-missions':'Keine MiSSiON ausgewählt','no-other-mode':'Kein anderer Modus vorhanden',
+  'mode-label-modal':'Modus','no-rulesets':'Keine Regelwerke.',
+  'edit-tip':'Bearbeiten','delete-tip':'Löschen','copy-to-rs-tip':'In anderes Regelwerk kopieren',
+  'auto-translate-tip':'Auto-übersetzen','chat-msg-fallback':'Nachricht…',
+  'cr-error-cr-mode-name-modal':'CityRush Modus hinzufügen','cr-edit-mode-modal':'Modus bearbeiten',
+  'no-cr-mode':'— Kein Regelwerk —','allowed-media':'Erlaubte Medien',
+  'cr-mode-name-eg':'z.B. Altstadt-Tour','cr-mode-delete-confirm':'CityRush Modus "{name}" und alle Missionen löschen?',
+  'export-btn':'⬇ Export','import-btn':'⬆ Import','s-import-btn':'⬆ Import','s-cr-import':'⬆ Import',
+  'copy-to-mode-btn':'⎘ Kopieren nach Modus…',
+  'cr-hint-add':'Hinweis hinzufügen','cr-hint-edit':'Hinweis bearbeiten',
+  'image-optional':'Bild (optional)','remove-image':'Bild entfernen','current-image':'aktuelles Bild',
+  'no-name':'(kein Name)','imported-suffix':'importiert','errors-suffix':'Fehler',
+  'copied-suffix':'kopiert!','exported-suffix':'exportiert'},
   en:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No CityRush mode yet. Click ＋ Mode.','cr-no-missions':'No CityRush missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
@@ -648,7 +679,35 @@ const GMT={
   'cr-m-gps-hints-label':'GPS hints (before arrival)',
   'cr-m-gps-hints-help':'Revealed one at a time before arrival. Help players find the target.',
   'cr-m-answer-hints-label':'Task hints (after arrival)',
-  'cr-m-answer-hints-help':'Revealed one at a time after arrival. Help players solve the task.','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove'},
+  'cr-m-answer-hints-help':'Revealed one at a time after arrival. Help players solve the task.','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove',
+  'freeze-team-tip':'Freeze team','thaw-team-tip':'Thaw team','thaw-label':'Thaw','freeze-label':'Freeze',
+  'pick-cr-mode':'Please pick a CityRush mode','error-prefix':'Error:','no-qr-yet':'No QR code yet',
+  'deleted':'Deleted','game-ended-toast':'Game ended!','enter-reason':'Please enter a reason',
+  'cr-rejected-notified':'CityRush: rejected & team notified.','accepted-toast':'Accepted!',
+  'rejected-notified':'Rejected & team notified.','enter-minutes':'Enter minutes',
+  'broadcast-sent':'Broadcast sent!','pick-team':'Please pick a team',
+  'already-frozen-team':'This team is already frozen','tunnel-detected':'Tunnel detected:',
+  'name-required':'Name required','cannot-del-default-mode':"Default mode can't be deleted.",
+  'mode-created':'Mode created!','mission-created':'MiSSiON created!','tpl-deleted':'Template deleted',
+  'update-ok':'Update successful! Restarting app…','update-failed':'Update failed.',
+  'ruleset-created':'Ruleset created!','cannot-del-default-rs':"Default ruleset can't be deleted.",
+  'cr-mode-created':'CityRush mode created!','pick-mode-first':'Pick a mode first',
+  'cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
+  'hint-saved':'Hint saved!','c-del-hint':'Delete hint?','hint-not-found':'Hint not found',
+  'invalid-json':'Invalid JSON file','invalid-format':'Invalid format (missions array missing)',
+  'pick-missions':'No MiSSiON selected','no-other-mode':'No other mode available',
+  'mode-label-modal':'Mode','no-rulesets':'No rulesets.',
+  'edit-tip':'Edit','delete-tip':'Delete','copy-to-rs-tip':'Copy to another ruleset',
+  'auto-translate-tip':'Auto-translate','chat-msg-fallback':'Message…',
+  'cr-error-cr-mode-name-modal':'Add CityRush mode','cr-edit-mode-modal':'Edit mode',
+  'no-cr-mode':'— No ruleset —','allowed-media':'Allowed media',
+  'cr-mode-name-eg':'e.g. Old Town Tour','cr-mode-delete-confirm':'Delete CityRush mode "{name}" and all its missions?',
+  'export-btn':'⬇ Export','import-btn':'⬆ Import','s-import-btn':'⬆ Import','s-cr-import':'⬆ Import',
+  'copy-to-mode-btn':'⎘ Copy to mode…',
+  'cr-hint-add':'Add hint','cr-hint-edit':'Edit hint',
+  'image-optional':'Image (optional)','remove-image':'Remove image','current-image':'current image',
+  'no-name':'(no name)','imported-suffix':'imported','errors-suffix':'errors',
+  'copied-suffix':'copied!','exported-suffix':'exported'},
   fr:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modes CityRush','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode CityRush. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission CityRush. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
@@ -708,7 +767,35 @@ const GMT={
   'cr-m-gps-hints-label':'Indices GPS (avant l\'arrivée)',
   'cr-m-gps-hints-help':'Révélés un par un avant l\'arrivée. Aident à trouver la cible.',
   'cr-m-answer-hints-label':'Indices de tâche (après l\'arrivée)',
-  'cr-m-answer-hints-help':'Révélés un par un après l\'arrivée. Aident à résoudre la tâche.','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer'},
+  'cr-m-answer-hints-help':'Révélés un par un après l\'arrivée. Aident à résoudre la tâche.','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer',
+  'freeze-team-tip':'Geler une équipe','thaw-team-tip':"Dégeler l'équipe",'thaw-label':'Dégeler','freeze-label':'Geler',
+  'pick-cr-mode':'Choisis un mode CityRush','error-prefix':'Erreur :','no-qr-yet':'Pas encore de QR',
+  'deleted':'Supprimé','game-ended-toast':'Partie terminée !','enter-reason':'Veuillez saisir un motif',
+  'cr-rejected-notified':'CityRush : refusé, équipe notifiée.','accepted-toast':'Accepté !',
+  'rejected-notified':'Refusé, équipe notifiée.','enter-minutes':'Saisir les minutes',
+  'broadcast-sent':'Annonce envoyée !','pick-team':'Choisis une équipe',
+  'already-frozen-team':'Cette équipe est déjà gelée','tunnel-detected':'Tunnel détecté :',
+  'name-required':'Nom requis','cannot-del-default-mode':'Le mode par défaut ne peut pas être supprimé.',
+  'mode-created':'Mode créé !','mission-created':'MiSSiON créée !','tpl-deleted':'Modèle supprimé',
+  'update-ok':'Mise à jour réussie ! Redémarrage…','update-failed':'Échec de la mise à jour.',
+  'ruleset-created':'Jeu de règles créé !','cannot-del-default-rs':'Le jeu de règles par défaut ne peut pas être supprimé.',
+  'cr-mode-created':'Mode CityRush créé !','pick-mode-first':"Choisis d'abord un mode",
+  'cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
+  'hint-saved':'Indice enregistré !','c-del-hint':"Supprimer l'indice ?",'hint-not-found':'Indice introuvable',
+  'invalid-json':'Fichier JSON invalide','invalid-format':'Format invalide (tableau missions manquant)',
+  'pick-missions':'Aucune MiSSiON sélectionnée','no-other-mode':'Aucun autre mode',
+  'mode-label-modal':'Mode','no-rulesets':'Aucun jeu de règles.',
+  'edit-tip':'Modifier','delete-tip':'Supprimer','copy-to-rs-tip':'Copier vers un autre jeu de règles',
+  'auto-translate-tip':'Traduire automatiquement','chat-msg-fallback':'Message…',
+  'cr-error-cr-mode-name-modal':'Ajouter un mode CityRush','cr-edit-mode-modal':'Modifier le mode',
+  'no-cr-mode':'— Aucun jeu de règles —','allowed-media':'Médias autorisés',
+  'cr-mode-name-eg':'p. ex. Vieille ville','cr-mode-delete-confirm':'Supprimer le mode CityRush "{name}" et toutes ses missions ?',
+  'export-btn':'⬇ Exporter','import-btn':'⬆ Importer','s-import-btn':'⬆ Importer','s-cr-import':'⬆ Importer',
+  'copy-to-mode-btn':'⎘ Copier vers un mode…',
+  'cr-hint-add':'Ajouter un indice','cr-hint-edit':"Modifier l'indice",
+  'image-optional':'Image (facultatif)','remove-image':"Supprimer l'image",'current-image':'image actuelle',
+  'no-name':'(sans nom)','imported-suffix':'importés','errors-suffix':'erreurs',
+  'copied-suffix':'copiés !','exported-suffix':'exportés'},
   it:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modalità CityRush','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'CityRush usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità CityRush. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione CityRush. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
@@ -768,7 +855,123 @@ const GMT={
   'cr-m-gps-hints-label':'Suggerimenti GPS (prima dell\'arrivo)',
   'cr-m-gps-hints-help':'Rivelati uno alla volta prima dell\'arrivo. Aiutano a trovare la destinazione.',
   'cr-m-answer-hints-label':'Suggerimenti compito (dopo l\'arrivo)',
-  'cr-m-answer-hints-help':'Rivelati uno alla volta dopo l\'arrivo. Aiutano a risolvere il compito.','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi'}
+  'cr-m-answer-hints-help':'Rivelati uno alla volta dopo l\'arrivo. Aiutano a risolvere il compito.','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi',
+  'freeze-team-tip':'Congela squadra','thaw-team-tip':'Scongela squadra','thaw-label':'Scongela','freeze-label':'Congela',
+  'pick-cr-mode':'Seleziona una modalità CityRush','error-prefix':'Errore:','no-qr-yet':'Ancora nessun QR',
+  'deleted':'Eliminato','game-ended-toast':'Partita terminata!','enter-reason':'Inserisci un motivo',
+  'cr-rejected-notified':'CityRush: rifiutato e squadra avvisata.','accepted-toast':'Accettato!',
+  'rejected-notified':'Rifiutato e squadra avvisata.','enter-minutes':'Inserisci i minuti',
+  'broadcast-sent':'Annuncio inviato!','pick-team':'Scegli una squadra',
+  'already-frozen-team':'Squadra già congelata','tunnel-detected':'Tunnel rilevato:',
+  'name-required':'Nome richiesto','cannot-del-default-mode':'Modalità predefinita non eliminabile.',
+  'mode-created':'Modalità creata!','mission-created':'MiSSiON creata!','tpl-deleted':'Modello eliminato',
+  'update-ok':'Aggiornamento riuscito! Riavvio…','update-failed':'Aggiornamento fallito.',
+  'ruleset-created':'Set di regole creato!','cannot-del-default-rs':'Set di regole predefinito non eliminabile.',
+  'cr-mode-created':'Modalità CityRush creata!','pick-mode-first':'Prima seleziona una modalità',
+  'cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
+  'hint-saved':'Suggerimento salvato!','c-del-hint':'Eliminare il suggerimento?','hint-not-found':'Suggerimento non trovato',
+  'invalid-json':'File JSON non valido','invalid-format':"Formato non valido (manca l'array missions)",
+  'pick-missions':'Nessuna MiSSiON selezionata','no-other-mode':'Nessuna altra modalità',
+  'mode-label-modal':'Modalità','no-rulesets':'Nessun set di regole.',
+  'edit-tip':'Modifica','delete-tip':'Elimina','copy-to-rs-tip':'Copia in un altro set di regole',
+  'auto-translate-tip':'Traduzione automatica','chat-msg-fallback':'Messaggio…',
+  'cr-error-cr-mode-name-modal':'Aggiungi modalità CityRush','cr-edit-mode-modal':'Modifica modalità',
+  'no-cr-mode':'— Nessun set di regole —','allowed-media':'Media consentiti',
+  'cr-mode-name-eg':'es. Tour Centro Storico','cr-mode-delete-confirm':'Eliminare la modalità CityRush "{name}" e tutte le sue missioni?',
+  'export-btn':'⬇ Esporta','import-btn':'⬆ Importa','s-import-btn':'⬆ Importa','s-cr-import':'⬆ Importa',
+  'copy-to-mode-btn':'⎘ Copia in modalità…',
+  'cr-hint-add':'Aggiungi suggerimento','cr-hint-edit':'Modifica suggerimento',
+  'image-optional':'Immagine (opzionale)','remove-image':'Rimuovi immagine','current-image':'immagine attuale',
+  'no-name':'(senza nome)','imported-suffix':'importati','errors-suffix':'errori',
+  'copied-suffix':'copiati!','exported-suffix':'esportati'},
+  es:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modos CityRush','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'CityRush usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo CityRush. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones CityRush. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
+  'cr-m-name':'Nombre','cr-m-lat':'Latitud','cr-m-lng':'Longitud','cr-m-radius':'Radio (metros)','cr-m-points':'Puntos',
+  'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
+  'cr-m-gps-hint':'Pista para los jugadores (GPS)','cr-m-time-secs':'Tiempo (segundos)','cr-m-pen-int':'Penalización cada X seg.','cr-m-pen-pts':'Penalización (puntos)',
+  'cr-m-media':'Tipo de medio','cr-m-media-none':'— Ninguno —','cr-m-has-answer':'❓ Pregunta con respuesta (los jugadores deben escribir la respuesta correcta)',
+  'cr-m-answer-label':'Respuesta correcta (al menos un idioma)','cr-m-hints-label':'💡 Pistas (opcional)','cr-m-add-hint':'＋ Pista','cr-m-no-hints':'Aún no hay pistas.',
+  'cr-m-tab-desc':'📖 Descripción','cr-m-tab-task':'🎯 Tarea','cr-m-add-title':'Añadir misión CityRush','cr-m-edit-title':'Editar misión CityRush','cr-m-create':'Crear','cr-m-save':'Guardar','cr-m-cancel':'Cancelar','cr-m-auto':'🌐 Auto',
+  'cr-m-hide-until-arrival':'🔒 Ocultar tarea y descripción hasta la llegada',
+  'cr-m-hide-tip':'Los jugadores solo ven la pista hasta llegar al punto GPS. Después se muestran la descripción y la tarea.',
+  // ── Tooltips (ES) ──────────────────────────────────────────────────────────
+  'tip-public-url':'La URL pública que usan los jugadores para unirse. Usa "Detectar" para leer la URL del túnel automáticamente.',
+  'tip-timeout':'Mensaje que se muestra a los jugadores cuando se acaba el tiempo.',
+  'tip-loc-missions':'Cuántas MiSSiONS se sortean por partida nueva en este lugar.',
+  'tip-loc-min-loc':'Mínimo de MiSSiONS específicas del lugar por partida — el resto se rellena del pool.',
+  'tip-loc-allow':'Qué tipos de medios se permiten en este lugar. Los no permitidos no se pueden elegir en las misiones.',
+  'tip-mode-name':'Nombre visible del modo de juego.',
+  'tip-mode-ruleset':'Qué conjunto de reglas se aplica a las partidas de este modo.',
+  'tip-mode-timer':'Duración por defecto (minutos) al crear una nueva partida en este modo.',
+  'tip-mission-name':'Nombre visible en los cinco idiomas.',
+  'tip-mission-loc':'Lugar de esta misión. "Pool" = disponible en cualquier lugar.',
+  'tip-mission-mode':'A qué modo de juego pertenece la misión.',
+  'tip-mission-media':'Qué medio deben enviar los jugadores.',
+  'tip-mission-points':'Puntos otorgados al aceptar el envío.',
+  'tip-mission-indoor':'La misión también se puede completar en interior.',
+  'tip-mission-desc':'Historia/contexto mostrado a los jugadores.',
+  'tip-mission-task':'Qué deben hacer los jugadores en concreto.',
+  'tip-cr-mode-name':'Nombre visible del modo CityRush.',
+  'tip-cr-mode-ruleset':'Conjunto de reglas mostrado a los jugadores en este modo.',
+  'tip-cr-mode-allow':'Tipos de medios permitidos en las misiones de este modo.',
+  'tip-cr-mode-timer':'Duración por defecto (minutos) al crear una nueva partida CityRush en este modo.',
+  'cr-mode-timer-label':'Duración por defecto (minutos)',
+  'tip-cr-lat':'Latitud del objetivo (grados decimales, p.ej. 47.47620).',
+  'tip-cr-lng':'Longitud del objetivo (grados decimales).',
+  'tip-cr-radius':'Distancia (m) a la que se considera que el jugador ha llegado.',
+  'tip-cr-points':'Puntos máximos de esta misión (las penalizaciones se restan).',
+  'tip-cr-gps':'Los jugadores deben llegar físicamente al objetivo antes de poder resolver la misión.',
+  'tip-cr-map':'Mostrar la misión como marcador en el mapa. Sin esto, los jugadores no sabrán adónde ir.',
+  'tip-cr-timed':'Con límite de tiempo: las penalizaciones empiezan cuando se supera.',
+  'tip-cr-time-secs':'Tiempo máximo (segundos) antes de que entren las penalizaciones.',
+  'tip-cr-pen-int':'Cada cuántos segundos de exceso se incurre en una nueva penalización.',
+  'tip-cr-pen-pts':'Puntos restados por penalización.',
+  'tip-cr-media':'Exigir una foto o vídeo. Las misiones con medios requieren la aprobación del Gamemaster.',
+  'tip-cr-has-answer':'Los jugadores deben escribir una respuesta correcta. Mutuamente excluyente con foto/vídeo.',
+  'tip-cr-answer':'La/s respuesta/s correcta/s — la comparación ignora mayúsculas y espacios.',
+  'tip-cr-hint':'Texto opcional que se muestra mientras los jugadores caminan hacia el objetivo.',
+  'tip-cr-hide-until-arrival':'La descripción y la tarea solo aparecen tras la llegada del jugador.',
+  'tip-cr-hints':'Pistas que los jugadores pueden pedir una a una si se atascan.','ll-select':'Elige un lugar','ll-settings':'Ajustes','gs-back':'Atrás','gs-mode-label':'Modo de juego','gs-recent':'Partidas recientes','gs-new':'Nueva partida','ng-title':'Partida creada','ng-back':'Atrás','ng-template':'Con plantilla','ng-open':'Abrir panel','db-games':'Partidas','tb-start':'Iniciar','tb-pause':'Pausa','db-teams':'EQUIPOS','db-select-team':'Selecciona un equipo','db-send':'Enviar','db-broadcast-info':'Enviar un mensaje a todos los equipos.','db-broadcast':'Enviar a todos','db-rankings':'CLASIFICACIÓN','sg-title':'Ajustes','sg-pw-label':'Contraseña','sg-back':'Atrás','sg-unlock':'Desbloquear','s-back':'Atrás','s-title':'AJUSTES','st-general':'General','st-locations':'Lugares','st-missions':'MiSSiONS','st-rules':'Reglas','st-template':'Plantilla QR','st-security':'Seguridad','st-updates':'Actualizaciones','s-gen-title':'Ajustes generales','s-url-label':'URL pública','s-detect':'Detectar','s-url-hint':'Ejecuta start-tunnel-windows.bat y luego pulsa Detectar.','s-timeout-label':'Mensaje de fin','s-save':'Guardar','s-add-loc':'+ Lugar','s-mode-label':'Modo:','s-add-mode':'+ Modo','s-add-mission':'+ MiSSiON','s-rules-title':'Reglas','s-add-rule':'+ Regla','s-rules-hint':'Marcadores: [photo] [video] [indoor]. Arrastra para reordenar.','s-rules-save':'Guardar','s-tpl-title':'Plantilla QR','s-tpl-size-label':'Tamaño de papel','s-tpl-upload-label':'Subir plantilla','s-tpl-drag-hint':'Arrastra el marcador del QR.','s-tpl-save':'Guardar posición','s-tpl-delete':'Eliminar plantilla','s-sec-title':'Cambiar contraseña','s-sec-old':'Contraseña actual','s-sec-new':'Nueva contraseña','s-sec-new2':'Confirmar','s-sec-save':'Actualizar','rej-title':'Rechazar envío','rej-hint':'El medio será eliminado.','rej-reason-label':'Motivo (mostrado al equipo)','rej-confirm':'Rechazar y notificar','qrm-title':'Código QR de acceso','s-add-rs':'＋ Conjunto de reglas','ruleset-label':'Conjunto de reglas','paper-size':'Tamaño de papel','update-title':'Actualizar app','update-btn':'Actualizar ahora','update-log':'Salida','github-label':'URL del repositorio GitHub','version-label':'Versión','modes-label':'Partidas','chat-ph-gm':'Mensaje…','qrm-close':'Cerrar','ng-qr-download':'⬇ QR','qrm-download':'⬇ Descargar QR','cancel':'Cancelar','create':'Crear','save':'Guardar','edit':'Editar','delete':'Eliminar','copy':'Copiar','rule':'Regla','add-mode':'＋ Modo','edit-mode':'Editar modo','min-label':'Minutos','per-game':'por partida','pool':'Pool (todos los lugares)','mission-name-label':'Nombre de la MiSSiON','loc-label':'Lugar','media-label':'Tipo de medio','indoor-label':'También en interior','desc-label':'Descripción','task-label':'Tarea','auto-translate':'🌐 Traducir automáticamente','no-rules':'Aún no hay reglas.','created':'¡Creado!','saved':'¡Guardado!','wrong-pw':'Contraseña incorrecta.','del':'Eliminar','no-missions':'Sin misiones.','all':'Todas','translating':'Traduciendo…','translated':'¡Traducido!','updating':'Actualizando…','selfie-uploaded':'Selfie subido',
+  'no-tunnel':'No se encontró ningún túnel.','mode-placeholder':'p. ej. ADVANCED',
+  'location-label':'Lugar','add-loc':'Añadir lugar','edit-loc':'Editar lugar',
+  'loc-spec':'MiSSiONS específicas del lugar','add-mission':'Añadir MiSSiON','edit-mission':'Editar MiSSiON',
+  'desc-hint':'Historia / contexto','task-hint':'Qué deben hacer los jugadores',
+  'copy-to':'Copiar a…','hint':'Pista','cr-mission-suffix':'misiones CityRush',
+  'cr-m-special':'⭐ Misión especial (siempre disponible, sin GPS)',
+  'cr-m-special-cooldown':'Pausa X (minutos entre intentos, 0 = desactivado)',
+  'tip-cr-special':'Las misiones especiales se pueden jugar en cualquier momento, no requieren GPS y no alteran el orden lineal.',
+  'tip-cr-special-cooldown':'Tiempo de espera entre dos intentos de una misión especial. 0 = solo se puede jugar una vez. Un rechazo del Gamemaster anula la espera.',
+  'cr-m-gps-hints-label':'Pistas GPS (antes de llegar)',
+  'cr-m-gps-hints-help':'Reveladas una a una antes de llegar. Ayudan a encontrar el destino.',
+  'cr-m-answer-hints-label':'Pistas de la tarea (tras llegar)',
+  'cr-m-answer-hints-help':'Reveladas una a una tras llegar. Ayudan a resolver la tarea.','enter-text':'Introduce primero el texto','all-filled':'Todos los campos ya están rellenados','tpl-uploaded':'¡Plantilla subida!','pw-mismatch':'Las contraseñas no coinciden.','pw-changed':'¡Contraseña cambiada!','rules-copied':'¡Reglas copiadas!','rule-copied':'¡Regla copiada!','copy-rule-title':'Copiar regla a…','target-rs':'Conjunto de reglas destino','no-other-rs':'No hay otros conjuntos de reglas.','del-mode-confirm':'¿Eliminar el modo? Todas las misiones también se eliminarán.','del-rs-confirm':'¿Eliminar el conjunto de reglas? Los modos volverán a Standard.','del-loc-confirm':'¿Eliminar el lugar y todas sus misiones?','del-mission-confirm':'¿Eliminar esta misión?','add-rs':'＋ Conjunto de reglas','ruleset':'Conjunto de reglas','remove':'Quitar',
+  'freeze-team-tip':'Congelar equipo','thaw-team-tip':'Descongelar equipo','thaw-label':'Descongelar','freeze-label':'Congelar',
+  'pick-cr-mode':'Elige un modo CityRush','error-prefix':'Error:','no-qr-yet':'Aún sin código QR',
+  'deleted':'Eliminado','game-ended-toast':'¡Partida terminada!','enter-reason':'Introduce un motivo',
+  'cr-rejected-notified':'CityRush: rechazado y equipo notificado.','accepted-toast':'¡Aceptado!',
+  'rejected-notified':'Rechazado y equipo notificado.','enter-minutes':'Introduce los minutos',
+  'broadcast-sent':'¡Anuncio enviado!','pick-team':'Elige un equipo',
+  'already-frozen-team':'Este equipo ya está congelado','tunnel-detected':'Túnel detectado:',
+  'name-required':'Nombre requerido','cannot-del-default-mode':'El modo predeterminado no se puede eliminar.',
+  'mode-created':'¡Modo creado!','mission-created':'¡MiSSiON creada!','tpl-deleted':'Plantilla eliminada',
+  'update-ok':'¡Actualización correcta! Reiniciando…','update-failed':'Actualización fallida.',
+  'ruleset-created':'¡Conjunto de reglas creado!','cannot-del-default-rs':'El conjunto de reglas predeterminado no se puede eliminar.',
+  'cr-mode-created':'¡Modo CityRush creado!','pick-mode-first':'Elige primero un modo',
+  'cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
+  'hint-saved':'¡Pista guardada!','c-del-hint':'¿Eliminar la pista?','hint-not-found':'Pista no encontrada',
+  'invalid-json':'Archivo JSON no válido','invalid-format':'Formato no válido (falta el array missions)',
+  'pick-missions':'Ninguna MiSSiON seleccionada','no-other-mode':'No hay otro modo',
+  'mode-label-modal':'Modo','no-rulesets':'No hay conjuntos de reglas.',
+  'edit-tip':'Editar','delete-tip':'Eliminar','copy-to-rs-tip':'Copiar a otro conjunto de reglas',
+  'auto-translate-tip':'Traducir automáticamente','chat-msg-fallback':'Mensaje…',
+  'cr-error-cr-mode-name-modal':'Añadir modo CityRush','cr-edit-mode-modal':'Editar modo',
+  'no-cr-mode':'— Sin conjunto de reglas —','allowed-media':'Medios permitidos',
+  'cr-mode-name-eg':'p. ej. Casco Antiguo','cr-mode-delete-confirm':'¿Eliminar el modo CityRush "{name}" y todas sus misiones?',
+  'export-btn':'⬇ Exportar','import-btn':'⬆ Importar','s-import-btn':'⬆ Importar','s-cr-import':'⬆ Importar',
+  'copy-to-mode-btn':'⎘ Copiar a modo…',
+  'cr-hint-add':'Añadir pista','cr-hint-edit':'Editar pista',
+  'image-optional':'Imagen (opcional)','remove-image':'Quitar imagen','current-image':'imagen actual',
+  'no-name':'(sin nombre)','imported-suffix':'importadas','errors-suffix':'errores',
+  'copied-suffix':'copiadas!','exported-suffix':'exportadas'}
 };
 function gmt(key){
   return (GMT[gmLang]||GMT['en']||{})[key] || (GMT['en']||{})[key] || '';
@@ -797,9 +1000,24 @@ function applyGmLang(){
   ['gm-lang-btn','gm-lang-btn2','gm-lang-btn3'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=gmLang.toUpperCase();});
   // Update placeholders and dynamic text
   const chatInput=document.getElementById('gm-chat-input');
-  if(chatInput) chatInput.placeholder=gmt('chat-ph-gm')||'Nachricht…';
+  if(chatInput) chatInput.placeholder=gmt('chat-ph-gm')||gmt('chat-msg-fallback')||'Nachricht…';
   const broadcastInfo=document.getElementById('db-broadcast-info');
   if(broadcastInfo) broadcastInfo.textContent=gmt('db-broadcast-info')||'Nachricht an alle Teams senden.';
+  // Translate non-textContent attributes (title tooltips, label spans whose
+  // own ID isn't a GMT key). Listed explicitly so we don't have to remember
+  // them in cycleGmLang — applyGmLang covers them on every language switch.
+  [
+    ['btn-freeze-team','title','freeze-team-tip'],
+    ['btn-thaw-team','title','thaw-team-tip'],
+    ['btn-freeze-team-lbl','text','freeze-label'],
+    ['btn-thaw-team-lbl','text','thaw-label'],
+  ].forEach(([id, kind, key]) => {
+    const el = document.getElementById(id);
+    const val = gmt(key);
+    if(!el || !val) return;
+    if(kind === 'title') el.title = val;
+    else el.textContent = val;
+  });
   // Refresh tooltips so a language switch retranslates the title attributes.
   applyTooltips();
 }
@@ -813,7 +1031,15 @@ function cycleGmLang(){
     selectTeam(selectedTeamId);
   }
   if(document.getElementById('stab-locations')?.classList.contains('active')) loadLocationsSettings();
-  if(document.getElementById('stab-missions')?.classList.contains('active')) loadMissions();
+  if(document.getElementById('stab-missions')?.classList.contains('active')) {
+    // Mission filter <option> text is built with gmt('all') at render time —
+    // applyGmLang() only refreshes top-level elements by ID, so the dropdown
+    // options stay stuck at whatever language they were last drawn in. Force
+    // a re-render of the filter and the mode tabs whenever the GM cycles.
+    loadModeTabs();
+    loadMissionFilter();
+    loadMissions();
+  }
   if(document.getElementById('stab-rules')?.classList.contains('active')) loadRulesetsSettings();
   if(document.getElementById('stab-cityrush')?.classList.contains('active')) loadCrModes();
   if(document.getElementById('games-grid')&&selectedLocationId) loadGames(selectedLocationId);
@@ -928,7 +1154,7 @@ async function createNewGame(){
   const crModeId = isCityRush
     ? Number(document.getElementById('cr-mode-select')?.value)||null
     : null;
-  if(isCityRush && !crModeId){toast('Bitte CityRush-Modus auswählen','warning');btn.disabled=false;return;}
+  if(isCityRush && !crModeId){toast(gmt('pick-cr-mode')||'Bitte CityRush-Modus auswählen','warning');btn.disabled=false;return;}
   // For CityRush, use a virtual location_id of 0 (no location needed)
   const locId = isCityRush ? null : selectedLocationId;
   const res=await API('/api/games',{method:'POST',body:{location_id:locId,mode_id:modeId,cr_mode_id:crModeId,is_cityrush:isCityRush?1:0}});
@@ -939,7 +1165,7 @@ async function createNewGame(){
   document.getElementById('join-url-display').textContent=res.joinUrl;
   document.getElementById('qr-img').src=res.qrCode;
   showScreen('screen-new-game');
-  }catch(e){toast('Fehler: '+e.message,'error');btn.disabled=false;}
+  }catch(e){toast((gmt('error-prefix')||'Fehler:')+' '+e.message,'error');btn.disabled=false;}
 }
 
 async function showGameQR(gameId){
@@ -958,7 +1184,7 @@ function downloadQR(){
 function downloadQRFromModal(){downloadQR();}
 
 async function downloadQRWithTemplate(){
-  if(!currentQRData){toast('No QR code yet','warning');return;}
+  if(!currentQRData){toast(gmt('no-qr-yet')||'No QR code yet','warning');return;}
   const s=await API('/api/settings');
   // Use gmLang to pick the correct language template
   const sizeEl=document.getElementById('tpl-size');
@@ -1000,12 +1226,12 @@ async function deleteGame(gameId,e){
   if(!settingsPassword){
     const pw=prompt('Passwort eingeben:');if(!pw)return;
     const v=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
-    if(!v.valid){toast('Falsches Passwort','error');return;}
+    if(!v.valid){toast(gmt('wrong-pw')||'Falsches Passwort','error');return;}
     settingsPassword=pw;
   }
   if(!confirm(`Spiel ${gameId} löschen? Alle Medien werden gelöscht.`))return;
   const res=await API(`/api/games/${gameId}`,{method:'DELETE',body:{password:settingsPassword}});
-  if(res.success){toast('Gelöscht','success');loadGames(selectedLocationId);}
+  if(res.success){toast(gmt('deleted')||'Gelöscht','success');loadGames(selectedLocationId);}
   else toast(res.error,'error');
 }
 
@@ -1097,7 +1323,7 @@ async function openDashboard(gameId){
     if(teamId === selectedTeamId) selectTeam(teamId);
   });
   socket.on('chat_message',onChatMessage);
-  socket.on('game_ended',()=>toast('Spiel beendet!'));
+  socket.on('game_ended',()=>toast(gmt('game-ended-toast')||'Spiel beendet!'));
   socket.on('gps_update',({teamId:tid,lat,lng})=>{
     ensureGmCrMap();
     upsertGmTeamMarker(tid, lat, lng);
@@ -1384,7 +1610,7 @@ function openCrRejectModal(subId){
 }
 async function confirmCrReject(){
   const reason = document.getElementById('reject-reason').value.trim();
-  if(!reason){ toast('Bitte Begründung eingeben','error'); return; }
+  if(!reason){ toast(gmt('enter-reason')||'Bitte Begründung eingeben','error'); return; }
   await API(`/api/cr/submissions/${pendingCrRejectSubId}/review`,
     {method:'POST',body:{action:'reject',message:reason,gameId:currentGameId}});
   document.getElementById('reject-modal').style.display='none';
@@ -1392,7 +1618,7 @@ async function confirmCrReject(){
   const btn = document.getElementById('rej-confirm');
   if(btn) btn.onclick = confirmReject;
   if(selectedTeamId) selectTeam(selectedTeamId);
-  toast('CityRush: Abgelehnt & Team benachrichtigt.','warning');
+  toast(gmt('cr-rejected-notified')||'CityRush: Abgelehnt & Team benachrichtigt.','warning');
 }
 
 function renderTeamMissions(missions){
@@ -1462,16 +1688,16 @@ async function reviewSub(tmId,action){
   if(action==='reject'){openRejectModal(tmId);return;}
   await API(`/api/submissions/${tmId}/review`,{method:'POST',body:{action,gameId:currentGameId}});
   if(selectedTeamId)selectTeam(selectedTeamId);
-  toast('Angenommen!','success');
+  toast(gmt('accepted-toast')||'Angenommen!','success');
 }
 function openRejectModal(tmId){pendingRejectSubId=tmId;pendingRejectGameId=currentGameId;document.getElementById('reject-reason').value='';document.getElementById('reject-modal').style.display='flex';}
 async function confirmReject(){
   const reason=document.getElementById('reject-reason').value.trim();
-  if(!reason){toast('Bitte Begründung eingeben','error');return;}
+  if(!reason){toast(gmt('enter-reason')||'Bitte Begründung eingeben','error');return;}
   await API(`/api/submissions/${pendingRejectSubId}/review`,{method:'POST',body:{action:'reject',message:reason,gameId:pendingRejectGameId}});
   document.getElementById('reject-modal').style.display='none';
   if(selectedTeamId)selectTeam(selectedTeamId);
-  toast('Abgelehnt & Team benachrichtigt.','warning');
+  toast(gmt('rejected-notified')||'Abgelehnt & Team benachrichtigt.','warning');
 }
 
 function renderRankings(rankings){
@@ -1520,7 +1746,7 @@ async function adjustTimer(seconds){
 }
 async function adjustTimerCustom(direction){
   const mins=parseFloat(document.getElementById('custom-timer-mins').value);
-  if(!mins||mins<=0){toast('Minuten eingeben','warning');return;}
+  if(!mins||mins<=0){toast(gmt('enter-minutes')||'Minuten eingeben','warning');return;}
   await adjustTimer(direction*Math.round(mins*60));
 }
 async function timerAction(action){await API(`/api/games/${currentGameId}/timer`,{method:'POST',body:{action}});}
@@ -1574,7 +1800,7 @@ async function sendBroadcast(){
   const content=document.getElementById('broadcast-input').value.trim();if(!content)return;
   await API(`/api/games/${currentGameId}/chat`,{method:'POST',body:{content,fromGm:true}});
   document.getElementById('broadcast-input').value='';
-  toast('Broadcast gesendet!','success');
+  toast(gmt('broadcast-sent')||'Broadcast gesendet!','success');
 }
 let gmCrMap=null, gmCrMarkers={};
 // Cached freeze rows for the active game. The chips show a ❄️ tag with
@@ -1683,7 +1909,7 @@ function pickFreezeSeconds(sec){
 function closeFreezeModal(){ document.getElementById('gm-freeze-modal').style.display = 'none'; }
 async function submitFreeze(){
   if(!selectedTeamId) return;
-  if(!_gmFreezePickedTargetId){ toast('Bitte ein Team wählen','warning'); return; }
+  if(!_gmFreezePickedTargetId){ toast(gmt('pick-team')||'Bitte ein Team wählen','warning'); return; }
   const r = await API(`/api/games/${currentGameId}/freeze`,{
     method:'POST',
     body:{
@@ -1694,7 +1920,7 @@ async function submitFreeze(){
   });
   if(r && r.success){ closeFreezeModal(); toast('❄ Eingefroren','success'); return; }
   if(r && r.error === 'already-frozen'){
-    toast('Dieses Team wurde bereits eingefroren','warning'); return;
+    toast(gmt('already-frozen-team')||'Dieses Team wurde bereits eingefroren','warning'); return;
   }
   toast(r && r.error || 'Fehler', 'error');
 }
@@ -1950,6 +2176,7 @@ async function loadSettings(){
   if(document.getElementById('s-timeout-en')) document.getElementById('s-timeout-en').value=s.timeout_text_en||'';
   if(document.getElementById('s-timeout-fr')) document.getElementById('s-timeout-fr').value=s.timeout_text_fr||'';
   if(document.getElementById('s-timeout-it')) document.getElementById('s-timeout-it').value=s.timeout_text_it||'';
+  if(document.getElementById('s-timeout-es')) document.getElementById('s-timeout-es').value=s.timeout_text_es||'';
   await loadLocationsSettings();
   await loadModeTabs();
   await loadMissions();
@@ -1970,12 +2197,12 @@ async function loadSettings(){
 
 async function detectTunnel(){
   const res=await API('/api/detect-tunnel');
-  if(res.url){document.getElementById('s-public-url').value=res.url;toast('Tunnel erkannt: '+res.url,'success');}
+  if(res.url){document.getElementById('s-public-url').value=res.url;toast((gmt('tunnel-detected')||'Tunnel erkannt:')+' '+res.url,'success');}
   else toast(gmt('no-tunnel')||'Kein Tunnel. / No tunnel found.','warning');
 }
 
 async function autoTranslateTimeout(){
-  const fields={de:document.getElementById('s-timeout-de')?.value,en:document.getElementById('s-timeout-en')?.value,fr:document.getElementById('s-timeout-fr')?.value,it:document.getElementById('s-timeout-it')?.value};
+  const fields={de:document.getElementById('s-timeout-de')?.value,en:document.getElementById('s-timeout-en')?.value,fr:document.getElementById('s-timeout-fr')?.value,it:document.getElementById('s-timeout-it')?.value,es:document.getElementById('s-timeout-es')?.value};
   const filled=Object.entries(fields).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben','warning');return;}
   const [fromLang,text]=filled;
@@ -1991,7 +2218,8 @@ async function saveGeneralSettings(){
   const tout_en=document.getElementById('s-timeout-en')?.value||'';
   const tout_fr=document.getElementById('s-timeout-fr')?.value||'';
   const tout_it=document.getElementById('s-timeout-it')?.value||'';
-  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it}});
+  const tout_es=document.getElementById('s-timeout-es')?.value||'';
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es}});
   toast(res.success?'Gespeichert!':res.error,res.success?'success':'error');
 }
 
@@ -2002,7 +2230,7 @@ async function loadModeTabs(){
   bar.innerHTML=modes.map(m=>`
     <span style="display:inline-flex;align-items:center;gap:1px;margin-right:.25rem;">
       <button class="tab ${sel(m.id===currentModeId)}" onclick="selectMode(${m.id},'${esc(m.name)}',this)">${esc(m.name)}</button>
-      <button style="padding:.2rem .35rem;font-size:.7rem;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius);cursor:pointer;" onclick="showEditMode(${m.id})" title="Bearbeiten">✎</button>
+      <button style="padding:.2rem .35rem;font-size:.7rem;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius);cursor:pointer;" onclick="showEditMode(${m.id})" title="${gmt('edit')||'Bearbeiten'}">✎</button>
     </span>`).join('');
 }
 async function selectMode(id,name,el){
@@ -2051,27 +2279,27 @@ async function showEditMode(id){
 }
 async function saveEditMode(id){
   const name=document.getElementById('edit-mode-name').value.trim();
-  if(!name){toast('Name required','error');return;}
+  if(!name){toast(gmt('name-required')||'Name required','error');return;}
   const rulesetId=Number(document.getElementById('edit-mode-ruleset').value);
   const timer=Number(document.getElementById('edit-mode-timer').value)||60;
   const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer}});
-  if(res.success){closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast('Gespeichert!','success');}
+  if(res.success){closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast(gmt('saved')||'Gespeichert!','success');}
   else toast(res.error,'error');
 }
 async function confirmDeleteMode(id){
-  if(id===1){toast('Standard-Modus kann nicht gelöscht werden.','warning');return;}
+  if(id===1){toast(gmt('cannot-del-default-mode')||'Standard-Modus kann nicht gelöscht werden.','warning');return;}
   if(!confirm(gmt('del-mode-confirm')||'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht. / Delete mode? All missions will be deleted too.'))return;
   const res=await API(`/api/modes/${id}`,{method:'DELETE',body:{password:settingsPassword}});
-  if(res.success){currentModeId=1;currentModeName='MiSSiONS';await loadModeTabs();await loadMissions();toast('Gelöscht','success');}
+  if(res.success){currentModeId=1;currentModeName='MiSSiONS';await loadModeTabs();await loadMissions();toast(gmt('deleted')||'Gelöscht','success');}
   else toast(res.error,'error');
 }
 async function saveNewMode(){
   const name=document.getElementById('mode-name').value.trim();
-  if(!name){toast('Name erforderlich','error');return;}
+  if(!name){toast(gmt('name-required')||'Name erforderlich','error');return;}
   const rulesetEl=document.getElementById('mode-ruleset');const rulesetId=rulesetEl?Number(rulesetEl.value):1;
   const timerEl=document.getElementById('mode-timer');const modeTimer=timerEl?Number(timerEl.value):60;
   const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer}});
-  if(res.success){closeModal();loadModeTabs();toast('Modus erstellt!','success');}
+  if(res.success){closeModal();loadModeTabs();toast(gmt('mode-created')||'Modus erstellt!','success');}
 }
 
 // Locations
@@ -2114,9 +2342,9 @@ function showAddLocation(){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveNewLocation(){
-  const name=document.getElementById('loc-name').value.trim();if(!name){toast('Name fehlt','error');return;}
+  const name=document.getElementById('loc-name').value.trim();if(!name){toast(gmt('name-required')||'Name fehlt','error');return;}
   const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0}});
-  if(res.success){closeModal();loadLocationsSettings();loadMissionFilter();toast('Erstellt!','success');}
+  if(res.success){closeModal();loadLocationsSettings();loadMissionFilter();toast(gmt('created')||'Erstellt!','success');}
 }
 async function editLocation(id){
   const locs=await API('/api/locations');const l=locs.find(x=>x.id===id);if(!l)return;
@@ -2140,7 +2368,7 @@ async function editLocation(id){
 }
 async function saveEditLocation(id){
   const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0}});
-  if(res.success){closeModal();loadLocationsSettings();toast('Gespeichert!','success');}
+  if(res.success){closeModal();loadLocationsSettings();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteLocation(id){
   if(!confirm(gmt('del-loc-confirm')||'Standort und alle MiSSiONS löschen? / Delete location and all its missions?'))return;
@@ -2169,10 +2397,10 @@ async function loadMissions(){
   // Add multiselect toolbar
   const toolbar = `<div id="ms-toolbar" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap;">
     <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-size:.85rem;">
-      <input type="checkbox" id="ms-select-all" onchange="toggleSelectAll(this)" style="accent-color:var(--red);"> Alle
+      <input type="checkbox" id="ms-select-all" onchange="toggleSelectAll(this)" style="accent-color:var(--red);"> ${gmt('all')||'Alle'}
     </label>
-    <button class="btn btn-ghost btn-sm" onclick="copySelectedMissions()" id="btn-ms-copy" style="display:none;">⎘ Kopieren nach Modus…</button>
-    <button class="btn btn-ghost btn-sm" onclick="downloadSelectedMissions()" id="btn-ms-download" style="display:none;">⬇ Exportieren</button>
+    <button class="btn btn-ghost btn-sm" onclick="copySelectedMissions()" id="btn-ms-copy" style="display:none;">${gmt('copy-to-mode-btn')||'⎘ Kopieren nach Modus…'}</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadSelectedMissions()" id="btn-ms-download" style="display:none;">${gmt('export-btn')||'⬇ Export'}</button>
   </div>`;
   list.innerHTML = toolbar + missions.map(m=>`
     <div class="card mb-1" id="mcard-s-${m.id}">
@@ -2198,7 +2426,7 @@ async function loadMissions(){
 
 
 async function autoTranslateMissionName(){
-  const texts={de:document.getElementById('m-name-de')?.value,en:document.getElementById('m-name-en')?.value,fr:document.getElementById('m-name-fr')?.value,it:document.getElementById('m-name-it')?.value};
+  const texts={de:document.getElementById('m-name-de')?.value,en:document.getElementById('m-name-en')?.value,fr:document.getElementById('m-name-fr')?.value,it:document.getElementById('m-name-it')?.value,es:document.getElementById('m-name-es')?.value};
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben','warning');return;}
   const [fromLang,text]=filled;
@@ -2223,12 +2451,13 @@ function missionModal(m,locs){
         <div class="field" style="margin:0;"><label class="label">EN</label><input id="m-name-en" class="input" value="${v('name_en')}"></div>
         <div class="field" style="margin:0;"><label class="label">FR</label><input id="m-name-fr" class="input" value="${v('name_fr')}"></div>
         <div class="field" style="margin:0;"><label class="label">IT</label><input id="m-name-it" class="input" value="${v('name_it')}"></div>
+        <div class="field" style="margin:0;"><label class="label">ES</label><input id="m-name-es" class="input" value="${v('name_es')}"></div>
       </div>
     </div>
     <div class="grid-2">
       <div class="field" data-tip="mission-loc"><label class="label" data-tip="mission-loc">${gmt('loc-label')||'Standort / Location'}</label>
         <select id="m-loc" class="select" data-tip="mission-loc"><option value="" ${sel(!m||!m.location_id)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
-      <div class="field" data-tip="mission-mode"><label class="label" data-tip="mission-mode">Modus</label>
+      <div class="field" data-tip="mission-mode"><label class="label" data-tip="mission-mode">${gmt('mode-label-modal')||'Modus'}</label>
         <select id="m-mode" class="select" data-tip="mission-mode"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
     </div>
     <div class="grid-2">
@@ -2254,6 +2483,7 @@ function missionModal(m,locs){
         <div class="field"><label class="label">EN</label><textarea id="m-desc-en" class="textarea" rows="3">${v('description_en')}</textarea></div>
         <div class="field"><label class="label">FR</label><textarea id="m-desc-fr" class="textarea" rows="3">${v('description_fr')}</textarea></div>
         <div class="field"><label class="label">IT</label><textarea id="m-desc-it" class="textarea" rows="3">${v('description_it')}</textarea></div>
+        <div class="field"><label class="label">ES</label><textarea id="m-desc-es" class="textarea" rows="3">${v('description_es')}</textarea></div>
       </div>
     </div>
     <div id="mtab-task" class="mission-tab-content">
@@ -2266,6 +2496,7 @@ function missionModal(m,locs){
         <div class="field"><label class="label">EN</label><textarea id="m-task-en" class="textarea" rows="3">${v('task_en')}</textarea></div>
         <div class="field"><label class="label">FR</label><textarea id="m-task-fr" class="textarea" rows="3">${v('task_fr')}</textarea></div>
         <div class="field"><label class="label">IT</label><textarea id="m-task-it" class="textarea" rows="3">${v('task_it')}</textarea></div>
+        <div class="field"><label class="label">ES</label><textarea id="m-task-es" class="textarea" rows="3">${v('task_es')}</textarea></div>
       </div>
     </div>`;
 }
@@ -2278,7 +2509,7 @@ function switchMissionTab(tab,el){
 }
 
 async function autoTranslate(section){
-  const texts={de:document.getElementById(`m-${section}-de`)?.value,en:document.getElementById(`m-${section}-en`)?.value,fr:document.getElementById(`m-${section}-fr`)?.value,it:document.getElementById(`m-${section}-it`)?.value};
+  const texts={de:document.getElementById(`m-${section}-de`)?.value,en:document.getElementById(`m-${section}-en`)?.value,fr:document.getElementById(`m-${section}-fr`)?.value,it:document.getElementById(`m-${section}-it`)?.value,es:document.getElementById(`m-${section}-es`)?.value};
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben / Enter text first','warning');return;}
   const [fromLang,text]=filled;
@@ -2306,8 +2537,8 @@ async function showAddMission(){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveNewMission(){
-  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value}});
-  if(res.success){closeModal();loadMissions();toast('MiSSiON erstellt!','success');}else toast(res.error,'error');
+  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||''}});
+  if(res.success){closeModal();loadMissions();toast(gmt('mission-created')||'MiSSiON erstellt!','success');}else toast(res.error,'error');
 }
 async function editMission(id){
   const locs=await API('/api/locations');
@@ -2326,8 +2557,8 @@ async function editMission(id){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveEditMission(id){
-  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value}});
-  if(res.success){closeModal();loadMissions();toast('Gespeichert!','success');}
+  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||''}});
+  if(res.success){closeModal();loadMissions();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteMission(id){
   if(!confirm(gmt('del-mission-confirm')||'MiSSiON löschen? / Delete mission?'))return;
@@ -2349,8 +2580,8 @@ function renderRulesList(){
         <span class="drag-handle" ondragstart="event.stopPropagation()" draggable="false">⠿</span>
         <span style="font-weight:600;font-size:.85rem;flex:1;">${gmt('rule')||(gmLang==='de'?'Regel':gmLang==='fr'?'Règle':gmLang==='it'?'Regola':'Rule')} ${i+1}</span>
         <div style="display:flex;gap:.4rem;">
-          <button class="btn btn-ghost btn-sm" onclick="autoTranslateRule(${i})" title="Auto-übersetzen">🌐</button>
-          <button class="btn btn-ghost btn-sm" onclick="showCopyOneRule(${i})" title="In anderes Regelwerk kopieren">⎘</button>
+          <button class="btn btn-ghost btn-sm" onclick="autoTranslateRule(${i})" title="${gmt('auto-translate-tip')||'Auto-übersetzen'}">🌐</button>
+          <button class="btn btn-ghost btn-sm" onclick="showCopyOneRule(${i})" title="${gmt('copy-to-rs-tip')||'In anderes Regelwerk kopieren'}">⎘</button>
           <button class="btn btn-danger btn-sm" onclick="deleteRule(${i})">${'✕'}</button>
         </div>
       </div>
@@ -2359,6 +2590,7 @@ function renderRulesList(){
         <div class="field" style="margin:0;"><label class="label">EN</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'en',this.value)">${esc(r.en||'')}</textarea></div>
         <div class="field" style="margin:0;"><label class="label">FR</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'fr',this.value)">${esc(r.fr||'')}</textarea></div>
         <div class="field" style="margin:0;"><label class="label">IT</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'it',this.value)">${esc(r.it||'')}</textarea></div>
+        <div class="field" style="margin:0;"><label class="label">ES</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'es',this.value)">${esc(r.es||'')}</textarea></div>
       </div>
     </div>`).join('');
   // Ensure textareas are not draggable
@@ -2377,13 +2609,13 @@ function ruleDragEnd(){
   document.querySelectorAll('.rule-item').forEach(el=>{el.style.opacity='';el.style.borderTop='';});
   dragSrc=null;
 }
-function addRuleItem(){rulesList.push({de:'',en:'',fr:'',it:''});renderRulesList();}
+function addRuleItem(){rulesList.push({de:'',en:'',fr:'',it:'',es:''});renderRulesList();}
 function deleteRule(i){rulesList.splice(i,1);renderRulesList();}
 function updateRule(i,lang,val){if(rulesList[i])rulesList[i][lang]=val;}
 
 async function autoTranslateRule(i){
   const r=rulesList[i];if(!r)return;
-  const texts={de:r.de,en:r.en,fr:r.fr,it:r.it};
+  const texts={de:r.de,en:r.en,fr:r.fr,it:r.it,es:r.es};
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben / Enter text first','warning');return;}
   const [fromLang,text]=filled;
@@ -2408,7 +2640,7 @@ function switchTplLang(lang, el){
   tplLang = lang;
   document.querySelectorAll('#stab-template [id^="tpl-lang-"]').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
-  const langNames = {de:'DE-Vorlage',en:'EN Template',fr:'Modèle FR',it:'Modello IT'};
+  const langNames = {de:'DE-Vorlage',en:'EN Template',fr:'Modèle FR',it:'Modello IT',es:'Plantilla ES'};
   const hint = document.getElementById('tpl-lang-hint');
   if(hint) hint.textContent = langNames[lang]||lang.toUpperCase();
   loadTemplate();
@@ -2508,7 +2740,7 @@ async function saveTemplatePosition(){
 async function deleteTemplate(){
   const size=document.getElementById('tpl-size').value;
   const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,[`qr_template_${size}`]:null}});
-  if(res.success){document.getElementById('tpl-editor').style.display='none';toast('Vorlage gelöscht','success');}
+  if(res.success){document.getElementById('tpl-editor').style.display='none';toast(gmt('tpl-deleted')||'Vorlage gelöscht','success');}
 }
 
 async function saveGithubUrl(){
@@ -2530,10 +2762,10 @@ async function runUpdate(){
     const res=await API('/api/update',{method:'POST',body:{password:settingsPassword}});
     log.textContent=res.log||'';
     if(res.success){
-      toast('Update erfolgreich! App startet neu...','success');
+      toast(gmt('update-ok')||'Update erfolgreich! App startet neu...','success');
       setTimeout(()=>window.location.reload(),3000);
     } else {
-      toast('Update fehlgeschlagen.','error');
+      toast(gmt('update-failed')||'Update fehlgeschlagen.','error');
       btn.disabled=false;
     }
   } catch(e) {
@@ -2561,7 +2793,7 @@ async function loadRulesetsSettings(){
   const rulesets = await API('/api/rulesets');
   const bar = document.getElementById('ruleset-subtabs');
   if(!bar) return;
-  if(!rulesets.length){bar.innerHTML=`<span style="color:var(--text-muted);font-size:.85rem;">${gmt('no-rules')||'Keine Regelwerke.'}</span>`;return;}
+  if(!rulesets.length){bar.innerHTML=`<span style="color:var(--text-muted);font-size:.85rem;">${gmt('no-rulesets')||'Keine Regelwerke.'}</span>`;return;}
   bar.innerHTML = rulesets.map(rs=>`
     <button class="tab ${rs.id===currentEditRulesetId?'active':''}"
       style="border-bottom-width:2px;padding:.35rem .8rem;font-size:.8rem;"
@@ -2607,12 +2839,12 @@ function showAddRuleset(){
 
 async function saveNewRuleset(){
   const name=document.getElementById('rs-name').value.trim();
-  if(!name){toast('Name required','error');return;}
+  if(!name){toast(gmt('name-required')||'Name required','error');return;}
   const res=await API('/api/rulesets',{method:'POST',body:{password:settingsPassword,name}});
   if(res.success){
     currentEditRulesetId=res.id; currentEditRulesetName=name;
     closeModal(); await loadRulesetsSettings();
-    toast('Regelwerk erstellt!','success');
+    toast(gmt('ruleset-created')||'Regelwerk erstellt!','success');
   }
 }
 
@@ -2633,12 +2865,12 @@ async function saveRules(){
     const vEl = document.getElementById('landing-version');
     if(vEl) vEl.textContent = v.full || v.version || '';
   } catch(e) {}
-    toast('Gespeichert!','success');
+    toast(gmt('saved')||'Gespeichert!','success');
   } else toast(res.error,'error');
 }
 
 async function deleteCurrentRuleset(){
-  if(currentEditRulesetId===1){toast('Standard-Regelwerk kann nicht gelöscht werden.','warning');return;}
+  if(currentEditRulesetId===1){toast(gmt('cannot-del-default-rs')||'Standard-Regelwerk kann nicht gelöscht werden.','warning');return;}
   if(!confirm(gmt('del-rs-confirm')||'Regelwerk löschen? Modi werden auf Standard zurückgesetzt. / Delete ruleset? Modes will fall back to Standard.'))return;
   const res=await API(`/api/rulesets/${currentEditRulesetId}`,{method:'DELETE',body:{password:settingsPassword}});
   if(res.success){
@@ -2652,7 +2884,7 @@ async function deleteCurrentRuleset(){
     const v = await API('/api/version');
     const vEl = document.getElementById('landing-version');
     if(vEl) vEl.textContent = v.full || v.version || '';
-  } catch(e) {} toast('Gelöscht','success');
+  } catch(e) {} toast(gmt('deleted')||'Gelöscht','success');
   } else toast(res.error,'error');
 }
 
@@ -2660,7 +2892,7 @@ async function deleteCurrentRuleset(){
 async function showCopyRuleset(){
   const rulesets=await API('/api/rulesets');
   const others=rulesets.filter(r=>r.id!==currentEditRulesetId);
-  if(!others.length){toast('Kein anderes Regelwerk vorhanden.','warning');return;}
+  if(!others.length){toast(gmt('no-other-rs')||'Kein anderes Regelwerk vorhanden.','warning');return;}
   const opts=others.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">Regeln kopieren nach…</h3>
@@ -2825,13 +3057,13 @@ function crDragEnd(){document.querySelectorAll('[id^="crmcard-"]').forEach(el=>{
 
 async function showAddCrMode(){
   const rulesets=await API('/api/rulesets');
-  const rsOpts=`<option value="">— Kein Regelwerk —</option>`+rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  const rsOpts=`<option value="">${gmt('no-cr-mode')||'— Kein Regelwerk —'}</option>`+rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
-    <h3 class="modal-title">CityRush Modus hinzufügen</h3>
-    <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name" class="input" placeholder="z.B. Altstadt-Tour" data-tip="cr-mode-name"></div>
+    <h3 class="modal-title">${gmt('cr-error-cr-mode-name-modal')||'CityRush Modus hinzufügen'}</h3>
+    <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name" class="input" placeholder="${gmt('cr-mode-name-eg')||'z.B. Altstadt-Tour'}" data-tip="cr-mode-name"></div>
     <div class="field" data-tip="cr-mode-ruleset"><label class="label" data-tip="cr-mode-ruleset">${gmt('ruleset')||'Regelwerk'}</label>
       <select id="cr-mode-ruleset" class="select" data-tip="cr-mode-ruleset">${rsOpts}</select></div>
-    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">Erlaubte Medien</label>
+    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-photo" checked style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-video" checked style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
@@ -2842,14 +3074,14 @@ async function showAddCrMode(){
       <input id="cr-mode-timer" type="number" class="input" value="60" min="1" data-tip="cr-mode-timer">
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveNewCrMode()">Erstellen</button>
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Abbrechen'}</button>
+      <button class="btn btn-primary" onclick="saveNewCrMode()">${gmt('create')||'Erstellen'}</button>
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
 }
 async function saveNewCrMode(){
   const name=document.getElementById('cr-mode-name').value.trim();
-  if(!name){toast('Name fehlt','error');return;}
+  if(!name){toast(gmt('name-required')||'Name fehlt','error');return;}
   const body={
     password:settingsPassword, name,
     allow_photo: document.getElementById('cr-mode-allow-photo')?.checked?1:0,
@@ -2858,18 +3090,18 @@ async function saveNewCrMode(){
     timer_default: Number(document.getElementById('cr-mode-timer')?.value)||60,
   };
   const res=await API('/api/cr/modes',{method:'POST',body});
-  if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;await loadCrModes();toast('CityRush Modus erstellt!','success');}
+  if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;await loadCrModes();toast(gmt('cr-mode-created')||'CityRush Modus erstellt!','success');}
 }
 async function editCurrentCrMode(){
   const [modes, rulesets] = await Promise.all([API('/api/cr/modes'), API('/api/rulesets')]);
   const m = modes.find(x=>x.id===currentCrModeId) || {name:currentCrModeName, allow_photo:1, allow_video:1, ruleset_id:null};
-  const rsOpts=`<option value="">— Kein Regelwerk —</option>`+rulesets.map(r=>`<option value="${r.id}" ${r.id===m.ruleset_id?'selected':''}>${esc(r.name)}</option>`).join('');
+  const rsOpts=`<option value="">${gmt('no-cr-mode')||'— Kein Regelwerk —'}</option>`+rulesets.map(r=>`<option value="${r.id}" ${r.id===m.ruleset_id?'selected':''}>${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
-    <h3 class="modal-title">Modus bearbeiten</h3>
+    <h3 class="modal-title">${gmt('cr-edit-mode-modal')||'Modus bearbeiten'}</h3>
     <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name-edit" class="input" value="${esc(m.name||'')}" data-tip="cr-mode-name"></div>
     <div class="field" data-tip="cr-mode-ruleset"><label class="label" data-tip="cr-mode-ruleset">${gmt('ruleset')||'Regelwerk'}</label>
       <select id="cr-mode-ruleset-edit" class="select" data-tip="cr-mode-ruleset">${rsOpts}</select></div>
-    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">Erlaubte Medien</label>
+    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-photo-edit" ${m.allow_photo!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-video-edit" ${m.allow_video!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
@@ -2880,8 +3112,8 @@ async function editCurrentCrMode(){
       <input id="cr-mode-timer-edit" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="cr-mode-timer">
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveEditCrMode()">Speichern</button>
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Abbrechen'}</button>
+      <button class="btn btn-primary" onclick="saveEditCrMode()">${gmt('save')||'Speichern'}</button>
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
 }
@@ -2899,7 +3131,7 @@ async function saveEditCrMode(){
   currentCrModeName=name; closeModal(); loadCrModes();
 }
 async function deleteCurrentCrMode(){
-  if(!confirm(`CityRush Modus "${currentCrModeName}" und alle Missionen löschen?`))return;
+  if(!confirm((gmt('cr-mode-delete-confirm')||'CityRush Modus "{name}" und alle Missionen löschen?').replace('{name}', currentCrModeName)))return;
   await API(`/api/cr/modes/${currentCrModeId}`,{method:'DELETE',body:{password:settingsPassword}});
   currentCrModeId=null; currentCrModeName=''; loadCrModes();
 }
@@ -2941,6 +3173,7 @@ function crMissionModal(m){
       <div><label class="label">EN</label><input id="cr-name-en" class="input" value="${v('name_en')}"></div>
       <div><label class="label">FR</label><input id="cr-name-fr" class="input" value="${v('name_fr')}"></div>
       <div><label class="label">IT</label><input id="cr-name-it" class="input" value="${v('name_it')}"></div>
+      <div><label class="label">ES</label><input id="cr-name-es" class="input" value="${v('name_es')}"></div>
     </div>
     <!-- Coords & Radius -->
     <div class="grid-2" style="gap:.4rem;margin-bottom:.75rem;">
@@ -3010,6 +3243,7 @@ function crMissionModal(m){
           <div><label class="label">EN</label><input id="cr-answer-en" class="input" value="${v('answer_en')}"></div>
           <div><label class="label">FR</label><input id="cr-answer-fr" class="input" value="${v('answer_fr')}"></div>
           <div><label class="label">IT</label><input id="cr-answer-it" class="input" value="${v('answer_it')}"></div>
+          <div><label class="label">ES</label><input id="cr-answer-es" class="input" value="${v('answer_es')}"></div>
         </div>
       </div>
     </div>
@@ -3039,6 +3273,7 @@ function crMissionModal(m){
         <div><label class="label">EN</label><textarea id="cr-desc-en" class="textarea" rows="3">${v('description_en')}</textarea></div>
         <div><label class="label">FR</label><textarea id="cr-desc-fr" class="textarea" rows="3">${v('description_fr')}</textarea></div>
         <div><label class="label">IT</label><textarea id="cr-desc-it" class="textarea" rows="3">${v('description_it')}</textarea></div>
+        <div><label class="label">ES</label><textarea id="cr-desc-es" class="textarea" rows="3">${v('description_es')}</textarea></div>
       </div>
     </div>
     <div id="mtab-task" class="mission-tab-content">
@@ -3050,6 +3285,7 @@ function crMissionModal(m){
         <div><label class="label">EN</label><textarea id="cr-task-en" class="textarea" rows="3">${v('task_en')}</textarea></div>
         <div><label class="label">FR</label><textarea id="cr-task-fr" class="textarea" rows="3">${v('task_fr')}</textarea></div>
         <div><label class="label">IT</label><textarea id="cr-task-it" class="textarea" rows="3">${v('task_it')}</textarea></div>
+        <div><label class="label">ES</label><textarea id="cr-task-es" class="textarea" rows="3">${v('task_es')}</textarea></div>
       </div>
     </div>`;
 }
@@ -3115,6 +3351,7 @@ function getCrMissionData(){
     name_en: document.getElementById('cr-name-en')?.value||'',
     name_fr: document.getElementById('cr-name-fr')?.value||'',
     name_it: document.getElementById('cr-name-it')?.value||'',
+    name_es: document.getElementById('cr-name-es')?.value||'',
     lat: crReadNumber('cr-lat'),
     lng: crReadNumber('cr-lng'),
     radius_meters: parseInt(crReadNumber('cr-radius'))||30,
@@ -3133,18 +3370,22 @@ function getCrMissionData(){
     answer_en: document.getElementById('cr-answer-en')?.value||'',
     answer_fr: document.getElementById('cr-answer-fr')?.value||'',
     answer_it: document.getElementById('cr-answer-it')?.value||'',
+    answer_es: document.getElementById('cr-answer-es')?.value||'',
     hint_de: document.getElementById('cr-hint-de')?.value||'',
     hint_en: document.getElementById('cr-hint-en')?.value||'',
     hint_fr: document.getElementById('cr-hint-fr')?.value||'',
     hint_it: document.getElementById('cr-hint-it')?.value||'',
+    hint_es: document.getElementById('cr-hint-es')?.value||'',
     description_de: document.getElementById('cr-desc-de')?.value||'',
     description_en: document.getElementById('cr-desc-en')?.value||'',
     description_fr: document.getElementById('cr-desc-fr')?.value||'',
     description_it: document.getElementById('cr-desc-it')?.value||'',
+    description_es: document.getElementById('cr-desc-es')?.value||'',
     task_de: document.getElementById('cr-task-de')?.value||'',
     task_en: document.getElementById('cr-task-en')?.value||'',
     task_fr: document.getElementById('cr-task-fr')?.value||'',
     task_it: document.getElementById('cr-task-it')?.value||'',
+    task_es: document.getElementById('cr-task-es')?.value||'',
   };
 }
 
@@ -3160,7 +3401,7 @@ function _hasTempHintWork(){
 }
 
 async function showAddCrMission(){
-  if(!currentCrModeId){toast('Erst einen Modus auswählen','warning');return;}
+  if(!currentCrModeId){toast(gmt('pick-mode-first')||'Erst einen Modus auswählen','warning');return;}
   _resetTempHints();
   // Refresh the cached mode list so the modal can filter media options
   // (uses a static cache to avoid awaiting inside the template).
@@ -3182,7 +3423,7 @@ async function saveNewCrMission(){
   if(res.id){
     if(_hasTempHintWork()) await saveCrHintsForMission(res.id);
     _resetTempHints();
-    closeModal();loadCrMissions();toast('Mission erstellt!','success');
+    closeModal();loadCrMissions();toast(gmt('cr-mission-created')||'Mission erstellt!','success');
   } else toast(res.error,'error');
 }
 async function editCrMission(id){
@@ -3211,11 +3452,11 @@ async function saveEditCrMission(id){
   if(res.success){
     if(_hasTempHintWork()) await saveCrHintsForMission(id);
     _resetTempHints();
-    closeModal();loadCrMissions();toast('Gespeichert!','success');
+    closeModal();loadCrMissions();toast(gmt('saved')||'Gespeichert!','success');
   }
 }
 async function deleteCrMission(id){
-  if(!confirm('Mission löschen?'))return;
+  if(!confirm(gmt('c-del-mission')||'Mission löschen?'))return;
   const res=await API(`/api/cr/missions/${id}`,{method:'DELETE',body:{password:settingsPassword}});
   if(res.success!==false){
     // Remove card from DOM immediately for instant feedback
@@ -3239,7 +3480,7 @@ let _crTempHints = _crTempHintsByType.answer;
 function addCrHintInline(type='answer'){
   type = type === 'gps' ? 'gps' : 'answer';
   const hintId = 'tmp_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  _crTempHintsByType[type].push({id: hintId, text_de:'', text_en:'', text_fr:'', text_it:'', image_path:null, _new:true, hint_type:type});
+  _crTempHintsByType[type].push({id: hintId, text_de:'', text_en:'', text_fr:'', text_it:'', text_es:'', image_path:null, _new:true, hint_type:type});
   renderCrHintsInline(type);
 }
 
@@ -3274,6 +3515,7 @@ function renderCrHintsInline(type){
         <div><label class="label">EN</label><input class="input" id="hint-en-${h.id}" value="${esc(h.text_en||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_en',this.value)"></div>
         <div><label class="label">FR</label><input class="input" id="hint-fr-${h.id}" value="${esc(h.text_fr||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_fr',this.value)"></div>
         <div><label class="label">IT</label><input class="input" id="hint-it-${h.id}" value="${esc(h.text_it||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_it',this.value)"></div>
+        <div><label class="label">ES</label><input class="input" id="hint-es-${h.id}" value="${esc(h.text_es||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_es',this.value)"></div>
       </div>
     </div>`).join('');
 }
@@ -3312,6 +3554,7 @@ async function saveCrHintsForMission(missionId){
       form.append('text_en', h.text_en||'');
       form.append('text_fr', h.text_fr||'');
       form.append('text_it', h.text_it||'');
+      form.append('text_es', h.text_es||'');
       form.append('order_index', i);
       form.append('hint_type', type);
       if(h._imageFile) form.append('image', h._imageFile);
@@ -3365,6 +3608,7 @@ function showCrHintModal(h, missionId){
       <div><label class="label">EN</label><textarea id="cr-hint-en" class="textarea" rows="2">${v('text_en')}</textarea></div>
       <div><label class="label">FR</label><textarea id="cr-hint-fr" class="textarea" rows="2">${v('text_fr')}</textarea></div>
       <div><label class="label">IT</label><textarea id="cr-hint-it" class="textarea" rows="2">${v('text_it')}</textarea></div>
+      <div><label class="label">ES</label><textarea id="cr-hint-es" class="textarea" rows="2">${v('text_es')}</textarea></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
@@ -3381,16 +3625,17 @@ async function saveCrHint(hintId, missionId){
   form.append('text_en',document.getElementById('cr-hint-en')?.value||'');
   form.append('text_fr',document.getElementById('cr-hint-fr')?.value||'');
   form.append('text_it',document.getElementById('cr-hint-it')?.value||'');
+  form.append('text_es',document.getElementById('cr-hint-es')?.value||'');
   if(imgFile) form.append('image',imgFile);
   if(clearImg) form.append('clear_image','1');
   const url=hintId?`/api/cr/hints/${hintId}`:`/api/cr/hints/${missionId}`;
   const method=hintId?'PUT':'POST';
   const res=await fetch(url,{method,body:form}).then(r=>r.json());
-  if(res.success||res.id){closeModal();loadCrHintsEditor(missionId);toast('Hinweis gespeichert!','success');}
+  if(res.success||res.id){closeModal();loadCrHintsEditor(missionId);toast(gmt('hint-saved')||'Hinweis gespeichert!','success');}
   else toast(res.error||'Fehler','error');
 }
 async function deleteCrHintFromEditor(hintId,missionId){
-  if(!confirm('Hinweis löschen?'))return;
+  if(!confirm(gmt('c-del-hint')||'Hinweis löschen?'))return;
   await API(`/api/cr/hints/${hintId}`,{method:'DELETE',body:{password:settingsPassword}});
   loadCrHintsEditor(missionId);
 }
@@ -3415,22 +3660,22 @@ async function _loadExistingHints(missionId){
 async function autoTranslateHint(hintId, type){
   type = type === 'gps' ? 'gps' : 'answer';
   const h = (_crTempHintsByType[type]||[]).find(x => String(x.id) === String(hintId));
-  if(!h){ toast('Hinweis nicht gefunden','error'); return; }
+  if(!h){ toast(gmt('hint-not-found')||'Hinweis nicht gefunden','error'); return; }
   // Pull live values from the inputs in case the user typed but hasn't
   // blurred yet — keeps behaviour identical to the field-level translator.
-  const langs = ['de','en','fr','it'];
+  const langs = ['de','en','fr','it','es'];
   const texts = Object.fromEntries(langs.map(l => {
     const el = document.getElementById(`hint-${l}-${hintId}`);
     return [l, el ? el.value : (h[`text_${l}`]||'')];
   }));
   const filled = Object.entries(texts).find(([,v]) => v && v.trim());
-  if(!filled){ toast('Bitte Text eingeben','warning'); return; }
+  if(!filled){ toast(gmt('enter-text')||'Bitte Text eingeben','warning'); return; }
   const [fromLang, text] = filled;
   const empty = Object.entries(texts)
     .filter(([k,v]) => k !== fromLang && (!v || !v.trim()))
     .map(([k]) => k);
-  if(!empty.length){ toast('Alle Felder ausgefüllt','warning'); return; }
-  toast('Übersetze…');
+  if(!empty.length){ toast(gmt('all-filled')||'Alle Felder ausgefüllt','warning'); return; }
+  toast(gmt('translating')||'Übersetze…');
   const res = await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
   empty.forEach(l => {
     if(!res[l]) return;
@@ -3438,7 +3683,7 @@ async function autoTranslateHint(hintId, type){
     if(el) el.value = res[l];
     h[`text_${l}`] = res[l];
   });
-  toast('Übersetzt!','success');
+  toast(gmt('translated')||'Übersetzt!','success');
 }
 
 // ── CityRush mission export / import ─────────────────────────────────────────
@@ -3451,7 +3696,7 @@ async function exportCrMissions(){
     const hints = await API(`/api/cr/hints/${m.id}`);
     return {
       // Identity
-      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'',
+      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
       // Gating + scoring
       points: m.points||10,
       lat: m.lat, lng: m.lng, radius_meters: m.radius_meters||30,
@@ -3462,17 +3707,17 @@ async function exportCrMissions(){
       is_special: !!m.is_special, repeat_minutes: m.repeat_minutes||0,
       // Q/A
       has_answer: !!m.has_answer,
-      answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'',
+      answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
       // Body
       description_de:m.description_de||'', description_en:m.description_en||'',
-      description_fr:m.description_fr||'', description_it:m.description_it||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
       task_de:m.task_de||'', task_en:m.task_en||'',
-      task_fr:m.task_fr||'', task_it:m.task_it||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
       // Hints (split by type; images become URLs that the importer will skip
       // unless the file is hand-edited to point at an existing upload).
       hints: (hints||[]).map(h => ({
         hint_type: h.hint_type === 'gps' ? 'gps' : 'answer',
-        text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'',
+        text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'', text_es:h.text_es||'',
         image_path: h.image_path || null,
       })),
     };
@@ -3494,23 +3739,23 @@ async function exportCrMissions(){
 }
 
 async function importCrMissions(file){
-  if(!file || !currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
+  if(!file || !currentCrModeId){ toast(gmt('pick-mode-first')||'Erst einen Modus auswählen','warning'); return; }
   let data;
   try { data = JSON.parse(await file.text()); }
-  catch(e){ toast('Ungültige JSON-Datei','error'); return; }
+  catch(e){ toast(gmt('invalid-json')||'Ungültige JSON-Datei','error'); return; }
   if(!data.missions || !Array.isArray(data.missions)){
-    toast('Kein gültiges Format (missions-Array fehlt)','error'); return;
+    toast(gmt('invalid-format')||'Kein gültiges Format (missions-Array fehlt)','error'); return;
   }
   let ok=0, errors=0;
   for(const m of data.missions){
     const body = {
       password: settingsPassword,
       mode_id: currentCrModeId,
-      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'',
+      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
       description_de:m.description_de||'', description_en:m.description_en||'',
-      description_fr:m.description_fr||'', description_it:m.description_it||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
       task_de:m.task_de||'', task_en:m.task_en||'',
-      task_fr:m.task_fr||'', task_it:m.task_it||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
       points: Number(m.points)||10,
       lat: (m.lat ?? null), lng: (m.lng ?? null),
       radius_meters: Number(m.radius_meters)||30,
@@ -3524,7 +3769,7 @@ async function importCrMissions(file){
       repeat_minutes: Math.max(0, Number(m.repeat_minutes)||0),
       has_answer: m.has_answer?1:0,
       answer_de:m.answer_de||'', answer_en:m.answer_en||'',
-      answer_fr:m.answer_fr||'', answer_it:m.answer_it||'',
+      answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
     };
     const res = await API('/api/cr/missions',{method:'POST',body});
     if(res && res.id){
@@ -3538,6 +3783,7 @@ async function importCrMissions(file){
         form.append('password', settingsPassword);
         form.append('text_de', h.text_de||''); form.append('text_en', h.text_en||'');
         form.append('text_fr', h.text_fr||''); form.append('text_it', h.text_it||'');
+        form.append('text_es', h.text_es||'');
         form.append('order_index', i);
         form.append('hint_type', h.hint_type === 'gps' ? 'gps' : 'answer');
         await fetch(`/api/cr/hints/${res.id}`,{method:'POST',body:form}).catch(()=>{});
@@ -3554,7 +3800,7 @@ async function importCrMissions(file){
 }
 
 async function autoTranslateCrField(field){
-  const langs=['de','en','fr','it'];
+  const langs=['de','en','fr','it','es'];
   // Some textareas use a shorter id prefix than the field name we get called
   // with (e.g. `cr-desc-de` for `description`). Map call-site names to the
   // actual DOM prefix so auto-translate doesn't silently no-op with
@@ -3563,14 +3809,14 @@ async function autoTranslateCrField(field){
   const idPrefix = FIELD_ID_ALIASES[field] || field;
   const texts=Object.fromEntries(langs.map(l=>[l,document.getElementById(`cr-${idPrefix}-${l}`)?.value||'']));
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
-  if(!filled){toast('Bitte Text eingeben','warning');return;}
+  if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben','warning');return;}
   const [fromLang,text]=filled;
   const empty=Object.entries(texts).filter(([k,v])=>k!==fromLang&&(!v||!v.trim())).map(([k])=>k);
-  if(!empty.length){toast('Alle Felder ausgefüllt','warning');return;}
-  toast('Übersetze…');
+  if(!empty.length){toast(gmt('all-filled')||'Alle Felder ausgefüllt','warning');return;}
+  toast(gmt('translating')||'Übersetze…');
   const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
   empty.forEach(l=>{const el=document.getElementById(`cr-${idPrefix}-${l}`);if(el&&res[l])el.value=res[l];});
-  toast('Übersetzt!','success');
+  toast(gmt('translated')||'Übersetzt!','success');
 }
 
 // Load CR modes when CityRush tab is opened
@@ -3595,10 +3841,10 @@ function getSelectedMissionIds(){
 }
 async function copySelectedMissions(){
   const ids=getSelectedMissionIds();
-  if(!ids.length){toast('Keine MiSSiON ausgewählt','warning');return;}
+  if(!ids.length){toast(gmt('pick-missions')||'Keine MiSSiON ausgewählt','warning');return;}
   const modes=await API('/api/modes');
   const others=modes.filter(m=>m.id!==currentModeId);
-  if(!others.length){toast('Kein anderer Modus vorhanden','warning');return;}
+  if(!others.length){toast(gmt('no-other-mode')||'Kein anderer Modus vorhanden','warning');return;}
   const opts=others.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${ids.length} MiSSiON${ids.length!==1?'s':''} kopieren nach…</h3>
@@ -3623,7 +3869,7 @@ async function confirmCopyMissions(ids){
 }
 async function downloadSelectedMissions(){
   const ids=getSelectedMissionIds();
-  if(!ids.length){toast('Keine MiSSiON ausgewählt','warning');return;}
+  if(!ids.length){toast(gmt('pick-missions')||'Keine MiSSiON ausgewählt','warning');return;}
   const allMissions=await API('/api/missions');
   const selected=allMissions.filter(m=>ids.includes(m.id));
   const modes=await API('/api/modes');
@@ -3642,6 +3888,7 @@ async function downloadSelectedMissions(){
       name_en: m.name_en||'',
       name_fr: m.name_fr||'',
       name_it: m.name_it||'',
+      name_es: m.name_es||'',
       // ── Mode & Location ───────────────────────────
       mode:     modeMap[m.mode_id]||'MiSSiONS',
       location: m.location_id ? (locMap[m.location_id]||null) : null,
@@ -3654,11 +3901,13 @@ async function downloadSelectedMissions(){
       description_en: m.description_en||'',
       description_fr: m.description_fr||'',
       description_it: m.description_it||'',
+      description_es: m.description_es||'',
       // ── Task (what players must do) ───────────────
       task_de: m.task_de||'',
       task_en: m.task_en||'',
       task_fr: m.task_fr||'',
       task_it: m.task_it||'',
+      task_es: m.task_es||'',
     }))
   };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
@@ -3670,8 +3919,8 @@ async function importMissions(file){
   if(!file)return;
   const text=await file.text();
   let data;
-  try{data=JSON.parse(text);}catch(e){toast('Ungültige JSON-Datei','error');return;}
-  if(!data.missions||!Array.isArray(data.missions)){toast('Kein gültiges Format (missions-Array fehlt)','error');return;}
+  try{data=JSON.parse(text);}catch(e){toast(gmt('invalid-json')||'Ungültige JSON-Datei','error');return;}
+  if(!data.missions||!Array.isArray(data.missions)){toast(gmt('invalid-format')||'Kein gültiges Format (missions-Array fehlt)','error');return;}
   const locs=await API('/api/locations');
   const modes=await API('/api/modes');
   const locByName=Object.fromEntries(locs.map(l=>[l.name.toLowerCase(),l.id]));
@@ -3693,14 +3942,14 @@ async function importMissions(file){
     const res=await API('/api/missions',{method:'POST',body:{
       password:settingsPassword,
       mode_id, location_id, name,
-      name_de:m.name_de||name, name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'',
+      name_de:m.name_de||name, name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
       media_type:m.media_type||'photo',
       points:Number(m.points)||1,
       is_indoor:m.is_indoor?1:0,
       description_de:m.description_de||'', description_en:m.description_en||'',
-      description_fr:m.description_fr||'', description_it:m.description_it||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
       task_de:m.task_de||'', task_en:m.task_en||'',
-      task_fr:m.task_fr||'', task_it:m.task_it||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
     }});
     if(res.id) ok++; else errors++;
   }
