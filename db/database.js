@@ -232,6 +232,11 @@ try { db.exec("ALTER TABLE cr_modes ADD COLUMN allow_photo INTEGER DEFAULT 1"); 
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN allow_video INTEGER DEFAULT 1"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN ruleset_id INTEGER"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN timer_default INTEGER DEFAULT 60"); } catch(e) {}
+// CityRush games aren't tied to a location, so the per-location language
+// allow-list doesn't apply. Each CR mode carries its own list instead;
+// player cycler reads cr_mode.allowed_langs the same way MiSSiONS reads
+// location.allowed_langs. Default 'de,en,fr,it,es' = unchanged behaviour.
+try { db.exec("ALTER TABLE cr_modes ADD COLUMN allowed_langs TEXT DEFAULT 'de,en,fr,it,es'"); } catch(e) {}
 // Hide a CR mission's description/task until the player physically arrives.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN hide_until_arrival INTEGER DEFAULT 0"); } catch(e) {}
 // "Special" missions: available at any time, no GPS dependency, repeatable
@@ -250,6 +255,11 @@ try { db.exec("ALTER TABLE teams ADD COLUMN selfie_path TEXT"); } catch(e) {}
 // UPLOAD_DIR (e.g. "ABC12345/collage.mp4"). generated_at is a unix-epoch ms.
 try { db.exec("ALTER TABLE games ADD COLUMN collage_path TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE games ADD COLUMN collage_generated_at INTEGER"); } catch(e) {}
+// Per-location allowed languages. Stored as a comma-separated list (e.g.
+// "de,en,fr"). Players joining a game at this location only see these
+// languages in the cycler — the rest are hidden. Default is all five
+// supported languages so existing locations behave as before.
+try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,en,fr,it,es'"); } catch(e) {}
 // Rival-team freeze. One row per (game, freezer, frozen). UNIQUE constraint
 // enforces "each team can only freeze each rival once". `until_ms` is the
 // absolute epoch when the freeze ends; rows are kept forever (used to grey
@@ -380,12 +390,29 @@ const deleteRuleset = id => {
 };
 
 // ── Locations ─────────────────────────────────────────────────────────────────
+// Normalise the allowed-langs input into a canonical "de,en,fr,it,es"-style
+// string. Accepts either an array (['de','en']) or a comma string. Falls
+// back to all five supported languages if nothing valid is provided, so the
+// payer-side cycler never ends up with an empty list.
+const ALL_LANGS = ['de','en','fr','it','es'];
+function normLangs(v) {
+  let arr;
+  if (Array.isArray(v))           arr = v;
+  else if (typeof v === 'string') arr = v.split(',');
+  else                            arr = ALL_LANGS;
+  const set = new Set(arr.map(x => String(x).trim().toLowerCase()).filter(x => ALL_LANGS.includes(x)));
+  if (set.size === 0) ALL_LANGS.forEach(l => set.add(l));
+  // Preserve canonical order regardless of input order
+  return ALL_LANGS.filter(l => set.has(l)).join(',');
+}
 const getLocations   = () => db.prepare('SELECT * FROM locations ORDER BY name').all();
 const getLocation    = id => db.prepare('SELECT * FROM locations WHERE id=?').get(id);
-const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1}) =>
-  num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor) VALUES(?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0).lastInsertRowid);
-const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1}) =>
-  db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,id);
+const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs}) => {
+  const langs = normLangs(allowed_langs);
+  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs) VALUES(?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs).lastInsertRowid);
+};
+const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs}) =>
+  db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),id);
 const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(id);
 
 // ── Missions ──────────────────────────────────────────────────────────────────
@@ -535,9 +562,9 @@ const getCrMode     = id => db.prepare('SELECT * FROM cr_modes WHERE id=?').get(
 const createCrMode  = (data) => {
   // Backward-compat: callers used to pass just a name string.
   if (typeof data === 'string') data = {name: data};
-  const {name, allow_photo=1, allow_video=1, ruleset_id=null, timer_default=60} = data;
-  return num(db.prepare('INSERT INTO cr_modes(name,allow_photo,allow_video,ruleset_id,timer_default) VALUES(?,?,?,?,?)')
-    .run(name, allow_photo?1:0, allow_video?1:0, ruleset_id||null, Number(timer_default)||60).lastInsertRowid);
+  const {name, allow_photo=1, allow_video=1, ruleset_id=null, timer_default=60, allowed_langs} = data;
+  return num(db.prepare('INSERT INTO cr_modes(name,allow_photo,allow_video,ruleset_id,timer_default,allowed_langs) VALUES(?,?,?,?,?,?)')
+    .run(name, allow_photo?1:0, allow_video?1:0, ruleset_id||null, Number(timer_default)||60, normLangs(allowed_langs)).lastInsertRowid);
 };
 const updateCrMode  = (id, data) => {
   if (typeof data === 'string') data = {name: data};
@@ -547,8 +574,9 @@ const updateCrMode  = (id, data) => {
   const allow_video   = data.allow_video   !== undefined ? (data.allow_video?1:0) : existing.allow_video;
   const ruleset_id    = data.ruleset_id    !== undefined ? (data.ruleset_id||null) : existing.ruleset_id;
   const timer_default = data.timer_default !== undefined ? (Number(data.timer_default)||60) : (existing.timer_default||60);
-  db.prepare('UPDATE cr_modes SET name=?, allow_photo=?, allow_video=?, ruleset_id=?, timer_default=? WHERE id=?')
-    .run(name, allow_photo, allow_video, ruleset_id, timer_default, id);
+  const allowed_langs = data.allowed_langs !== undefined ? normLangs(data.allowed_langs) : (existing.allowed_langs || 'de,en,fr,it,es');
+  db.prepare('UPDATE cr_modes SET name=?, allow_photo=?, allow_video=?, ruleset_id=?, timer_default=?, allowed_langs=? WHERE id=?')
+    .run(name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, id);
 };
 const deleteCrMode  = id => {
   runTx(() => {

@@ -256,6 +256,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
       <span style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;" id="s-title">EINSTELLUNGEN</span>
     </div>
     <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="showManualsModal()" id="btn-manuals" title="">📖</button>
       <button class="btn btn-ghost btn-sm" id="gm-lang-btn2" onclick="cycleGmLang()">DE</button>
     </div>
   </div>
@@ -629,7 +630,19 @@ const GMT={
   'export-blurb':'Lade alle angenommenen Fotos und Videos als ZIP herunter, oder erstelle ein Foto-Collage-Video. Videos sind nur im ZIP enthalten.',
   'export-zip-btn':'ZIP herunterladen (alle Medien)',
   'export-collage-btn':'Foto-Collage rendern',
-  'export-rendering':'Wird gerendert…','export-done':'Fertig — Download startet…'},
+  'export-rendering':'Wird gerendert…','export-done':'Fertig — Download startet…',
+  // Submission review buttons (on each mission card)
+  'accept-btn':'Annehmen','reject-btn':'Ablehnen',
+  // Per-location language allow-list (Add/Edit Location modal)
+  'loc-allowed-langs':'Erlaubte Sprachen',
+  'loc-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler an diesem Standort.',
+  'cr-allowed-langs':'Erlaubte Sprachen',
+  'cr-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.',
+  // 📖 Manuals download (button in settings topbar, next to language switch)
+  'manuals-tip':'Handbücher herunterladen','manuals-title':'Handbücher',
+  'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
+  'manuals-gm':'GM-Handbuch','manuals-settings':'Einstellungs-Handbuch',
+  'manuals-others':'Andere Sprachen'},
   en:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No CityRush mode yet. Click ＋ Mode.','cr-no-missions':'No CityRush missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
@@ -723,7 +736,16 @@ const GMT={
   'export-blurb':'Download every accepted photo and video as a ZIP, or render a photo-collage video. Videos are only in the ZIP.',
   'export-zip-btn':'Download ZIP (all media)',
   'export-collage-btn':'Render photo collage',
-  'export-rendering':'Rendering…','export-done':'Done — download starting…'},
+  'export-rendering':'Rendering…','export-done':'Done — download starting…',
+  'accept-btn':'Accept','reject-btn':'Reject',
+  'loc-allowed-langs':'Allowed languages',
+  'loc-allowed-langs-hint':'Only these languages will appear for players at this location.',
+  'cr-allowed-langs':'Allowed languages',
+  'cr-allowed-langs-hint':'Only these languages will appear for players in this CityRush mode.',
+  'manuals-tip':'Download manuals','manuals-title':'Manuals',
+  'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
+  'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
+  'manuals-others':'Other languages'},
   fr:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modes CityRush','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode CityRush. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission CityRush. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
@@ -817,7 +839,16 @@ const GMT={
   'export-blurb':"Téléchargez toutes les photos et vidéos acceptées en ZIP, ou créez une vidéo-collage de photos. Les vidéos ne sont incluses que dans le ZIP.",
   'export-zip-btn':'Télécharger ZIP (tous les médias)',
   'export-collage-btn':'Créer la vidéo-collage',
-  'export-rendering':'Rendu en cours…','export-done':'Terminé — téléchargement…'},
+  'export-rendering':'Rendu en cours…','export-done':'Terminé — téléchargement…',
+  'accept-btn':'Accepter','reject-btn':'Refuser',
+  'loc-allowed-langs':'Langues autorisées',
+  'loc-allowed-langs-hint':"Seules ces langues apparaîtront pour les joueurs à ce lieu.",
+  'cr-allowed-langs':'Langues autorisées',
+  'cr-allowed-langs-hint':'Seules ces langues apparaîtront pour les joueurs dans ce mode CityRush.',
+  'manuals-tip':'Télécharger les manuels','manuals-title':'Manuels',
+  'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
+  'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
+  'manuals-others':'Autres langues'},
   it:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modalità CityRush','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'CityRush usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità CityRush. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione CityRush. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
@@ -911,7 +942,16 @@ const GMT={
   'export-blurb':'Scarica tutte le foto e i video accettati come ZIP, oppure crea un video-collage di foto. I video sono solo nel ZIP.',
   'export-zip-btn':'Scarica ZIP (tutti i media)',
   'export-collage-btn':'Crea video-collage',
-  'export-rendering':'Rendering in corso…','export-done':'Pronto — download in corso…'},
+  'export-rendering':'Rendering in corso…','export-done':'Pronto — download in corso…',
+  'accept-btn':'Accetta','reject-btn':'Rifiuta',
+  'loc-allowed-langs':'Lingue consentite',
+  'loc-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questo luogo.',
+  'cr-allowed-langs':'Lingue consentite',
+  'cr-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questa modalità CityRush.',
+  'manuals-tip':'Scarica i manuali','manuals-title':'Manuali',
+  'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
+  'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
+  'manuals-others':'Altre lingue'},
   es:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modos CityRush','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'CityRush usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo CityRush. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones CityRush. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
   'cr-m-name':'Nombre','cr-m-lat':'Latitud','cr-m-lng':'Longitud','cr-m-radius':'Radio (metros)','cr-m-points':'Puntos',
   'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
@@ -1005,7 +1045,16 @@ const GMT={
   'export-blurb':'Descarga todas las fotos y vídeos aceptados como ZIP, o crea un vídeo-collage de fotos. Los vídeos solo están en el ZIP.',
   'export-zip-btn':'Descargar ZIP (todos los medios)',
   'export-collage-btn':'Crear vídeo-collage',
-  'export-rendering':'Renderizando…','export-done':'¡Listo! Descargando…'}
+  'export-rendering':'Renderizando…','export-done':'¡Listo! Descargando…',
+  'accept-btn':'Aceptar','reject-btn':'Rechazar',
+  'loc-allowed-langs':'Idiomas permitidos',
+  'loc-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este lugar.',
+  'cr-allowed-langs':'Idiomas permitidos',
+  'cr-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este modo CityRush.',
+  'manuals-tip':'Descargar manuales','manuals-title':'Manuales',
+  'manuals-blurb':'Descarga los manuales PDF actuales. El maintainer los actualiza cuando hay cambios importantes.',
+  'manuals-gm':'Manual del GM','manuals-settings':'Manual de ajustes',
+  'manuals-others':'Otros idiomas'}
 };
 function gmt(key){
   return (GMT[gmLang]||GMT['en']||{})[key] || (GMT['en']||{})[key] || '';
@@ -1045,6 +1094,7 @@ function applyGmLang(){
     ['btn-thaw-team','title','thaw-team-tip'],
     ['btn-freeze-team-lbl','text','freeze-label'],
     ['btn-thaw-team-lbl','text','thaw-label'],
+    ['btn-manuals','title','manuals-tip'],
   ].forEach(([id, kind, key]) => {
     const el = document.getElementById(id);
     const val = gmt(key);
@@ -1228,6 +1278,49 @@ function paintGameExportButton(){
     ? (gmt('export-tip-ready')||'Spiel-Medien exportieren')
     : (gmt('export-tip-locked')||'Erst nach Spielende verfügbar');
   btn.style.opacity = ended ? '1' : '.45';
+}
+
+// ── 📖 Manuals modal ────────────────────────────────────────────────────────
+// Opens from the settings topbar (button next to the language switcher).
+// Lists the four PDFs that live under public/manuals/ and gives the GM a
+// direct download for each. The PDFs are mirrored there by
+// handbook/scripts/build-pdfs.mjs every time the manuals are rebuilt, so
+// the in-app downloads are always whatever was last shipped.
+function showManualsModal(){
+  document.getElementById('modal-overlay').style.display='flex';
+  const cur = (typeof gmLang === 'string') ? gmLang : 'de';
+  // We only ship DE and EN at the moment; for FR/IT/ES we recommend EN.
+  const fallback = (cur === 'de') ? 'de' : 'en';
+  // Build a list of [filename, label, primary] tuples. The "current language"
+  // manuals get highlighted as the primary download; the alt-language ones
+  // are tucked in as secondaries underneath.
+  const langs = ['de','en'];
+  const labelGm    = gmt('manuals-gm')       || 'GM-Handbuch';
+  const labelSet   = gmt('manuals-settings') || 'Einstellungs-Handbuch';
+  const primaryLn = fallback;
+  const others    = langs.filter(l => l !== primaryLn);
+  const row = (file, label, lang, primary) => `
+    <a class="btn ${primary ? 'btn-primary' : 'btn-ghost'} btn-full" style="margin-bottom:.4rem;justify-content:flex-start;text-decoration:none;"
+       href="/manuals/${file}" download>
+      📥 ${label} <span style="color:var(--text-muted);font-weight:400;margin-left:.5rem;">(${lang.toUpperCase()})</span>
+    </a>`;
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">📖 ${gmt('manuals-title')||'Handbücher'}</h3>
+    <p style="color:var(--text-dim);font-size:.85rem;margin-bottom:1rem;">
+      ${gmt('manuals-blurb')||'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.'}
+    </p>
+    <div>
+      ${row(`GM_Manual-${primaryLn}.pdf`,       labelGm,  primaryLn, true)}
+      ${row(`SETTINGS_Manual-${primaryLn}.pdf`, labelSet, primaryLn, true)}
+      <div style="font-size:.78rem;color:var(--text-muted);margin:.85rem 0 .35rem 0;">
+        ${gmt('manuals-others')||'Andere Sprachen'}
+      </div>
+      ${others.map(l => row(`GM_Manual-${l}.pdf`,       labelGm,  l, false)).join('')}
+      ${others.map(l => row(`SETTINGS_Manual-${l}.pdf`, labelSet, l, false)).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Schließen'}</button>
+    </div>`;
 }
 
 // Open the export modal with two big actions: download zip / render collage.
@@ -1702,8 +1795,8 @@ async function renderCrTeamMissions(teamId){
         ? `<video src="${src}" onclick="openLightbox('${src}',true)" style="max-width:100%;max-height:200px;border-radius:var(--radius);border:1px solid var(--border);display:block;margin:.5rem 0;cursor:pointer;"></video>`
         : `<img src="${src}" onclick="openLightbox('${src}',false)" style="max-width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);display:block;margin:.5rem 0;" alt="thumb">`;
       actions = `<div class="review-actions">
-        <button class="btn btn-success btn-sm" onclick="reviewCrSub(${sub.id},'accept')">✓ Annehmen</button>
-        <button class="btn btn-danger btn-sm" onclick="openCrRejectModal(${sub.id})">✗ Ablehnen</button>
+        <button class="btn btn-success btn-sm" onclick="reviewCrSub(${sub.id},'accept')">✓ ${gmt('accept-btn')||'Annehmen'}</button>
+        <button class="btn btn-danger btn-sm" onclick="openCrRejectModal(${sub.id})">✗ ${gmt('reject-btn')||'Ablehnen'}</button>
       </div>`;
     }
     return `<div class="mission-card ${sc}">
@@ -1768,8 +1861,8 @@ function renderTeamMissions(missions){
     }
     let actions='';
     if(m.status==='pending')actions=`<div class="review-actions">
-      <button class="btn btn-success btn-sm" onclick="reviewSub(${m.id},'accept')">✓ Annehmen</button>
-      <button class="btn btn-danger btn-sm" onclick="openRejectModal(${m.id})">✗ Ablehnen</button>
+      <button class="btn btn-success btn-sm" onclick="reviewSub(${m.id},'accept')">✓ ${gmt('accept-btn')||'Annehmen'}</button>
+      <button class="btn btn-danger btn-sm" onclick="openRejectModal(${m.id})">✗ ${gmt('reject-btn')||'Ablehnen'}</button>
     </div>`;
     const desc=m['description_'+gmLang]||m.description_de||m.description_en||'';
     const task=m['task_'+gmLang]||m.task_de||m.task_en||'';
@@ -2452,18 +2545,51 @@ async function loadLocationsSettings(){
     </div>`).join('');
 }
 
+// Render the 5 language checkboxes shared by the Location and CR Mode
+// modals. `idPrefix` namespaces the input IDs so the two modals don't
+// clash when both happen to render in the same DOM. `checkedLangs` is an
+// array or comma string of the currently-allowed languages; missing from
+// the list = unchecked. Defaults to all five so a new entity is never
+// surprise-restricted.
+function langCheckboxes(idPrefix, checkedLangs){
+  let arr;
+  if (Array.isArray(checkedLangs))           arr = checkedLangs;
+  else if (typeof checkedLangs === 'string') arr = checkedLangs.split(',').map(s=>s.trim());
+  else                                       arr = ['de','en','fr','it','es'];
+  const set = new Set(arr.filter(Boolean));
+  const flags = { de:'🇩🇪 DE', en:'🇬🇧 EN', fr:'🇫🇷 FR', it:'🇮🇹 IT', es:'🇪🇸 ES' };
+  return ['de','en','fr','it','es'].map(l => `
+    <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+      <input type="checkbox" id="${idPrefix}${l}" ${set.has(l)?'checked':''} style="accent-color:var(--red);width:16px;height:16px;">
+      ${flags[l]}
+    </label>`).join('');
+}
+function readLangsByPrefix(idPrefix){
+  return ['de','en','fr','it','es']
+    .filter(l => document.getElementById(idPrefix+l)?.checked)
+    .join(',') || 'de,en,fr,it,es';  // never let the GM save an empty list
+}
+// Back-compat thin shims so existing Location modal call sites keep working.
+const locLangCheckboxes = (checked) => langCheckboxes('loc-lang-', checked);
+const readLocLangs      = () => readLangsByPrefix('loc-lang-');
+
 function showAddLocation(){
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('add-loc')||'Standort hinzufügen / Add Location'}</h3>
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input"></div>
     <div class="field" data-tip="loc-missions"><label class="label" data-tip="loc-missions">MiSSiONS ${gmt('per-game')||'pro Spiel / per game'}</label><input id="loc-max" type="number" class="input" value="10" min="1" data-tip="loc-missions"></div>
     <div class="field" data-tip="loc-min-loc"><label class="label" data-tip="loc-min-loc">Min. ${gmt('loc-spec')||'Standort-MiSSiONS'}</label><input id="loc-min-loc" type="number" class="input" value="3" min="0" data-tip="loc-min-loc"></div>
-    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">Erlaubte Medien</label>
+    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" checked style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" checked style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" checked style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
       </div>
+    </div>
+    <div class="field" data-tip="loc-allowed-langs">
+      <label class="label" data-tip="loc-allowed-langs">${gmt('loc-allowed-langs')||'Erlaubte Sprachen'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('loc-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler an diesem Standort.'}</p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">${locLangCheckboxes()}</div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
@@ -2473,7 +2599,7 @@ function showAddLocation(){
 }
 async function saveNewLocation(){
   const name=document.getElementById('loc-name').value.trim();if(!name){toast(gmt('name-required')||'Name fehlt','error');return;}
-  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0}});
+  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0,allowed_langs:readLocLangs()}});
   if(res.success){closeModal();loadLocationsSettings();loadMissionFilter();toast(gmt('created')||'Erstellt!','success');}
 }
 async function editLocation(id){
@@ -2483,12 +2609,17 @@ async function editLocation(id){
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input" value="${esc(l.name)}"></div>
     <div class="field" data-tip="loc-missions"><label class="label" data-tip="loc-missions">MiSSiONS</label><input id="loc-max" type="number" class="input" value="${l.missions_count||l.max_missions||10}" data-tip="loc-missions"></div>
     <div class="field" data-tip="loc-min-loc"><label class="label" data-tip="loc-min-loc">Min. Standort</label><input id="loc-min-loc" type="number" class="input" value="${l.min_location_missions}" data-tip="loc-min-loc"></div>
-    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">Erlaubte Medien</label>
+    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" ${l.allow_photo!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" ${l.allow_video!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
         <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" ${l.allow_indoor!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
       </div>
+    </div>
+    <div class="field" data-tip="loc-allowed-langs">
+      <label class="label" data-tip="loc-allowed-langs">${gmt('loc-allowed-langs')||'Erlaubte Sprachen'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('loc-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler an diesem Standort.'}</p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">${locLangCheckboxes(l.allowed_langs)}</div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
@@ -2497,7 +2628,7 @@ async function editLocation(id){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveEditLocation(id){
-  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0}});
+  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0,allowed_langs:readLocLangs()}});
   if(res.success){closeModal();loadLocationsSettings();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteLocation(id){
@@ -3203,6 +3334,11 @@ async function showAddCrMode(){
       <label class="label" data-tip="cr-mode-timer">${gmt('cr-mode-timer-label')||'Standard-Dauer (Minuten)'}</label>
       <input id="cr-mode-timer" type="number" class="input" value="60" min="1" data-tip="cr-mode-timer">
     </div>
+    <div class="field" data-tip="cr-mode-allowed-langs">
+      <label class="label" data-tip="cr-mode-allowed-langs">${gmt('cr-allowed-langs')||'Erlaubte Sprachen'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.'}</p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">${langCheckboxes('cr-mode-lang-')}</div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Abbrechen'}</button>
       <button class="btn btn-primary" onclick="saveNewCrMode()">${gmt('create')||'Erstellen'}</button>
@@ -3218,6 +3354,7 @@ async function saveNewCrMode(){
     allow_video: document.getElementById('cr-mode-allow-video')?.checked?1:0,
     ruleset_id:  Number(document.getElementById('cr-mode-ruleset')?.value)||null,
     timer_default: Number(document.getElementById('cr-mode-timer')?.value)||60,
+    allowed_langs: readLangsByPrefix('cr-mode-lang-'),
   };
   const res=await API('/api/cr/modes',{method:'POST',body});
   if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;await loadCrModes();toast(gmt('cr-mode-created')||'CityRush Modus erstellt!','success');}
@@ -3241,6 +3378,11 @@ async function editCurrentCrMode(){
       <label class="label" data-tip="cr-mode-timer">${gmt('cr-mode-timer-label')||'Standard-Dauer (Minuten)'}</label>
       <input id="cr-mode-timer-edit" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="cr-mode-timer">
     </div>
+    <div class="field" data-tip="cr-mode-allowed-langs">
+      <label class="label" data-tip="cr-mode-allowed-langs">${gmt('cr-allowed-langs')||'Erlaubte Sprachen'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.'}</p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;">${langCheckboxes('cr-mode-lang-edit-', m.allowed_langs)}</div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Abbrechen'}</button>
       <button class="btn btn-primary" onclick="saveEditCrMode()">${gmt('save')||'Speichern'}</button>
@@ -3256,6 +3398,7 @@ async function saveEditCrMode(){
     allow_video: document.getElementById('cr-mode-allow-video-edit')?.checked?1:0,
     ruleset_id:  Number(document.getElementById('cr-mode-ruleset-edit')?.value)||null,
     timer_default: Number(document.getElementById('cr-mode-timer-edit')?.value)||60,
+    allowed_langs: readLangsByPrefix('cr-mode-lang-edit-'),
   };
   await API(`/api/cr/modes/${currentCrModeId}`,{method:'PUT',body});
   currentCrModeName=name; closeModal(); loadCrModes();

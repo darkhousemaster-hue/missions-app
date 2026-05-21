@@ -100,7 +100,7 @@ function _detectJoinLang() {
   const nav = (navigator.language || navigator.userLanguage || 'de').slice(0,2).toLowerCase();
   return JOIN_LANGS.includes(nav) ? nav : 'de';
 }
-const joinLang = _detectJoinLang();
+let joinLang = _detectJoinLang();
 const JOIN_T = {
   de: {loading:'Laden…', error:'Fehler', invalid:'Ungültiger Code oder Spiel beendet.', ask_gm:'Bitte den Spielleiter um einen neuen Code.', game_ended:'Dieses Spiel ist bereits beendet.', create_team:'Neues Team erstellen', join_team:'Team beitreten', back:'← Zurück', teamname:'Teamname', teamname_ph:'Teamname eingeben…', start:'MiSSiON starten →', team_hint:'Du siehst dieselben MiSSiONS und kannst unabhängig Medien einreichen.', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.', waiting:'Warte…', join_btn:'Beitreten', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.'},
   en: {loading:'Loading…', error:'Error', invalid:'Invalid code or game ended.', ask_gm:'Please ask the Gamemaster for a new code.', game_ended:'This game has already ended.', create_team:'Create new team', join_team:'Join team', back:'← Back', teamname:'Team name', teamname_ph:'Enter team name…', start:'Start MiSSiON →', team_hint:'You see the same MiSSiONS and can submit media independently.', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.', waiting:'Waiting…', join_btn:'Join', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.'},
@@ -118,9 +118,11 @@ function ensureCrPlayerKey() {
 
 document.documentElement.lang = joinLang;
 document.getElementById('game-id-display').textContent = gameId ? '#' + gameId : '';
-// Translate the static strings sitting in the markup. Done here so the
-// DOMContentLoaded handler doesn't have to know about every label.
-(function _applyJoinTranslations(){
+// Translate the static strings sitting in the markup. Hoisted from an IIFE
+// so the per-location language restriction below can re-call it after
+// snapping joinLang to whatever the location actually permits.
+function _applyJoinTranslations(){
+  document.documentElement.lang = joinLang;
   const loading = document.querySelector('#screen-loading p');
   if(loading) loading.textContent = jt('loading');
   const errH = document.querySelector('#screen-error h2');
@@ -142,7 +144,19 @@ document.getElementById('game-id-display').textContent = gameId ? '#' + gameId :
   if(startBtn) startBtn.textContent = jt('start');
   const teamHint = document.querySelector('#panel-join p');
   if(teamHint) teamHint.textContent = jt('team_hint');
-})();
+}
+_applyJoinTranslations();
+
+// Snap joinLang to the location's allowed list if the auto-detected language
+// isn't permitted there. Called after the game fetch in the DOMContentLoaded
+// handler below.
+function _applyJoinAllowedLangs(csv){
+  const arr = String(csv || '').split(',').map(s => s.trim()).filter(l => JOIN_LANGS.includes(l));
+  if (arr.length === 0 || arr.includes(joinLang)) return;
+  joinLang = arr[0];
+  localStorage.setItem('m_lang', joinLang);  // so /play and /cityrush also pick it up
+  _applyJoinTranslations();
+}
 
 window.addEventListener('DOMContentLoaded', async () => {
   if (!gameId) { show('error'); return; }
@@ -170,6 +184,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (game.location) {
       document.getElementById('location-info').textContent = '📍 ' + game.location.name;
+      // If the location restricts the language list, snap joinLang into the
+      // allowed set before the player even sees the join screen.
+      if (game.location.allowed_langs) _applyJoinAllowedLangs(game.location.allowed_langs);
     }
     // If game has CityRush mode AND no normal missions, go to cityrush page
     if (game.crMode) {

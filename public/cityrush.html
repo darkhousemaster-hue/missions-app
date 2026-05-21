@@ -823,8 +823,29 @@ function applyProgressPayload(data={}){
   renderMission();
   renderAllMissionMarkers();
 }
+// crAllowedLangs is filled by setCrAllowedLangs() once the team payload
+// arrives. CityRush games are not tied to a location and therefore not
+// subject to per-location restriction by default; this hook exists so a
+// future CR-mode-level allow-list can plug in without touching the cycler.
+let crAllowedLangs = ['de','en','fr','it','es'];
+function setCrAllowedLangs(csv){
+  const all = ['de','en','fr','it','es'];
+  let arr = String(csv || '').split(',').map(s => s.trim()).filter(l => all.includes(l));
+  if (arr.length === 0) arr = all.slice();
+  crAllowedLangs = arr;
+  const btn = document.getElementById('btn-v-lang');
+  if (btn) btn.style.display = crAllowedLangs.length > 1 ? '' : 'none';
+  if (!crAllowedLangs.includes(lang)) {
+    lang = crAllowedLangs[0];
+    localStorage.setItem('cr_lang', lang);
+    if (btn) btn.textContent = lang.toUpperCase();
+    if (typeof applyCrTranslations === 'function') applyCrTranslations();
+    if (typeof renderTiles === 'function') renderTiles();
+    if (typeof renderSpecialTiles === 'function') renderSpecialTiles();
+  }
+}
 function crCycleLang(){
-  const LANGS=['de','en','fr','it','es'];
+  const LANGS = crAllowedLangs;
   lang=LANGS[(LANGS.indexOf(lang)+1)%LANGS.length];
   localStorage.setItem('cr_lang',lang);
   document.getElementById('btn-v-lang').textContent=lang.toUpperCase();
@@ -939,8 +960,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Selfie-at-start gate (non-blocking for everything else — the rest of the
   // init keeps running; the overlay just covers the UI until uploaded).
   crEnsureSelfie().catch(()=>{});
-  // Hydrate the frozen overlay if we reloaded while a freeze is active.
+  // Hydrate the frozen overlay if we reloaded while a freeze is active,
+  // and apply the location's allowed-language list to the cycler.
   fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json()).then(d => {
+    if(d && d.allowed_langs) setCrAllowedLangs(d.allowed_langs);
     if(d && d.freeze && d.freeze.until_ms && d.freeze.until_ms > Date.now()){
       crShowFrozen(d.freeze.until_ms);
     }

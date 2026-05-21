@@ -12,7 +12,7 @@
 // screenshot with caption. No external markdown library — small parser
 // inline.
 
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -27,7 +27,12 @@ const ROOT    = join(__dirname, '..');
 const CONTENT = join(ROOT, 'content');
 const SHOTS   = join(ROOT, 'screenshots');
 const PDF_DIR = join(ROOT, 'pdf');
+// public/manuals/ is the deployed copy the in-app 📖 Manuals button serves.
+// Mirror the build output there on every run so the in-app downloads always
+// match what we just regenerated.
+const PUBLIC_MANUALS = join(ROOT, '..', 'public', 'manuals');
 mkdirSync(PDF_DIR, { recursive: true });
+mkdirSync(PUBLIC_MANUALS, { recursive: true });
 
 // ── Tiny markdown → HTML converter ──────────────────────────────────────────
 // We don't want to depend on an npm marked install. The set of constructs we
@@ -241,7 +246,10 @@ async function buildOne(mdFile) {
     await page.goto('file://' + htmlPath.replace(/\\/g, '/'), { waitUntil: 'networkidle' });
     const out = join(PDF_DIR, outName + '.pdf');
     await page.pdf({ path: out, format: 'A4', printBackground: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
-    console.log(`  ${outName}.pdf  (${manifest.length} screenshots)`);
+    // Mirror to public/manuals/ so the in-app download button serves the
+    // fresh build immediately on next request.
+    copyFileSync(out, join(PUBLIC_MANUALS, outName + '.pdf'));
+    console.log(`  ${outName}.pdf  (${manifest.length} screenshots) → public/manuals/`);
   } finally {
     await browser.close();
   }

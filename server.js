@@ -436,7 +436,20 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   // Include the current freeze (if any) so the player UI can decide whether
   // to show the frozen overlay on reload.
   const freeze = db.activeFreezeFor(req.params.gameId, Number(req.params.teamId));
-  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze});
+  // Surface the allowed-languages list so the player's cycler can hide
+  // options that aren't permitted. MiSSiONS games read from the game's
+  // location; CityRush games (no location_id) read from the CR mode.
+  // Either way, fall back to all five supported languages if unset.
+  const game = db.getGame(req.params.gameId);
+  let allowed_langs = 'de,en,fr,it,es';
+  if (game && game.location_id) {
+    const loc = db.getLocation(game.location_id);
+    if (loc && loc.allowed_langs) allowed_langs = loc.allowed_langs;
+  } else if (game) {
+    const crMode = db.getGameCrMode(game.id);
+    if (crMode && crMode.allowed_langs) allowed_langs = crMode.allowed_langs;
+  }
+  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs});
 });
 app.get('/api/games/:gameId/rankings', (req,res) => res.json(db.getRankings(req.params.gameId)));
 
@@ -694,14 +707,14 @@ function crMediaMatchesMission(mission, mediaPath) {
 app.get('/api/cr/modes', (req,res) => res.json(db.getCrModes()));
 app.post('/api/cr/modes', (req,res) => {
   if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
-  const {name, allow_photo, allow_video, ruleset_id, timer_default} = req.body;
-  const id = db.createCrMode({name, allow_photo, allow_video, ruleset_id, timer_default});
+  const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs} = req.body;
+  const id = db.createCrMode({name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs});
   res.json({id, success:true});
 });
 app.put('/api/cr/modes/:id', (req,res) => {
   if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
-  const {name, allow_photo, allow_video, ruleset_id, timer_default} = req.body;
-  db.updateCrMode(req.params.id, {name, allow_photo, allow_video, ruleset_id, timer_default});
+  const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs} = req.body;
+  db.updateCrMode(req.params.id, {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs});
   res.json({success:true});
 });
 app.delete('/api/cr/modes/:id', (req,res) => {

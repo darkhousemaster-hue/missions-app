@@ -401,8 +401,31 @@ const T = {
     flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
   }
 };
-const LANGS = ['de','en','fr','it','es'];
+const ALL_LANGS = ['de','en','fr','it','es'];
+// LANGS is the currently-permitted set; the team-fetch payload narrows it
+// down via setAllowedLangs() once we know the game's location restrictions.
+// Until then we accept all five so the page renders something on first load.
+let LANGS = ['de','en','fr','it','es'];
 function t(k) { return (T[lang]||T.de)[k]||k; }
+
+// Replace the active language allow-list. Called after fetching the team
+// payload (which carries the location's `allowed_langs`). If the player's
+// stored language isn't allowed at this location, snap to the first one.
+function setAllowedLangs(csv) {
+  let arr = String(csv || '').split(',').map(s => s.trim()).filter(l => ALL_LANGS.includes(l));
+  if (arr.length === 0) arr = ALL_LANGS.slice();
+  LANGS = arr;
+  // Hide the cycler entirely if only one language is on offer
+  const btn = document.getElementById('btn-lang');
+  if (btn) btn.style.display = LANGS.length > 1 ? '' : 'none';
+  if (!LANGS.includes(lang)) {
+    lang = LANGS[0];
+    localStorage.setItem('m_lang', lang);
+    applyTranslations();
+    if (typeof loadMissions === 'function') loadMissions();
+    if (typeof loadRules    === 'function') loadRules();
+  }
+}
 
 function applyTranslations() {
   document.getElementById('btn-lang').textContent = lang.toUpperCase();
@@ -542,6 +565,10 @@ function updateTimer({ remaining, running }) {
 // ── Missions ──────────────────────────────────────────────────────────────────
 async function loadMissions() {
   const data = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
+  // Apply the location's allowed-language restriction. Safe to call on every
+  // loadMissions (no-op when nothing changes); the GM can edit the allow-list
+  // mid-game and the player picks it up on next refresh without reload.
+  if (data.allowed_langs) setAllowedLangs(data.allowed_langs);
   // Update teamName from server (fixes reload showing 'Team')
   if (data.name) {
     teamName = data.name;
