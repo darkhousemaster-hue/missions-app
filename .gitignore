@@ -36,3 +36,7 @@ logs/
 
 # Windows bat output
 *.tmp
+
+# Handbook artifacts — regenerated on demand by handbook/scripts/*
+handbook/screenshots/
+handbook/pdf/

@@ -166,6 +166,9 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
     <div class="topbar-right">
       <span style="font-family:var(--mono);font-size:.8rem;color:var(--text-muted);" id="gm-game-id-display"></span>
       <button class="btn btn-ghost btn-sm" onclick="showQRModal()">QR</button>
+      <!-- 🎬 Export: zip of all accepted media + optional photo-collage MP4.
+           Enabled only when the game has ended (set by openDashboard). -->
+      <button class="btn btn-ghost btn-sm" id="btn-game-export" onclick="showGameExportModal()" disabled title="">🎬</button>
       <button class="btn btn-ghost btn-sm" onclick="showSettingsGate()">⚙</button>
       <button class="btn btn-ghost btn-sm" id="gm-lang-btn" onclick="cycleGmLang()">DE</button>
     </div>
@@ -619,7 +622,14 @@ const GMT={
   'cr-hint-add':'Hinweis hinzufügen','cr-hint-edit':'Hinweis bearbeiten',
   'image-optional':'Bild (optional)','remove-image':'Bild entfernen','current-image':'aktuelles Bild',
   'no-name':'(kein Name)','imported-suffix':'importiert','errors-suffix':'Fehler',
-  'copied-suffix':'kopiert!','exported-suffix':'exportiert'},
+  'copied-suffix':'kopiert!','exported-suffix':'exportiert',
+  // 🎬 Game-media export (button on the dashboard top bar)
+  'export-tip-ready':'Spiel-Medien exportieren','export-tip-locked':'Erst nach Spielende verfügbar',
+  'export-title':'Spiel exportieren',
+  'export-blurb':'Lade alle angenommenen Fotos und Videos als ZIP herunter, oder erstelle ein Foto-Collage-Video. Videos sind nur im ZIP enthalten.',
+  'export-zip-btn':'ZIP herunterladen (alle Medien)',
+  'export-collage-btn':'Foto-Collage rendern',
+  'export-rendering':'Wird gerendert…','export-done':'Fertig — Download startet…'},
   en:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No CityRush mode yet. Click ＋ Mode.','cr-no-missions':'No CityRush missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
@@ -707,7 +717,13 @@ const GMT={
   'cr-hint-add':'Add hint','cr-hint-edit':'Edit hint',
   'image-optional':'Image (optional)','remove-image':'Remove image','current-image':'current image',
   'no-name':'(no name)','imported-suffix':'imported','errors-suffix':'errors',
-  'copied-suffix':'copied!','exported-suffix':'exported'},
+  'copied-suffix':'copied!','exported-suffix':'exported',
+  'export-tip-ready':'Export game media','export-tip-locked':'Available after the game ends',
+  'export-title':'Export game',
+  'export-blurb':'Download every accepted photo and video as a ZIP, or render a photo-collage video. Videos are only in the ZIP.',
+  'export-zip-btn':'Download ZIP (all media)',
+  'export-collage-btn':'Render photo collage',
+  'export-rendering':'Rendering…','export-done':'Done — download starting…'},
   fr:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modes CityRush','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode CityRush. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission CityRush. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
@@ -795,7 +811,13 @@ const GMT={
   'cr-hint-add':'Ajouter un indice','cr-hint-edit':"Modifier l'indice",
   'image-optional':'Image (facultatif)','remove-image':"Supprimer l'image",'current-image':'image actuelle',
   'no-name':'(sans nom)','imported-suffix':'importés','errors-suffix':'erreurs',
-  'copied-suffix':'copiés !','exported-suffix':'exportés'},
+  'copied-suffix':'copiés !','exported-suffix':'exportés',
+  'export-tip-ready':'Exporter les médias de la partie','export-tip-locked':'Disponible après la fin de la partie',
+  'export-title':'Exporter la partie',
+  'export-blurb':"Téléchargez toutes les photos et vidéos acceptées en ZIP, ou créez une vidéo-collage de photos. Les vidéos ne sont incluses que dans le ZIP.",
+  'export-zip-btn':'Télécharger ZIP (tous les médias)',
+  'export-collage-btn':'Créer la vidéo-collage',
+  'export-rendering':'Rendu en cours…','export-done':'Terminé — téléchargement…'},
   it:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modalità CityRush','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'CityRush usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità CityRush. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione CityRush. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
@@ -883,7 +905,13 @@ const GMT={
   'cr-hint-add':'Aggiungi suggerimento','cr-hint-edit':'Modifica suggerimento',
   'image-optional':'Immagine (opzionale)','remove-image':'Rimuovi immagine','current-image':'immagine attuale',
   'no-name':'(senza nome)','imported-suffix':'importati','errors-suffix':'errori',
-  'copied-suffix':'copiati!','exported-suffix':'esportati'},
+  'copied-suffix':'copiati!','exported-suffix':'esportati',
+  'export-tip-ready':'Esporta i media della partita','export-tip-locked':'Disponibile dopo la fine della partita',
+  'export-title':'Esporta partita',
+  'export-blurb':'Scarica tutte le foto e i video accettati come ZIP, oppure crea un video-collage di foto. I video sono solo nel ZIP.',
+  'export-zip-btn':'Scarica ZIP (tutti i media)',
+  'export-collage-btn':'Crea video-collage',
+  'export-rendering':'Rendering in corso…','export-done':'Pronto — download in corso…'},
   es:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modos CityRush','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'CityRush usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo CityRush. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones CityRush. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
   'cr-m-name':'Nombre','cr-m-lat':'Latitud','cr-m-lng':'Longitud','cr-m-radius':'Radio (metros)','cr-m-points':'Puntos',
   'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
@@ -971,7 +999,13 @@ const GMT={
   'cr-hint-add':'Añadir pista','cr-hint-edit':'Editar pista',
   'image-optional':'Imagen (opcional)','remove-image':'Quitar imagen','current-image':'imagen actual',
   'no-name':'(sin nombre)','imported-suffix':'importadas','errors-suffix':'errores',
-  'copied-suffix':'copiadas!','exported-suffix':'exportadas'}
+  'copied-suffix':'copiadas!','exported-suffix':'exportadas',
+  'export-tip-ready':'Exportar medios de la partida','export-tip-locked':'Disponible al terminar la partida',
+  'export-title':'Exportar partida',
+  'export-blurb':'Descarga todas las fotos y vídeos aceptados como ZIP, o crea un vídeo-collage de fotos. Los vídeos solo están en el ZIP.',
+  'export-zip-btn':'Descargar ZIP (todos los medios)',
+  'export-collage-btn':'Crear vídeo-collage',
+  'export-rendering':'Renderizando…','export-done':'¡Listo! Descargando…'}
 };
 function gmt(key){
   return (GMT[gmLang]||GMT['en']||{})[key] || (GMT['en']||{})[key] || '';
@@ -1183,6 +1217,92 @@ function downloadQR(){
 }
 function downloadQRFromModal(){downloadQR();}
 
+// ── Game-media export (🎬 button) ───────────────────────────────────────────
+// The button is enabled only on ended games. paintGameExportButton() reads
+// `currentGame.status` and toggles the disabled attribute + tooltip.
+function paintGameExportButton(){
+  const btn=document.getElementById('btn-game-export'); if(!btn) return;
+  const ended = currentGame && currentGame.status==='ended';
+  btn.disabled = !ended;
+  btn.title = ended
+    ? (gmt('export-tip-ready')||'Spiel-Medien exportieren')
+    : (gmt('export-tip-locked')||'Erst nach Spielende verfügbar');
+  btn.style.opacity = ended ? '1' : '.45';
+}
+
+// Open the export modal with two big actions: download zip / render collage.
+function showGameExportModal(){
+  if(!currentGameId) return;
+  document.getElementById('modal-overlay').style.display='flex';
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">🎬 ${gmt('export-title')||'Spiel exportieren'}</h3>
+    <p style="color:var(--text-dim);font-size:.85rem;margin-bottom:1rem;">
+      ${gmt('export-blurb')||'Lade alle angenommenen Fotos und Videos als ZIP herunter, oder erstelle ein Foto-Collage-Video. Videos sind nur im ZIP enthalten.'}
+    </p>
+    <div style="display:grid;gap:.6rem;">
+      <button class="btn btn-primary btn-full" onclick="downloadGameZip()">
+        📦 ${gmt('export-zip-btn')||'ZIP herunterladen (alle Medien)'}
+      </button>
+      <button class="btn btn-secondary btn-full" id="btn-collage-render" onclick="startCollageRender()">
+        🎬 ${gmt('export-collage-btn')||'Foto-Collage rendern'}
+      </button>
+    </div>
+    <div id="collage-progress" style="display:none;margin-top:1rem;padding:.75rem;background:var(--surface);border-radius:var(--radius);">
+      <div style="font-size:.85rem;color:var(--text-dim);margin-bottom:.4rem;" id="collage-progress-label">${gmt('export-rendering')||'Wird gerendert…'}</div>
+      <div style="background:var(--bg);height:.6rem;border-radius:.3rem;overflow:hidden;">
+        <div id="collage-progress-bar" style="height:100%;background:var(--orange);width:0%;transition:width .3s;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Schließen'}</button>
+    </div>`;
+}
+
+// ZIP — browser handles the streamed download directly. No JS-side decoding.
+function downloadGameZip(){
+  if(!currentGameId) return;
+  window.location.href = `/api/games/${currentGameId}/media.zip`;
+}
+
+// Collage render — POST kicks off the job, then poll /status every 1.5s. On
+// completion, navigate to the file URL so the browser pulls the MP4 down.
+async function startCollageRender(){
+  if(!currentGameId) return;
+  const renderBtn = document.getElementById('btn-collage-render');
+  if(renderBtn) { renderBtn.disabled = true; renderBtn.textContent = '⏳ ' + (gmt('export-rendering')||'Wird gerendert…'); }
+  const box = document.getElementById('collage-progress');
+  if(box) box.style.display = 'block';
+
+  let job;
+  try { job = await API(`/api/games/${currentGameId}/collage`, { method: 'POST', body: {} }); }
+  catch(e){ toast((gmt('error-prefix')||'Fehler:') + ' ' + e.message, 'error');
+            if(renderBtn) renderBtn.disabled = false; return; }
+  if(!job || !job.job_id){ toast(gmt('error-prefix')||'Fehler', 'error'); return; }
+
+  // Poll until phase === 'done' or 'error'
+  const bar = document.getElementById('collage-progress-bar');
+  const lbl = document.getElementById('collage-progress-label');
+  const poll = setInterval(async () => {
+    let s;
+    try { s = await API(`/api/games/${currentGameId}/collage/status/${job.job_id}`); }
+    catch(e){ /* keep trying — transient */ return; }
+    if(bar && s.total) bar.style.width = (100 * s.step / s.total).toFixed(0) + '%';
+    if(lbl) lbl.textContent = (gmt('export-rendering')||'Wird gerendert…') +
+      ' (' + s.step + '/' + s.total + (s.phase==='concat' ? ' · concat' : '') + ')';
+    if(s.phase === 'done'){
+      clearInterval(poll);
+      if(bar) bar.style.width='100%';
+      if(lbl) lbl.textContent = gmt('export-done')||'Fertig — Download startet…';
+      // Trigger the download
+      setTimeout(() => { window.location.href = s.url; }, 400);
+    } else if(s.phase === 'error'){
+      clearInterval(poll);
+      toast((gmt('error-prefix')||'Fehler:') + ' ' + (s.error||'render failed'), 'error');
+      if(renderBtn){ renderBtn.disabled=false; renderBtn.textContent = '🎬 ' + (gmt('export-collage-btn')||'Foto-Collage rendern'); }
+    }
+  }, 1500);
+}
+
 async function downloadQRWithTemplate(){
   if(!currentQRData){toast(gmt('no-qr-yet')||'No QR code yet','warning');return;}
   const s=await API('/api/settings');
@@ -1323,7 +1443,14 @@ async function openDashboard(gameId){
     if(teamId === selectedTeamId) selectTeam(teamId);
   });
   socket.on('chat_message',onChatMessage);
-  socket.on('game_ended',()=>toast(gmt('game-ended-toast')||'Spiel beendet!'));
+  socket.on('game_ended',()=>{
+    toast(gmt('game-ended-toast')||'Spiel beendet!');
+    // Re-enable the export button now that there's a final deliverable to
+    // ship. The server-side gate also enforces this, but the client should
+    // reflect it immediately.
+    if(currentGame) currentGame.status='ended';
+    paintGameExportButton();
+  });
   socket.on('gps_update',({teamId:tid,lat,lng})=>{
     ensureGmCrMap();
     upsertGmTeamMarker(tid, lat, lng);
@@ -1364,6 +1491,9 @@ async function refreshDashboard(gameId){
   // Pull pending counts so the notification dot reflects reality the moment
   // the dashboard opens (covers refresh / re-open scenarios).
   await refreshPendingCounts();
+  // The 🎬 export button is only enabled when the game has ended — paint it
+  // based on the current status. Status flips on the `game_ended` socket too.
+  paintGameExportButton();
   // Pull the freeze log once so chips can paint the ❄️ remaining-time tag.
   try {
     gmFreezes = await API(`/api/games/${gameId}/freezes`) || [];

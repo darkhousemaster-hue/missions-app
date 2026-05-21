@@ -9,12 +9,15 @@ const fs         = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const cron       = require('node-cron');
 const db         = require('./db/database');
+const collage    = require('./lib/collage');
 
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, { cors: { origin: '*' } });
 const PORT   = process.env.PORT || 3001;
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
+// UPLOAD_DIR is overridable via env so the handbook capture scripts can
+// point at a throw-away fixture directory without touching production media.
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -345,6 +348,68 @@ app.get('/api/games/:id/qr', (req,res) => {
     if(err) return res.status(500).json({error:'QR failed'});
     res.json({qrCode:qr,joinUrl});
   });
+});
+
+// ── Game-media exports ────────────────────────────────────────────────────────
+// Two endpoints + a couple of poll/serve helpers, all gated on the game
+// having ended (so the deliverable is final). The zip streams directly to
+// the client; the collage is a background job we track in-memory.
+const collageJobs = new Map();  // jobId → { gameId, step, total, phase, path?, error? }
+
+function endedGameOr404(id, res) {
+  const g = db.getGame(id);
+  if(!g) { res.status(404).json({ error: 'Game not found' }); return null; }
+  if(g.status !== 'ended') { res.status(409).json({ error: 'Game not ended yet' }); return null; }
+  return g;
+}
+
+// 1) Zip download — streams every accepted submission + team selfies. Names
+//    inside the zip are `<team-slug>/<NN>-<mission-slug>.<ext>`.
+app.get('/api/games/:id/media.zip', (req,res) => {
+  if(!endedGameOr404(req.params.id, res)) return;
+  try { collage.streamZip(db._db, req.params.id, UPLOAD_DIR, res); }
+  catch(e) { console.error('zip error:', e); res.status(500).json({ error: e.message }); }
+});
+
+// 2) Collage POST — kick off the render, return a job id immediately. We
+//    don't queue or rate-limit; assumption is the GM dashboard only fires
+//    one of these at a time per game.
+app.post('/api/games/:id/collage', (req,res) => {
+  const g = endedGameOr404(req.params.id, res);
+  if(!g) return;
+  const jobId = uuidv4().slice(0,8);
+  const job   = { gameId: g.id, step: 0, total: 1, phase: 'starting', started_at: Date.now() };
+  collageJobs.set(jobId, job);
+  collage.generateCollage(db._db, g.id, UPLOAD_DIR, (p) => {
+    job.step  = p.step; job.total = p.total; job.phase = p.phase;
+  })
+  .then(relPath => { job.phase = 'done'; job.path = relPath; })
+  .catch(err   => { console.error('collage failed:', err);
+                    job.phase = 'error'; job.error = err.message || 'render failed'; });
+  res.json({ job_id: jobId });
+});
+
+// 3) Status poll — the GM dashboard hits this every 1–2s for progress
+app.get('/api/games/:id/collage/status/:jobId', (req,res) => {
+  const job = collageJobs.get(req.params.jobId);
+  if(!job || job.gameId !== req.params.id) return res.status(404).json({ error: 'No such job' });
+  res.json({
+    phase: job.phase, step: job.step, total: job.total,
+    error: job.error || null,
+    url: job.path ? `/api/games/${job.gameId}/collage/file` : null,
+  });
+});
+
+// 4) Final file — served as an attachment so the browser downloads instead
+//    of trying to stream it inline.
+app.get('/api/games/:id/collage/file', (req,res) => {
+  const g = db.getGame(req.params.id);
+  if(!g || !g.collage_path) return res.status(404).json({ error: 'No collage' });
+  const abs = path.join(UPLOAD_DIR, g.collage_path);
+  if(!fs.existsSync(abs)) return res.status(404).json({ error: 'File missing' });
+  res.setHeader('Content-Disposition', `attachment; filename="missions-${g.id}-collage.mp4"`);
+  res.setHeader('Content-Type', 'video/mp4');
+  fs.createReadStream(abs).pipe(res);
 });
 
 // ── Teams ─────────────────────────────────────────────────────────────────────

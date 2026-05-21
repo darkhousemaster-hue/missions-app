@@ -4,7 +4,10 @@ const bcrypt = require('bcryptjs');
 const path   = require('path');
 const fs     = require('fs');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'missions.db');
+// DB_PATH defaults to data/missions.db beside the project root, but can be
+// overridden via the DB_PATH env var (used by the handbook capture scripts
+// to spin up a throw-away fixture without touching production data).
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'missions.db');
 if (!fs.existsSync(path.dirname(DB_PATH))) fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const db = new DatabaseSync(DB_PATH);
@@ -242,6 +245,11 @@ try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(
 // Team selfie taken at the start of the game so the GM can see who's who.
 // `selfie_path` is the uploads-relative path; stays NULL until uploaded.
 try { db.exec("ALTER TABLE teams ADD COLUMN selfie_path TEXT"); } catch(e) {}
+// Game media export — populated after the GM renders the photo-collage MP4
+// from the dashboard. NULL until the first render. The path is relative to
+// UPLOAD_DIR (e.g. "ABC12345/collage.mp4"). generated_at is a unix-epoch ms.
+try { db.exec("ALTER TABLE games ADD COLUMN collage_path TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE games ADD COLUMN collage_generated_at INTEGER"); } catch(e) {}
 // Rival-team freeze. One row per (game, freezer, frozen). UNIQUE constraint
 // enforces "each team can only freeze each rival once". `until_ms` is the
 // absolute epoch when the freeze ends; rows are kept forever (used to grey
@@ -869,6 +877,10 @@ const listFreezesForGame = gameId =>
   db.prepare('SELECT * FROM team_freezes WHERE game_id=? ORDER BY id').all(gameId);
 
 module.exports = {
+  // Raw handle for callers that need ad-hoc prepared statements (e.g. the
+  // collage helper's UNION query). Prefer named helpers below for everything
+  // else; reach for `_db` only when adding a new helper would be overkill.
+  _db: db,
   getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,getGameRules,
