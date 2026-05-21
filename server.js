@@ -187,7 +187,21 @@ app.post('/api/update', async (req,res) => {
   const npmArgs = fs.existsSync(path.join(appDir, 'package-lock.json'))
     ? ['ci', '--omit=dev']
     : ['install', '--omit=dev'];
-  const npm = await run(npmCmd, npmArgs, {timeout: 20 * 60 * 1000});
+  let npm = await run(npmCmd, npmArgs, {timeout: 20 * 60 * 1000});
+  // npm ci pre-wipes node_modules. On Linux the running server holds
+  // binaries from packages like ffmpeg-static open via require(), which can
+  // leave one file behind and trigger ENOTEMPTY / EBUSY / ETXTBSY when npm
+  // tries to rmdir. Recover by force-wiping node_modules and falling back
+  // to a plain `npm install` (which doesn't pre-wipe and is more tolerant
+  // of busy files on a re-create).
+  if (!npm.ok && /ENOTEMPTY|EBUSY|ETXTBSY/.test(npm.stderr + npm.stdout)) {
+    log.push('npm ci could not clear node_modules. Wiping and retrying with npm install.');
+    const wipe = process.platform === 'win32'
+      ? await run('cmd', ['/c', 'rmdir', '/s', '/q', 'node_modules'], {timeout: 5 * 60 * 1000})
+      : await run('sh',  ['-c', 'rm -rf node_modules'],                {timeout: 5 * 60 * 1000});
+    if (!wipe.ok) return fail('Update failed: could not clear node_modules before retry.');
+    npm = await run(npmCmd, ['install', '--omit=dev', '--no-audit', '--no-fund'], {timeout: 20 * 60 * 1000});
+  }
   if (!npm.ok) return fail('Update failed: dependencies could not be installed.');
 
   log.push('Update complete. Restarting...');

@@ -17,30 +17,38 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Read version from package.json
+      - name: Detect version change
         id: version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check if tag already exists
-        id: tag_check
-        run: |
-          if git ls-remote --tags origin "refs/tags/v${{ steps.version.outputs.version }}" | grep -q "refs/tags"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+          # Read the version that was just pushed and the previous one. If
+          # they match, there's no new release to make. fetch-depth: 2 above
+          # guarantees HEAD~1 is available.
+          CUR=$(node -p "require('./package.json').version")
+          PREV=$(git show HEAD~1:package.json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).version||""))' 2>/dev/null || echo "")
+          echo "current=$CUR" >> $GITHUB_OUTPUT
+          echo "previous=$PREV" >> $GITHUB_OUTPUT
+          if [ "$CUR" != "$PREV" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version bumped: ${PREV:-<none>} -> $CUR"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged ($CUR). Skipping release."
           fi
 
       - name: Create Release
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.version.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: MiSSiONS v${{ steps.version.outputs.version }}
+          # softprops/action-gh-release creates the tag on the release commit
+          # if it doesn't yet exist on the remote, and updates the existing
+          # release if one is already attached to the tag. We deliberately
+          # don't gate on tag presence — a manually pushed tag still gets a
+          # release this way, fixing the prior "skipped because tag exists"
+          # failure mode.
+          tag_name: v${{ steps.version.outputs.current }}
+          name: MiSSiONS v${{ steps.version.outputs.current }}
           body: |
-            ## MiSSiONS v${{ steps.version.outputs.version }}
+            ## MiSSiONS v${{ steps.version.outputs.current }}
 
             ${{ github.event.head_commit.message }}
 
