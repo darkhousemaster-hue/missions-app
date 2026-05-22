@@ -213,9 +213,22 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <!-- ── MISSIONS VIEW ── -->
 <div id="view-missions">
   <div class="legend-bar" id="legend-bar">
-    <div class="legend-item" id="leg-photo-item">📷 <span id="leg-photo">Fotoauftrag</span></div>
-    <div class="legend-item" id="leg-video-item">🎬 <span id="leg-video">Videoauftrag</span></div>
-    <div class="legend-item" id="leg-indoor-item">🏠 <span id="leg-indoor">Auch drinnen möglich</span></div>
+    <!-- Legend icons swapped from emoji to the shared stroked-SVG icon
+         family so they sit on the baseline cleanly. The JS labels are
+         injected by applyTranslations(), so we only need the icon
+         HTML + label-target spans here. -->
+    <div class="legend-item" id="leg-photo-item">
+      <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span id="leg-photo">Fotoauftrag</span>
+    </div>
+    <div class="legend-item" id="leg-video-item">
+      <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <span id="leg-video">Videoauftrag</span>
+    </div>
+    <div class="legend-item" id="leg-indoor-item">
+      <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
+      <span id="leg-indoor">Auch drinnen möglich</span>
+    </div>
   </div>
   <div id="missions-list"></div>
 </div>
@@ -301,6 +314,16 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 let gameId, teamId, teamName;
 let socket;
 let lang = localStorage.getItem('m_lang') || 'de';
+
+// Inline SVG icons matching the GM-side redesign family. Returned as
+// HTML strings so they sit cleanly inside template literals (mission
+// cards, legend bar). currentColor lets the icon inherit the parent
+// text colour, so legend items dim/brighten with the surrounding row.
+const ICONS = {
+  camera:`<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  video: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
+  house: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>`,
+};
 let cameraStream = null, mediaRecorder = null, recordedChunks = [];
 let capturedBlob = null, capturedIsVideo = false, capturedMimeType = 'video/webm';
 let currentMissionId = null, currentMissionType = 'photo';
@@ -598,12 +621,14 @@ async function loadMissions() {
 }
 
 function missionCard(m) {
-  const icon   = m.media_type==='video' ? '🎬' : '📷';
+  const icon   = m.media_type==='video' ? ICONS.video : ICONS.camera;
   const desc   = m[`description_${lang}`] || m.description_de || m.description_en || '';
   const task   = m[`task_${lang}`] || m.task_de || m.task_en || '';
   const status = m.status || 'open';
-  const pts    = `<span class="badge badge-orange">+${m.points}pt</span>`;
-  const indoor = m.is_indoor ? '🏠' : '';
+  // Points are info, not a "needs your action" signal — use neutral grey
+  // instead of orange so the orange tokens stay reserved for state-of-attention.
+  const pts    = `<span class="badge badge-grey">+${m.points}pt</span>`;
+  const indoor = m.is_indoor ? ICONS.house : '';
 
   let footer = '';
   if (status==='open' || status==='rejected') {

@@ -583,6 +583,23 @@ const sel = v => v ? 'selected' : '';
 // ── GM Language ────────────────────────────────────────────────────────────
 let gmLang = localStorage.getItem('gm_lang')||'de';
 const LANGS_GM=['de','en','fr','it','es'];
+
+// Shared SVG icon library. Keep stroke-width / linecap consistent so
+// every icon reads as one family. `inlineIcon(name, sizeCls)` returns
+// a ready-to-drop-in HTML string; pages render icons as inline SVG so
+// they inherit currentColor (button states paint the stroke). For
+// places that previously used a media-type emoji (📷 / 🎬 / 🏠), call
+// inlineIcon('camera' | 'video' | 'house') and you get the SVG.
+const ICONS = {
+  camera:`<svg class="icon ICN" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  video: `<svg class="icon ICN" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
+  house: `<svg class="icon ICN" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>`,
+  star:  `<svg class="icon ICN" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+};
+function inlineIcon(name, sizeCls){
+  const svg = ICONS[name] || '';
+  return sizeCls ? svg.replace('class="icon ICN"', `class="icon ${sizeCls} ICN"`) : svg;
+}
 const GMT={
   de:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'CityRush nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein CityRush-Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine CityRush-Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
   // CR mission modal labels
@@ -1985,8 +2002,10 @@ function renderTeamMissions(missions){
   const list=document.getElementById('team-missions-list');
   if(!missions.length){list.innerHTML='<div class="empty"><p>Keine MiSSiONS in diesem Spiel.</p></div>';return;}
   list.innerHTML=missions.map(m=>{
-    const icon=m.media_type==='video'?'🎬':'📷';
-    const indoor=m.is_indoor?'🏠':''
+    // SVG icons keep the same role as the previous 📷 / 🎬 / 🏠 glyphs but
+    // sit on the optical baseline cleanly and inherit the card's text colour.
+    const icon=m.media_type==='video'?inlineIcon('video'):inlineIcon('camera');
+    const indoor=m.is_indoor?inlineIcon('house'):''
     const sc=m.status==='pending'?'has-pending':m.status==='accepted'?'accepted':m.status==='rejected'?'rejected':'';
     const bc=m.status==='pending'?'orange':m.status==='accepted'?'green':m.status==='rejected'?'red':'grey';
     let media='';
@@ -2823,9 +2842,9 @@ async function loadMissions(){
         <div style="flex:1;">
           <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:.25rem;">
             <strong>${esc(m['name_'+gmLang]||m.name||'(kein Name)')}</strong>
-            <span>${m.media_type==='video'?'🎬':'📷'}</span>
-            ${m.is_indoor?'<span>🏠</span>':''}
-            <span class="badge badge-orange">${m.points}pt</span>
+            <span style="display:inline-flex;align-items:center;color:var(--text-dim);">${m.media_type==='video'?inlineIcon('video'):inlineIcon('camera')}</span>
+            ${m.is_indoor?`<span style="display:inline-flex;align-items:center;color:var(--text-dim);">${inlineIcon('house')}</span>`:''}
+            <span class="badge badge-grey">${m.points}pt</span>
             <span class="badge badge-grey">${m.location_id?esc(locMap[m.location_id]||'?'):'Pool'}</span>
           </div>
           ${(m['description_'+gmLang]||m.description_de)?`<div style="font-size:.85rem;color:var(--text-dim);">${esc(m['description_'+gmLang]||m.description_de)}</div>`:''}\n          ${(m['task_'+gmLang]||m.task_de)?`<div style="font-size:.82rem;color:var(--orange);">→ ${esc(m['task_'+gmLang]||m.task_de)}</div>`:''}
