@@ -1272,7 +1272,7 @@ async function loadLanding(){
   if(crModes.length){
     cards.push(`<div class="location-card" onclick="selectCityRushLocation()" style="border-color:var(--orange);">
       <h3>🏃 CityRush</h3>
-      <small style="color:var(--orange);">${crModes.length} ${crModes.length===1?'Modus':'Modi'}</small>
+      <small style="color:var(--text-dim);">${crModes.length} ${crModes.length===1?'Modus':'Modi'}</small>
     </div>`);
   }
   if(!cards.length){grid.innerHTML='<div class="empty"><div class="empty-icon">📍</div><p>Keine Standorte.</p></div>';return;}
@@ -3584,7 +3584,7 @@ async function loadCrMissions() {
         <div style="flex:1;">
           <div style="font-weight:700;">${esc(m.name_de||'(kein Name)')}</div>
           ${m.description_de?`<div style="font-size:.8rem;color:var(--text-dim);">${esc(m.description_de)}</div>`:''}
-          ${flags?`<div style="font-size:.75rem;color:var(--orange);margin-top:.2rem;">${flags}</div>`:''}
+          ${flags?`<div style="font-size:.75rem;color:var(--text-dim);margin-top:.2rem;">${flags}</div>`:''}
           <small style="color:var(--text-muted);">${m.points} Punkte · ${m.lat?`${m.lat.toFixed(5)},${m.lng.toFixed(5)}`:'Keine Koordinaten'}</small>
         </div>
         <div style="display:flex;gap:.4rem;">
