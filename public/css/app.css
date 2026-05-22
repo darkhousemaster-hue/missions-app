@@ -225,6 +225,39 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
   box-shadow:0 0 0 1px var(--green-dim) inset, 0 0 16px -10px var(--green-dim);
 }
 
+/* ── Segmented control ────────────────────────────────────────────────────
+   A 2-3 option pill row that replaces awkward <select>s (media type,
+   etc.). The hidden input with id matching the wrapper's data-input
+   carries the active value so existing save code keeps reading
+   `.value` exactly as before. */
+.segmented{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:3px;width:100%;}
+.segmented > *{flex:1;text-align:center;padding:.55rem .75rem;border-radius:4px;font-weight:600;font-size:.85rem;letter-spacing:.04em;color:var(--text-dim);cursor:pointer;user-select:none;transition:background .12s,color .12s;display:inline-flex;align-items:center;justify-content:center;gap:.3rem;}
+.segmented > *:hover{color:var(--text);}
+.segmented > .is-active{background:var(--text);color:var(--bg);font-weight:700;}
+
+/* ── iOS-style toggle ─────────────────────────────────────────────────────
+   The visible pill swap, plus a hidden <input type=checkbox> with id
+   matching the toggle's data-input. toggleSwitch() flips both at once
+   so existing save code can keep reading `.checked` unchanged. */
+.toggle{width:44px;height:26px;background:rgba(255,255,255,0.12);border-radius:999px;position:relative;cursor:pointer;transition:background .15s;display:inline-block;flex-shrink:0;}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:999px;transition:transform .15s;}
+.toggle.is-on{background:var(--orange);}
+.toggle.is-on::after{transform:translateX(18px);}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.65rem .85rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);}
+.toggle-row .toggle-row-text{font:600 .85rem/1.3 var(--body);color:var(--text);}
+.toggle-row .toggle-row-sub{font:400 .75rem/1.3 var(--body);color:var(--text-muted);margin-top:.15rem;}
+
+/* ── Stepper input (for numeric values like Points) ──────────────────────
+   Wraps an existing <input type=number> so we don't have to touch the
+   save logic — the input is the source of truth, the buttons just nudge
+   its value through stepInput(). */
+.stepper{display:inline-flex;align-items:stretch;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;width:auto;}
+.stepper > button{width:40px;background:transparent;border:0;color:var(--text);font:600 1.1rem/1 var(--body);cursor:pointer;}
+.stepper > button:hover{background:rgba(255,255,255,0.05);}
+.stepper > input{width:60px;text-align:center;background:transparent;border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);color:var(--text);font:700 .95rem/1 var(--mono);outline:none;padding:0;}
+.stepper > input::-webkit-outer-spin-button,.stepper > input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.stepper > input[type=number]{-moz-appearance:textfield;}
+
 /* ── Language tabstrip (Add/Edit Mission, CR Mission, Hints) ──────────────
    Replaces the previous 5-stacked-fields-per-field pattern. Each tabstrip
    pairs with a stack of .lang-panel divs that share the same data-prefix;

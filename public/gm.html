@@ -685,6 +685,7 @@ const GMT={
   'cr-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.',
   'lightbox-rotate':'Drehen','st-games':'Spiele',
   'cr-m-map-picker':'Karte (Klick zum Setzen, Marker ziehbar)',
+  'indoor-hint':'Spielbar auch bei Regen.',
   // 📖 Manuals download (button in settings topbar, next to language switch)
   'manuals-tip':'Handbücher herunterladen','manuals-title':'Handbücher',
   'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
@@ -791,6 +792,7 @@ const GMT={
   'cr-allowed-langs-hint':'Only these languages will appear for players in this CityRush mode.',
   'lightbox-rotate':'Rotate','st-games':'Games',
   'cr-m-map-picker':'Map (click to set, drag the marker to refine)',
+  'indoor-hint':'Playable in bad weather too.',
   'manuals-tip':'Download manuals','manuals-title':'Manuals',
   'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
@@ -896,6 +898,7 @@ const GMT={
   'cr-allowed-langs-hint':'Seules ces langues apparaîtront pour les joueurs dans ce mode CityRush.',
   'lightbox-rotate':'Tourner','st-games':'Jeux',
   'cr-m-map-picker':'Carte (cliquer pour placer, marqueur déplaçable)',
+  'indoor-hint':'Jouable aussi par mauvais temps.',
   'manuals-tip':'Télécharger les manuels','manuals-title':'Manuels',
   'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
@@ -1001,6 +1004,7 @@ const GMT={
   'cr-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questa modalità CityRush.',
   'lightbox-rotate':'Ruota','st-games':'Partite',
   'cr-m-map-picker':'Mappa (clic per posizionare, marker trascinabile)',
+  'indoor-hint':'Giocabile anche con maltempo.',
   'manuals-tip':'Scarica i manuali','manuals-title':'Manuali',
   'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
@@ -1106,6 +1110,7 @@ const GMT={
   'cr-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este modo CityRush.',
   'lightbox-rotate':'Girar','st-games':'Partidas',
   'cr-m-map-picker':'Mapa (clic para colocar, marcador arrastrable)',
+  'indoor-hint':'Jugable también con mal tiempo.',
   'manuals-tip':'Descargar manuales','manuals-title':'Manuales',
   'manuals-blurb':'Descarga los manuales PDF actuales. El maintainer los actualiza cuando hay cambios importantes.',
   'manuals-gm':'Manual del GM','manuals-settings':'Manual de ajustes',
@@ -2828,13 +2833,39 @@ function missionModal(m,locs){
         <select id="m-mode" class="select" data-tip="mission-mode"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
     </div>
     <div class="grid-2">
-      <div class="field" data-tip="mission-media"><label class="label" data-tip="mission-media">${gmt('media-label')||'Media'}</label>
-        <select id="m-type" class="select" data-tip="mission-media"><option value="photo" ${sel(!m||m.media_type==='photo')}>📷 Foto</option><option value="video" ${sel(m&&m.media_type==='video')}>🎬 Video</option></select></div>
-      <div class="field" data-tip="mission-points"><label class="label" data-tip="mission-points">Punkte</label><input id="m-pts" type="number" class="input" value="${m?m.points:1}" min="1" data-tip="mission-points"></div>
+      <div class="field" data-tip="mission-media">
+        <label class="label" data-tip="mission-media">${gmt('media-label')||'Media'}</label>
+        <!-- Segmented control replaces the old <select>. A hidden input
+             named m-type still carries the value so existing save code
+             (which reads .value) keeps working unchanged. -->
+        <div class="segmented" data-input="m-type" data-tip="mission-media">
+          <span class="${(!m||m.media_type==='photo')?'is-active':''}" data-value="photo" onclick="selectSegment(this)">📷 Foto</span>
+          <span class="${(m&&m.media_type==='video')?'is-active':''}" data-value="video" onclick="selectSegment(this)">🎬 Video</span>
+        </div>
+        <input type="hidden" id="m-type" value="${(m&&m.media_type)||'photo'}">
+      </div>
+      <div class="field" data-tip="mission-points">
+        <label class="label" data-tip="mission-points">Punkte</label>
+        <!-- Stepper wraps a real <input type=number>; existing save code
+             keeps reading +document.getElementById('m-pts').value. -->
+        <div class="stepper" data-tip="mission-points">
+          <button type="button" onclick="stepInput('m-pts',-1)">−</button>
+          <input id="m-pts" type="number" value="${m?m.points:1}" min="1">
+          <button type="button" onclick="stepInput('m-pts',1)">+</button>
+        </div>
+      </div>
     </div>
-    <div class="field" style="display:flex;align-items:center;gap:.5rem;" data-tip="mission-indoor">
-      <input type="checkbox" id="m-indoor" ${m&&m.is_indoor?'checked':''} style="width:18px;height:18px;accent-color:var(--red);" data-tip="mission-indoor">
-      <label for="m-indoor" style="cursor:pointer;font-weight:600;font-size:.9rem;" data-tip="mission-indoor">🏠 ${gmt('indoor-label')||'Auch drinnen möglich'}</label>
+    <div class="field" data-tip="mission-indoor">
+      <!-- iOS-style toggle. The visible pill flips a hidden checkbox so
+           existing save code can keep reading document.getElementById('m-indoor').checked. -->
+      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'m-indoor')" data-tip="mission-indoor">
+        <div>
+          <div class="toggle-row-text">🏠 ${gmt('indoor-label')||'Auch drinnen möglich'}</div>
+          <div class="toggle-row-sub">${gmt('indoor-hint')||'Spielbar auch bei Regen.'}</div>
+        </div>
+        <div class="toggle ${m&&m.is_indoor?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'m-indoor')"></div>
+      </div>
+      <input type="checkbox" id="m-indoor" ${m&&m.is_indoor?'checked':''} style="display:none;">
     </div>
     <div class="tabs" style="margin-top:.75rem;">
       <button class="tab active" onclick="switchMissionTab('desc',this)">📖 ${gmt('desc-label')||'Beschreibung / Description'}</button>
@@ -2921,6 +2952,43 @@ function refreshLangTickMarks(prefix){
     const el = document.getElementById(`${prefix}-${l}`);
     if(el) markLangTabFilled(prefix, l, (el.value||'').trim() !== '');
   });
+}
+
+// ── Form-control helpers (segmented / toggle / stepper) ────────────────────
+// These keep existing save logic working unchanged:
+//   - selectSegment(el)        — segmented control, writes to hidden input
+//                                whose id matches the wrapper's data-input
+//   - toggleSwitch(el, id)     — pairs with a hidden <input type=checkbox>
+//                                so existing `.checked` reads still work
+//   - stepInput(id, delta)     — nudges a real <input type=number>, so the
+//                                number input is the source of truth
+function selectSegment(el){
+  const wrap = el.parentElement;
+  wrap.querySelectorAll(':scope > *').forEach(s => s.classList.remove('is-active'));
+  el.classList.add('is-active');
+  const targetId = wrap.getAttribute('data-input');
+  if(targetId){
+    const inp = document.getElementById(targetId);
+    if(inp){ inp.value = el.getAttribute('data-value') || ''; inp.dispatchEvent(new Event('change')); }
+  }
+}
+function toggleSwitch(el, inputId){
+  el.classList.toggle('is-on');
+  const cb = document.getElementById(inputId);
+  if(cb){
+    cb.checked = el.classList.contains('is-on');
+    cb.dispatchEvent(new Event('change'));
+  }
+}
+function stepInput(id, delta){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const cur = parseInt(el.value, 10);
+  const v = (isNaN(cur) ? 0 : cur) + delta;
+  const min = el.min !== '' ? parseInt(el.min, 10) : -Infinity;
+  const max = el.max !== '' ? parseInt(el.max, 10) :  Infinity;
+  el.value = Math.max(min, Math.min(max, v));
+  el.dispatchEvent(new Event('change'));
 }
 
 async function autoTranslate(section){
