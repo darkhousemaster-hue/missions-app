@@ -192,13 +192,21 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   </div>
   <span class="team-score-chip" id="team-score-text">0pt</span>
   <div style="display:flex;gap:.4rem;flex-shrink:0;">
-    <button class="topbar-btn" id="btn-missions" onclick="showView('missions')">📋</button>
-    <button class="topbar-btn" id="btn-chat" onclick="showView('chat')" style="position:relative;">
-      💬
+    <!-- Topbar buttons use stroked SVG line icons from the redesign icon
+         family. Title attributes carry the label for screen readers and
+         hover hints; the language button keeps the text glyph (DE/EN/etc)
+         since the icon there would be ambiguous. -->
+    <button class="topbar-btn" id="btn-missions" onclick="showView('missions')" title="Missions" aria-label="Missions">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    </button>
+    <button class="topbar-btn" id="btn-chat" onclick="showView('chat')" title="Chat" aria-label="Chat" style="position:relative;">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       <span id="chat-dot" style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--orange);display:none;"></span>
     </button>
-    <button class="topbar-btn" id="btn-rules" onclick="showView('rules')">📖</button>
-    <button class="topbar-btn" id="btn-lang" onclick="cycleLang()">DE</button>
+    <button class="topbar-btn" id="btn-rules" onclick="showView('rules')" title="Rules" aria-label="Rules">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </button>
+    <button class="topbar-btn" id="btn-lang" onclick="cycleLang()" title="Language">DE</button>
   </div>
 </div>
 
