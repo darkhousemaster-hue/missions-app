@@ -247,6 +247,16 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
 .toggle-row .toggle-row-text{font:600 .85rem/1.3 var(--body);color:var(--text);}
 .toggle-row .toggle-row-sub{font:400 .75rem/1.3 var(--body);color:var(--text-muted);margin-top:.15rem;}
 
+/* ── Check pill (compact alternative to toggle-row for inline flag rows)
+   For places like "Allowed media: [📷 Photo] [🎬 Video] [🏠 Indoor]" where
+   a full toggle-row per flag would be too tall. The pill pairs with a
+   hidden <input type=checkbox> via toggleCheckPill(). */
+.check-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem .9rem;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font:600 .85rem/1 var(--body);cursor:pointer;user-select:none;transition:all .12s;letter-spacing:.02em;}
+.check-pill:hover{color:var(--text);}
+.check-pill.is-on{background:rgba(232,95,30,0.12);color:var(--text);border-color:var(--orange-dim);}
+.check-pill .check-mark{display:inline-flex;width:14px;height:14px;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid currentColor;color:var(--text-muted);font-size:9px;font-weight:700;flex-shrink:0;}
+.check-pill.is-on .check-mark{background:var(--orange);border-color:var(--orange);color:#fff;}
+
 /* ── Stepper input (for numeric values like Points) ──────────────────────
    Wraps an existing <input type=number> so we don't have to touch the
    save logic — the input is the source of truth, the buttons just nudge

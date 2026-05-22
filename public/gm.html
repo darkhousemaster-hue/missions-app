@@ -685,10 +685,12 @@ const GMT={
   'cr-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.',
   'lightbox-rotate':'Drehen','st-games':'Spiele',
   'cr-m-map-picker':'Karte (Klick zum Setzen, Marker ziehbar)',
-  'indoor-hint':'Spielbar auch bei Regen.',
+  'indoor-hint':'Mission lässt sich auch drinnen durchführen.',
   'cr-m-gps-sub':'Mission entsperrt erst nach physischer Ankunft.',
   'cr-m-map-sub':'Ziel-Marker für Spieler auf der Karte sichtbar.',
   'cr-m-timed-sub':'Penalty greift, wenn das Limit überschritten wird.',
+  'cr-m-special-sub':'Erscheint im ⭐-Bereich, ohne lineare Reihenfolge.',
+  'cr-m-has-answer-sub':'Spieler tippen die richtige Antwort. Schließt Foto/Video aus.',
   // 📖 Manuals download (button in settings topbar, next to language switch)
   'manuals-tip':'Handbücher herunterladen','manuals-title':'Handbücher',
   'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
@@ -795,10 +797,12 @@ const GMT={
   'cr-allowed-langs-hint':'Only these languages will appear for players in this CityRush mode.',
   'lightbox-rotate':'Rotate','st-games':'Games',
   'cr-m-map-picker':'Map (click to set, drag the marker to refine)',
-  'indoor-hint':'Playable in bad weather too.',
+  'indoor-hint':'Mission can also be completed indoors.',
   'cr-m-gps-sub':"Mission unlocks only after the team physically arrives.",
   'cr-m-map-sub':'Target marker is visible to players on the map.',
   'cr-m-timed-sub':'A penalty kicks in when the limit is exceeded.',
+  'cr-m-special-sub':'Appears in the ⭐ tray, outside the linear order.',
+  'cr-m-has-answer-sub':'Players type the correct answer. Excludes photo/video.',
   'manuals-tip':'Download manuals','manuals-title':'Manuals',
   'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
@@ -904,10 +908,12 @@ const GMT={
   'cr-allowed-langs-hint':'Seules ces langues apparaîtront pour les joueurs dans ce mode CityRush.',
   'lightbox-rotate':'Tourner','st-games':'Jeux',
   'cr-m-map-picker':'Carte (cliquer pour placer, marqueur déplaçable)',
-  'indoor-hint':'Jouable aussi par mauvais temps.',
+  'indoor-hint':"La mission peut aussi être réalisée à l'intérieur.",
   'cr-m-gps-sub':"La mission ne se déverrouille qu'après arrivée physique.",
   'cr-m-map-sub':'Le marqueur de la cible est visible sur la carte.',
   'cr-m-timed-sub':"Une pénalité s'applique au-delà de la limite.",
+  'cr-m-special-sub':"Apparaît dans la zone ⭐, hors séquence linéaire.",
+  'cr-m-has-answer-sub':"Les joueurs tapent la bonne réponse. Exclut photo/vidéo.",
   'manuals-tip':'Télécharger les manuels','manuals-title':'Manuels',
   'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
@@ -1013,10 +1019,12 @@ const GMT={
   'cr-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questa modalità CityRush.',
   'lightbox-rotate':'Ruota','st-games':'Partite',
   'cr-m-map-picker':'Mappa (clic per posizionare, marker trascinabile)',
-  'indoor-hint':'Giocabile anche con maltempo.',
+  'indoor-hint':'La missione può essere svolta anche al chiuso.',
   'cr-m-gps-sub':"La missione si sblocca solo dopo l'arrivo fisico.",
   'cr-m-map-sub':'Il marker del bersaglio è visibile sulla mappa.',
   'cr-m-timed-sub':'Si applica una penalità oltre il limite.',
+  'cr-m-special-sub':"Compare nella sezione ⭐, fuori dall'ordine lineare.",
+  'cr-m-has-answer-sub':'I giocatori scrivono la risposta corretta. Esclude foto/video.',
   'manuals-tip':'Scarica i manuali','manuals-title':'Manuali',
   'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
@@ -1122,10 +1130,12 @@ const GMT={
   'cr-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este modo CityRush.',
   'lightbox-rotate':'Girar','st-games':'Partidas',
   'cr-m-map-picker':'Mapa (clic para colocar, marcador arrastrable)',
-  'indoor-hint':'Jugable también con mal tiempo.',
+  'indoor-hint':'La misión también se puede realizar en interiores.',
   'cr-m-gps-sub':'La misión se desbloquea solo tras la llegada física.',
   'cr-m-map-sub':'El marcador del objetivo es visible en el mapa.',
   'cr-m-timed-sub':'Se aplica una penalización al superar el límite.',
+  'cr-m-special-sub':'Aparece en la sección ⭐, fuera del orden lineal.',
+  'cr-m-has-answer-sub':'Los jugadores escriben la respuesta correcta. Excluye foto/vídeo.',
   'manuals-tip':'Descargar manuales','manuals-title':'Manuales',
   'manuals-blurb':'Descarga los manuales PDF actuales. El maintainer los actualiza cuando hay cambios importantes.',
   'manuals-gm':'Manual del GM','manuals-settings':'Manual de ajustes',
@@ -2707,11 +2717,14 @@ function showAddLocation(){
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input"></div>
     <div class="field" data-tip="loc-missions"><label class="label" data-tip="loc-missions">MiSSiONS ${gmt('per-game')||'pro Spiel / per game'}</label><input id="loc-max" type="number" class="input" value="10" min="1" data-tip="loc-missions"></div>
     <div class="field" data-tip="loc-min-loc"><label class="label" data-tip="loc-min-loc">Min. ${gmt('loc-spec')||'Standort-MiSSiONS'}</label><input id="loc-min-loc" type="number" class="input" value="3" min="0" data-tip="loc-min-loc"></div>
-    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" checked style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" checked style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" checked style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
+    <div class="field" data-tip="loc-allow">
+      <label class="label" data-tip="loc-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        ${checkPillRow([
+          {id:'loc-allow-photo',  label:'📷 Foto',   isOn:true},
+          {id:'loc-allow-video',  label:'🎬 Video',  isOn:true},
+          {id:'loc-allow-indoor', label:'🏠 Indoor', isOn:true},
+        ])}
       </div>
     </div>
     <div class="field" data-tip="loc-allowed-langs">
@@ -2737,11 +2750,14 @@ async function editLocation(id){
     <div class="field"><label class="label">Name</label><input id="loc-name" class="input" value="${esc(l.name)}"></div>
     <div class="field" data-tip="loc-missions"><label class="label" data-tip="loc-missions">MiSSiONS</label><input id="loc-max" type="number" class="input" value="${l.missions_count||l.max_missions||10}" data-tip="loc-missions"></div>
     <div class="field" data-tip="loc-min-loc"><label class="label" data-tip="loc-min-loc">Min. Standort</label><input id="loc-min-loc" type="number" class="input" value="${l.min_location_missions}" data-tip="loc-min-loc"></div>
-    <div class="field" data-tip="loc-allow"><label class="label" data-tip="loc-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-photo" ${l.allow_photo!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-video" ${l.allow_video!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="loc-allow-indoor" ${l.allow_indoor!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🏠 Indoor</label>
+    <div class="field" data-tip="loc-allow">
+      <label class="label" data-tip="loc-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        ${checkPillRow([
+          {id:'loc-allow-photo',  label:'📷 Foto',   isOn:l.allow_photo!==0},
+          {id:'loc-allow-video',  label:'🎬 Video',  isOn:l.allow_video!==0},
+          {id:'loc-allow-indoor', label:'🏠 Indoor', isOn:l.allow_indoor!==0},
+        ])}
       </div>
     </div>
     <div class="field" data-tip="loc-allowed-langs">
@@ -2876,7 +2892,7 @@ function missionModal(m,locs){
       <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'m-indoor')" data-tip="mission-indoor">
         <div>
           <div class="toggle-row-text">🏠 ${gmt('indoor-label')||'Auch drinnen möglich'}</div>
-          <div class="toggle-row-sub">${gmt('indoor-hint')||'Spielbar auch bei Regen.'}</div>
+          <div class="toggle-row-sub">${gmt('indoor-hint')||'Mission lässt sich auch drinnen durchführen.'}</div>
         </div>
         <div class="toggle ${m&&m.is_indoor?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'m-indoor')"></div>
       </div>
@@ -3004,6 +3020,28 @@ function stepInput(id, delta){
   const max = el.max !== '' ? parseInt(el.max, 10) :  Infinity;
   el.value = Math.max(min, Math.min(max, v));
   el.dispatchEvent(new Event('change'));
+}
+
+// Compact toggle-pill alternative to toggle-row for inline flag groups.
+// Pairs with a hidden <input type=checkbox> via data-input on the pill so
+// existing `.checked` reads still work.
+function toggleCheckPill(el, inputId){
+  el.classList.toggle('is-on');
+  const cb = document.getElementById(inputId);
+  if(cb){
+    cb.checked = el.classList.contains('is-on');
+    cb.dispatchEvent(new Event('change'));
+  }
+}
+// Build a horizontal row of check-pill flags. `flags` is an array of
+// { id, label, isOn } and the result HTML wires a hidden checkbox per flag.
+function checkPillRow(flags){
+  return flags.map(f => `
+    <span class="check-pill ${f.isOn?'is-on':''}" onclick="toggleCheckPill(this,'${f.id}')">
+      <span class="check-mark">${f.isOn?'✓':''}</span>${f.label}
+    </span>
+    <input type="checkbox" id="${f.id}" ${f.isOn?'checked':''} style="display:none;">`
+  ).join('');
 }
 
 async function autoTranslate(section){
@@ -3562,10 +3600,13 @@ async function showAddCrMode(){
     <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name" class="input" placeholder="${gmt('cr-mode-name-eg')||'z.B. Altstadt-Tour'}" data-tip="cr-mode-name"></div>
     <div class="field" data-tip="cr-mode-ruleset"><label class="label" data-tip="cr-mode-ruleset">${gmt('ruleset')||'Regelwerk'}</label>
       <select id="cr-mode-ruleset" class="select" data-tip="cr-mode-ruleset">${rsOpts}</select></div>
-    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-photo" checked style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-video" checked style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
+    <div class="field" data-tip="cr-mode-allow">
+      <label class="label" data-tip="cr-mode-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        ${checkPillRow([
+          {id:'cr-mode-allow-photo', label:'📷 Foto',  isOn:true},
+          {id:'cr-mode-allow-video', label:'🎬 Video', isOn:true},
+        ])}
       </div>
     </div>
     <div class="field" data-tip="cr-mode-timer">
@@ -3606,10 +3647,13 @@ async function editCurrentCrMode(){
     <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name-edit" class="input" value="${esc(m.name||'')}" data-tip="cr-mode-name"></div>
     <div class="field" data-tip="cr-mode-ruleset"><label class="label" data-tip="cr-mode-ruleset">${gmt('ruleset')||'Regelwerk'}</label>
       <select id="cr-mode-ruleset-edit" class="select" data-tip="cr-mode-ruleset">${rsOpts}</select></div>
-    <div class="field" data-tip="cr-mode-allow"><label class="label" data-tip="cr-mode-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-photo-edit" ${m.allow_photo!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 📷 Foto</label>
-        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;"><input type="checkbox" id="cr-mode-allow-video-edit" ${m.allow_video!==0?'checked':''} style="accent-color:var(--red);width:16px;height:16px;"> 🎬 Video</label>
+    <div class="field" data-tip="cr-mode-allow">
+      <label class="label" data-tip="cr-mode-allow">${gmt('allowed-media')||'Erlaubte Medien'}</label>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        ${checkPillRow([
+          {id:'cr-mode-allow-photo-edit', label:'📷 Foto',  isOn:m.allow_photo!==0},
+          {id:'cr-mode-allow-video-edit', label:'🎬 Video', isOn:m.allow_video!==0},
+        ])}
       </div>
     </div>
     <div class="field" data-tip="cr-mode-timer">
@@ -3663,13 +3707,20 @@ function crMissionModal(m){
   return `
     <!-- SPECIAL MISSION TOGGLE — sits before everything else. When ticked
          this is a parallel mission (no GPS dependency, always available),
-         and the cooldown row below appears. -->
-    <div style="background:rgba(255,107,0,.06);border:1px solid var(--orange);border-radius:var(--radius);padding:.6rem .75rem;margin-bottom:.75rem;" data-tip="cr-special">
-      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;margin:0;">
-        <input type="checkbox" id="cr-is-special" ${chk('is_special')} style="accent-color:var(--orange);width:16px;height:16px;" onchange="crToggleSpecial()">
-        <strong>⭐ ${gmt('cr-m-special')||'Spezial-Mission (jederzeit verfügbar, GPS-unabhängig)'}</strong>
-      </label>
-      <div id="cr-special-cooldown-row" style="margin-top:.5rem;${m&&m.is_special?'':'display:none;'}">
+         and the cooldown row below appears. Kept inside an orange-tinted
+         container because flipping it changes the mission's behaviour
+         significantly; the toggle inside replaces the old checkbox. -->
+    <div style="background:rgba(232,95,30,0.06);border:1px solid var(--orange-dim);border-radius:var(--radius);padding:.8rem 1rem;margin-bottom:.75rem;" data-tip="cr-special">
+      <div class="toggle-row" style="background:transparent;border:0;padding:0;"
+           onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-special')">
+        <div>
+          <div class="toggle-row-text"><strong>⭐ ${gmt('cr-m-special')||'Spezial-Mission (jederzeit verfügbar, GPS-unabhängig)'}</strong></div>
+          <div class="toggle-row-sub">${gmt('cr-m-special-sub')||'Erscheint im ⭐-Bereich, ohne lineare Reihenfolge.'}</div>
+        </div>
+        <div class="toggle ${m&&m.is_special?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-special')"></div>
+      </div>
+      <input type="checkbox" id="cr-is-special" ${chk('is_special')} style="display:none;" onchange="crToggleSpecial()">
+      <div id="cr-special-cooldown-row" style="margin-top:.75rem;${m&&m.is_special?'':'display:none;'}">
         <label class="label" data-tip="cr-special-cooldown">${gmt('cr-m-special-cooldown')||'Begrenzt auf X (Minuten zwischen Versuchen, 0 = aus)'}</label>
         <input id="cr-repeat-minutes" type="number" class="input" min="0" value="${num('repeat_minutes',0)}">
       </div>
@@ -3769,12 +3820,18 @@ function crMissionModal(m){
         <div data-tip="cr-pen-pts"><label class="label" data-tip="cr-pen-pts">${gmt('cr-m-pen-pts')||'Penalty (Punkte)'}</label><input id="cr-penalty-pts" type="number" class="input" value="${num('penalty_points',2)}" data-tip="cr-pen-pts"></div>
       </div>
     </div>
-    <!-- Answer/Question toggle -->
+    <!-- Answer/Question toggle. Mutually exclusive with the media segment
+         above (crToggleAnswer disables the segmented choices when on). -->
     <div style="border-top:1px solid var(--border);padding-top:.75rem;margin-bottom:.75rem;">
-      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;margin-bottom:.5rem;" data-tip="cr-has-answer">
-        <input type="checkbox" id="cr-has-answer" ${chk('has_answer')} style="accent-color:var(--red);width:16px;height:16px;" onchange="crToggleAnswer()" data-tip="cr-has-answer">
-        ${gmt('cr-m-has-answer')||'❓ Frage mit Antwort'}
-      </label>
+      <div class="toggle-row" style="margin-bottom:.6rem;"
+           onclick="toggleSwitch(this.querySelector('.toggle'),'cr-has-answer')" data-tip="cr-has-answer">
+        <div>
+          <div class="toggle-row-text">${gmt('cr-m-has-answer')||'❓ Frage mit Antwort'}</div>
+          <div class="toggle-row-sub">${gmt('cr-m-has-answer-sub')||'Spieler tippen die richtige Antwort. Schließt Foto/Video aus.'}</div>
+        </div>
+        <div class="toggle ${m&&m.has_answer?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-has-answer')"></div>
+      </div>
+      <input type="checkbox" id="cr-has-answer" ${chk('has_answer')} style="display:none;" onchange="crToggleAnswer()">
       <div id="cr-answer-section" style="${m&&m.has_answer?'':'display:none;'}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
           <label class="label" style="margin:0;" data-tip="cr-answer">${gmt('cr-m-answer-label')||'Korrekte Antwort (mind. eine Sprache)'}</label>
