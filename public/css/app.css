@@ -144,7 +144,11 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
 .ranking-row:nth-child(3){border-left-color:#cd7f32;}
 .ranking-pos{font-family:var(--mono);font-size:.8rem;color:var(--text-muted);width:20px;}
 .ranking-name{flex:1;font-weight:600;font-size:.9rem;}
-.ranking-score{font-family:var(--mono);color:var(--orange);font-size:.95rem;}
+/* Ranking scores stay neutral white — orange is reserved for "action
+   required" signals (pending submissions, freeze warnings). A scoreboard
+   isn't an action prompt; the team-color left-stripe on each row already
+   carries the team identity. */
+.ranking-score{font-family:var(--mono);color:var(--text);font-size:.95rem;font-weight:600;}
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;}

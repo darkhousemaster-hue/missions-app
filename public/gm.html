@@ -140,7 +140,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   <img src="/assets/logo.png" class="logo" alt="AR">
   <div>
     <h2 id="ng-title">Neues Spiel</h2>
-    <p>ID: <span id="qr-game-id" style="font-family:var(--mono);color:var(--orange);"></span></p>
+    <p>ID: <span id="qr-game-id" style="font-family:var(--mono);color:var(--text-dim);"></span></p>
   </div>
   <div class="qr-box"><img id="qr-img" width="240" alt="QR"></div>
   <p style="font-size:.8rem;font-family:var(--mono);color:var(--text-dim);" id="join-url-display"></p>
@@ -263,14 +263,21 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
 <!-- SETTINGS GATE -->
 <div id="screen-settings-gate" style="display:none;flex:1;align-items:center;justify-content:center;padding:2rem;">
-  <div class="card bracket" style="max-width:380px;width:100%;">
-    <h3 class="modal-title">🔐 <span id="sg-title">Einstellungen</span></h3>
-    <div class="field"><label class="label" id="sg-pw-label">Passwort</label><input id="gate-pw" type="password" class="input" onkeydown="if(event.key==='Enter')verifyGate()"></div>
-    <div style="display:flex;gap:.75rem;">
+  <div class="card bracket" style="max-width:420px;width:100%;padding:2.25rem 1.75rem;">
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <div style="font-size:2.4rem;line-height:1;margin-bottom:.5rem;">🔐</div>
+      <h3 class="wordmark" style="font-size:1.7rem;margin:0;" id="sg-title">Einstellungen</h3>
+    </div>
+    <div class="field" style="margin-bottom:1rem;">
+      <label class="label" id="sg-pw-label">Passwort</label>
+      <input id="gate-pw" type="password" class="input" autofocus
+             onkeydown="if(event.key==='Enter')verifyGate()">
+    </div>
+    <div style="display:flex;gap:.6rem;">
       <button class="btn btn-ghost" onclick="goBack()" id="sg-back">← Zurück</button>
       <button class="btn btn-primary btn-full" onclick="verifyGate()" id="sg-unlock">Entsperren</button>
     </div>
-    <p id="gate-err" style="color:var(--red-light);font-size:.85rem;margin-top:.5rem;"></p>
+    <p id="gate-err" style="color:var(--red-light);font-size:.85rem;margin-top:.75rem;min-height:1.2em;"></p>
   </div>
 </div>
 

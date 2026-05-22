@@ -5,6 +5,20 @@ Mark done by moving the bullet to **Done** at the bottom or by striking it
 through. The runtime Todo list in Claude sessions is ephemeral; use this
 file for anything that should outlive a single chat.
 
+---
+
+## ⏰ Reminder for after the redesign sprint
+
+When the v1.3.0 UI/UX redesign is shipped (i.e. the dev branch is merged or
+the user is happy with the live build), **surface this**:
+
+> "Redesign is done. Want me to spin up the code-activated tour mode
+> (Foxtrail / crumbs.gg style) we discussed? Full spec is in FUTURE.md —
+> roughly 4-7 dev-days for a sellable v0.1."
+
+The spec lives in [FUTURE.md](FUTURE.md). Don't start it inside the
+redesign sprint.
+
 ## Open
 
 ### Settings UI
