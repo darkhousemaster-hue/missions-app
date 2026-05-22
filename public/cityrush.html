@@ -13,22 +13,24 @@
 * { box-sizing:border-box; margin:0; padding:0; }
 body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
 
-/* ── Topbar ── */
-.cr-topbar { display:flex; align-items:center; justify-content:space-between; padding:.6rem .75rem;
-  background:var(--bg2); border-bottom:1px solid var(--border); flex-shrink:0; gap:.5rem; }
-.cr-timer { font-family:var(--mono); font-size:1.4rem; letter-spacing:.05em; white-space:nowrap; }
+/* ── Topbar ──
+   Same direction as play.html: warmer --bg3 surface, hairline border,
+   display font on the team name, neutral score chip (orange reserved
+   for action signals, not progress info). */
+.cr-topbar { display:flex; align-items:center; justify-content:space-between; padding:.65rem .8rem;
+  background:var(--bg3); border-bottom:1px solid var(--hairline); flex-shrink:0; gap:.5rem; }
+.cr-timer { font-family:var(--mono); font-size:1.4rem; letter-spacing:.04em; white-space:nowrap; font-weight:500; }
 .cr-timer.urgent { color:var(--red); animation:pulse-red 1s infinite; }
-.team-name-cr { font-family:var(--heading); font-size:1rem; letter-spacing:.1em; text-transform:uppercase;
+.team-name-cr { font-family:var(--display); font-weight:800; font-size:1.1rem; letter-spacing:.06em; text-transform:uppercase;
   flex:1; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-/* Score chip lives outside the team-name container so a long team name
-   can't clip it via overflow:hidden. */
-.cr-score-chip { font-family:var(--mono); color:var(--orange); font-size:.9rem;
-  background:rgba(255,107,0,.12); border:1px solid rgba(255,107,0,.4);
-  border-radius:var(--radius); padding:.15rem .5rem; flex-shrink:0;
-  white-space:nowrap; }
-.topbar-btn { background:var(--surface); border:1px solid var(--border); color:var(--text-dim);
-  border-radius:var(--radius); padding:.35rem .6rem; cursor:pointer; font-size:.75rem;
-  font-weight:700; text-transform:uppercase; white-space:nowrap; flex-shrink:0; position:relative; }
+.cr-score-chip { font-family:var(--mono); color:var(--text); font-size:.9rem; font-weight:600;
+  background:rgba(255,255,255,0.06); border:1px solid var(--hairline);
+  border-radius:999px; padding:.2rem .65rem; flex-shrink:0;
+  white-space:nowrap; letter-spacing:.02em; }
+.topbar-btn { background:var(--surface); border:1px solid var(--hairline); color:var(--text-dim);
+  border-radius:var(--radius); padding:.4rem .65rem; cursor:pointer; font-size:.75rem;
+  font-weight:700; text-transform:uppercase; white-space:nowrap; flex-shrink:0; position:relative; transition:color .12s,border-color .12s; }
+.topbar-btn:hover { color:var(--text); }
 .topbar-btn.active { border-color:var(--red); color:var(--red-light); }
 /* Inside the chat / rules overlays the back button shares a row with a
    1.2–1.3rem heading. Match that size and undo the narrow-viewport
