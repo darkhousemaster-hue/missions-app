@@ -686,6 +686,9 @@ const GMT={
   'lightbox-rotate':'Drehen','st-games':'Spiele',
   'cr-m-map-picker':'Karte (Klick zum Setzen, Marker ziehbar)',
   'indoor-hint':'Spielbar auch bei Regen.',
+  'cr-m-gps-sub':'Mission entsperrt erst nach physischer Ankunft.',
+  'cr-m-map-sub':'Ziel-Marker für Spieler auf der Karte sichtbar.',
+  'cr-m-timed-sub':'Penalty greift, wenn das Limit überschritten wird.',
   // 📖 Manuals download (button in settings topbar, next to language switch)
   'manuals-tip':'Handbücher herunterladen','manuals-title':'Handbücher',
   'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
@@ -793,6 +796,9 @@ const GMT={
   'lightbox-rotate':'Rotate','st-games':'Games',
   'cr-m-map-picker':'Map (click to set, drag the marker to refine)',
   'indoor-hint':'Playable in bad weather too.',
+  'cr-m-gps-sub':"Mission unlocks only after the team physically arrives.",
+  'cr-m-map-sub':'Target marker is visible to players on the map.',
+  'cr-m-timed-sub':'A penalty kicks in when the limit is exceeded.',
   'manuals-tip':'Download manuals','manuals-title':'Manuals',
   'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
@@ -899,6 +905,9 @@ const GMT={
   'lightbox-rotate':'Tourner','st-games':'Jeux',
   'cr-m-map-picker':'Carte (cliquer pour placer, marqueur déplaçable)',
   'indoor-hint':'Jouable aussi par mauvais temps.',
+  'cr-m-gps-sub':"La mission ne se déverrouille qu'après arrivée physique.",
+  'cr-m-map-sub':'Le marqueur de la cible est visible sur la carte.',
+  'cr-m-timed-sub':"Une pénalité s'applique au-delà de la limite.",
   'manuals-tip':'Télécharger les manuels','manuals-title':'Manuels',
   'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
@@ -1005,6 +1014,9 @@ const GMT={
   'lightbox-rotate':'Ruota','st-games':'Partite',
   'cr-m-map-picker':'Mappa (clic per posizionare, marker trascinabile)',
   'indoor-hint':'Giocabile anche con maltempo.',
+  'cr-m-gps-sub':"La missione si sblocca solo dopo l'arrivo fisico.",
+  'cr-m-map-sub':'Il marker del bersaglio è visibile sulla mappa.',
+  'cr-m-timed-sub':'Si applica una penalità oltre il limite.',
   'manuals-tip':'Scarica i manuali','manuals-title':'Manuali',
   'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
@@ -1111,6 +1123,9 @@ const GMT={
   'lightbox-rotate':'Girar','st-games':'Partidas',
   'cr-m-map-picker':'Mapa (clic para colocar, marcador arrastrable)',
   'indoor-hint':'Jugable también con mal tiempo.',
+  'cr-m-gps-sub':'La misión se desbloquea solo tras la llegada física.',
+  'cr-m-map-sub':'El marcador del objetivo es visible en el mapa.',
+  'cr-m-timed-sub':'Se aplica una penalización al superar el límite.',
   'manuals-tip':'Descargar manuales','manuals-title':'Manuales',
   'manuals-blurb':'Descarga los manuales PDF actuales. El maintainer los actualiza cuando hay cambios importantes.',
   'manuals-gm':'Manual del GM','manuals-settings':'Manual de ajustes',
@@ -3684,20 +3699,36 @@ function crMissionModal(m){
       <label class="label" data-tip="cr-map-picker">${gmt('cr-m-map-picker')||'Karte (Klick zum Setzen, Marker ziehbar)'}</label>
       <div id="cr-mission-map" style="height:220px;border-radius:var(--radius);border:1px solid var(--border);background:#0a0a0a;overflow:hidden;"></div>
     </div>
-    <!-- Flags -->
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;">
-      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;" data-tip="cr-gps">
-        <input type="checkbox" id="cr-use-gps" ${chk('use_gps')} style="accent-color:var(--red);width:16px;height:16px;" onchange="crToggleOptions()" data-tip="cr-gps">
-        ${gmt('cr-m-gps')||'📍 GPS-Trigger'}
-      </label>
-      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;" data-tip="cr-map">
-        <input type="checkbox" id="cr-use-map" ${chk('use_map')} style="accent-color:var(--red);width:16px;height:16px;" data-tip="cr-map">
-        ${gmt('cr-m-map')||'🗺️ Karte anzeigen'}
-      </label>
-      <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;" data-tip="cr-timed">
-        <input type="checkbox" id="cr-is-timed" ${chk('is_timed')} style="accent-color:var(--red);width:16px;height:16px;" onchange="crToggleOptions()" data-tip="cr-timed">
-        ${gmt('cr-m-timed')||'⏱ Zeitlimit'}
-      </label>
+    <!-- Mission options as iOS-style toggle rows. Each row's hidden
+         checkbox keeps existing save / onchange logic working (the
+         visible toggle dispatches a change event on the hidden input). -->
+    <div class="field" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem;">
+      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-use-gps')" data-tip="cr-gps">
+        <div>
+          <div class="toggle-row-text">${gmt('cr-m-gps')||'📍 GPS-Trigger'}</div>
+          <div class="toggle-row-sub">${gmt('cr-m-gps-sub')||'Mission entsperrt erst nach physischer Ankunft.'}</div>
+        </div>
+        <div class="toggle ${m&&m.use_gps?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-use-gps')"></div>
+      </div>
+      <input type="checkbox" id="cr-use-gps" ${chk('use_gps')} style="display:none;" onchange="crToggleOptions()">
+
+      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-use-map')" data-tip="cr-map">
+        <div>
+          <div class="toggle-row-text">${gmt('cr-m-map')||'🗺️ Karte anzeigen'}</div>
+          <div class="toggle-row-sub">${gmt('cr-m-map-sub')||'Ziel-Marker für Spieler auf der Karte sichtbar.'}</div>
+        </div>
+        <div class="toggle ${m&&m.use_map?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-use-map')"></div>
+      </div>
+      <input type="checkbox" id="cr-use-map" ${chk('use_map')} style="display:none;">
+
+      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-timed')" data-tip="cr-timed">
+        <div>
+          <div class="toggle-row-text">${gmt('cr-m-timed')||'⏱ Zeitlimit'}</div>
+          <div class="toggle-row-sub">${gmt('cr-m-timed-sub')||'Penalty greift, wenn das Limit überschritten wird.'}</div>
+        </div>
+        <div class="toggle ${m&&m.is_timed?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-timed')"></div>
+      </div>
+      <input type="checkbox" id="cr-is-timed" ${chk('is_timed')} style="display:none;" onchange="crToggleOptions()">
     </div>
     <!-- GPS hints (multi-hint editor; only meaningful when use_gps is on).
          Collapsible <details> so the modal stays compact. -->
@@ -3711,14 +3742,23 @@ function crMissionModal(m){
       </div>
       <div id="cr-gps-hints-list"><span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span></div>
     </details>
-    <!-- Media required: below the checkboxes & GPS, above hints editor. -->
+    <!-- Media required as a segmented control. The hidden input keeps
+         document.getElementById('cr-media').value working unchanged
+         and its onchange continues to fire crToggleAnswer() (selectSegment
+         dispatches a change event on the hidden input). showPhoto /
+         showVideo are pre-computed above to respect the CR mode's
+         allow_photo / allow_video settings, so unsupported media types
+         stay greyed out. NOTE: this whole block sits inside a JS
+         template literal, so backticks inside the comment would
+         terminate the string early. -->
     <div class="field" data-tip="cr-media">
       <label class="label" data-tip="cr-media">${gmt('cr-m-media')||'Medientyp'}</label>
-      <select id="cr-media" class="select" onchange="crToggleAnswer()" data-tip="cr-media">
-        <option value="none" ${(!m||m.media_required==='none')?'selected':''}>${gmt('cr-m-media-none')||'— Keine —'}</option>
-        ${photoOpt}
-        ${videoOpt}
-      </select>
+      <div class="segmented" data-input="cr-media" data-tip="cr-media">
+        <span class="${(!m||m.media_required==='none')?'is-active':''}" data-value="none" onclick="selectSegment(this)">${gmt('cr-m-media-none')||'— Keine —'}</span>
+        ${showPhoto?`<span class="${(m&&m.media_required==='photo')?'is-active':''}" data-value="photo" onclick="selectSegment(this)">📷 Foto</span>`:''}
+        ${showVideo?`<span class="${(m&&m.media_required==='video')?'is-active':''}" data-value="video" onclick="selectSegment(this)">🎬 Video</span>`:''}
+      </div>
+      <input type="hidden" id="cr-media" value="${(m&&m.media_required)||'none'}" onchange="crToggleAnswer()">
     </div>
     <!-- Timed options -->
     <div id="cr-timed-section" style="${m&&m.is_timed?'':'display:none;'}">
