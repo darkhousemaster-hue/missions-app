@@ -1611,6 +1611,21 @@ let currentGame=null;
 async function refreshDashboard(gameId){
   currentGame=await API(`/api/games/${gameId}`);
   const game=currentGame;
+  // CityRush-only UI bits (map tab on the right rail, freeze/thaw on the
+  // team header) are hidden for MiSSiONS games. Re-evaluated on every
+  // refresh in case the game type ever flips mid-session.
+  const isCr = !!game.crMode;
+  const crmapTab = document.getElementById('tab-crmap');
+  if(crmapTab) crmapTab.style.display = isCr ? '' : 'none';
+  // If the GM was looking at the map panel and the game isn't CR, bounce
+  // them back to the chat panel so they're not staring at a hidden tab.
+  if(!isCr){
+    const crmapPanel = document.getElementById('panel-crmap');
+    if(crmapPanel && crmapPanel.classList.contains('active')){
+      const chatTab = document.getElementById('tab-chat');
+      if(chatTab) switchPanel('chat', chatTab);
+    }
+  }
   renderTeamsBar(game.teams);
   renderRankings(await API(`/api/games/${gameId}/rankings`));
   // For CityRush games, seed any cached GPS positions onto the map so the GM
@@ -2132,9 +2147,19 @@ function isTeamFrozenNow(teamId){
   return gmFreezes.some(f => f.frozen_team_id === teamId && f.until_ms > now);
 }
 function paintTeamDetailFreezeButtons(teamId){
-  const frozen = isTeamFrozenNow(teamId);
   const freezeBtn = document.getElementById('btn-freeze-team');
   const thawBtn   = document.getElementById('btn-thaw-team');
+  // Freeze is a CityRush-only mechanic (caught-on-camera PvP penalty).
+  // MiSSiONS games run one team per location with no rival interaction,
+  // so freeze has no game purpose there — hide both buttons regardless
+  // of frozen state when the current game isn't a CityRush one.
+  const isCr = !!(currentGame && currentGame.crMode);
+  if(!isCr){
+    if(freezeBtn) freezeBtn.style.display = 'none';
+    if(thawBtn)   thawBtn.style.display   = 'none';
+    return;
+  }
+  const frozen = isTeamFrozenNow(teamId);
   if(freezeBtn) freezeBtn.style.display = frozen ? 'none' : 'inline-flex';
   if(thawBtn)   thawBtn.style.display   = frozen ? 'inline-flex' : 'none';
 }
