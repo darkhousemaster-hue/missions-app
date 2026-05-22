@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MiSSiONS — Player home (mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { display:flex; align-items:center; justify-content:center; padding: 40px 20px; }
+  .player-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 50px 22px 14px;
+  }
+  .wordmark { text-align:center; line-height:1; }
+  .wordmark .stamp {
+    font: 700 9px/1 var(--body);
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .wordmark .name {
+    font-family: var(--display); font-weight: 800;
+    font-size: 32px; letter-spacing: 0.06em;
+    color: var(--text);
+  }
+  .legend-row {
+    margin: 0 22px 16px;
+    display:flex; align-items:center; justify-content:center; gap: 14px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-pill);
+    font-size: 11px; color: var(--text-muted); letter-spacing: 0.06em;
+  }
+  .legend-row .item { display:flex; align-items:center; gap:5px; }
+  .legend-row .item svg { width: 14px; height: 14px; opacity: .85; }
+  .legend-row .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-muted); }
+
+  .missions-list { padding: 0 18px 130px; display:flex; flex-direction:column; gap: 10px; }
+
+  .mcard {
+    position: relative;
+    display:grid; grid-template-columns: 28px 1fr auto; gap: 12px;
+    padding: 14px 14px 14px 14px;
+  }
+  .mcard__type {
+    width: 28px; height: 28px;
+    display:flex; align-items:center; justify-content:center;
+    color: var(--text-dim);
+  }
+  .mcard__type svg { width: 18px; height: 18px; }
+  .mcard__body { min-width: 0; }
+  .mcard__title { font: 700 14px/1.2 var(--body); color: var(--text); margin-bottom: 2px; }
+  .mcard__desc  { font: 400 12px/1.35 var(--body); color: var(--text-dim); margin-bottom: 6px; }
+  .mcard__task  {
+    font: 500 12px/1.35 var(--body); color: var(--text);
+    display:flex; align-items:flex-start; gap: 6px;
+  }
+  .mcard__task .arrow { color: var(--orange); font-weight: 700; flex-shrink: 0; }
+  .mcard__points {
+    align-self: start;
+    font: 700 11px/1 var(--mono); color: var(--text);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--hairline);
+    padding: 5px 8px; border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+  .mcard__check {
+    position: absolute; top: 12px; right: 12px;
+    width: 18px; height: 18px;
+    display:flex; align-items:center; justify-content:center;
+    color: var(--green);
+  }
+
+  /* Bottom action bar */
+  .action-bar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 0 56px;
+    display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(180deg, transparent 0%, rgba(15,14,13,0.95) 35%, var(--bg) 100%);
+  }
+  .camera-btn {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    background: var(--orange);
+    color: #fff;
+    border: 0;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 12px 32px -8px var(--orange);
+    cursor: pointer;
+  }
+  .camera-btn svg { width: 28px; height: 28px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="phone__notch"></div>
+  <div class="phone__screen">
+
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-bar__right">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M0 6.5L2 4.5L4 6.5L6 4.5L8 6.5L10 4.5L12 6.5L14 4.5L16 6.5V10H0V6.5Z" fill="currentColor" opacity=".85"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11" fill="none"><rect x="0.5" y="0.5" width="18" height="10" rx="2" stroke="currentColor" opacity=".85"/><rect x="2" y="2" width="14" height="7" rx="1" fill="currentColor"/><rect x="19.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity=".5"/></svg>
+      </div>
+    </div>
+
+    <div class="scroll">
+
+      <header class="player-header">
+        <span class="score-pill">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          12 PT
+        </span>
+        <div class="wordmark">
+          <div class="stamp">Adventurerooms</div>
+          <div class="name">MiSSiONS</div>
+        </div>
+        <button class="icon-btn" aria-label="Language">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+        </button>
+      </header>
+
+      <div class="legend-row">
+        <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>photo</span>
+        <span class="dot"></span>
+        <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>video</span>
+        <span class="dot"></span>
+        <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V9.5Z"/></svg>indoor</span>
+      </div>
+
+      <div class="missions-list">
+
+        <!-- DONE card -->
+        <article class="card card--done mcard">
+          <div class="mcard__type">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div class="mcard__body">
+            <div class="mcard__title">Brunnen-Selfie</div>
+            <div class="mcard__desc">Sucht den ältesten Brunnen der Altstadt.</div>
+            <div class="mcard__task"><span class="arrow">→</span><span>Macht ein Gruppenfoto mit dem Brunnen.</span></div>
+          </div>
+          <div class="mcard__points">10 PT</div>
+          <span class="mcard__check">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </article>
+
+        <!-- Default cards -->
+        <article class="card mcard">
+          <div class="mcard__type">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div class="mcard__body">
+            <div class="mcard__title">Inschrift entdecken</div>
+            <div class="mcard__desc">An einer Fassade ist eine Jahreszahl in Stein gemeißelt.</div>
+            <div class="mcard__task"><span class="arrow">→</span><span>Filmt die Inschrift und nennt das Jahr.</span></div>
+          </div>
+          <div class="mcard__points">15 PT</div>
+        </article>
+
+        <article class="card mcard">
+          <div class="mcard__type">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <div class="mcard__body">
+            <div class="mcard__title">Baum umarmen</div>
+            <div class="mcard__desc">Im Stadtpark steht eine alte Eiche.</div>
+            <div class="mcard__task"><span class="arrow">→</span><span>Filmt das Team beim Baumumarmen.</span></div>
+          </div>
+          <div class="mcard__points">5 PT</div>
+        </article>
+
+        <article class="card mcard">
+          <div class="mcard__type">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div class="mcard__body">
+            <div class="mcard__title">Ankunftstafel ablesen</div>
+            <div class="mcard__desc">Die grosse Ankunftstafel im Hauptbahnhof.</div>
+            <div class="mcard__task"><span class="arrow">→</span><span>Foto mit dem aktuellen ersten Eintrag.</span></div>
+          </div>
+          <div class="mcard__points">5 PT</div>
+        </article>
+
+        <article class="card mcard">
+          <div class="mcard__type">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <div class="mcard__body">
+            <div class="mcard__title">Hochformat-Logo</div>
+            <div class="mcard__desc">Findet ein bekanntes Firmenlogo in der Nähe.</div>
+            <div class="mcard__task"><span class="arrow">→</span><span>Filmt hochkant mit allen Spielern im Bild.</span></div>
+          </div>
+          <div class="mcard__points">20 PT</div>
+        </article>
+
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="camera-btn" aria-label="Open camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
+    </div>
+
+    <div class="phone__indicator"></div>
+  </div>
+</div>
+
+</body>
+</html>

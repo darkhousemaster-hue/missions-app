@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MiSSiONS — UI/UX redesign concept board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { padding: 60px 24px; }
+  .board-header {
+    max-width: 1400px; margin: 0 auto 40px;
+    text-align: center;
+  }
+  .board-header .stamp {
+    font: 700 11px/1 var(--body);
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 8px;
+  }
+  .board-header h1 {
+    font-family: var(--display); font-weight: 800;
+    font-size: 44px; letter-spacing: 0.06em;
+    margin: 0 0 10px;
+    color: var(--text);
+  }
+  .board-header p {
+    font: 400 14px/1.6 var(--body);
+    color: var(--text-dim);
+    max-width: 580px; margin: 0 auto;
+  }
+  .board-header .note {
+    margin-top: 16px;
+    font: 500 12px/1.4 var(--body);
+    color: var(--text-muted);
+  }
+
+  .triptych {
+    display: flex; gap: 48px;
+    justify-content: center; align-items: flex-start; flex-wrap: wrap;
+    margin: 0 auto;
+  }
+
+  .frame {
+    display:flex; flex-direction:column; align-items:center; gap: 14px;
+  }
+  .frame__caption {
+    text-align: center; max-width: 380px;
+  }
+  .frame__caption .label {
+    font: 600 10px/1 var(--body); letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 8px;
+  }
+  .frame__caption h2 {
+    font: 700 18px/1.2 var(--body);
+    margin: 0 0 6px;
+    color: var(--text);
+  }
+  .frame__caption p {
+    font: 400 12px/1.5 var(--body);
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  iframe.phone-iframe {
+    width: 414px; height: 868px;
+    border: 0;
+    border-radius: 48px;
+  }
+
+  .footer-note {
+    max-width: 700px; margin: 60px auto 0;
+    text-align: center;
+    font: 400 12px/1.7 var(--body);
+    color: var(--text-muted);
+  }
+  .footer-note code {
+    background: rgba(255,255,255,0.05);
+    padding: 2px 6px; border-radius: 4px;
+    font-family: var(--mono); font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<header class="board-header">
+  <div class="stamp">Concept board · internal review</div>
+  <h1>MiSSiONS Redesign</h1>
+  <p>Three key screens of the proposed UI/UX direction. Same brand identity, restrained palette, single iconography family, status-coloured signals, language-tabbed editors, team color identity.</p>
+  <div class="note">Open the individual files for a clean per-screen view. Inspect with browser DevTools to read the spacing / type stack.</div>
+</header>
+
+<div class="triptych">
+
+  <div class="frame">
+    <iframe class="phone-iframe" src="01-player-home.html" loading="eager"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 1 · Player</div>
+      <h2>MiSSiONS Home</h2>
+      <p>Restrained mission cards, one icon family, status colours doing the work (green = done, orange = next action). Single fat camera button as the anchor CTA.</p>
+    </div>
+  </div>
+
+  <div class="frame">
+    <iframe class="phone-iframe" src="02-gm-dashboard.html" loading="eager"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 2 · Gamemaster</div>
+      <h2>Game Dashboard</h2>
+      <p>Team color stripes for identity. Three matching top-bar icons (QR / overflow / lang) — no more orange-on-everything. Rankings + chat condensed into one bottom zone. No freeze button on MiSSiONS games.</p>
+    </div>
+  </div>
+
+  <div class="frame">
+    <iframe class="phone-iframe" src="03-add-mission-modal.html" loading="eager"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 3 · Settings</div>
+      <h2>Add MiSSiON</h2>
+      <p>Language-tabbed editor (DE ✓ / EN ✓ / FR / IT ✓ / ES) replaces five stacked fields per language. Segmented controls, real toggles, proper steppers. Airy.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-note">
+  These are static HTML concepts under <code>mockups/</code> — they don't ship with the app.
+  Open <code>mockups/index.html</code> in any browser to view, or open each <code>0X-*.html</code> file directly.
+</div>
+
+</body>
+</html>

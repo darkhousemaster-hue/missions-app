@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MiSSiONS — Add Mission modal (mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { display:flex; align-items:center; justify-content:center; padding: 40px 20px; }
+
+  .modal-header {
+    padding: 50px 22px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-title { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .modal-body { padding: 0 22px 100px; }
+  .field { margin-bottom: 18px; }
+
+  /* Language tabstrip placed prominently below the title */
+  .lang-strip {
+    display:flex; gap: 6px; flex-wrap: nowrap; margin-bottom: 22px;
+    padding-bottom: 18px; border-bottom: 1px solid var(--hairline-2);
+  }
+
+  /* Name input with embedded autotranslate */
+  .name-wrap { position: relative; }
+  .name-wrap .input { padding-right: 110px; font: 600 16px/1 var(--body); }
+  .name-wrap .auto-btn {
+    position:absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    color: var(--text-dim);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font: 600 10px/1 var(--body); letter-spacing: 0.05em;
+    cursor: pointer;
+    display:inline-flex; align-items:center; gap: 5px;
+  }
+  .name-wrap .auto-btn svg { width: 11px; height: 11px; }
+
+  /* Side-by-side grid for compact fields */
+  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+
+  .toggle-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-button);
+  }
+  .toggle-row .text { font: 500 13px/1.3 var(--body); }
+  .toggle-row .sub  { font: 400 11px/1.3 var(--body); color: var(--text-muted); margin-top: 2px; }
+
+  .locked {
+    display:flex; align-items:center; gap: 8px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.025);
+    border: 1px dashed var(--hairline);
+    border-radius: var(--r-button);
+    color: var(--text-dim);
+    font: 500 13px/1 var(--body);
+  }
+  .locked svg { width: 13px; height: 13px; }
+
+  /* Description / Task tabstrip — two pills */
+  .pair-tabs-row { margin-bottom: 10px; }
+
+  /* Footer */
+  .modal-footer {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 18px 36px;
+    display:flex; gap: 10px;
+    background: linear-gradient(180deg, transparent 0%, rgba(15,14,13,0.98) 50%);
+    backdrop-filter: blur(8px);
+  }
+  .modal-footer .btn { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="phone__notch"></div>
+  <div class="phone__screen">
+
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-bar__right">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M0 6.5L2 4.5L4 6.5L6 4.5L8 6.5L10 4.5L12 6.5L14 4.5L16 6.5V10H0V6.5Z" fill="currentColor" opacity=".85"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11" fill="none"><rect x="0.5" y="0.5" width="18" height="10" rx="2" stroke="currentColor" opacity=".85"/><rect x="2" y="2" width="14" height="7" rx="1" fill="currentColor"/></svg>
+      </div>
+    </div>
+
+    <div class="scroll">
+
+      <header class="modal-header">
+        <div class="modal-title">Add MiSSiON</div>
+        <button class="icon-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <div class="modal-body">
+
+        <!-- Language tabstrip — currently EN -->
+        <div class="lang-strip">
+          <span class="lang-tab"><span class="tick">✓</span>DE</span>
+          <span class="lang-tab is-active"><span class="tick">✓</span>EN</span>
+          <span class="lang-tab">FR</span>
+          <span class="lang-tab"><span class="tick">✓</span>IT</span>
+          <span class="lang-tab">ES</span>
+        </div>
+
+        <!-- Mission name (single, language-scoped) -->
+        <div class="field">
+          <div class="field-label">Mission name</div>
+          <div class="name-wrap">
+            <input class="input" type="text" value="Fountain selfie">
+            <button class="auto-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+              Auto-translate
+            </button>
+          </div>
+        </div>
+
+        <!-- Location + Mode side by side -->
+        <div class="grid-2">
+          <div class="field" style="margin:0;">
+            <div class="field-label">Location</div>
+            <select class="select">
+              <option>Altstadt</option>
+              <option>Stadtpark</option>
+              <option>Hauptbahnhof</option>
+              <option>Pool (any location)</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;">
+            <div class="field-label">Mode</div>
+            <div class="locked">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 1 1 8 0v4"/></svg>
+              MiSSiONS
+            </div>
+          </div>
+        </div>
+
+        <!-- Media type segmented -->
+        <div class="field">
+          <div class="field-label">Media type</div>
+          <div class="segmented">
+            <span class="is-active">Photo</span>
+            <span>Video</span>
+            <span>Either</span>
+          </div>
+        </div>
+
+        <!-- Points + Indoor row -->
+        <div class="grid-2">
+          <div class="field" style="margin:0;">
+            <div class="field-label">Points</div>
+            <div class="stepper">
+              <button>−</button>
+              <div class="stepper__value">10</div>
+              <button>+</button>
+            </div>
+          </div>
+          <div class="field" style="margin:0;">
+            <div class="field-label">Also indoor</div>
+            <div class="toggle-row">
+              <div>
+                <div class="text">Indoor backup</div>
+                <div class="sub">Playable when raining</div>
+              </div>
+              <div class="toggle" aria-label="Indoor toggle"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description / Task tabs + textarea -->
+        <div class="field">
+          <div class="field-label">Content</div>
+          <div class="pair-tabs-row pair-tabs">
+            <span class="pair-tab is-active">Description</span>
+            <span class="pair-tab">Task</span>
+          </div>
+          <textarea class="textarea" placeholder="Story / context shown above the camera button.">Find the oldest fountain in the old town. It dates back to the 16th century and sits hidden in a small square behind the cathedral.</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn--ghost">Cancel</button>
+      <button class="btn btn--primary">Save</button>
+    </div>
+
+    <div class="phone__indicator"></div>
+  </div>
+</div>
+
+</body>
+</html>
