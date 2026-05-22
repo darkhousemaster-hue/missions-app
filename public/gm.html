@@ -25,12 +25,38 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .game-card-date{font-size:.8rem;color:var(--text-dim);margin:.25rem 0;}
 .game-card-actions{display:flex;gap:.4rem;margin-top:.75rem;}
 #screen-new-game{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;text-align:center;}
-/* Dashboard */
-#screen-dashboard{flex:1;display:grid;grid-template-rows:auto auto 1fr;grid-template-columns:1fr 300px;grid-template-areas:"topbar topbar" "teams teams" "main panel";overflow:hidden;}
+/* Dashboard — desktop-first layout. The GM is on a laptop or desktop,
+   so the default treats 1280px+ as primary and progressively collapses.
+   The right panel is wider on bigger screens (380px @ 1280+, 320px @
+   1024-1280) so chat and rankings are comfortable to read. Below 900px
+   the panel stacks below the main area as a fallback. */
+#screen-dashboard{
+  flex:1;display:grid;
+  grid-template-rows:auto auto 1fr;
+  grid-template-columns:minmax(0,1fr) 380px;
+  grid-template-areas:"topbar topbar" "teams teams" "main panel";
+  overflow:hidden;
+}
+@media(max-width:1280px){
+  #screen-dashboard{grid-template-columns:minmax(0,1fr) 320px;}
+}
+@media(max-width:900px){
+  #screen-dashboard{
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto 1fr auto;
+    grid-template-areas:"topbar" "teams" "main" "panel";
+  }
+}
 #dash-topbar{grid-area:topbar;}
 #dash-teams{grid-area:teams;border-bottom:1px solid var(--border);background:var(--bg2);padding:.5rem .75rem;overflow-x:auto;display:flex;align-items:center;gap:.4rem;flex-shrink:0;}
-#dash-main{grid-area:main;overflow-y:auto;padding:1rem;}
-#dash-panel{grid-area:panel;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#dash-main{grid-area:main;overflow-y:auto;padding:1.25rem 1.5rem;}
+/* Keep the mission list readable on ultrawide screens — cap to ~960px
+   centered within the main area rather than spreading edge-to-edge. */
+#dash-main > *{max-width:960px;}
+#dash-panel{grid-area:panel;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg2);}
+@media(max-width:900px){
+  #dash-panel{border-left:0;border-top:1px solid var(--border);max-height:50vh;}
+}
 .team-chip-gm{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .6rem .3rem .35rem;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:600;font-size:.85rem;text-transform:uppercase;flex-shrink:0;}
 .team-chip-selfie{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0;}
 .team-chip-gm:hover{border-color:var(--text-dim);}
@@ -262,15 +288,27 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   </div>
   <div style="flex:1;overflow-y:auto;">
     <div class="page" style="max-width:900px;">
+      <!-- Top-level settings tabs. MiSSiONS + CityRush used to sit here as
+           peer tabs; they're now folded into a single "Games" tab with a
+           sub-tab strip that appears below when Games is active. The Games
+           parent button (id=st-games-btn) wraps an emoji + a translatable
+           inner <span id="st-games">; applyGmLang only touches the span so
+           the emoji stays put. -->
       <div class="tabs" id="settings-tabs" style="flex-wrap:wrap;">
         <button class="tab active" onclick="switchSettingsTab('general',this)" id="st-general">Allgemein</button>
         <button class="tab" onclick="switchSettingsTab('locations',this)" id="st-locations">Standorte</button>
-        <button class="tab" onclick="switchSettingsTab('missions',this)" id="st-missions">MiSSiONS</button>
-        <button class="tab" onclick="switchSettingsTab('cityrush',this)" id="st-cityrush">🏃 CityRush</button>
+        <button class="tab" onclick="switchSettingsTab('games',this)" id="st-games-btn">🎮 <span id="st-games">Spiele</span></button>
         <button class="tab" onclick="switchSettingsTab('rules',this)" id="st-rules">Regeln</button>
         <button class="tab" onclick="switchSettingsTab('template',this)" id="st-template">QR-Vorlage</button>
         <button class="tab" onclick="switchSettingsTab('security',this)" id="st-security">Sicherheit</button>
         <button class="tab" onclick="switchSettingsTab('updates',this)" id="st-updates">Updates</button>
+      </div>
+      <!-- Games sub-tab strip. Hidden unless Games is the active top-level
+           tab. The sub-tabs reuse the existing st-missions / st-cityrush
+           IDs so the existing GMT translations apply unchanged. -->
+      <div class="tabs" id="settings-subtabs" style="display:none;margin-top:.5rem;padding-left:.5rem;border-left:2px solid var(--orange);">
+        <button class="tab active" onclick="switchGameSubTab('missions',this)" id="st-missions">MiSSiONS</button>
+        <button class="tab" onclick="switchGameSubTab('cityrush',this)" id="st-cityrush">🏃 CityRush</button>
       </div>
 
       <!-- General -->
@@ -638,6 +676,8 @@ const GMT={
   'loc-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler an diesem Standort.',
   'cr-allowed-langs':'Erlaubte Sprachen',
   'cr-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.',
+  'lightbox-rotate':'Drehen','st-games':'Spiele',
+  'cr-m-map-picker':'Karte (Klick zum Setzen, Marker ziehbar)',
   // 📖 Manuals download (button in settings topbar, next to language switch)
   'manuals-tip':'Handbücher herunterladen','manuals-title':'Handbücher',
   'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
@@ -742,6 +782,8 @@ const GMT={
   'loc-allowed-langs-hint':'Only these languages will appear for players at this location.',
   'cr-allowed-langs':'Allowed languages',
   'cr-allowed-langs-hint':'Only these languages will appear for players in this CityRush mode.',
+  'lightbox-rotate':'Rotate','st-games':'Games',
+  'cr-m-map-picker':'Map (click to set, drag the marker to refine)',
   'manuals-tip':'Download manuals','manuals-title':'Manuals',
   'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
@@ -845,6 +887,8 @@ const GMT={
   'loc-allowed-langs-hint':"Seules ces langues apparaîtront pour les joueurs à ce lieu.",
   'cr-allowed-langs':'Langues autorisées',
   'cr-allowed-langs-hint':'Seules ces langues apparaîtront pour les joueurs dans ce mode CityRush.',
+  'lightbox-rotate':'Tourner','st-games':'Jeux',
+  'cr-m-map-picker':'Carte (cliquer pour placer, marqueur déplaçable)',
   'manuals-tip':'Télécharger les manuels','manuals-title':'Manuels',
   'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
@@ -948,6 +992,8 @@ const GMT={
   'loc-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questo luogo.',
   'cr-allowed-langs':'Lingue consentite',
   'cr-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questa modalità CityRush.',
+  'lightbox-rotate':'Ruota','st-games':'Partite',
+  'cr-m-map-picker':'Mappa (clic per posizionare, marker trascinabile)',
   'manuals-tip':'Scarica i manuali','manuals-title':'Manuali',
   'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
@@ -1051,6 +1097,8 @@ const GMT={
   'loc-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este lugar.',
   'cr-allowed-langs':'Idiomas permitidos',
   'cr-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este modo CityRush.',
+  'lightbox-rotate':'Girar','st-games':'Partidas',
+  'cr-m-map-picker':'Mapa (clic para colocar, marcador arrastrable)',
   'manuals-tip':'Descargar manuales','manuals-title':'Manuales',
   'manuals-blurb':'Descarga los manuales PDF actuales. El maintainer los actualiza cuando hay cambios importantes.',
   'manuals-gm':'Manual del GM','manuals-settings':'Manual de ajustes',
@@ -1639,6 +1687,25 @@ async function refreshPendingCounts(){
 // Build the inner markup of a team chip — selfie thumbnail, name, score,
 // frozen indicator and notification dot. Pulled out of renderTeamsBar so the
 // "team_selfie_updated"/"team_frozen" events can refresh a single chip.
+// Derive a stable display colour from the team's database ID. Teams don't
+// store an explicit colour yet, so we hash the ID into a curated palette of
+// distinct hues. Same team always gets the same colour; chip + detail panel
+// + ranking row all read this via --team-color.
+const _TEAM_PALETTE = [
+  '#E04848', // red
+  '#4ADE80', // green
+  '#5AA0FF', // blue
+  '#F4B400', // yellow
+  '#C77DFF', // violet
+  '#06B6D4', // cyan
+  '#FB7185', // pink
+  '#A3E635', // lime
+];
+function teamColor(t){
+  const id = t && (t.id != null ? Number(t.id) : 0);
+  return _TEAM_PALETTE[Math.abs(id) % _TEAM_PALETTE.length];
+}
+
 function _teamChipInner(t){
   // Clicking the selfie thumbnail (rather than the chip body) opens the
   // fullscreen lightbox without re-triggering the chip's selectTeam().
@@ -1647,7 +1714,7 @@ function _teamChipInner(t){
     : '';
   return `
     ${selfie}<span class="tname">${esc(t.name)}</span>
-    <span id="tscore-${t.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--orange);">${t.score||0}pt</span>
+    <span id="tscore-${t.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--text);">${t.score||0}pt</span>
     <span class="cr-frozen-tag" id="tfrozen-${t.id}" style="display:none;background:#0d3a59;color:#9fd6ff;padding:.1rem .35rem;border-radius:2px;font-size:.65rem;letter-spacing:.05em;">❄️ <span class="rem"></span></span>
     <span class="notif-dot" id="notif-${t.id}" style="display:none;"></span>`;
 }
@@ -1656,7 +1723,9 @@ function renderTeamsBar(teams){
   const bar=document.getElementById('teams-chips');
   if(!teams.length){bar.innerHTML='<span style="font-size:.8rem;color:var(--text-muted);">Warten auf Spieler…</span>';return;}
   bar.innerHTML=teams.map(t=>`
-    <div class="team-chip-gm ${t.id===selectedTeamId?'active':''}" id="tc-${t.id}" onclick="selectTeam(${t.id})">
+    <div class="team-chip-gm ${t.id===selectedTeamId?'active':''}" id="tc-${t.id}"
+         style="--team-color:${teamColor(t)};padding-left:.85rem;"
+         onclick="selectTeam(${t.id})">
       ${_teamChipInner(t)}
     </div>`).join('');
   teams.forEach(t => { paintNotif(t.id); paintFrozenTag(t.id); });
@@ -1670,6 +1739,8 @@ function addTeamChip(team){
   if(document.getElementById('tc-'+team.id))return;
   const div=document.createElement('div');
   div.className='team-chip-gm';div.id=`tc-${team.id}`;
+  div.style.setProperty('--team-color', teamColor(team));
+  div.style.paddingLeft = '.85rem';
   div.innerHTML = _teamChipInner(team);
   div.onclick=()=>selectTeam(team.id);
   bar.appendChild(div);
@@ -1683,8 +1754,13 @@ async function selectTeam(teamId){
   // The notification dot is no longer cleared by clicking — it stays visible
   // (with a count) until every pending submission is reviewed.
   document.getElementById('no-team-selected').style.display='none';
-  document.getElementById('team-detail').style.display='block';
+  const detail=document.getElementById('team-detail');
+  detail.style.display='block';
   const data=await API(`/api/games/${currentGameId}/teams/${teamId}`);
+  // Paint the team's colour bar on the detail panel so the GM always knows
+  // which team they're looking at at a glance.
+  detail.style.setProperty('--team-color', teamColor(data));
+  detail.classList.add('team-color-bar');
   document.getElementById('detail-team-name').textContent=data.name;
   document.getElementById('detail-team-score').textContent=`${data.score} pts`;
   // Selfie thumbnail next to the team name; clicking opens the lightbox.
@@ -1892,7 +1968,7 @@ function openLightbox(url,isVid){
   const bar=document.createElement('div');
   bar.style.cssText='position:fixed;top:1rem;right:1rem;display:flex;gap:.5rem;z-index:9001;';
   const rotBtn=document.createElement('button');
-  rotBtn.className='btn btn-secondary btn-sm';rotBtn.textContent='↻ Drehen';
+  rotBtn.className='btn btn-secondary btn-sm';rotBtn.textContent='↻ ' + (gmt('lightbox-rotate')||'Drehen');
   rotBtn.onclick=e=>{e.stopPropagation();rotation=(rotation+90)%360;el.style.transform=`rotate(${rotation}deg)`;};
   const closeBtn=document.createElement('button');
   closeBtn.className='btn btn-danger btn-sm';closeBtn.textContent='✕';
@@ -2696,6 +2772,7 @@ async function autoTranslateMissionName(){
   toast(gmt('translating')||'Übersetze…');
   const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
   empty.forEach(lang=>{const el=document.getElementById('m-name-'+lang);if(el&&res[lang])el.value=res[lang];});
+  refreshLangTickMarks('m-name');
   toast(gmt('translated')||'Übersetzt!','success');
 }
 function missionModal(m,locs){
@@ -2703,17 +2780,14 @@ function missionModal(m,locs){
   const v=(f)=>m?esc(m[f]||''):'';
   return `
     <div class="field">
-      <label class="label" style="display:flex;justify-content:space-between;">
+      <label class="label" style="display:flex;justify-content:space-between;align-items:center;">
         <span>${gmt('mission-name-label')||'Name'}</span>
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.15rem .4rem;" onclick="autoTranslateMissionName()">${gmt('auto-translate')||'🌐 Auto'}</button>
       </label>
-      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
-        <div class="field" style="margin:0;"><label class="label">DE</label><input id="m-name-de" class="input" value="${v('name_de')||v('name')}"></div>
-        <div class="field" style="margin:0;"><label class="label">EN</label><input id="m-name-en" class="input" value="${v('name_en')}"></div>
-        <div class="field" style="margin:0;"><label class="label">FR</label><input id="m-name-fr" class="input" value="${v('name_fr')}"></div>
-        <div class="field" style="margin:0;"><label class="label">IT</label><input id="m-name-it" class="input" value="${v('name_it')}"></div>
-        <div class="field" style="margin:0;"><label class="label">ES</label><input id="m-name-es" class="input" value="${v('name_es')}"></div>
-      </div>
+      ${langTabFields('m-name', 'input', {
+        de: m?(m.name_de||m.name||''):'', en: v('name_en'),
+        fr: v('name_fr'), it: v('name_it'), es: v('name_es')
+      })}
     </div>
     <div class="grid-2">
       <div class="field" data-tip="mission-loc"><label class="label" data-tip="mission-loc">${gmt('loc-label')||'Standort / Location'}</label>
@@ -2739,26 +2813,20 @@ function missionModal(m,locs){
       <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:.4rem;">
         <button class="btn btn-ghost btn-sm" onclick="autoTranslate('desc')" title="${gmt('auto-translate')||'🌐 Auto'}">🌐 Auto</button>
       </div>
-      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
-        <div class="field"><label class="label">DE</label><textarea id="m-desc-de" class="textarea" rows="3">${v('description_de')}</textarea></div>
-        <div class="field"><label class="label">EN</label><textarea id="m-desc-en" class="textarea" rows="3">${v('description_en')}</textarea></div>
-        <div class="field"><label class="label">FR</label><textarea id="m-desc-fr" class="textarea" rows="3">${v('description_fr')}</textarea></div>
-        <div class="field"><label class="label">IT</label><textarea id="m-desc-it" class="textarea" rows="3">${v('description_it')}</textarea></div>
-        <div class="field"><label class="label">ES</label><textarea id="m-desc-es" class="textarea" rows="3">${v('description_es')}</textarea></div>
-      </div>
+      ${langTabFields('m-desc', 'textarea', {
+        de: v('description_de'), en: v('description_en'),
+        fr: v('description_fr'), it: v('description_it'), es: v('description_es')
+      }, 'de', 3)}
     </div>
     <div id="mtab-task" class="mission-tab-content">
       <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">${gmt('task-hint')||'Aufgabe für Spieler'}</p>
       <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:.4rem;">
         <button class="btn btn-ghost btn-sm" onclick="autoTranslate('task')" title="${gmt('auto-translate')||'🌐 Auto'}">🌐 Auto</button>
       </div>
-      <div class="grid-2" style="grid-template-columns:1fr 1fr;">
-        <div class="field"><label class="label">DE</label><textarea id="m-task-de" class="textarea" rows="3">${v('task_de')}</textarea></div>
-        <div class="field"><label class="label">EN</label><textarea id="m-task-en" class="textarea" rows="3">${v('task_en')}</textarea></div>
-        <div class="field"><label class="label">FR</label><textarea id="m-task-fr" class="textarea" rows="3">${v('task_fr')}</textarea></div>
-        <div class="field"><label class="label">IT</label><textarea id="m-task-it" class="textarea" rows="3">${v('task_it')}</textarea></div>
-        <div class="field"><label class="label">ES</label><textarea id="m-task-es" class="textarea" rows="3">${v('task_es')}</textarea></div>
-      </div>
+      ${langTabFields('m-task', 'textarea', {
+        de: v('task_de'), en: v('task_en'),
+        fr: v('task_fr'), it: v('task_it'), es: v('task_es')
+      }, 'de', 3)}
     </div>`;
 }
 
@@ -2767,6 +2835,60 @@ function switchMissionTab(tab,el){
   document.getElementById(`mtab-${tab}`).classList.add('active');
   document.querySelectorAll('.modal .tabs .tab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
+}
+
+// ── Language-tabbed editor helper ───────────────────────────────────────────
+// Replaces the previous "5 stacked inputs per language" pattern. Produces a
+// [DE ✓] [EN ✓] [FR] [IT ✓] [ES] tabstrip plus five panels that share the
+// same `prefix`; only the active one is visible at a time. The save flow is
+// unchanged because all five inputs stay in the DOM with their original
+// IDs (e.g. `m-name-de` … `m-name-es`).
+//
+//   prefix   : ID prefix, e.g. 'm-name', 'm-desc', 'cr-task'
+//   type     : 'input' | 'textarea'
+//   values   : { de, en, fr, it, es }  current values for prefill / tick state
+//   initial  : the language tab to start active on (defaults to 'de')
+//   rows     : rows attr for the textarea variant (default 4)
+function langTabFields(prefix, type, values, initial='de', rows=4){
+  const all = ['de','en','fr','it','es'];
+  const filled = l => String(values && values[l] || '').trim() !== '';
+  const tabs = all.map(l => `
+    <button type="button" class="lang-tab ${l===initial?'is-active':''}" data-lang="${l}"
+            onclick="switchLangPanel('${prefix}','${l}',this)">
+      ${filled(l) ? '<span class="tick">✓</span>' : '<span class="tick" style="display:none;">✓</span>'}${l.toUpperCase()}
+    </button>`).join('');
+  const panels = all.map(l => {
+    const val = esc(values && values[l] || '');
+    const oninput = `markLangTabFilled('${prefix}','${l}', this.value.trim() !== '')`;
+    const ctrl = type === 'textarea'
+      ? `<textarea id="${prefix}-${l}" class="textarea" rows="${rows}" oninput="${oninput}">${val}</textarea>`
+      : `<input id="${prefix}-${l}" class="input" value="${val}" oninput="${oninput}">`;
+    return `<div class="lang-panel ${l===initial?'is-active':''}" data-lang="${l}">${ctrl}</div>`;
+  }).join('');
+  return `<div class="lang-strip" data-prefix="${prefix}">${tabs}</div><div class="lang-panels" data-prefix="${prefix}">${panels}</div>`;
+}
+
+function switchLangPanel(prefix, lang, btn){
+  document.querySelectorAll(`.lang-strip[data-prefix="${prefix}"] .lang-tab`).forEach(t => t.classList.remove('is-active'));
+  if(btn) btn.classList.add('is-active');
+  document.querySelectorAll(`.lang-panels[data-prefix="${prefix}"] .lang-panel`).forEach(p => {
+    p.classList.toggle('is-active', p.dataset.lang === lang);
+  });
+}
+
+// Called from each input's oninput so the green ✓ on the tab updates live as
+// the GM types. Also called after auto-translate runs.
+function markLangTabFilled(prefix, lang, isFilled){
+  const tab = document.querySelector(`.lang-strip[data-prefix="${prefix}"] .lang-tab[data-lang="${lang}"]`);
+  if(!tab) return;
+  const tick = tab.querySelector('.tick');
+  if(tick) tick.style.display = isFilled ? 'inline' : 'none';
+}
+function refreshLangTickMarks(prefix){
+  ['de','en','fr','it','es'].forEach(l => {
+    const el = document.getElementById(`${prefix}-${l}`);
+    if(el) markLangTabFilled(prefix, l, (el.value||'').trim() !== '');
+  });
 }
 
 async function autoTranslate(section){
@@ -2779,6 +2901,7 @@ async function autoTranslate(section){
   toast(gmt('translating')||'Übersetze… / Translating…');
   const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
   empty.forEach(lang=>{if(res[lang]){const el=document.getElementById(`m-${section}-${lang}`);if(el)el.value=res[lang];}});
+  refreshLangTickMarks(`m-${section}`);
   toast(gmt('translated')||'Übersetzt! / Translated!','success');
 }
 
@@ -3441,19 +3564,25 @@ function crMissionModal(m){
       <label class="label" style="margin:0;">${gmt('cr-m-name')||'Name'}</label>
       <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('name')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
     </div>
-    <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem;">
-      <div><label class="label">DE</label><input id="cr-name-de" class="input" value="${v('name_de')}"></div>
-      <div><label class="label">EN</label><input id="cr-name-en" class="input" value="${v('name_en')}"></div>
-      <div><label class="label">FR</label><input id="cr-name-fr" class="input" value="${v('name_fr')}"></div>
-      <div><label class="label">IT</label><input id="cr-name-it" class="input" value="${v('name_it')}"></div>
-      <div><label class="label">ES</label><input id="cr-name-es" class="input" value="${v('name_es')}"></div>
-    </div>
+    ${langTabFields('cr-name', 'input', {
+      de: v('name_de'), en: v('name_en'),
+      fr: v('name_fr'), it: v('name_it'), es: v('name_es')
+    })}
     <!-- Coords & Radius -->
     <div class="grid-2" style="gap:.4rem;margin-bottom:.75rem;">
       <div data-tip="cr-lat"><label class="label" data-tip="cr-lat">${gmt('cr-m-lat')||'Latitude'}</label><input id="cr-lat" type="number" step="0.00001" class="input" value="${v('lat')}" placeholder="47.47620" data-tip="cr-lat"></div>
       <div data-tip="cr-lng"><label class="label" data-tip="cr-lng">${gmt('cr-m-lng')||'Longitude'}</label><input id="cr-lng" type="number" step="0.00001" class="input" value="${v('lng')}" placeholder="8.30700" data-tip="cr-lng"></div>
       <div data-tip="cr-radius"><label class="label" data-tip="cr-radius">${gmt('cr-m-radius')||'Radius (Meter)'}</label><input id="cr-radius" type="number" class="input" value="${num('radius_meters',30)}" data-tip="cr-radius"></div>
       <div data-tip="cr-points"><label class="label" data-tip="cr-points">${gmt('cr-m-points')||'Punkte'}</label><input id="cr-points" type="number" class="input" value="${num('points',10)}" data-tip="cr-points"></div>
+    </div>
+    <!-- Map picker. Click anywhere on the map to drop / move the marker;
+         drag the marker to refine; the orange circle shows the radius.
+         The three text inputs above stay the source of truth, the map
+         just updates them. initCrMissionMapPicker() is called after the
+         modal renders (showAddCrMission / showEditCrMission). -->
+    <div class="field" data-tip="cr-map-picker" style="margin-bottom:.75rem;">
+      <label class="label" data-tip="cr-map-picker">${gmt('cr-m-map-picker')||'Karte (Klick zum Setzen, Marker ziehbar)'}</label>
+      <div id="cr-mission-map" style="height:220px;border-radius:var(--radius);border:1px solid var(--border);background:#0a0a0a;overflow:hidden;"></div>
     </div>
     <!-- Flags -->
     <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;">
@@ -3511,13 +3640,10 @@ function crMissionModal(m){
           <label class="label" style="margin:0;" data-tip="cr-answer">${gmt('cr-m-answer-label')||'Korrekte Antwort (mind. eine Sprache)'}</label>
           <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('answer')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
         </div>
-        <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem;">
-          <div><label class="label">DE</label><input id="cr-answer-de" class="input" value="${v('answer_de')}"></div>
-          <div><label class="label">EN</label><input id="cr-answer-en" class="input" value="${v('answer_en')}"></div>
-          <div><label class="label">FR</label><input id="cr-answer-fr" class="input" value="${v('answer_fr')}"></div>
-          <div><label class="label">IT</label><input id="cr-answer-it" class="input" value="${v('answer_it')}"></div>
-          <div><label class="label">ES</label><input id="cr-answer-es" class="input" value="${v('answer_es')}"></div>
-        </div>
+        ${langTabFields('cr-answer', 'input', {
+          de: v('answer_de'), en: v('answer_en'),
+          fr: v('answer_fr'), it: v('answer_it'), es: v('answer_es')
+        })}
       </div>
     </div>
     <!-- Answer/question hints (multi-hint editor; revealed after arrival, or
@@ -3541,25 +3667,19 @@ function crMissionModal(m){
       <div style="display:flex;justify-content:flex-end;margin-bottom:.2rem;">
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslateCrField('description')">🌐 Auto</button>
       </div>
-      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;">
-        <div><label class="label">DE</label><textarea id="cr-desc-de" class="textarea" rows="3">${v('description_de')}</textarea></div>
-        <div><label class="label">EN</label><textarea id="cr-desc-en" class="textarea" rows="3">${v('description_en')}</textarea></div>
-        <div><label class="label">FR</label><textarea id="cr-desc-fr" class="textarea" rows="3">${v('description_fr')}</textarea></div>
-        <div><label class="label">IT</label><textarea id="cr-desc-it" class="textarea" rows="3">${v('description_it')}</textarea></div>
-        <div><label class="label">ES</label><textarea id="cr-desc-es" class="textarea" rows="3">${v('description_es')}</textarea></div>
-      </div>
+      ${langTabFields('cr-desc', 'textarea', {
+        de: v('description_de'), en: v('description_en'),
+        fr: v('description_fr'), it: v('description_it'), es: v('description_es')
+      }, 'de', 3)}
     </div>
     <div id="mtab-task" class="mission-tab-content">
       <div style="display:flex;justify-content:flex-end;margin-bottom:.2rem;">
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslateCrField('task')">🌐 Auto</button>
       </div>
-      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.4rem;">
-        <div><label class="label">DE</label><textarea id="cr-task-de" class="textarea" rows="3">${v('task_de')}</textarea></div>
-        <div><label class="label">EN</label><textarea id="cr-task-en" class="textarea" rows="3">${v('task_en')}</textarea></div>
-        <div><label class="label">FR</label><textarea id="cr-task-fr" class="textarea" rows="3">${v('task_fr')}</textarea></div>
-        <div><label class="label">IT</label><textarea id="cr-task-it" class="textarea" rows="3">${v('task_it')}</textarea></div>
-        <div><label class="label">ES</label><textarea id="cr-task-es" class="textarea" rows="3">${v('task_es')}</textarea></div>
-      </div>
+      ${langTabFields('cr-task', 'textarea', {
+        de: v('task_de'), en: v('task_en'),
+        fr: v('task_fr'), it: v('task_it'), es: v('task_es')
+      }, 'de', 3)}
     </div>`;
 }
 
@@ -3689,6 +3809,7 @@ async function showAddCrMission(){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
   crSyncMediaAnswerExclusion();
   renderCrHintsInline();   // paint both empty hint lists
+  setTimeout(initCrMissionMapPicker, 100);  // map needs the modal to be visible first
 }
 async function saveNewCrMission(){
   const data=getCrMissionData();
@@ -3717,6 +3838,7 @@ async function editCrMission(id){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
   crSyncMediaAnswerExclusion();
   if(m.id) setTimeout(()=>_loadExistingHints(m.id), 100);
+  setTimeout(initCrMissionMapPicker, 100);
 }
 async function saveEditCrMission(id){
   const data=getCrMissionData();
@@ -4072,6 +4194,82 @@ async function importCrMissions(file){
   toast(`${ok} importiert${errors?', '+errors+' Fehler':''}!`, ok>0?'success':'error');
 }
 
+// ── CityRush mission map picker ─────────────────────────────────────────────
+// Embeds a small Leaflet picker inside the CR mission editor modal so the
+// GM can click to drop the target marker instead of typing decimals into
+// the lat/lng inputs. The lat/lng/radius inputs remain the source of truth;
+// the map round-trips with them in both directions. Called on a setTimeout
+// after the modal opens so the #cr-mission-map div has its final dimensions.
+let _crPickerMap = null;
+let _crPickerMarker = null;
+let _crPickerCircle = null;
+function initCrMissionMapPicker(){
+  const el = document.getElementById('cr-mission-map');
+  if(!el || !window.L) return;
+  // If the modal was just re-opened, tear down the previous map first so
+  // Leaflet doesn't error with "Map container is already initialized".
+  if(_crPickerMap){ try { _crPickerMap.remove(); } catch{} _crPickerMap=null; _crPickerMarker=null; _crPickerCircle=null; }
+
+  const latInput    = document.getElementById('cr-lat');
+  const lngInput    = document.getElementById('cr-lng');
+  const radiusInput = document.getElementById('cr-radius');
+  // Default to Zurich centre if no coords yet; the GM clicks to set anyway.
+  const initLat = parseFloat(latInput?.value) || 47.3769;
+  const initLng = parseFloat(lngInput?.value) || 8.5417;
+  const initR   = Math.max(5, parseFloat(radiusInput?.value) || 30);
+
+  _crPickerMap = L.map(el, { zoomControl: true, attributionControl: false });
+  _crPickerMap.setView([initLat, initLng], 16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_crPickerMap);
+
+  const placeMarker = (lat, lng) => {
+    if(_crPickerMarker){ _crPickerMarker.setLatLng([lat, lng]); }
+    else { _crPickerMarker = L.marker([lat, lng], { draggable: true }).addTo(_crPickerMap); }
+    if(_crPickerCircle){ _crPickerCircle.setLatLng([lat, lng]); }
+    else {
+      _crPickerCircle = L.circle([lat, lng], {
+        radius: initR, color: '#ff6b00', fillColor: '#ff6b00', fillOpacity: 0.18, weight: 1.5,
+      }).addTo(_crPickerMap);
+    }
+    _crPickerMarker.on('dragend', () => {
+      const p = _crPickerMarker.getLatLng();
+      if(latInput) latInput.value = p.lat.toFixed(5);
+      if(lngInput) lngInput.value = p.lng.toFixed(5);
+      _crPickerCircle.setLatLng(p);
+    });
+  };
+
+  // Only show the marker if the GM already has coords; an empty mission
+  // shouldn't paint a phantom marker at 47.3769 / 8.5417.
+  if(latInput?.value && lngInput?.value) placeMarker(initLat, initLng);
+
+  _crPickerMap.on('click', (e) => {
+    const { lat, lng } = e.latlng;
+    if(latInput) latInput.value = lat.toFixed(5);
+    if(lngInput) lngInput.value = lng.toFixed(5);
+    placeMarker(lat, lng);
+  });
+
+  // Live-sync the inputs back to the map (typing in lat/lng or radius
+  // moves / resizes the marker without waiting for save).
+  const syncFromInputs = () => {
+    const la = parseFloat(latInput?.value), ln = parseFloat(lngInput?.value);
+    const r  = Math.max(5, parseFloat(radiusInput?.value) || 30);
+    if(!isNaN(la) && !isNaN(ln)){
+      placeMarker(la, ln);
+      _crPickerMap.setView([la, ln]);
+    }
+    if(_crPickerCircle) _crPickerCircle.setRadius(r);
+  };
+  latInput?.addEventListener('change',    syncFromInputs);
+  lngInput?.addEventListener('change',    syncFromInputs);
+  radiusInput?.addEventListener('input',  syncFromInputs);
+
+  // Leaflet measures the container before the modal finishes its CSS
+  // transition; one invalidateSize after a beat gives a crisp render.
+  setTimeout(() => _crPickerMap.invalidateSize(), 200);
+}
+
 async function autoTranslateCrField(field){
   const langs=['de','en','fr','it','es'];
   // Some textareas use a shorter id prefix than the field name we get called
@@ -4089,6 +4287,7 @@ async function autoTranslateCrField(field){
   toast(gmt('translating')||'Übersetze…');
   const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
   empty.forEach(l=>{const el=document.getElementById(`cr-${idPrefix}-${l}`);if(el&&res[l])el.value=res[l];});
+  refreshLangTickMarks(`cr-${idPrefix}`);
   toast(gmt('translated')||'Übersetzt!','success');
 }
 
@@ -4256,13 +4455,44 @@ function closeModal(){document.getElementById('modal-overlay').style.display='no
   const obs = new MutationObserver(() => applyTooltips(root));
   obs.observe(root, {childList:true, subtree:true});
 })();
+// Tracks the active sub-tab inside the Games parent so re-entering Games
+// from another top-level tab restores the previously-shown game type.
+let _activeGameSubTab = 'missions';
+
 function switchSettingsTab(tab,el){
   document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));
-  document.getElementById(`stab-${tab}`).classList.add('active');
   document.querySelectorAll('#settings-tabs .tab').forEach(t=>t.classList.remove('active'));
-  if(el)el.classList.add('active');
+  if(el) el.classList.add('active');
+  const subRow = document.getElementById('settings-subtabs');
+
+  if(tab === 'games'){
+    // Show the Games sub-strip and route to whichever game type was last
+    // active (defaults to MiSSiONS on first visit). The parent Games
+    // button stays in the active state for the whole top-level row.
+    if(subRow) subRow.style.display = 'flex';
+    const btn = document.getElementById('st-' + _activeGameSubTab);
+    switchGameSubTab(_activeGameSubTab, btn);
+    return;
+  }
+
+  // Any non-Games tab hides the sub-strip and renders the matching panel
+  // directly (one-to-one with the legacy stab-* content IDs).
+  if(subRow) subRow.style.display = 'none';
+  const panel = document.getElementById('stab-' + tab);
+  if(panel) panel.classList.add('active');
   if(tab==='rules') loadRulesetsSettings();
-  if(tab==='cityrush') loadCrModes();
+}
+
+// Routes between the two Games sub-tabs (MiSSiONS / CityRush). Each maps
+// to one of the existing stab-missions / stab-cityrush content panels.
+function switchGameSubTab(sub, el){
+  _activeGameSubTab = sub;
+  document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('#settings-subtabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const panel = document.getElementById('stab-' + sub);
+  if(panel) panel.classList.add('active');
+  if(sub === 'cityrush') loadCrModes();
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast-container').appendChild(el);setTimeout(()=>el.remove(),3500);}

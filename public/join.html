@@ -9,9 +9,13 @@
 <style>
 body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:var(--bg);}
 .join-wrap{width:100%;max-width:400px;}
-.logo-area{text-align:center;margin-bottom:2.5rem;}
-.logo-area img{height:64px;mix-blend-mode:screen;}
-.logo-area h1{font-size:3rem;letter-spacing:.15em;color:var(--red);margin-top:.5rem;}
+/* Player-side logo — always perfectly centered regardless of viewport
+   quirks. Flexbox guarantees it sits on the optical centre of the join
+   panel; the inner <img> and <h1> centre themselves via auto margins
+   and a flex column. */
+.logo-area{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;margin:0 auto 2.5rem;width:100%;}
+.logo-area img{display:block;height:64px;width:auto;margin:0 auto;mix-blend-mode:screen;}
+.logo-area h1{font-size:3rem;letter-spacing:.15em;color:var(--red);margin:.5rem auto 0;}
 .loc-sub{font-size:.85rem;color:var(--text-muted);margin-top:.3rem;}
 .gameid-sub{font-family:var(--mono);font-size:.8rem;color:var(--orange);margin-top:.15rem;}
 .join-choice{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem;}

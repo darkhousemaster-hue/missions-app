@@ -1,17 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+/* Fonts:
+   - Bebas Neue:    legacy display (kept for backward compat in some places)
+   - Big Shoulders Stencil Display: NEW distressed-stencil display for wordmark / top-level titles
+   - Rajdhani:      legacy body (kept)
+   - Inter:         NEW grotesque for body / labels in modernised areas
+   - Share Tech Mono / JetBrains Mono: monospace for timers, IDs, scores
+*/
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Big+Shoulders+Stencil+Display:wght@700;800&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Share+Tech+Mono&display=swap');
 
 :root {
-  --bg:#0e0e0e; --bg2:#161616; --bg3:#1e1e1e;
-  --surface:#252525; --surface2:#2d2d2d; --border:#333;
+  /* Surfaces — slightly warmer dark, closer to the Pre-Redesign feel but
+     a touch less neutral so cards have more depth against the bg. */
+  --bg:#0F0E0D; --bg2:#15130F; --bg3:#1c1916;
+  --surface:#1A1817; --surface2:#221F1D; --border:#2a2724;
+  --hairline:rgba(255,255,255,0.08);
+
+  /* Status palette — orange is now ONLY for "needs your attention".
+     Green = done/accepted. Red = destructive (delete, reject). */
   --red:#d42b2b; --red-light:#ff3b3b; --red-dim:#8a1c1c;
-  --orange:#ff6b00; --green:#00e676;
-  --text:#e8e8e8; --text-dim:#888; --text-muted:#555;
-  --mono:'Share Tech Mono',monospace;
-  --heading:'Bebas Neue',sans-serif;
-  --body:'Rajdhani',sans-serif;
-  --radius:4px;
+  --orange:#E85F1E; --orange-soft:rgba(232,95,30,0.14); --orange-dim:rgba(232,95,30,0.55);
+  --green:#4ADE80; --green-soft:rgba(74,222,128,0.14); --green-dim:rgba(74,222,128,0.55);
+
+  /* Text — warmer cream than pure white so the dark feels less harsh. */
+  --text:#F4F2EE; --text-dim:#9B9690; --text-muted:#6A6560;
+
+  /* Typography */
+  --mono:'JetBrains Mono','Share Tech Mono',Consolas,monospace;
+  --display:'Big Shoulders Stencil Display','Trade Gothic Bold Condensed','Bebas Neue',sans-serif;
+  --heading:'Big Shoulders Stencil Display','Bebas Neue',sans-serif;
+  --body:'Inter','Rajdhani',-apple-system,'Segoe UI',Roboto,sans-serif;
+
+  --radius:6px;
   --glow-red:0 0 12px rgba(212,43,43,.5);
-  --glow-orange:0 0 12px rgba(255,107,0,.6);
+  --glow-orange:0 0 16px rgba(232,95,30,.45);
+
+  /* Per-team colour custom property. Components set this via inline style
+     (e.g. <div class="team-chip" style="--team-color:#E04848">) and any
+     descendant can paint a stripe / glow with var(--team-color). */
+  --team-color:var(--orange);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{height:100%;}
@@ -155,3 +180,57 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
 .drag-ghost-placeholder{border:2px dashed var(--red-dim);border-radius:var(--radius);background:rgba(212,43,43,.05);min-height:60px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem;}
 
 @media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr;}.page{padding:.75rem;}.hide-mobile{display:none !important;}}
+
+/* ── Visual redesign: team-color stripe (GM dashboard) ─────────────────────
+   Each team chip carries a `--team-color` custom property set inline based
+   on its derived colour. A 4px stripe on the left edge replaces "orange on
+   everything" and makes teams identifiable at a glance under pressure. */
+.team-chip-gm{position:relative;}
+.team-chip-gm::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:var(--team-color, var(--orange));
+  border-top-left-radius:var(--radius);border-bottom-left-radius:var(--radius);
+}
+.team-chip-gm.active{
+  border-color:var(--team-color, var(--orange)) !important;
+  background:rgba(255,255,255,0.04);
+  color:var(--text) !important;
+}
+
+/* Per-team detail panel: a 4px coloured bar down the left edge of the
+   selected team's main panel, same logic as the chip. */
+.team-color-bar{
+  border-left:4px solid var(--team-color, var(--orange)) !important;
+  padding-left:.75rem;
+}
+
+/* ── Player-side logo: always centered, never crowded by side elements. */
+.player-logo-wrap{display:flex;align-items:center;justify-content:center;width:100%;}
+.player-logo-wrap .logo,.player-logo-wrap .logo-sm{margin:0 auto;}
+
+/* ── Wordmark — the distressed display font, kept for top-level titles. */
+.wordmark{font-family:var(--display);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);}
+
+/* ── Softer pending / accepted card states using the new tokens. */
+.mission-card.has-pending{
+  border-color:var(--orange-dim);
+  box-shadow:0 0 0 1px var(--orange-dim) inset, 0 0 24px -8px var(--orange-dim);
+}
+.mission-card.accepted{
+  border-color:var(--green-dim);
+  box-shadow:0 0 0 1px var(--green-dim) inset, 0 0 16px -10px var(--green-dim);
+}
+
+/* ── Language tabstrip (Add/Edit Mission, CR Mission, Hints) ──────────────
+   Replaces the previous 5-stacked-fields-per-field pattern. Each tabstrip
+   pairs with a stack of .lang-panel divs that share the same data-prefix;
+   switchLangPanel() toggles which panel is visible. Tabs marked with a
+   .tick child show a green ✓ — managed live by markLangTabFilled(). */
+.lang-strip{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.5rem;}
+.lang-tab{padding:.35rem .7rem;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font:600 .75rem/1 var(--body);letter-spacing:.04em;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;}
+.lang-tab:hover{background:var(--surface2);}
+.lang-tab.is-active{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.25);}
+.lang-tab .tick{color:var(--green);font-weight:700;}
+.lang-panels{margin-bottom:.5rem;}
+.lang-panel{display:none;}
+.lang-panel.is-active{display:block;}
