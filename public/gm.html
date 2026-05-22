@@ -9,13 +9,17 @@
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
-#screen-landing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;padding:2rem;}
-.landing-logo{text-align:center;}
-.landing-logo img{height:160px;margin-bottom:1rem;}
-.landing-logo h1{font-size:4rem;letter-spacing:.15em;color:var(--red);}
-.location-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;width:100%;max-width:700px;}
-.location-card{padding:1.2rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .15s;text-align:center;}
-.location-card:hover{border-color:var(--red);background:rgba(212,43,43,.08);}
+/* Landing — first sight every session. More generous spacing, the
+   wordmark uses the new --display font, location tiles are airier
+   with a hairline border that brightens on hover. */
+#screen-landing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.25rem;padding:2.5rem 1.5rem;}
+.landing-logo{text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem;}
+.landing-logo img{height:140px;width:auto;}
+.landing-logo h1{font-family:var(--display);font-weight:800;font-size:clamp(3rem,9vw,4.5rem);letter-spacing:.06em;line-height:.95;color:var(--text);margin:0;}
+.landing-logo p{font-size:.85rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted);margin-top:.25rem;}
+.location-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;width:100%;max-width:720px;}
+.location-card{padding:1.6rem 1.2rem;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background .15s,transform .15s;text-align:center;font:700 1rem/1.2 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--text);}
+.location-card:hover{border-color:rgba(255,255,255,0.18);background:var(--surface2);transform:translateY(-1px);}
 #screen-game-select{flex:1;overflow-y:auto;}
 .gs-inner{max-width:700px;margin:0 auto;padding:2rem 1rem;}
 .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem;}
