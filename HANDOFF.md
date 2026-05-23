@@ -340,10 +340,16 @@ To ship a new version:
 
 ```bash
 # 1. Bump
-node -e "let p=require('./package.json'); p.version='1.3.0'; require('fs').writeFileSync('./package.json', JSON.stringify(p,null,2)+'\n');"
+node -e "let p=require('./package.json'); p.version='2.0.2'; require('fs').writeFileSync('./package.json', JSON.stringify(p,null,2)+'\n');"
 
-# 2. Commit + push (the workflow creates the tag + release on remote)
-git add package.json && git commit -m "v1.3.0: …"
+# 2. Bump the CSS cache-bust string in all four HTML files so returning
+#    browsers fetch the new stylesheet immediately instead of waiting for
+#    the 4-hour cache-control TTL to expire. Pattern is /css/app.css?v=X.Y.Z
+#    in <head> of gm.html, play.html, cityrush.html, join.html.
+#    (See v2.0.1 commit for the reason this is needed.)
+
+# 3. Commit + push (the workflow creates the tag + release on remote)
+git add package.json public/*.html && git commit -m "v2.0.2: …"
 git push origin main
 ```
 
