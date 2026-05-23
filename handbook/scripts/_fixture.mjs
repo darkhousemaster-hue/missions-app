@@ -173,7 +173,9 @@ async function seed(base) {
 // A larger-than-1x1 PNG so the GM lightbox actually has something to display.
 // 100x150 dark-themed rectangle with the text "DEMO PHOTO" in the middle.
 // Built once at module load, returned as Buffer.
-function placeholderPhotoPng() {
+// Exported so capture/verify scripts can reuse it for team selfies instead of
+// hand-rolling their own byte literals.
+export function placeholderPhotoPng() {
   // We can't easily generate a 100×150 PNG without a library, but Node has
   // `node:zlib` and we can construct one. Use a flat fill — small enough to
   // hard-code. (4×6 = 24 px, dark red, scaled up by browsers when rendered.)

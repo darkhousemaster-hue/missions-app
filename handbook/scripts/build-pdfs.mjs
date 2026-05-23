@@ -220,6 +220,7 @@ function outputBasename(slug) {
   const [kind, lang] = slug.split('-');
   if (kind === 'settings') return `SETTINGS_Manual-${lang}`;
   if (kind === 'gm')       return `GM_Manual-${lang}`;
+  if (kind === 'player')   return `PLAYER_Manual-${lang}`;
   return slug;  // fallback for anything that doesn't match
 }
 

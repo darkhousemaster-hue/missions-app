@@ -9,26 +9,94 @@
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
-/* Landing — first sight every session. More generous spacing, the
-   wordmark uses the new --display font, location tiles are airier
-   with a hairline border that brightens on hover. */
-#screen-landing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.25rem;padding:2.5rem 1.5rem;}
-.landing-logo{text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem;}
-.landing-logo img{height:140px;width:auto;}
-.landing-logo h1{font-family:var(--display);font-weight:800;font-size:clamp(3rem,9vw,4.5rem);letter-spacing:.06em;line-height:.95;color:var(--text);margin:0;}
-.landing-logo p{font-size:.85rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted);margin-top:.25rem;}
-.location-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;width:100%;max-width:720px;}
-.location-card{padding:1.6rem 1.2rem;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background .15s,transform .15s;text-align:center;font:700 1rem/1.2 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--text);}
+/* Landing — first sight every session. Body has overflow:hidden, so the
+   whole screen MUST fit in the viewport without scrolling. Spacing is
+   tuned for ~700px-tall viewports (small laptops) and only gets airier
+   from there via `clamp()` on the wordmark and the gap. Logo height
+   matches v1.2.0 (160px) per explicit request — the brand mark reads
+   at a glance. */
+#screen-landing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(.85rem,2.2vh,1.6rem);padding:clamp(.75rem,2vh,1.5rem) 1.5rem;overflow:hidden;}
+.landing-logo{text-align:center;display:flex;flex-direction:column;align-items:center;gap:.55rem;}
+.landing-logo img{height:clamp(110px,18vh,160px);width:auto;}
+.landing-logo h1{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,5.5vh,3.6rem);letter-spacing:.06em;line-height:.95;color:var(--red);margin:0;}
+.landing-logo p{font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-top:.15rem;font-weight:600;}
+/* 5-segment language pill in the top-right corner of the landing.
+   Clicking a segment calls setGmLang(lang); the active segment is
+   filled with --text. Mirrors the picker pattern from the mockups. */
+.ll-langs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:4px;}
+.ll-langs .ll-lang{padding:6px 11px;border-radius:999px;font:700 11px/1 var(--body);letter-spacing:.08em;color:var(--text-muted);cursor:pointer;background:transparent;border:0;text-transform:uppercase;}
+.ll-langs .ll-lang:hover{color:var(--text);}
+.ll-langs .ll-lang.is-active{background:var(--text);color:var(--bg);}
+/* Sectioned location picker. "Pick a starting point" sits above the
+   location tiles; "Or pick a CityRush route" sits above the CityRush
+   tile when at least one CR mode exists. */
+.ll-section{width:100%;max-width:720px;}
+.ll-section-title{font:700 .68rem/1 var(--body);letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.5rem;padding-left:.15rem;}
+.location-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem;width:100%;}
+.location-card{padding:1.1rem 1rem;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background .15s,transform .15s;text-align:center;font:700 .95rem/1.2 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45rem;min-height:96px;}
 .location-card:hover{border-color:rgba(255,255,255,0.18);background:var(--surface2);transform:translateY(-1px);}
+.location-card .ll-icon{color:var(--text-dim);display:flex;align-items:center;justify-content:center;}
+.location-card .ll-icon svg{width:20px;height:20px;}
+/* CityRush tile sits alone in its own grid; render it as a single horizontal
+   row (icon + label) so it stays compact, instead of stacked like a square
+   location tile. */
+.location-card--cr{background:linear-gradient(160deg,rgba(232,95,30,0.10),rgba(232,95,30,0.02));border-color:rgba(232,95,30,0.32);color:var(--orange);flex-direction:row;min-height:64px;padding:.85rem 1rem;gap:.65rem;}
+.location-card--cr:hover{background:linear-gradient(160deg,rgba(232,95,30,0.14),rgba(232,95,30,0.04));border-color:rgba(232,95,30,0.55);}
+.location-card--cr .ll-icon{color:var(--orange);}
+/* Game-select — mid-flow screen between landing and dashboard.
+   Two sections: a "start a new game" form card (selects + CTA), and
+   a grid of recent games. Cards mirror the landing-tile treatment
+   (hairline border, subtle hover lift) so the screens feel related. */
 #screen-game-select{flex:1;overflow-y:auto;}
-.gs-inner{max-width:700px;margin:0 auto;padding:2rem 1rem;}
-.games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem;}
-.game-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;cursor:pointer;transition:border-color .15s;}
-.game-card:hover{border-color:var(--red);}
-.game-card-id{font-family:var(--mono);font-size:1.1rem;font-weight:700;}
-.game-card-date{font-size:.8rem;color:var(--text-dim);margin:.25rem 0;}
-.game-card-actions{display:flex;gap:.4rem;margin-top:.75rem;}
-#screen-new-game{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;text-align:center;}
+.gs-inner{width:100%;max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem;}
+.gs-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.gs-header-left{display:flex;flex-direction:column;gap:.35rem;min-width:0;}
+.gs-kicker{font-size:.7rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted);}
+.gs-header-left h2{font-family:var(--display);font-weight:800;font-size:clamp(1.7rem,3.5vw,2.4rem);letter-spacing:.04em;line-height:1;margin:0;color:var(--text);}
+.gs-form-card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:1.4rem 1.4rem 1.5rem;display:flex;flex-direction:column;gap:1rem;margin-bottom:2rem;}
+.gs-form-card .field{margin-bottom:0;}
+.gs-form-card .select{max-width:none;}
+.gs-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;margin:.5rem 0 .75rem;}
+.gs-section-head .sidebar-title{margin-bottom:0;}
+.gs-section-count{font-family:var(--mono);font-size:.75rem;color:var(--text-muted);}
+.games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem;}
+.game-card{position:relative;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:1.05rem 1.15rem 1.1rem;display:flex;flex-direction:column;gap:.55rem;transition:border-color .15s,background .15s,transform .15s;}
+.game-card:hover{border-color:rgba(255,255,255,0.18);background:var(--surface2);transform:translateY(-1px);}
+.game-card-id{font-family:var(--mono);font-size:1.05rem;font-weight:600;color:var(--text);letter-spacing:.02em;}
+.game-card-date{font-size:.78rem;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+.game-card-meta{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;}
+.game-card-actions{display:flex;gap:.35rem;margin-top:.4rem;}
+.game-card-actions .btn{padding:.5rem .7rem;}
+.game-card-actions .btn-primary{flex:1;}
+.game-card-actions .btn-icon{padding:.5rem;}
+.game-card-actions .btn-icon .icon{width:16px;height:16px;}
+.gs-empty{padding:2rem 1rem;text-align:center;color:var(--text-muted);background:var(--surface);border:1px dashed var(--hairline);border-radius:var(--radius);}
+.gs-empty .icon{width:28px;height:28px;color:var(--text-muted);margin-bottom:.5rem;}
+.gs-empty p{color:var(--text-muted);font-size:.9rem;margin:0;}
+/* New-game · QR. Two-column grid (per mockup 06): left holds the
+   "game created" kicker, the call to hand out the code, two info cards
+   (Game ID + Join URL with a COPY button each), and a 3-button action
+   row. Right holds a big white-bg QR card with the "Scan to join" hint.
+   Collapses to a single column under 900px. */
+#screen-new-game{flex:1;display:flex;flex-direction:column;overflow-y:auto;}
+.ng-inner{width:100%;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 3rem;}
+.ng-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;}
+@media(max-width:900px){.ng-grid{grid-template-columns:1fr;gap:1.75rem;}}
+.ng-left{padding-right:.5rem;min-width:0;}
+.ng-kicker{font:700 .7rem/1 var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--green);margin-bottom:.5rem;}
+.ng-left h2{font-family:var(--display);font-weight:800;font-size:clamp(1.7rem,3.5vw,2.4rem);letter-spacing:.04em;line-height:1;margin:0 0 .6rem;color:var(--text);}
+.ng-subtitle{font:400 .9rem/1.55 var(--body);color:var(--text-dim);margin:0 0 1.4rem;max-width:460px;}
+.ng-info-card{background:var(--surface2);border:1px solid var(--hairline);border-radius:var(--radius);padding:.9rem 1.1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.75rem;}
+.ng-info-card .label{font:600 .62rem/1 var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.3rem;}
+.ng-info-card .value{font:600 1rem/1.2 var(--mono);color:var(--text);letter-spacing:.02em;word-break:break-all;}
+.ng-info-card .value.value-sm{font-size:.8rem;font-weight:500;max-width:320px;}
+.ng-copy{background:transparent;border:1px solid var(--hairline);color:var(--text-dim);border-radius:8px;padding:.5rem .75rem;font:600 .68rem/1 var(--body);letter-spacing:.08em;cursor:pointer;text-transform:uppercase;transition:color .15s,border-color .15s;flex-shrink:0;}
+.ng-copy:hover{color:var(--text);border-color:rgba(255,255,255,.18);}
+.ng-actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.5rem;}
+.ng-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:.9rem;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:2rem;}
+.ng-qr{width:280px;height:280px;background:#fff;border-radius:12px;padding:1.1rem;display:flex;align-items:center;justify-content:center;}
+.ng-qr img{max-width:100%;max-height:100%;display:block;}
+.ng-qr-hint{font:500 .75rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);}
 /* Dashboard — desktop-first layout. The GM is on a laptop or desktop,
    so the default treats 1280px+ as primary and progressively collapses.
    The right panel is wider on bigger screens (380px @ 1280+, 320px @
@@ -61,10 +129,16 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 @media(max-width:900px){
   #dash-panel{border-left:0;border-top:1px solid var(--border);max-height:50vh;}
 }
-.team-chip-gm{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .6rem .3rem .35rem;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:600;font-size:.85rem;text-transform:uppercase;flex-shrink:0;}
-.team-chip-selfie{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0;}
-.team-chip-gm:hover{border-color:var(--text-dim);}
-.team-chip-gm.active{border-color:var(--red);background:rgba(212,43,43,.1);color:var(--red-light);}
+/* Team chip — mockup 07 _shared.css numbers. The stripe is a 4px-wide
+   inline element (sibling, NOT ::before), full-height of the chip, with
+   its own 2px radius. Padding is asymmetric: 8px on the right, 6px on
+   the left so the stripe sits flush against the chip edge. */
+.team-chip-gm{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 6px;background:var(--surface);border:1px solid var(--hairline);border-radius:10px;position:relative;min-width:150px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;}
+.team-chip-gm:hover{border-color:rgba(255,255,255,.18);}
+.team-chip-gm.active{background:var(--surface2);border-color:rgba(255,255,255,.18);}
+.team-chip-selfie{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--hairline);flex-shrink:0;}
+.tname{font:700 12px/1 var(--body);letter-spacing:.03em;text-transform:uppercase;color:var(--text);}
+.tscore-line{font:500 11px/1.3 var(--mono);color:var(--text-dim);margin-top:2px;}
 #dash-panel .tabs{padding:0 .75rem;margin-bottom:0;flex-shrink:0;}
 .panel-content{flex:1;overflow:hidden;display:none;}
 .panel-content.active{display:flex;flex-direction:column;}
@@ -102,114 +176,196 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
 <!-- LANDING -->
 <div id="screen-landing" style="display:none;">
-  <div style="position:absolute;top:.75rem;right:.75rem;display:flex;gap:.5rem;align-items:center;">
+  <div style="position:absolute;top:.75rem;right:.75rem;display:flex;gap:.75rem;align-items:center;">
     <span id="landing-version" style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted);"></span>
-    <button class="btn btn-ghost btn-sm" id="gm-lang-btn3" onclick="cycleGmLang()">DE</button>
+    <!-- 5-segment language picker. setGmLang(lang) is the single entry
+         point — applyGmLang() paints `.is-active` on whichever segment
+         matches the current gmLang. -->
+    <div class="ll-langs" id="ll-langs">
+      <button type="button" class="ll-lang" data-lang="de" onclick="setGmLang('de')">DE</button>
+      <button type="button" class="ll-lang" data-lang="en" onclick="setGmLang('en')">EN</button>
+      <button type="button" class="ll-lang" data-lang="fr" onclick="setGmLang('fr')">FR</button>
+      <button type="button" class="ll-lang" data-lang="it" onclick="setGmLang('it')">IT</button>
+      <button type="button" class="ll-lang" data-lang="es" onclick="setGmLang('es')">ES</button>
+    </div>
   </div>
   <div class="landing-logo">
     <img src="/assets/logo.png" class="logo" alt="AR">
     <h1><span>MiSSi</span><span>ONS</span></h1>
-    <p id="ll-select">Standort wählen</p>
+    <p id="ll-tagline">Adventurerooms · Spielleiter</p>
   </div>
-  <div id="location-grid" class="location-grid"></div>
+  <!-- Two sections: locations first, CityRush below. The CR section is
+       hidden by loadLanding() when no CR modes exist. Section titles
+       are paint-only via the GMT dict; the grids are populated by
+       loadLanding() (location tiles) / fixed markup (the CR tile). -->
+  <div class="ll-section" id="ll-section-loc">
+    <div class="ll-section-title" id="ll-pick">Standort wählen</div>
+    <div id="location-grid" class="location-grid"></div>
+  </div>
+  <div class="ll-section" id="ll-section-cr" style="display:none;">
+    <div class="ll-section-title" id="ll-cr-pick">Oder eine CityRush-Route</div>
+    <div class="location-grid">
+      <div class="location-card location-card--cr" id="ll-cr-tile" onclick="selectCityRushLocation()" style="grid-column:1/-1;">
+        <div class="ll-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l-3 8h3l-2 8 7-10h-4l3-6z"/></svg></div>
+        <div>CityRush</div>
+      </div>
+    </div>
+  </div>
   <button class="btn btn-ghost btn-sm" onclick="showSettingsGate()">⚙ <span id="ll-settings">Einstellungen</span></button>
 </div>
 
 <!-- GAME SELECT -->
 <div id="screen-game-select" style="display:none;flex:1;flex-direction:column;overflow-y:auto;">
   <div class="gs-inner">
-    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-landing')">← <span id="gs-back">Zurück</span></button>
-      <h2 id="gs-location-name"></h2>
+    <div class="gs-header">
+      <div class="gs-header-left">
+        <span class="gs-kicker" id="gs-kicker">Standort</span>
+        <h2 id="gs-location-name"></h2>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-landing')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        <span id="gs-back">Zurück</span>
+      </button>
     </div>
-    <div id="mode-select-wrap" style="margin-bottom:1rem;">
-      <label class="label" id="gs-mode-label">Spielmodus</label>
-      <select id="mode-select" class="select" style="max-width:300px;"></select>
+    <div class="gs-form-card">
+      <div class="field" id="mode-select-wrap">
+        <label class="label" id="gs-mode-label" for="mode-select">Spielmodus</label>
+        <select id="mode-select" class="select"></select>
+      </div>
+      <div class="field" id="cr-mode-select-wrap">
+        <label class="label" id="gs-cr-mode-label" for="cr-mode-select">CityRush-Modus</label>
+        <select id="cr-mode-select" class="select">
+          <option value="">— Modus wählen —</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" onclick="createNewGame()" id="btn-new-game">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span id="gs-new">Neues Spiel</span>
+      </button>
     </div>
-    <div id="cr-mode-select-wrap" style="margin-bottom:1rem;">
-      <label class="label">CityRush (optional)</label>
-      <select id="cr-mode-select" class="select" style="max-width:300px;">
-        <option value="">— Kein CityRush —</option>
-      </select>
+    <div class="gs-section-head">
+      <div class="sidebar-title" id="gs-recent">Letzte Spiele</div>
+      <span class="gs-section-count" id="gs-recent-count"></span>
     </div>
-    <button class="btn btn-primary btn-full" onclick="createNewGame()" id="btn-new-game" style="margin-bottom:1.5rem;">＋ <span id="gs-new">Neues Spiel</span></button>
-    <div class="divider"></div>
-    <div class="sidebar-title" id="gs-recent">Letzte Spiele</div>
-    <div id="games-grid" class="games-grid" style="margin-top:.5rem;"></div>
+    <div id="games-grid" class="games-grid"></div>
   </div>
 </div>
 
-<!-- NEW GAME QR -->
-<div id="screen-new-game" style="display:none;">
-  <img src="/assets/logo.png" class="logo" alt="AR">
-  <div>
-    <h2 id="ng-title">Neues Spiel</h2>
-    <p>ID: <span id="qr-game-id" style="font-family:var(--mono);color:var(--text-dim);"></span></p>
-  </div>
-  <div class="qr-box"><img id="qr-img" width="240" alt="QR"></div>
-  <p style="font-size:.8rem;font-family:var(--mono);color:var(--text-dim);" id="join-url-display"></p>
-  <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;">
-    <button class="btn btn-ghost" onclick="goToDashboardBack()">← <span id="ng-back">Zurück</span></button>
-    <button class="btn btn-ghost" id="ng-qr-download" onclick="downloadQRWithTemplate()">⬇ QR</button>
-    <button class="btn btn-primary" onclick="openDashboard(currentGameId)"><span id="ng-open">Dashboard öffnen</span> →</button>
+<!-- NEW GAME QR — two-column layout (mockup 06). Keep the existing
+     element IDs that the create-game flow writes to: qr-game-id, qr-img,
+     join-url-display. ng-copy buttons read those values straight from
+     the DOM, so we don't have to thread the game id into the handler. -->
+<div id="screen-new-game" style="display:none;flex:1;flex-direction:column;overflow-y:auto;">
+  <div class="ng-inner">
+    <div class="ng-grid">
+      <div class="ng-left">
+        <div class="ng-kicker" id="ng-kicker">Spiel erstellt</div>
+        <h2 id="ng-title">Übergib den Code</h2>
+        <p class="ng-subtitle" id="ng-subtitle">Spieler treten dem Spiel bei, indem sie den QR-Code scannen oder den Link auf ihrem Handy öffnen.</p>
+
+        <div class="ng-info-card">
+          <div style="min-width:0;">
+            <div class="label" id="ng-game-id-label">Spiel-ID</div>
+            <div class="value" id="qr-game-id"></div>
+          </div>
+          <button type="button" class="ng-copy" onclick="copyToClipboard(document.getElementById('qr-game-id').textContent, this)"><span id="ng-copy-1">Kopieren</span></button>
+        </div>
+
+        <div class="ng-info-card">
+          <div style="min-width:0;">
+            <div class="label" id="ng-join-url-label">Beitrittslink</div>
+            <div class="value value-sm" id="join-url-display"></div>
+          </div>
+          <button type="button" class="ng-copy" onclick="copyToClipboard(document.getElementById('join-url-display').textContent, this)"><span id="ng-copy-2">Kopieren</span></button>
+        </div>
+
+        <div class="ng-actions">
+          <button class="btn btn-ghost" onclick="goToDashboardBack()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            <span id="ng-back">Zurück</span>
+          </button>
+          <button class="btn btn-ghost" id="ng-qr-download" onclick="downloadQRWithTemplate()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span id="ng-qr-dl">QR</span>
+          </button>
+          <button class="btn btn-primary" onclick="openDashboard(currentGameId)">
+            <span id="ng-open">Dashboard öffnen</span>
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="ng-qr-wrap">
+        <div class="ng-qr"><img id="qr-img" alt="QR"></div>
+        <div class="ng-qr-hint" id="ng-qr-hint">Zum Beitreten scannen</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- DASHBOARD -->
 <div id="screen-dashboard" style="display:none;">
-  <div id="dash-topbar" class="topbar">
-    <div class="topbar-left">
-      <button class="btn btn-ghost btn-sm" onclick="goToDashboardBack()">← <span id="db-games">Spiele</span></button>
-      <img src="/assets/logo.png" class="logo-sm" alt="AR">
-      <span style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;color:var(--red);">MiSSiONS</span>
+  <div id="dash-topbar" class="dt-topbar">
+    <div class="dt-topbar__left">
+      <button class="btn btn-ghost btn-sm dt-topbar__back" onclick="goToDashboardBack()">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        <span id="db-games">Spiele</span>
+      </button>
+      <div class="dt-wordmark"><span class="ar">Adventurerooms</span>MiSSiONS</div>
     </div>
-    <div class="topbar-center">
-      <div>
-        <div class="timer-display" id="gm-timer">--:--</div>
-        <div class="timer-controls">
-          <button class="btn btn-success btn-sm" id="btn-timer-start" onclick="timerAction('start')">▶ <span id="tb-start">Start</span></button>
-          <button class="btn btn-ghost btn-sm" id="btn-timer-pause" onclick="timerAction('pause')" style="display:none;">⏸ <span id="tb-pause">Pause</span></button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleTimerAdjust()">⏱ <span id="tb-adjust">Timer</span></button>
+    <div class="timer-block">
+      <div class="timer-display" id="gm-timer">--<span class="colon">:</span>--</div>
+      <div class="timer-controls">
+        <button class="btn btn-success btn-sm" id="btn-timer-start" onclick="timerAction('start')">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+          <span id="tb-start">Start</span>
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btn-timer-pause" onclick="timerAction('pause')" style="display:none;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          <span id="tb-pause">Pause</span>
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleTimerAdjust()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          <span id="tb-adjust">Timer</span>
+        </button>
+      </div>
+      <!-- Timer adjust panel — opens as a dropdown anchored below the
+           .timer-block. CSS handles positioning; we only flip the inline
+           display here to show/hide. -->
+      <div id="timer-adjust-panel" style="display:none;">
+        <div style="display:flex;gap:.3rem;justify-content:center;margin-bottom:.4rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="adjustTimer(60)">+1m</button>
+          <button class="btn btn-ghost btn-sm" onclick="adjustTimer(120)">+2m</button>
+          <button class="btn btn-ghost btn-sm" onclick="adjustTimer(300)">+5m</button>
+          <button class="btn btn-ghost btn-sm" onclick="adjustTimer(600)">+10m</button>
         </div>
-        <!-- Timer adjust panel -->
-        <div id="timer-adjust-panel" style="display:none;margin-top:.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;text-align:center;">
-          <div style="display:flex;gap:.3rem;justify-content:center;margin-bottom:.4rem;flex-wrap:wrap;">
-            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(60)">+1m</button>
-            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(120)">+2m</button>
-            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(300)">+5m</button>
-            <button class="btn btn-ghost btn-sm" onclick="adjustTimer(600)">+10m</button>
-          </div>
-          <div style="display:flex;gap:.3rem;justify-content:center;margin-bottom:.6rem;flex-wrap:wrap;">
-            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-60)">−1m</button>
-            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-120)">−2m</button>
-            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-300)">−5m</button>
-            <button class="btn btn-danger btn-sm" onclick="adjustTimer(-600)">−10m</button>
-          </div>
-          <div style="display:flex;gap:.4rem;align-items:center;justify-content:center;">
-            <input id="custom-timer-mins" type="number" class="input" placeholder="min" min="1" max="999" style="width:70px;text-align:center;">
-            <button class="btn btn-ghost btn-sm" onclick="adjustTimerCustom(1)" id="btn-add-custom">＋ Add</button>
-            <button class="btn btn-danger btn-sm" onclick="adjustTimerCustom(-1)" id="btn-sub-custom">− Sub</button>
-          </div>
+        <div style="display:flex;gap:.3rem;justify-content:center;margin-bottom:.6rem;flex-wrap:wrap;">
+          <button class="btn btn-danger btn-sm" onclick="adjustTimer(-60)">−1m</button>
+          <button class="btn btn-danger btn-sm" onclick="adjustTimer(-120)">−2m</button>
+          <button class="btn btn-danger btn-sm" onclick="adjustTimer(-300)">−5m</button>
+          <button class="btn btn-danger btn-sm" onclick="adjustTimer(-600)">−10m</button>
+        </div>
+        <div style="display:flex;gap:.4rem;align-items:center;justify-content:center;">
+          <input id="custom-timer-mins" type="number" class="input" placeholder="min" min="1" max="999" style="width:70px;text-align:center;">
+          <button class="btn btn-ghost btn-sm" onclick="adjustTimerCustom(1)" id="btn-add-custom">＋ Add</button>
+          <button class="btn btn-danger btn-sm" onclick="adjustTimerCustom(-1)" id="btn-sub-custom">− Sub</button>
         </div>
       </div>
     </div>
-    <div class="topbar-right">
-      <span style="font-family:var(--mono);font-size:.8rem;color:var(--text-muted);" id="gm-game-id-display"></span>
-      <!-- Topbar action buttons use stroked SVG line icons; titles carry
-           the label for hover/SR. QR / Export / Settings cog / Lang
-           keep their existing onclick handlers and IDs. -->
-      <button class="btn btn-ghost btn-sm" onclick="showQRModal()" title="QR">
+    <div class="dt-topbar__actions">
+      <span class="dt-topbar__gameid" id="gm-game-id-display"></span>
+      <!-- Mockup-07 action chips: 36px squares with hairline + faint fill.
+           Same onclick handlers and IDs as before. -->
+      <button class="icon-btn" onclick="showQRModal()" title="QR" aria-label="QR">
         <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="14" y1="16" x2="14" y2="14"/></svg>
       </button>
-      <!-- Export: zip of all accepted media + optional photo-collage MP4.
-           Enabled only when the game has ended (set by openDashboard). -->
-      <button class="btn btn-ghost btn-sm" id="btn-game-export" onclick="showGameExportModal()" disabled title="">
+      <button class="icon-btn" id="btn-game-export" onclick="showGameExportModal()" disabled title="" aria-label="Export">
         <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
       </button>
-      <button class="btn btn-ghost btn-sm" onclick="showSettingsGate()" title="Settings">
+      <button class="icon-btn" onclick="showSettingsGate()" title="Settings" aria-label="Settings">
         <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
-      <button class="btn btn-ghost btn-sm" id="gm-lang-btn" onclick="cycleGmLang()" title="Language">DE</button>
+      <button class="icon-btn" id="gm-lang-btn" onclick="cycleGmLang()" title="Language" aria-label="Language">DE</button>
     </div>
   </div>
   <div id="dash-teams">
@@ -219,13 +375,13 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   <div id="dash-main">
     <div id="no-team-selected" class="empty"><div class="empty-icon">👥</div><p id="db-select-team">Team auswählen</p></div>
     <div id="team-detail" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:.75rem;min-width:0;">
-          <img id="detail-team-selfie" alt="" style="display:none;width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--border);cursor:zoom-in;flex-shrink:0;" onclick="openGmSelfieLightbox(this.src)">
-          <h2 id="detail-team-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;"></h2>
+      <div class="team-detail-head">
+        <div class="left">
+          <img id="detail-team-selfie" class="selfie" alt="" style="display:none;" onclick="openGmSelfieLightbox(this.src)">
+          <h2 id="detail-team-name" class="name"></h2>
         </div>
-        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
-          <span class="badge badge-orange" id="detail-team-score" style="font-size:.95rem;padding:.25rem .75rem;"></span>
+        <div class="right">
+          <span class="score-pill" id="detail-team-score"></span>
           <button class="btn btn-ghost btn-sm" onclick="openFreezeModal()" id="btn-freeze-team" title="Team einfrieren">❄ <span id="btn-freeze-team-lbl">Freeze</span></button>
           <button class="btn btn-ghost btn-sm" onclick="thawTeam()" id="btn-thaw-team" style="display:none;" title="Team auftauen">🔥 <span id="btn-thaw-team-lbl">Auftauen</span></button>
         </div>
@@ -237,13 +393,13 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
     <div class="tabs">
       <button class="tab active" onclick="switchPanel('chat',this)" id="tab-chat" type="button" style="position:relative;">Chat<span id="gm-chat-tab-dot" style="display:none;position:absolute;top:2px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px var(--bg2);"></span></button>
       <button class="tab" onclick="switchPanel('broadcast',this)" id="tab-broadcast">Broadcast</button>
-      <button class="tab" onclick="switchPanel('crmap',this)" id="tab-crmap">🗺️</button>
+      <button class="tab" onclick="switchPanel('crmap',this)" id="tab-crmap"><span id="tab-map-label">Karte</span></button>
     </div>
     <div id="panel-chat" class="panel-content active">
       <div id="gm-chat-messages" class="chat-messages" style="flex:1;"></div>
       <div class="chat-input-row">
-        <input id="gm-chat-input" class="input" placeholder="Nachricht…" style="flex:1;" onkeydown="if(event.key==='Enter')sendGmChat()">
-        <button class="btn btn-primary btn-sm" onclick="sendGmChat()" id="db-send">Senden</button>
+        <input id="gm-chat-input" class="input" placeholder="Nachricht…" onkeydown="if(event.key==='Enter')sendGmChat()">
+        <button class="chat-send" onclick="sendGmChat()" id="db-send" aria-label="Send">→</button>
       </div>
     </div>
     <div id="panel-broadcast" class="panel-content">
@@ -296,67 +452,136 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
 <!-- SETTINGS -->
 <div id="screen-settings">
-  <div class="topbar">
-    <div class="topbar-left">
-      <button class="btn btn-ghost btn-sm" onclick="goBack()">← <span id="s-back">Zurück</span></button>
-      <span style="font-family:var(--heading);font-size:1.3rem;letter-spacing:.1em;" id="s-title">EINSTELLUNGEN</span>
+  <div class="settings-shell">
+    <!-- Topbar: back / Settings title / spacer / Unlocked pill / manuals + lang chips -->
+    <div class="settings-topbar">
+      <button class="btn btn-ghost btn-sm" onclick="goBack()">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        <span id="s-back">Zurück</span>
+      </button>
+      <h1 id="s-title">Einstellungen</h1>
+      <span class="spacer"></span>
+      <span class="pill pill--green" id="s-unlocked">Entsperrt</span>
     </div>
-    <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="showManualsModal()" id="btn-manuals" title="">📖</button>
-      <button class="btn btn-ghost btn-sm" id="gm-lang-btn2" onclick="cycleGmLang()">DE</button>
-    </div>
-  </div>
-  <div style="flex:1;overflow-y:auto;">
-    <div class="page" style="max-width:900px;">
-      <!-- Top-level settings tabs. MiSSiONS + CityRush used to sit here as
-           peer tabs; they're now folded into a single "Games" tab with a
-           sub-tab strip that appears below when Games is active. The Games
-           parent button (id=st-games-btn) wraps an emoji + a translatable
-           inner <span id="st-games">; applyGmLang only touches the span so
-           the emoji stays put. -->
-      <div class="tabs" id="settings-tabs" style="flex-wrap:wrap;">
-        <button class="tab active" onclick="switchSettingsTab('general',this)" id="st-general">Allgemein</button>
-        <button class="tab" onclick="switchSettingsTab('locations',this)" id="st-locations">Standorte</button>
-        <button class="tab" onclick="switchSettingsTab('games',this)" id="st-games-btn">🎮 <span id="st-games">Spiele</span></button>
-        <button class="tab" onclick="switchSettingsTab('rules',this)" id="st-rules">Regeln</button>
-        <button class="tab" onclick="switchSettingsTab('template',this)" id="st-template">QR-Vorlage</button>
-        <button class="tab" onclick="switchSettingsTab('security',this)" id="st-security">Sicherheit</button>
-        <button class="tab" onclick="switchSettingsTab('updates',this)" id="st-updates">Updates</button>
-      </div>
-      <!-- Games sub-tab strip. Hidden unless Games is the active top-level
-           tab. The sub-tabs reuse the existing st-missions / st-cityrush
-           IDs so the existing GMT translations apply unchanged. -->
-      <div class="tabs" id="settings-subtabs" style="display:none;margin-top:.5rem;padding-left:.5rem;border-left:2px solid var(--orange);">
-        <button class="tab active" onclick="switchGameSubTab('missions',this)" id="st-missions">MiSSiONS</button>
-        <button class="tab" onclick="switchGameSubTab('cityrush',this)" id="st-cityrush">🏃 CityRush</button>
-      </div>
 
-      <!-- General -->
+    <!-- Sidebar: App group + Games group, items map to existing #stab-* panels -->
+    <aside class="settings-side">
+      <div class="group-label" id="sg-app">App</div>
+      <button class="item is-active" onclick="switchSettingsTab('general',this)" id="st-general">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Allgemein</span>
+      </button>
+      <button class="item" onclick="switchSettingsTab('template',this)" id="st-template">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>QR-Vorlage</span>
+      </button>
+      <button class="item" onclick="switchSettingsTab('security',this)" id="st-security">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Sicherheit</span>
+      </button>
+      <button class="item" onclick="switchSettingsTab('updates',this)" id="st-updates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+        <span>Updates</span>
+      </button>
+      <button class="item" onclick="switchSettingsTab('manuals',this)" id="st-manuals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Handbücher</span>
+      </button>
+
+      <div class="group-label" id="sg-games">Spiele</div>
+      <button class="item" onclick="switchSettingsTab('locations',this)" id="st-locations">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>Standorte</span>
+      </button>
+      <button class="item is-sub" onclick="switchSettingsTab('missions',this)" id="st-missions">MiSSiONS</button>
+      <button class="item is-sub" onclick="switchSettingsTab('cityrush',this)" id="st-cityrush">CityRush</button>
+      <button class="item" onclick="switchSettingsTab('rules',this)" id="st-rules">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+        <span>Regeln</span>
+      </button>
+    </aside>
+
+    <main class="settings-main">
+      <!-- General — mockup 08 form-grid: label cell (200px) + control cell (1fr).
+           All 4 fields per mockup: Public URL, Timeout (lang-tabbed), GitHub repo URL,
+           Sound on accept. Then the per-location-language note, then Save/Cancel. -->
       <div id="stab-general" class="stab active">
-        <div class="card mb-2">
-          <h3 style="margin-bottom:1rem;" id="s-gen-title">Allgemeine Einstellungen</h3>
-          <div class="field" data-tip="public-url">
-            <label class="label" id="s-url-label">Öffentliche URL (für QR-Codes)</label>
-            <div style="display:flex;gap:.5rem;">
-              <input id="s-public-url" class="input" placeholder="https://xxx.trycloudflare.com" data-tip="public-url">
-              <button class="btn btn-ghost btn-sm" onclick="detectTunnel()">🔍 <span id="s-detect">Erkennen</span></button>
-            </div>
-            <small id="s-url-hint">Starte start-tunnel-windows.bat, dann klicke Erkennen.</small>
+        <h2 id="s-gen-title">Allgemein</h2>
+        <p class="subtitle" id="s-gen-subtitle">App-weite Konfiguration. Die meisten Teams ändern diese Einstellungen nur einmal beim Setup.</p>
+
+        <div class="form-grid">
+
+          <div class="label">
+            <span id="s-url-label">Öffentliche URL</span>
+            <span class="help" id="s-url-help">Der Cloudflare-Tunnel, über den Spieler beitreten. „Erkennen" liest <code>tunnel-url.txt</code>.</span>
           </div>
-          <div class="field" data-tip="timeout">
-            <label class="label" style="display:flex;justify-content:space-between;" data-tip="timeout">
-              <span id="s-timeout-label">Timeout-Nachricht</span>
-              <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.15rem .4rem;" onclick="autoTranslateTimeout()">🌐 Auto</button>
-            </label>
-            <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:.5rem;">
-              <div class="field" style="margin:0;"><label class="label">DE</label><textarea id="s-timeout-de" class="textarea" rows="2"></textarea></div>
-              <div class="field" style="margin:0;"><label class="label">EN</label><textarea id="s-timeout-en" class="textarea" rows="2"></textarea></div>
-              <div class="field" style="margin:0;"><label class="label">FR</label><textarea id="s-timeout-fr" class="textarea" rows="2"></textarea></div>
-              <div class="field" style="margin:0;"><label class="label">IT</label><textarea id="s-timeout-it" class="textarea" rows="2"></textarea></div>
-              <div class="field" style="margin:0;"><label class="label">ES</label><textarea id="s-timeout-es" class="textarea" rows="2"></textarea></div>
+          <div class="control" data-tip="public-url">
+            <div class="row">
+              <input id="s-public-url" class="input" type="text" placeholder="https://xxx.trycloudflare.com">
+              <button class="btn" onclick="detectTunnel()"><span id="s-detect">Erkennen</span></button>
             </div>
           </div>
-          <button class="btn btn-primary" onclick="saveGeneralSettings()" id="s-save">Speichern</button>
+
+          <div class="label">
+            <span id="s-timeout-label">Timeout-Nachricht</span>
+            <span class="help" id="s-timeout-help">Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.</span>
+          </div>
+          <div class="control" data-tip="timeout">
+            <div class="lang-strip" data-prefix="timeout">
+              <span class="lang-tab is-active" data-lang="de" onclick="switchLangPanel('timeout','de',this)"><span class="tick" style="display:none;">✓</span>DE</span>
+              <span class="lang-tab" data-lang="en" onclick="switchLangPanel('timeout','en',this)"><span class="tick" style="display:none;">✓</span>EN</span>
+              <span class="lang-tab" data-lang="fr" onclick="switchLangPanel('timeout','fr',this)"><span class="tick" style="display:none;">✓</span>FR</span>
+              <span class="lang-tab" data-lang="it" onclick="switchLangPanel('timeout','it',this)"><span class="tick" style="display:none;">✓</span>IT</span>
+              <span class="lang-tab" data-lang="es" onclick="switchLangPanel('timeout','es',this)"><span class="tick" style="display:none;">✓</span>ES</span>
+            </div>
+            <div class="lang-panels" data-prefix="timeout">
+              <div class="lang-panel is-active" data-lang="de"><textarea id="s-timeout-de" class="textarea" rows="3" oninput="markLangTabFilled('timeout','de',!!this.value.trim())"></textarea></div>
+              <div class="lang-panel" data-lang="en"><textarea id="s-timeout-en" class="textarea" rows="3" oninput="markLangTabFilled('timeout','en',!!this.value.trim())"></textarea></div>
+              <div class="lang-panel" data-lang="fr"><textarea id="s-timeout-fr" class="textarea" rows="3" oninput="markLangTabFilled('timeout','fr',!!this.value.trim())"></textarea></div>
+              <div class="lang-panel" data-lang="it"><textarea id="s-timeout-it" class="textarea" rows="3" oninput="markLangTabFilled('timeout','it',!!this.value.trim())"></textarea></div>
+              <div class="lang-panel" data-lang="es"><textarea id="s-timeout-es" class="textarea" rows="3" oninput="markLangTabFilled('timeout','es',!!this.value.trim())"></textarea></div>
+            </div>
+          </div>
+
+          <div class="label">
+            <span id="s-gh-label">GitHub-Repo-URL</span>
+            <span class="help" id="s-gh-help">Wird vom In-App-Updater für <code>git pull</code> und das Versions-Badge verwendet.</span>
+          </div>
+          <div class="control">
+            <input id="s-github-url" class="input" type="text" placeholder="https://github.com/user/missions-app.git">
+          </div>
+
+          <div class="label">
+            <span id="s-sound-label">Ton bei Annahme</span>
+            <span class="help" id="s-sound-help">Spielt einen kurzen Ton, wenn der GM eine Einreichung annimmt.</span>
+          </div>
+          <div class="control">
+            <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'s-sound-checkbox')">
+              <div>
+                <div style="font:600 13px/1 var(--body);color:var(--text);" id="s-sound-on">Aktiviert</div>
+                <div style="font:400 11px/1.3 var(--body);color:var(--text-muted);margin-top:2px;" id="s-sound-perm">Browser-Berechtigung beim ersten Klick erforderlich.</div>
+              </div>
+              <div class="toggle" id="s-sound-toggle" onclick="event.stopPropagation();toggleSwitch(this,'s-sound-checkbox');"></div>
+            </div>
+            <input type="checkbox" id="s-sound-checkbox" style="display:none;" onchange="localStorage.setItem('gm_sound_accept', this.checked ? '1' : '0');">
+          </div>
+
+        </div>
+
+        <!-- Mockup 08 settings-note: per-location default language reminder -->
+        <div class="settings-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <div class="note-title" id="s-loc-lang-title">Standardsprache wird <em>pro Standort</em> gesetzt</div>
+            <div class="note-body" id="s-loc-lang-body">
+              Jeder Standort wählt seine eigene Standardsprache (ein Veranstaltungsort in Genf nutzt FR, einer in Zürich DE). Festlegen unter <strong>Spiele → Standorte → [Standort]</strong>. Die App-weite Standardsprache wurde entfernt.
+            </div>
+          </div>
+        </div>
+
+        <div class="save-row">
+          <button class="btn" onclick="goBack()" id="s-cancel">Abbrechen</button>
+          <button class="btn btn-primary" onclick="saveGeneralSettings()" id="s-save">Änderungen speichern</button>
         </div>
       </div>
 
@@ -456,19 +681,40 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
         </div>
       </div>
 
-      <!-- Updates -->
+      <!-- Updates — GitHub URL field moved to General (mockup 08), so this
+           panel now just hosts the update trigger + log. -->
       <div id="stab-updates" class="stab">
         <div class="card mb-2">
           <h3 style="margin-bottom:1rem;" id="s-update-title">App aktualisieren</h3>
-          <div class="field">
-            <label class="label" id="s-github-label">GitHub Repository URL</label>
-            <input id="s-github-url" class="input" placeholder="https://github.com/user/missions-app.git" value="https://github.com/darkhousemaster-hue/missions-app.git">
-          </div>
-          <button class="btn btn-primary" onclick="saveGithubUrl()" id="s-save-github">Speichern</button>
-          <div class="divider" style="margin:1rem 0;"></div>
-          <button class="btn btn-secondary btn-full" onclick="runUpdate()" id="btn-update" id="s-update-btn">⬆ <span id="s-update-btn-label">Jetzt aktualisieren</span></button>
+          <p style="margin-bottom:1rem;font-size:.85rem;color:var(--text-dim);" id="s-update-hint">Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe <strong style="color:var(--text);">Allgemein</strong>) und startet den Server neu.</p>
+          <button class="btn btn-secondary btn-full" onclick="runUpdate()" id="btn-update">⬆ <span id="s-update-btn-label">Jetzt aktualisieren</span></button>
           <div id="update-log" style="margin-top:.75rem;font-family:var(--mono);font-size:.75rem;color:var(--text-dim);white-space:pre-wrap;max-height:220px;overflow-y:auto;background:var(--bg);padding:.5rem;border-radius:var(--radius);border:1px solid var(--border);display:none;"></div>
         </div>
+      </div>
+
+      <!-- Manuals — language-filtered PDF list. The MANUALS manifest in
+           loadManualsList() is empty for now; once we author the PDFs in
+           public/manuals/, add their { lang, title, file, size } entries
+           and they render automatically. -->
+      <div id="stab-manuals" class="stab">
+        <h2 id="s-manuals-title">Handbücher</h2>
+        <p class="subtitle" id="s-manuals-subtitle">Lade hier die PDF-Handbücher in deiner Sprache herunter.</p>
+        <div class="form-grid">
+          <div class="label">
+            <span id="s-manuals-lang">Sprache</span>
+            <span class="help" id="s-manuals-lang-help">Nur Handbücher in dieser Sprache anzeigen.</span>
+          </div>
+          <div class="control">
+            <select id="manuals-lang-filter" class="select" onchange="loadManualsList()" style="max-width:240px;">
+              <option value="de">Deutsch</option>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+              <option value="it">Italiano</option>
+              <option value="es">Español</option>
+            </select>
+          </div>
+        </div>
+        <div id="manuals-list" style="margin-top:24px;max-width:860px;"></div>
       </div>
 
       <!-- CityRush -->
@@ -515,7 +761,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
           <p id="sec-msg" style="margin-top:.5rem;font-size:.85rem;"></p>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </div>
 </div><!-- #app -->
@@ -652,7 +898,7 @@ const GMT={
   'tip-cr-answer':'Korrekte Antwort(en) — Vergleich ist tolerant gegenüber Groß-/Kleinschreibung und Leerzeichen.',
   'tip-cr-hint':'Optionaler Text, der angezeigt wird, solange die Spieler noch zum Ziel laufen.',
   'tip-cr-hide-until-arrival':'Beschreibung und Aufgabe werden erst nach Ankunft am Ziel angezeigt.',
-  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','db-send':'Senden','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemeine Einstellungen','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','updating':'Aktualisiere…','selfie-uploaded':'Selfie hochgeladen',
+  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-pick':'Standort wählen','ll-cr-pick':'Oder eine CityRush-Route','ll-tagline':'Adventurerooms · Spielleiter','ll-empty':'Keine Standorte.','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-cr-mode-label':'CityRush-Modus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','gs-new-cr':'CityRush starten','gs-kicker-loc':'Standort','gs-kicker-cr':'CityRush','gs-cr-pick':'Modus wählen','gs-open':'Öffnen','gs-st-ended':'beendet','gs-st-playing':'läuft','gs-st-waiting':'wartet','gs-none':'Noch keine Spiele.','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-kicker':'Spiel erstellt','ng-title':'Übergib den Code','ng-subtitle':'Spieler treten dem Spiel bei, indem sie den QR-Code scannen oder den Link auf ihrem Handy öffnen. Sie wählen einen Teamnamen und machen ein Selfie — sobald sie drin sind, erscheinen sie im Dashboard.','ng-game-id-label':'Spiel-ID','ng-join-url-label':'Beitrittslink','ng-qr-hint':'Zum Beitreten scannen','ng-qr-dl':'QR','ng-copy-1':'Kopieren','ng-copy-2':'Kopieren','ng-copied':'Kopiert!','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','tab-map-label':'Karte','chat-reply-to':'Antwort an','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemein','s-gen-subtitle':'App-weite Konfiguration. Die meisten Teams ändern diese Einstellungen nur einmal beim Setup.','s-unlocked':'Entsperrt','sg-app':'App','sg-games':'Spiele','s-url-help':'Der Cloudflare-Tunnel, über den Spieler beitreten. „Erkennen" liest tunnel-url.txt.','s-timeout-help':'Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.','s-gh-label':'GitHub-Repo-URL','s-gh-help':'Wird vom In-App-Updater für git pull und das Versions-Badge verwendet.','s-sound-label':'Ton bei Annahme','s-sound-help':'Spielt einen kurzen Ton, wenn der GM eine Einreichung annimmt.','s-sound-on':'Aktiviert','s-sound-perm':'Browser-Berechtigung beim ersten Klick erforderlich.','s-loc-lang-title':'Standardsprache wird <em>pro Standort</em> gesetzt','s-cancel':'Abbrechen','st-manuals':'Handbücher','s-manuals-title':'Handbücher','s-manuals-subtitle':'Lade hier die PDF-Handbücher in deiner Sprache herunter.','s-manuals-lang':'Sprache','s-manuals-lang-help':'Nur Handbücher in dieser Sprache anzeigen.','no-manuals-yet':'Noch keine Handbücher in dieser Sprache verfügbar.','s-update-hint':'Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe Allgemein) und startet den Server neu.','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','updating':'Aktualisiere…','selfie-uploaded':'Selfie hochgeladen',
   // ── Settings UI fallbacks ─────────────────────────────────────────────────
   'no-tunnel':'Kein Tunnel gefunden.','mode-placeholder':'z.B. ADVANCED',
   'location-label':'Standort','add-loc':'Standort hinzufügen','edit-loc':'Standort bearbeiten',
@@ -707,14 +953,14 @@ const GMT={
   'export-collage-btn':'Foto-Collage rendern',
   'export-rendering':'Wird gerendert…','export-done':'Fertig — Download startet…',
   // Submission review buttons (on each mission card)
-  'accept-btn':'Annehmen','reject-btn':'Ablehnen',
+  'accept-btn':'Annehmen','pill-pending':'Ausstehend','pill-done':'Erledigt','pill-rejected':'Abgelehnt','pill-open':'Offen','pill-skipped':'Übersprungen','stop-prefix':'STOPP','stop-special':'SPEZIAL','no-missions-game':'Keine MiSSiONS in diesem Spiel.','open-lightbox':'Vergrößern','reject-btn':'Ablehnen',
   // Per-location language allow-list (Add/Edit Location modal)
   'loc-allowed-langs':'Erlaubte Sprachen',
   'loc-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler an diesem Standort.',
   'cr-allowed-langs':'Erlaubte Sprachen',
   'cr-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.',
   'lightbox-rotate':'Drehen','st-games':'Spiele',
-  'cr-m-map-picker':'Karte (Klick zum Setzen, Marker ziehbar)',
+  'cr-m-map-picker':'Karte (Klick zum Setzen, Marker ziehbar)','cr-m-use-loc':'Aktuellen Standort verwenden','geo-unsupported':'Geolocation wird vom Browser nicht unterstützt.','geo-denied':'Standortzugriff abgelehnt.','geo-error':'Standort konnte nicht ermittelt werden.','geo-set':'Standort übernommen',
   'indoor-hint':'Mission lässt sich auch drinnen durchführen.',
   'cr-m-gps-sub':'Mission entsperrt erst nach physischer Ankunft.',
   'cr-m-map-sub':'Ziel-Marker für Spieler auf der Karte sichtbar.',
@@ -772,7 +1018,7 @@ const GMT={
   'tip-cr-answer':'The correct answer(s) — matching is case-insensitive and trims whitespace.',
   'tip-cr-hint':'Optional text shown while players are still walking to the target.',
   'tip-cr-hide-until-arrival':'Description and task only appear after the player arrives.',
-  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-recent':'Recent Games','gs-new':'New Game','ng-title':'New Game Created','ng-back':'Back','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','db-send':'Send','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General Settings','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','updating':'Updating…','selfie-uploaded':'Selfie uploaded',
+  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-pick':'Pick a starting point','ll-cr-pick':'Or pick a CityRush route','ll-tagline':'Adventurerooms · Gamemaster','ll-empty':'No locations yet.','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-cr-mode-label':'CityRush Mode','gs-recent':'Recent Games','gs-new':'New Game','gs-new-cr':'Start CityRush','gs-kicker-loc':'Location','gs-kicker-cr':'CityRush','gs-cr-pick':'Pick a mode','gs-open':'Open','gs-st-ended':'ended','gs-st-playing':'running','gs-st-waiting':'waiting','gs-none':'No games yet.','ng-title':'New Game Created','ng-back':'Back','ng-kicker':'Game created','ng-title':'Hand out the code','ng-subtitle':'Players join by scanning the QR or opening the link on their phones. They pick a team name and take a selfie — you’ll see them appear in the dashboard the moment they’re in.','ng-game-id-label':'Game ID','ng-join-url-label':'Join URL','ng-qr-hint':'Scan to join','ng-qr-dl':'QR','ng-copy-1':'Copy','ng-copy-2':'Copy','ng-copied':'Copied!','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','tab-map-label':'Map','chat-reply-to':'Reply to','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General','s-gen-subtitle':'App-wide configuration. Most teams won’t touch these once set up.','s-unlocked':'Unlocked','sg-app':'App','sg-games':'Games','s-url-help':'The Cloudflare quick-tunnel hostname players reach you on. “Detect” reads tunnel-url.txt.','s-timeout-help':'Shown to players when their game timer hits zero. Per-language.','s-gh-label':'GitHub repo URL','s-gh-help':'Used by the in-app updater for git pull and the version badge.','s-sound-label':'Sound on accept','s-sound-help':'Plays a short chime when the GM accepts a submission.','s-sound-on':'Enabled','s-sound-perm':'Browser permission required on first click.','s-loc-lang-title':'Default language is set <em>per location</em>','s-cancel':'Cancel','st-manuals':'Manuals','s-manuals-title':'Manuals','s-manuals-subtitle':'Download the PDF manuals in your language here.','s-manuals-lang':'Language','s-manuals-lang-help':'Only show manuals in this language.','no-manuals-yet':'No manuals available in this language yet.','s-update-hint':'Pulls the latest version from the configured GitHub repo (see General) and restarts the server.','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','updating':'Updating…','selfie-uploaded':'Selfie uploaded',
   'no-tunnel':'No tunnel found.','mode-placeholder':'e.g. ADVANCED',
   'location-label':'Location','add-loc':'Add Location','edit-loc':'Edit Location',
   'loc-spec':'location-specific MiSSiONS','add-mission':'Add MiSSiON','edit-mission':'Edit MiSSiON',
@@ -820,13 +1066,13 @@ const GMT={
   'export-zip-btn':'Download ZIP (all media)',
   'export-collage-btn':'Render photo collage',
   'export-rendering':'Rendering…','export-done':'Done — download starting…',
-  'accept-btn':'Accept','reject-btn':'Reject',
+  'accept-btn':'Accept','pill-pending':'Pending','pill-done':'Done','pill-rejected':'Rejected','pill-open':'Open','pill-skipped':'Skipped','stop-prefix':'STOP','stop-special':'SPECIAL','no-missions-game':'No missions in this game.','open-lightbox':'Enlarge','reject-btn':'Reject',
   'loc-allowed-langs':'Allowed languages',
   'loc-allowed-langs-hint':'Only these languages will appear for players at this location.',
   'cr-allowed-langs':'Allowed languages',
   'cr-allowed-langs-hint':'Only these languages will appear for players in this CityRush mode.',
   'lightbox-rotate':'Rotate','st-games':'Games',
-  'cr-m-map-picker':'Map (click to set, drag the marker to refine)',
+  'cr-m-map-picker':'Map (click to set, drag the marker to refine)','cr-m-use-loc':'Use current location','geo-unsupported':'Geolocation isn’t supported by this browser.','geo-denied':'Location access denied.','geo-error':'Could not get location.','geo-set':'Location set',
   'indoor-hint':'Mission can also be completed indoors.',
   'cr-m-gps-sub':"Mission unlocks only after the team physically arrives.",
   'cr-m-map-sub':'Target marker is visible to players on the map.',
@@ -883,7 +1129,7 @@ const GMT={
   'tip-cr-answer':'La/les bonne(s) réponse(s) — comparaison insensible à la casse et aux espaces.',
   'tip-cr-hint':'Texte optionnel affiché pendant que les joueurs marchent vers la cible.',
   'tip-cr-hide-until-arrival':'Description et tâche n\'apparaissent qu\'après l\'arrivée.',
-  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','ng-title':'Partie créée','ng-back':'Retour','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','db-send':'Envoyer','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Paramètres généraux','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','updating':'Mise à jour…','selfie-uploaded':'Selfie envoyé',
+  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-pick':'Choisir un lieu','ll-cr-pick':'Ou un parcours CityRush','ll-tagline':'Adventurerooms · Maître du jeu','ll-empty':'Pas encore de lieux.','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-cr-mode-label':'Mode CityRush','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','gs-new-cr':'Démarrer CityRush','gs-kicker-loc':'Lieu','gs-kicker-cr':'CityRush','gs-cr-pick':'Choisir un mode','gs-open':'Ouvrir','gs-st-ended':'terminé','gs-st-playing':'en cours','gs-st-waiting':'en attente','gs-none':'Pas encore de parties.','ng-title':'Partie créée','ng-back':'Retour','ng-kicker':'Partie créée','ng-title':'Distribue le code','ng-subtitle':'Les joueurs rejoignent la partie en scannant le QR ou en ouvrant le lien sur leur téléphone. Ils choisissent un nom d’équipe et prennent un selfie — tu les verras apparaître dans le tableau de bord.','ng-game-id-label':'ID de partie','ng-join-url-label':'Lien d’accès','ng-qr-hint':'Scanner pour rejoindre','ng-qr-dl':'QR','ng-copy-1':'Copier','ng-copy-2':'Copier','ng-copied':'Copié !','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','tab-map-label':'Carte','chat-reply-to':'Répondre à','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Général','s-gen-subtitle':'Configuration globale de l’app. La plupart des équipes ne touchent à cela qu’à l’installation.','s-unlocked':'Déverrouillé','sg-app':'App','sg-games':'Parties','s-url-help':'Le tunnel Cloudflare via lequel les joueurs rejoignent. « Détecter » lit tunnel-url.txt.','s-timeout-help':'Affiché aux joueurs lorsque le minuteur arrive à zéro. Par langue.','s-gh-label':'URL du dépôt GitHub','s-gh-help':'Utilisé par la mise à jour intégrée pour git pull et le badge de version.','s-sound-label':'Son à l’acceptation','s-sound-help':'Joue un court signal quand le GM accepte une soumission.','s-sound-on':'Activé','s-sound-perm':'Autorisation du navigateur requise au premier clic.','s-loc-lang-title':'La langue par défaut est définie <em>par lieu</em>','s-cancel':'Annuler','st-manuals':'Manuels','s-manuals-title':'Manuels','s-manuals-subtitle':'Téléchargez ici les manuels PDF dans votre langue.','s-manuals-lang':'Langue','s-manuals-lang-help':'Afficher uniquement les manuels dans cette langue.','no-manuals-yet':'Aucun manuel disponible dans cette langue pour l’instant.','s-update-hint':'Tire la dernière version du dépôt GitHub configuré (voir Général) et redémarre le serveur.','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','updating':'Mise à jour…','selfie-uploaded':'Selfie envoyé',
   'no-tunnel':'Aucun tunnel trouvé.','mode-placeholder':'p. ex. ADVANCED',
   'location-label':'Lieu','add-loc':'Ajouter un lieu','edit-loc':'Modifier le lieu',
   'loc-spec':'MiSSiONS spécifiques au lieu','add-mission':'Ajouter une MiSSiON','edit-mission':'Modifier la MiSSiON',
@@ -931,13 +1177,13 @@ const GMT={
   'export-zip-btn':'Télécharger ZIP (tous les médias)',
   'export-collage-btn':'Créer la vidéo-collage',
   'export-rendering':'Rendu en cours…','export-done':'Terminé — téléchargement…',
-  'accept-btn':'Accepter','reject-btn':'Refuser',
+  'accept-btn':'Accepter','pill-pending':'En attente','pill-done':'Terminé','pill-rejected':'Refusé','pill-open':'Ouvert','pill-skipped':'Sauté','stop-prefix':'ÉTAPE','stop-special':'SPÉCIAL','no-missions-game':'Aucune mission dans cette partie.','open-lightbox':'Agrandir','reject-btn':'Refuser',
   'loc-allowed-langs':'Langues autorisées',
   'loc-allowed-langs-hint':"Seules ces langues apparaîtront pour les joueurs à ce lieu.",
   'cr-allowed-langs':'Langues autorisées',
   'cr-allowed-langs-hint':'Seules ces langues apparaîtront pour les joueurs dans ce mode CityRush.',
   'lightbox-rotate':'Tourner','st-games':'Jeux',
-  'cr-m-map-picker':'Carte (cliquer pour placer, marqueur déplaçable)',
+  'cr-m-map-picker':'Carte (cliquer pour placer, marqueur déplaçable)','cr-m-use-loc':'Utiliser ma position','geo-unsupported':'La géolocalisation n’est pas prise en charge.','geo-denied':'Accès à la position refusé.','geo-error':'Impossible d’obtenir la position.','geo-set':'Position définie',
   'indoor-hint':"La mission peut aussi être réalisée à l'intérieur.",
   'cr-m-gps-sub':"La mission ne se déverrouille qu'après arrivée physique.",
   'cr-m-map-sub':'Le marqueur de la cible est visible sur la carte.',
@@ -994,7 +1240,7 @@ const GMT={
   'tip-cr-answer':'Le risposte corrette — confronto case-insensitive e con spazi normalizzati.',
   'tip-cr-hint':'Testo opzionale mostrato mentre i giocatori camminano verso il target.',
   'tip-cr-hide-until-arrival':'Descrizione e compito appaiono solo dopo l\'arrivo.',
-  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-recent':'Partite recenti','gs-new':'Nuova partita','ng-title':'Partita creata','ng-back':'Indietro','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','db-send':'Invia','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Impostazioni generali','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','updating':'Aggiornamento…','selfie-uploaded':'Selfie caricato',
+  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-pick':'Scegli un luogo','ll-cr-pick':'O un percorso CityRush','ll-tagline':'Adventurerooms · Game master','ll-empty':'Nessuna sede.','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-cr-mode-label':'Modalità CityRush','gs-recent':'Partite recenti','gs-new':'Nuova partita','gs-new-cr':'Avvia CityRush','gs-kicker-loc':'Sede','gs-kicker-cr':'CityRush','gs-cr-pick':'Scegli una modalità','gs-open':'Apri','gs-st-ended':'finita','gs-st-playing':'in corso','gs-st-waiting':'in attesa','gs-none':'Ancora nessuna partita.','ng-title':'Partita creata','ng-back':'Indietro','ng-kicker':'Partita creata','ng-title':'Distribuisci il codice','ng-subtitle':'I giocatori entrano scansionando il QR o aprendo il link sul telefono. Scelgono un nome di squadra e fanno un selfie — appariranno nella dashboard appena entrano.','ng-game-id-label':'ID partita','ng-join-url-label':'Link di accesso','ng-qr-hint':'Scansiona per entrare','ng-qr-dl':'QR','ng-copy-1':'Copia','ng-copy-2':'Copia','ng-copied':'Copiato!','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','tab-map-label':'Mappa','chat-reply-to':'Rispondi a','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Generale','s-gen-subtitle':'Configurazione globale dell’app. La maggior parte dei team la imposta una sola volta.','s-unlocked':'Sbloccato','sg-app':'App','sg-games':'Partite','s-url-help':'Il tunnel Cloudflare con cui i giocatori entrano. „Rileva" legge tunnel-url.txt.','s-timeout-help':'Mostrato ai giocatori al termine del timer. Per lingua.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usato dall’aggiornatore interno per git pull e il badge versione.','s-sound-label':'Suono all’accettazione','s-sound-help':'Riproduce un breve suono quando il GM accetta un invio.','s-sound-on':'Attivo','s-sound-perm':'Autorizzazione del browser richiesta al primo clic.','s-loc-lang-title':'La lingua predefinita è impostata <em>per sede</em>','s-cancel':'Annulla','st-manuals':'Manuali','s-manuals-title':'Manuali','s-manuals-subtitle':'Scarica qui i manuali PDF nella tua lingua.','s-manuals-lang':'Lingua','s-manuals-lang-help':'Mostra solo i manuali in questa lingua.','no-manuals-yet':'Nessun manuale disponibile in questa lingua per ora.','s-update-hint':'Scarica l’ultima versione dal repo GitHub configurato (vedi Generale) e riavvia il server.','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','updating':'Aggiornamento…','selfie-uploaded':'Selfie caricato',
   'no-tunnel':'Nessun tunnel trovato.','mode-placeholder':'es. ADVANCED',
   'location-label':'Luogo','add-loc':'Aggiungi luogo','edit-loc':'Modifica luogo',
   'loc-spec':'MiSSiONS specifiche del luogo','add-mission':'Aggiungi MiSSiON','edit-mission':'Modifica MiSSiON',
@@ -1042,13 +1288,13 @@ const GMT={
   'export-zip-btn':'Scarica ZIP (tutti i media)',
   'export-collage-btn':'Crea video-collage',
   'export-rendering':'Rendering in corso…','export-done':'Pronto — download in corso…',
-  'accept-btn':'Accetta','reject-btn':'Rifiuta',
+  'accept-btn':'Accetta','pill-pending':'In attesa','pill-done':'Fatto','pill-rejected':'Rifiutato','pill-open':'Aperto','pill-skipped':'Saltata','stop-prefix':'TAPPA','stop-special':'SPECIALE','no-missions-game':'Nessuna missione in questa partita.','open-lightbox':'Ingrandisci','reject-btn':'Rifiuta',
   'loc-allowed-langs':'Lingue consentite',
   'loc-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questo luogo.',
   'cr-allowed-langs':'Lingue consentite',
   'cr-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questa modalità CityRush.',
   'lightbox-rotate':'Ruota','st-games':'Partite',
-  'cr-m-map-picker':'Mappa (clic per posizionare, marker trascinabile)',
+  'cr-m-map-picker':'Mappa (clic per posizionare, marker trascinabile)','cr-m-use-loc':'Usa posizione attuale','geo-unsupported':'Geolocalizzazione non supportata dal browser.','geo-denied':'Accesso alla posizione negato.','geo-error':'Impossibile ottenere la posizione.','geo-set':'Posizione impostata',
   'indoor-hint':'La missione può essere svolta anche al chiuso.',
   'cr-m-gps-sub':"La missione si sblocca solo dopo l'arrivo fisico.",
   'cr-m-map-sub':'Il marker del bersaglio è visibile sulla mappa.',
@@ -1105,7 +1351,7 @@ const GMT={
   'tip-cr-answer':'La/s respuesta/s correcta/s — la comparación ignora mayúsculas y espacios.',
   'tip-cr-hint':'Texto opcional que se muestra mientras los jugadores caminan hacia el objetivo.',
   'tip-cr-hide-until-arrival':'La descripción y la tarea solo aparecen tras la llegada del jugador.',
-  'tip-cr-hints':'Pistas que los jugadores pueden pedir una a una si se atascan.','ll-select':'Elige un lugar','ll-settings':'Ajustes','gs-back':'Atrás','gs-mode-label':'Modo de juego','gs-recent':'Partidas recientes','gs-new':'Nueva partida','ng-title':'Partida creada','ng-back':'Atrás','ng-template':'Con plantilla','ng-open':'Abrir panel','db-games':'Partidas','tb-start':'Iniciar','tb-pause':'Pausa','db-teams':'EQUIPOS','db-select-team':'Selecciona un equipo','db-send':'Enviar','db-broadcast-info':'Enviar un mensaje a todos los equipos.','db-broadcast':'Enviar a todos','db-rankings':'CLASIFICACIÓN','sg-title':'Ajustes','sg-pw-label':'Contraseña','sg-back':'Atrás','sg-unlock':'Desbloquear','s-back':'Atrás','s-title':'AJUSTES','st-general':'General','st-locations':'Lugares','st-missions':'MiSSiONS','st-rules':'Reglas','st-template':'Plantilla QR','st-security':'Seguridad','st-updates':'Actualizaciones','s-gen-title':'Ajustes generales','s-url-label':'URL pública','s-detect':'Detectar','s-url-hint':'Ejecuta start-tunnel-windows.bat y luego pulsa Detectar.','s-timeout-label':'Mensaje de fin','s-save':'Guardar','s-add-loc':'+ Lugar','s-mode-label':'Modo:','s-add-mode':'+ Modo','s-add-mission':'+ MiSSiON','s-rules-title':'Reglas','s-add-rule':'+ Regla','s-rules-hint':'Marcadores: [photo] [video] [indoor]. Arrastra para reordenar.','s-rules-save':'Guardar','s-tpl-title':'Plantilla QR','s-tpl-size-label':'Tamaño de papel','s-tpl-upload-label':'Subir plantilla','s-tpl-drag-hint':'Arrastra el marcador del QR.','s-tpl-save':'Guardar posición','s-tpl-delete':'Eliminar plantilla','s-sec-title':'Cambiar contraseña','s-sec-old':'Contraseña actual','s-sec-new':'Nueva contraseña','s-sec-new2':'Confirmar','s-sec-save':'Actualizar','rej-title':'Rechazar envío','rej-hint':'El medio será eliminado.','rej-reason-label':'Motivo (mostrado al equipo)','rej-confirm':'Rechazar y notificar','qrm-title':'Código QR de acceso','s-add-rs':'＋ Conjunto de reglas','ruleset-label':'Conjunto de reglas','paper-size':'Tamaño de papel','update-title':'Actualizar app','update-btn':'Actualizar ahora','update-log':'Salida','github-label':'URL del repositorio GitHub','version-label':'Versión','modes-label':'Partidas','chat-ph-gm':'Mensaje…','qrm-close':'Cerrar','ng-qr-download':'⬇ QR','qrm-download':'⬇ Descargar QR','cancel':'Cancelar','create':'Crear','save':'Guardar','edit':'Editar','delete':'Eliminar','copy':'Copiar','rule':'Regla','add-mode':'＋ Modo','edit-mode':'Editar modo','min-label':'Minutos','per-game':'por partida','pool':'Pool (todos los lugares)','mission-name-label':'Nombre de la MiSSiON','loc-label':'Lugar','media-label':'Tipo de medio','indoor-label':'También en interior','desc-label':'Descripción','task-label':'Tarea','auto-translate':'🌐 Traducir automáticamente','no-rules':'Aún no hay reglas.','created':'¡Creado!','saved':'¡Guardado!','wrong-pw':'Contraseña incorrecta.','del':'Eliminar','no-missions':'Sin misiones.','all':'Todas','translating':'Traduciendo…','translated':'¡Traducido!','updating':'Actualizando…','selfie-uploaded':'Selfie subido',
+  'tip-cr-hints':'Pistas que los jugadores pueden pedir una a una si se atascan.','ll-select':'Elige un lugar','ll-pick':'Elige un lugar','ll-cr-pick':'O una ruta CityRush','ll-tagline':'Adventurerooms · Maestro de juego','ll-empty':'Aún no hay ubicaciones.','ll-settings':'Ajustes','gs-back':'Atrás','gs-mode-label':'Modo de juego','gs-cr-mode-label':'Modo CityRush','gs-recent':'Partidas recientes','gs-new':'Nueva partida','gs-new-cr':'Iniciar CityRush','gs-kicker-loc':'Ubicación','gs-kicker-cr':'CityRush','gs-cr-pick':'Elegir un modo','gs-open':'Abrir','gs-st-ended':'terminado','gs-st-playing':'en curso','gs-st-waiting':'esperando','gs-none':'Aún no hay partidas.','ng-title':'Partida creada','ng-back':'Atrás','ng-kicker':'Partida creada','ng-title':'Reparte el código','ng-subtitle':'Los jugadores entran escaneando el QR o abriendo el enlace en su móvil. Eligen un nombre de equipo y se hacen un selfie — los verás aparecer en el panel en cuanto entren.','ng-game-id-label':'ID de partida','ng-join-url-label':'Enlace de acceso','ng-qr-hint':'Escanear para entrar','ng-qr-dl':'QR','ng-copy-1':'Copiar','ng-copy-2':'Copiar','ng-copied':'¡Copiado!','ng-template':'Con plantilla','ng-open':'Abrir panel','db-games':'Partidas','tb-start':'Iniciar','tb-pause':'Pausa','db-teams':'EQUIPOS','db-select-team':'Selecciona un equipo','tab-map-label':'Mapa','chat-reply-to':'Responder a','db-broadcast-info':'Enviar un mensaje a todos los equipos.','db-broadcast':'Enviar a todos','db-rankings':'CLASIFICACIÓN','sg-title':'Ajustes','sg-pw-label':'Contraseña','sg-back':'Atrás','sg-unlock':'Desbloquear','s-back':'Atrás','s-title':'AJUSTES','st-general':'General','st-locations':'Lugares','st-missions':'MiSSiONS','st-rules':'Reglas','st-template':'Plantilla QR','st-security':'Seguridad','st-updates':'Actualizaciones','s-gen-title':'General','s-gen-subtitle':'Configuración global de la app. La mayoría de equipos no la tocan después del setup.','s-unlocked':'Desbloqueado','sg-app':'App','sg-games':'Partidas','s-url-help':'El túnel Cloudflare por donde entran los jugadores. „Detectar" lee tunnel-url.txt.','s-timeout-help':'Se muestra a los jugadores cuando el temporizador llega a cero. Por idioma.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usado por el actualizador interno para git pull y la insignia de versión.','s-sound-label':'Sonido al aceptar','s-sound-help':'Reproduce un breve sonido cuando el GM acepta un envío.','s-sound-on':'Activado','s-sound-perm':'Se requiere permiso del navegador en el primer clic.','s-loc-lang-title':'El idioma predeterminado se define <em>por ubicación</em>','s-cancel':'Cancelar','st-manuals':'Manuales','s-manuals-title':'Manuales','s-manuals-subtitle':'Descarga aquí los manuales PDF en tu idioma.','s-manuals-lang':'Idioma','s-manuals-lang-help':'Mostrar solo manuales en este idioma.','no-manuals-yet':'No hay manuales disponibles en este idioma todavía.','s-update-hint':'Descarga la última versión del repo GitHub configurado (ver General) y reinicia el servidor.','s-url-label':'URL pública','s-detect':'Detectar','s-url-hint':'Ejecuta start-tunnel-windows.bat y luego pulsa Detectar.','s-timeout-label':'Mensaje de fin','s-save':'Guardar','s-add-loc':'+ Lugar','s-mode-label':'Modo:','s-add-mode':'+ Modo','s-add-mission':'+ MiSSiON','s-rules-title':'Reglas','s-add-rule':'+ Regla','s-rules-hint':'Marcadores: [photo] [video] [indoor]. Arrastra para reordenar.','s-rules-save':'Guardar','s-tpl-title':'Plantilla QR','s-tpl-size-label':'Tamaño de papel','s-tpl-upload-label':'Subir plantilla','s-tpl-drag-hint':'Arrastra el marcador del QR.','s-tpl-save':'Guardar posición','s-tpl-delete':'Eliminar plantilla','s-sec-title':'Cambiar contraseña','s-sec-old':'Contraseña actual','s-sec-new':'Nueva contraseña','s-sec-new2':'Confirmar','s-sec-save':'Actualizar','rej-title':'Rechazar envío','rej-hint':'El medio será eliminado.','rej-reason-label':'Motivo (mostrado al equipo)','rej-confirm':'Rechazar y notificar','qrm-title':'Código QR de acceso','s-add-rs':'＋ Conjunto de reglas','ruleset-label':'Conjunto de reglas','paper-size':'Tamaño de papel','update-title':'Actualizar app','update-btn':'Actualizar ahora','update-log':'Salida','github-label':'URL del repositorio GitHub','version-label':'Versión','modes-label':'Partidas','chat-ph-gm':'Mensaje…','qrm-close':'Cerrar','ng-qr-download':'⬇ QR','qrm-download':'⬇ Descargar QR','cancel':'Cancelar','create':'Crear','save':'Guardar','edit':'Editar','delete':'Eliminar','copy':'Copiar','rule':'Regla','add-mode':'＋ Modo','edit-mode':'Editar modo','min-label':'Minutos','per-game':'por partida','pool':'Pool (todos los lugares)','mission-name-label':'Nombre de la MiSSiON','loc-label':'Lugar','media-label':'Tipo de medio','indoor-label':'También en interior','desc-label':'Descripción','task-label':'Tarea','auto-translate':'🌐 Traducir automáticamente','no-rules':'Aún no hay reglas.','created':'¡Creado!','saved':'¡Guardado!','wrong-pw':'Contraseña incorrecta.','del':'Eliminar','no-missions':'Sin misiones.','all':'Todas','translating':'Traduciendo…','translated':'¡Traducido!','updating':'Actualizando…','selfie-uploaded':'Selfie subido',
   'no-tunnel':'No se encontró ningún túnel.','mode-placeholder':'p. ej. ADVANCED',
   'location-label':'Lugar','add-loc':'Añadir lugar','edit-loc':'Editar lugar',
   'loc-spec':'MiSSiONS específicas del lugar','add-mission':'Añadir MiSSiON','edit-mission':'Editar MiSSiON',
@@ -1153,13 +1399,13 @@ const GMT={
   'export-zip-btn':'Descargar ZIP (todos los medios)',
   'export-collage-btn':'Crear vídeo-collage',
   'export-rendering':'Renderizando…','export-done':'¡Listo! Descargando…',
-  'accept-btn':'Aceptar','reject-btn':'Rechazar',
+  'accept-btn':'Aceptar','pill-pending':'Pendiente','pill-done':'Hecho','pill-rejected':'Rechazado','pill-open':'Abierta','pill-skipped':'Saltada','stop-prefix':'PARADA','stop-special':'ESPECIAL','no-missions-game':'Sin misiones en esta partida.','open-lightbox':'Ampliar','reject-btn':'Rechazar',
   'loc-allowed-langs':'Idiomas permitidos',
   'loc-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este lugar.',
   'cr-allowed-langs':'Idiomas permitidos',
   'cr-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este modo CityRush.',
   'lightbox-rotate':'Girar','st-games':'Partidas',
-  'cr-m-map-picker':'Mapa (clic para colocar, marcador arrastrable)',
+  'cr-m-map-picker':'Mapa (clic para colocar, marcador arrastrable)','cr-m-use-loc':'Usar ubicación actual','geo-unsupported':'Geolocalización no soportada por el navegador.','geo-denied':'Acceso a la ubicación denegado.','geo-error':'No se pudo obtener la ubicación.','geo-set':'Ubicación establecida',
   'indoor-hint':'La misión también se puede realizar en interiores.',
   'cr-m-gps-sub':'La misión se desbloquea solo tras la llegada física.',
   'cr-m-map-sub':'El marcador del objetivo es visible en el mapa.',
@@ -1194,8 +1440,22 @@ function applyTooltips(root){
 }
 function applyGmLang(){
   const t=GMT[gmLang]||GMT.en;
-  Object.entries(t).forEach(([id,text])=>{const el=document.getElementById(id);if(el)el.textContent=text;});
+  // Values that contain HTML (e.g. "<em>" emphasis in the per-location-
+  // language note) use innerHTML so the markup survives the language
+  // switch. Values are hardcoded in this file — no untrusted input.
+  Object.entries(t).forEach(([id,text])=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(typeof text==='string' && /[<&]/.test(text)) el.innerHTML=text;
+    else el.textContent=text;
+  });
   ['gm-lang-btn','gm-lang-btn2','gm-lang-btn3'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=gmLang.toUpperCase();});
+  // Paint the active state on the landing 5-segment picker (if present).
+  // The cycle button on the dashboard / settings topbars still exists for
+  // power users — the 5-segment is landing-only.
+  document.querySelectorAll('#ll-langs .ll-lang').forEach(el => {
+    el.classList.toggle('is-active', el.dataset.lang === gmLang);
+  });
   // Update placeholders and dynamic text
   const chatInput=document.getElementById('gm-chat-input');
   if(chatInput) chatInput.placeholder=gmt('chat-ph-gm')||gmt('chat-msg-fallback')||'Nachricht…';
@@ -1219,6 +1479,23 @@ function applyGmLang(){
   });
   // Refresh tooltips so a language switch retranslates the title attributes.
   applyTooltips();
+}
+function setGmLang(lang){
+  // No-op if it's already the active language or the requested code isn't
+  // one we ship. Avoids re-painting the whole UI for a misclick.
+  if(!LANGS_GM.includes(lang) || lang === gmLang) return;
+  gmLang = lang;
+  tplLang = gmLang;
+  localStorage.setItem('gm_lang', gmLang);
+  applyGmLang();
+  // Mirror cycleGmLang's "refresh visible dynamic content" effect so the
+  // landing language picker re-renders the location tiles in the new
+  // language (the tile labels come straight from the API, but the
+  // section titles + tooltips are GMT-driven).
+  if(document.getElementById('screen-landing')?.style.display !== 'none') loadLanding();
+  if(document.getElementById('screen-dashboard')?.style.display !== 'none' && selectedTeamId){
+    selectTeam(selectedTeamId);
+  }
 }
 function cycleGmLang(){
   gmLang=LANGS_GM[(LANGS_GM.indexOf(gmLang)+1)%LANGS_GM.length];
@@ -1272,20 +1549,63 @@ window.addEventListener('DOMContentLoaded',async()=>{
 async function loadLanding(){
   const [locs, crModes] = await Promise.all([API('/api/locations'), API('/api/cr/modes')]);
   const grid=document.getElementById('location-grid');
-  const cards = locs.map(l=>`<div class="location-card" onclick="selectLocation(${l.id},'${esc(l.name)}')">${esc(l.name)}</div>`);
-  if(crModes.length){
-    cards.push(`<div class="location-card" onclick="selectCityRushLocation()" style="border-color:var(--orange);">
-      <h3>🏃 CityRush</h3>
-      <small style="color:var(--text-dim);">${crModes.length} ${crModes.length===1?'Modus':'Modi'}</small>
-    </div>`);
+  // Each location tile is a pin icon stacked above the name. No mission
+  // count — locations are picked by place, not by inventory size, and the
+  // count was visual noise (per the v1.3.0 design pass).
+  const pinIcon = `<div class="ll-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>`;
+  if(!locs.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">📍</div><p>'+(gmt('ll-empty')||'Keine Standorte.')+'</p></div>';
+  } else {
+    grid.innerHTML = locs.map(l=>`<div class="location-card" onclick="selectLocation(${l.id},'${esc(l.name)}')">${pinIcon}<div>${esc(l.name)}</div></div>`).join('');
   }
-  if(!cards.length){grid.innerHTML='<div class="empty"><div class="empty-icon">📍</div><p>Keine Standorte.</p></div>';return;}
-  grid.innerHTML=cards.join('');
+  // CityRush is exclusive from MiSSiONS — it gets its own section, hidden
+  // outright when no CR modes exist (rather than rendered as a styled card
+  // that does nothing). selectCityRushLocation() is on the tile itself.
+  const crSection = document.getElementById('ll-section-cr');
+  if(crSection) crSection.style.display = crModes.length ? '' : 'none';
 }
 
+// The "New Game" button has both an SVG icon and a label span. These two
+// helpers swap just the label (keeps the icon intact) without re-rendering
+// the whole button, so the topbar visual language stays consistent across
+// the MiSSiONS and CityRush variants of this screen.
+function _setNewGameLabel(text){
+  const span = document.getElementById('gs-new');
+  if(span) span.textContent = text;
+}
+function _setGsKicker(text){
+  const el = document.getElementById('gs-kicker');
+  if(el) el.textContent = text;
+}
+// Used by the two COPY buttons on the new-game screen. We toggle just the
+// inner <span> (not the whole button) so the icon-less "Copy" / "Copied!"
+// flash still respects applyGmLang's by-ID translation pass afterwards.
+async function copyToClipboard(text, btn){
+  if(!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch(e){
+    // Some browsers reject the modern API on insecure origins; fall back
+    // to the old textarea+execCommand trick so this still works on the
+    // Pi/cloudflared dev setup.
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch{}
+    document.body.removeChild(ta);
+  }
+  if(btn){
+    const lbl = btn.querySelector('span');
+    if(!lbl) return;
+    const orig = lbl.textContent;
+    lbl.textContent = gmt('ng-copied')||'Kopiert!';
+    setTimeout(() => { lbl.textContent = orig; }, 1500);
+  }
+}
 async function selectCityRushLocation(){
   selectedLocationId='cityrush';
-  document.getElementById('gs-location-name').textContent='🏃 CityRush';
+  _setGsKicker(gmt('gs-kicker-cr')||'CityRush');
+  document.getElementById('gs-location-name').textContent='CityRush';
   showScreen('screen-game-select');
   // Show only CR modes, hide normal mode selector
   const crModes=await API('/api/cr/modes');
@@ -1293,20 +1613,22 @@ async function selectCityRushLocation(){
   document.getElementById('cr-mode-select-wrap').style.display='block';
   const crSel=document.getElementById('cr-mode-select');
   if(crSel){
-    crSel.innerHTML='<option value="">— Modus wählen —</option>'+
-      crModes.map(m=>`<option value="${m.id}">🏃 ${esc(m.name)}</option>`).join('');
+    crSel.innerHTML='<option value="">— '+(gmt('gs-cr-pick')||'Modus wählen')+' —</option>'+
+      crModes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   }
-  document.getElementById('btn-new-game').textContent='🏃 CityRush starten';
+  _setNewGameLabel(gmt('gs-new-cr')||'CityRush starten');
   await loadGames('cityrush');
 }
 async function selectLocation(id,name){
   selectedLocationId=id;
+  _setGsKicker(gmt('gs-kicker-loc')||'Standort');
   document.getElementById('gs-location-name').textContent=name;
   showScreen('screen-game-select');
-  // Restore normal mode selector
+  // Restore normal mode selector; hide the CR picker (CityRush has its own
+  // entry point on the landing screen and uses its own location id).
   document.getElementById('mode-select-wrap').style.display='block';
   document.getElementById('cr-mode-select-wrap').style.display='none';
-  if(document.getElementById('btn-new-game')) document.getElementById('btn-new-game').textContent='＋ ' + (gmt('gs-new')||'Neues Spiel');
+  _setNewGameLabel(gmt('gs-new')||'Neues Spiel');
   // Load modes into selector
   const modes=await API('/api/modes');
   const sel=document.getElementById('mode-select');
@@ -1326,21 +1648,52 @@ async function loadGames(locationId){
   const url = locationId==='cityrush' ? '/api/games?is_cityrush=1' : `/api/games?location_id=${locationId}`;
   const games=await API(url);
   const grid=document.getElementById('games-grid');
-  if(!games.length){grid.innerHTML='<p style="color:var(--text-muted);">Noch keine Spiele.</p>';return;}
-  grid.innerHTML=games.map(g=>`
+  const countEl=document.getElementById('gs-recent-count');
+  if(countEl) countEl.textContent = games.length ? String(games.length) : '';
+  if(!games.length){
+    const noneTxt = gmt('gs-none')||'Noch keine Spiele.';
+    grid.innerHTML=`<div class="gs-empty" style="grid-column:1/-1;">
+      <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+      <p>${esc(noneTxt)}</p>
+    </div>`;
+    return;
+  }
+  const lang = (typeof currentGmLang==='string'?currentGmLang:'de');
+  const localeMap = {de:'de-DE',en:'en-US',fr:'fr-FR',it:'it-IT',es:'es-ES'};
+  const locale = localeMap[lang]||'de-DE';
+  const dateOpts = {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'};
+  const lblOpen = gmt('gs-open')||'Öffnen';
+  const lblQR = gmt('qrm-title')||'QR';
+  const lblDelete = gmt('delete')||'Löschen';
+  const statusLabel = g => {
+    if(g.status==='ended') return gmt('gs-st-ended')||'beendet';
+    if(g.timer_running)    return gmt('gs-st-playing')||'läuft';
+    return gmt('gs-st-waiting')||'wartet';
+  };
+  grid.innerHTML=games.map(g=>{
+    const cls = g.status==='ended' ? 'badge-grey' : g.timer_running ? 'badge-green' : 'badge-grey';
+    return `
     <div class="game-card">
-      <div class="game-card-id">${g.id}</div>
-      <div class="game-card-date">${new Date(g.created_at).toLocaleString('de-DE')}</div>
-      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin:.25rem 0;">
-        <span class="badge badge-${g.status==='ended'?'red':g.timer_running?'green':'grey'}">${g.status==='ended'?(gmt('s-sec-title')||'ended'):g.timer_running?'playing':'waiting'}</span>
+      <div class="game-card-id">${esc(g.id)}</div>
+      <div class="game-card-date">${new Date(g.created_at).toLocaleString(locale, dateOpts)}</div>
+      <div class="game-card-meta">
+        <span class="badge ${cls}">${esc(statusLabel(g))}</span>
         ${g.mode_name?`<span class="badge badge-grey">${esc(g.mode_name)}</span>`:''}
       </div>
       <div class="game-card-actions">
-        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="openDashboard('${g.id}')">Öffnen</button>
-        <button class="btn btn-ghost btn-sm" onclick="showGameQR('${g.id}')">QR</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteGame('${g.id}',event)">🗑</button>
+        <button class="btn btn-primary btn-sm" onclick="openDashboard('${esc(g.id)}')" title="${esc(lblOpen)}">
+          <span>${esc(lblOpen)}</span>
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+        </button>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="showGameQR('${esc(g.id)}')" title="${esc(lblQR)}" aria-label="${esc(lblQR)}">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="14" y1="16" x2="14" y2="14"/></svg>
+        </button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteGame('${esc(g.id)}',event)" title="${esc(lblDelete)}" aria-label="${esc(lblDelete)}">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function createNewGame(){
@@ -1568,6 +1921,7 @@ async function openDashboard(gameId){
   // Reset any state carried over from a previous game so the new dashboard
   // can't see stale teams, markers, pending counts, or cached payloads.
   resetGmDashboardState();
+  closeTimerAdjust();  // never inherit an open timer-adjust dropdown from the previous game
 
   currentGameId=gameId;
   selectedTeamId=null;
@@ -1789,24 +2143,30 @@ function teamColor(t){
 }
 
 function _teamChipInner(t){
-  // Clicking the selfie thumbnail (rather than the chip body) opens the
-  // fullscreen lightbox without re-triggering the chip's selectTeam().
+  // Mockup 07 chip: 4px-wide stripe element (full chip height, NOT a
+  // ::before), then a stacked body with the team name above the score,
+  // then an absolutely-positioned orange dot in the corner for pending.
+  // Clicking the selfie thumbnail opens the fullscreen lightbox without
+  // re-triggering selectTeam().
   const selfie = t.selfie_path
     ? `<img class="team-chip-selfie" id="tselfie-${t.id}" src="/uploads/${t.selfie_path}" alt="" style="cursor:zoom-in;" onerror="this.style.display='none'" onclick="event.stopPropagation();openGmSelfieLightbox(this.src)">`
     : '';
   return `
-    ${selfie}<span class="tname">${esc(t.name)}</span>
-    <span id="tscore-${t.id}" style="font-family:var(--mono);font-size:.75rem;color:var(--text);">${t.score||0}pt</span>
-    <span class="cr-frozen-tag" id="tfrozen-${t.id}" style="display:none;background:#0d3a59;color:#9fd6ff;padding:.1rem .35rem;border-radius:2px;font-size:.65rem;letter-spacing:.05em;">❄️ <span class="rem"></span></span>
-    <span class="notif-dot" id="notif-${t.id}" style="display:none;"></span>`;
+    <div class="tchip__stripe" style="background:${teamColor(t)};"></div>
+    ${selfie}
+    <div class="tchip__body">
+      <div class="tchip__name">${esc(t.name)}</div>
+      <div class="tchip__score" id="tscore-${t.id}">${t.score||0} PT</div>
+    </div>
+    <span class="cr-frozen-tag" id="tfrozen-${t.id}" style="display:none;">❄️ <span class="rem"></span></span>
+    <span class="tchip__dot notif-dot" id="notif-${t.id}" style="display:none;"></span>`;
 }
 
 function renderTeamsBar(teams){
   const bar=document.getElementById('teams-chips');
-  if(!teams.length){bar.innerHTML='<span style="font-size:.8rem;color:var(--text-muted);">Warten auf Spieler…</span>';return;}
+  if(!teams.length){bar.innerHTML='<span style="font-size:.8rem;color:var(--text-muted);">'+(gmt('waiting-for-players')||'Warten auf Spieler…')+'</span>';return;}
   bar.innerHTML=teams.map(t=>`
     <div class="team-chip-gm ${t.id===selectedTeamId?'active':''}" id="tc-${t.id}"
-         style="--team-color:${teamColor(t)};padding-left:.85rem;"
          onclick="selectTeam(${t.id})">
       ${_teamChipInner(t)}
     </div>`).join('');
@@ -1839,12 +2199,15 @@ async function selectTeam(teamId){
   const detail=document.getElementById('team-detail');
   detail.style.display='block';
   const data=await API(`/api/games/${currentGameId}/teams/${teamId}`);
-  // Paint the team's colour bar on the detail panel so the GM always knows
-  // which team they're looking at at a glance.
+  // Set --team-color so the team-detail-head ::before stripe paints in
+  // the right colour. The old whole-panel `.team-color-bar` left border
+  // is dropped — mockup 07 only stripes the header row.
   detail.style.setProperty('--team-color', teamColor(data));
-  detail.classList.add('team-color-bar');
   document.getElementById('detail-team-name').textContent=data.name;
-  document.getElementById('detail-team-score').textContent=`${data.score} pts`;
+  document.getElementById('detail-team-score').textContent=`${data.score} PT`;
+  // "Reply to <team>…" placeholder per mockup 07.
+  const chatInput=document.getElementById('gm-chat-input');
+  if(chatInput) chatInput.placeholder = (gmt('chat-reply-to')||'Antwort an') + ' ' + data.name + '…';
   // Selfie thumbnail next to the team name; clicking opens the lightbox.
   const selfieEl = document.getElementById('detail-team-selfie');
   if(selfieEl){
@@ -1923,53 +2286,77 @@ async function renderCrTeamMissions(teamId){
     .filter(s => s.team_id === teamId && s.status === 'pending')
     .forEach(s => { pendingByMission[s.mission_id] = s; });
 
+  // Mockup 07 markup parity with MiSSiONS. CR-specific bit: a "STOP N"
+  // (or "SPEZIAL") orange kicker above the title.
+  const PILL_TXT = {
+    pending:  gmt('pill-pending') ||'PENDING REVIEW',
+    accepted: gmt('pill-done')    ||'DONE',
+    rejected: gmt('pill-rejected')||'REJECTED',
+    skipped:  gmt('pill-skipped') ||'SKIPPED',
+    open:     gmt('pill-open')    ||'OPEN',
+  };
+  const CARD_STATE = {
+    pending: 'card--pending', accepted: 'card--done',
+    rejected: 'card--rejected', skipped: '', open: '',
+  };
+  const PILL_CLS = {
+    pending: 'pill pill--orange', accepted: 'pill pill--green',
+    rejected: 'pill pill--red',   skipped: 'pill', open: 'open-tag pill',
+  };
   list.innerHTML=cr.missions.map((m,i)=>{
     const sub = pendingByMission[m.id];
-    let status, bc;
-    if(sub){ status='pending'; bc='orange'; }
-    else if(m.is_special && (specialByMission[m.id]?.completed_count||0) > 0){ status='accepted'; bc='green'; }
-    else if(progressByMission[m.id]?.status === 'pending'){ status='pending'; bc='orange'; }
-    else if(progressByMission[m.id]?.status === 'completed'){ status='accepted'; bc='green'; }
-    else if(progressByMission[m.id]?.status === 'skipped'){ status='skipped'; bc='grey'; }
-    else { status='open'; bc='grey'; }
-    const sc = status==='pending' ? 'has-pending' : status==='accepted' ? 'accepted' : '';
-    const name=m['name_'+gmLang]||m.name_de||'(kein Name)';
-    const desc=m['description_'+gmLang]||m.description_de||'';
+    let status;
+    if(sub) status='pending';
+    else if(m.is_special && (specialByMission[m.id]?.completed_count||0) > 0) status='accepted';
+    else if(progressByMission[m.id]?.status === 'pending')   status='pending';
+    else if(progressByMission[m.id]?.status === 'completed') status='accepted';
+    else if(progressByMission[m.id]?.status === 'skipped')   status='skipped';
+    else status='open';
+    const name=m['name_'+gmLang]||m.name_de||'(no name)';
     const task=m['task_'+gmLang]||m.task_de||'';
-    const flags=[
-      m.use_gps?'📍':'',
-      m.use_map?'🗺️':'',
-      m.is_timed?'⏱':'',
-      m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
-      m.has_answer?'❓':'',
-      m.hide_until_arrival?'🔒':''
-    ].filter(Boolean).join(' ');
-    // Media preview + review actions when a submission is waiting.
-    let media = '', actions = '';
+    const stopLabel = m.is_special
+      ? (gmt('stop-special') || 'SPECIAL')
+      : ((gmt('stop-prefix') || 'STOP') + ' ' + (i+1));
+
+    // Thumb: pending with media → image/video overlaying the gradient.
+    // Otherwise plain surface with the type icon.
+    const typeIcon = m.media_required === 'video' ? inlineIcon('video') : inlineIcon('camera');
+    let thumbHtml;
     if(sub && sub.media_path){
       const src = `/uploads/${sub.media_path}`;
-      const isVideo = m.media_required==='video' || /\.(mp4|webm|mov)$/i.test(sub.media_path);
-      media = isVideo
-        ? `<video src="${src}" onclick="openLightbox('${src}',true)" style="max-width:100%;max-height:200px;border-radius:var(--radius);border:1px solid var(--border);display:block;margin:.5rem 0;cursor:pointer;"></video>`
-        : `<img src="${src}" onclick="openLightbox('${src}',false)" style="max-width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);display:block;margin:.5rem 0;" alt="thumb">`;
-      actions = `<div class="review-actions">
-        <button class="btn btn-success btn-sm" onclick="reviewCrSub(${sub.id},'accept')">✓ ${gmt('accept-btn')||'Annehmen'}</button>
-        <button class="btn btn-danger btn-sm" onclick="openCrRejectModal(${sub.id})">✗ ${gmt('reject-btn')||'Ablehnen'}</button>
-      </div>`;
+      const isVideo = m.media_required === 'video' || /\.(mp4|webm|mov)$/i.test(sub.media_path);
+      const media = isVideo
+        ? `<video src="${src}" muted preload="metadata" onclick="event.stopPropagation();openLightbox('${src}',true)"></video>`
+        : `<img src="${src}" alt="" onclick="event.stopPropagation();openLightbox('${src}',false)">`;
+      thumbHtml = `<div class="gcard__thumb">${media}</div>`;
+    } else {
+      thumbHtml = `<div class="gcard__thumb gcard__thumb--plain">${typeIcon}</div>`;
     }
-    return `<div class="mission-card ${sc}">
-      <div class="mission-header">
-        <span style="font-family:var(--mono);color:var(--text-muted);font-size:.8rem;margin-right:.5rem;">${i+1}.</span>
-        <div style="flex:1;">
-          <div style="font-weight:700;font-size:.9rem;">${esc(name)} <small style="color:var(--text-muted);">${flags}</small></div>
-          ${desc?`<div style="font-size:.85rem;color:var(--text-dim);">${esc(desc)}</div>`:''}
-          ${task?`<div style="font-size:.85rem;color:var(--orange);">→ ${esc(task)}</div>`:''}
-          <small>${m.points} Punkt${m.points!==1?'e':''}</small>
+
+    const actions = (sub && sub.media_path) ? `<div class="gcard__actions">
+      <button class="btn btn-success btn-sm" onclick="reviewCrSub(${sub.id},'accept')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        ${esc(gmt('accept-btn')||'Accept')} · ${m.points} PT
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="openCrRejectModal(${sub.id})" style="color:var(--red-light);">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        ${esc(gmt('reject-btn')||'Reject')}
+      </button>
+    </div>` : '';
+
+    return `<article class="gcard ${CARD_STATE[status]}">
+      ${thumbHtml}
+      <div class="gcard__body">
+        <div class="gcard__stop">${esc(stopLabel)}</div>
+        <div class="gcard__title-row">
+          <div class="gcard__title">${esc(name)}</div>
+          <span class="${PILL_CLS[status]}">${esc(PILL_TXT[status])}</span>
         </div>
-        <span class="badge badge-${bc}">${status}</span>
+        ${task?`<div class="gcard__task"><span class="arrow">→</span><span>${esc(task)}</span></div>`:''}
+        ${actions}
       </div>
-      ${media}${actions}
-    </div>`;
+      <span class="score-pill">${m.points} PT</span>
+    </article>`;
   }).join('');
 }
 
@@ -1979,6 +2366,7 @@ async function reviewCrSub(subId, action){
   if(action==='reject'){ openCrRejectModal(subId); return; }
   await API(`/api/cr/submissions/${subId}/review`,{method:'POST',body:{action,gameId:currentGameId}});
   if(selectedTeamId) selectTeam(selectedTeamId);
+  playAcceptChime();
 }
 let pendingCrRejectSubId = null;
 function openCrRejectModal(subId){
@@ -2004,41 +2392,65 @@ async function confirmCrReject(){
 
 function renderTeamMissions(missions){
   const list=document.getElementById('team-missions-list');
-  if(!missions.length){list.innerHTML='<div class="empty"><p>Keine MiSSiONS in diesem Spiel.</p></div>';return;}
+  if(!missions.length){list.innerHTML='<div class="empty"><p>'+(gmt('no-missions-game')||'Keine MiSSiONS in diesem Spiel.')+'</p></div>';return;}
+  // Mockup 07 markup exactly: <article class="gcard card--pending"> with
+  // a colored thumb (gradient by default, plain surface for non-pending),
+  // body containing a title-row (title + .pill status), task line, and
+  // optional accept/reject actions, then a .score-pill in the 3rd column.
+  const PILL_TXT = {
+    pending:  gmt('pill-pending') || 'PENDING REVIEW',
+    accepted: gmt('pill-done')    || 'DONE',
+    rejected: gmt('pill-rejected')|| 'REJECTED',
+    open:     gmt('pill-open')    || 'OPEN',
+  };
+  const CARD_STATE = {
+    pending: 'card--pending', accepted: 'card--done',
+    rejected: 'card--rejected', open: '',
+  };
+  const PILL_CLS = {
+    pending: 'pill pill--orange', accepted: 'pill pill--green',
+    rejected: 'pill pill--red',   open: 'open-tag pill',
+  };
   list.innerHTML=missions.map(m=>{
-    // SVG icons keep the same role as the previous 📷 / 🎬 / 🏠 glyphs but
-    // sit on the optical baseline cleanly and inherit the card's text colour.
-    const icon=m.media_type==='video'?inlineIcon('video'):inlineIcon('camera');
-    const indoor=m.is_indoor?inlineIcon('house'):''
-    const sc=m.status==='pending'?'has-pending':m.status==='accepted'?'accepted':m.status==='rejected'?'rejected':'';
-    const bc=m.status==='pending'?'orange':m.status==='accepted'?'green':m.status==='rejected'?'red':'grey';
-    let media='';
-    if(m.media_path&&(m.status==='pending'||m.status==='accepted')){
-      const src=`/uploads/${m.media_path}`;
-      media=m.media_type==='video'
-        ?`<video src="${src}" onclick="openLightbox('${src}',true)" style="max-width:100%;max-height:200px;border-radius:var(--radius);border:1px solid var(--border);display:block;margin:.5rem 0;cursor:pointer;" title="Klicken zum Vergrößern"></video>`
-        :`<img src="${src}" onclick="openLightbox('${src}',false)" style="max-width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);display:block;margin:.5rem 0;" alt="thumb">`;
+    const stKey = (m.status==='pending'||m.status==='accepted'||m.status==='rejected') ? m.status : 'open';
+    const indoor = m.is_indoor ? inlineIcon('house') : '';
+    const typeIcon = m.media_type==='video' ? inlineIcon('video') : inlineIcon('camera');
+    // Mockup default thumb is the orange-red gradient with a radial
+    // highlight (the .gcard__thumb default style). When a submission has
+    // a real photo, the <img>/<video> overlays the gradient.
+    let thumbHtml;
+    if(m.media_path && (m.status==='pending' || m.status==='accepted')){
+      const src = `/uploads/${m.media_path}`;
+      const media = m.media_type==='video'
+        ? `<video src="${src}" muted preload="metadata" onclick="event.stopPropagation();openLightbox('${src}',true)" title="${gmt('open-lightbox')||'Enlarge'}"></video>`
+        : `<img src="${src}" alt="" onclick="event.stopPropagation();openLightbox('${src}',false)">`;
+      thumbHtml = `<div class="gcard__thumb">${media}</div>`;
+    } else {
+      thumbHtml = `<div class="gcard__thumb gcard__thumb--plain">${typeIcon}</div>`;
     }
-    let actions='';
-    if(m.status==='pending')actions=`<div class="review-actions">
-      <button class="btn btn-success btn-sm" onclick="reviewSub(${m.id},'accept')">✓ ${gmt('accept-btn')||'Annehmen'}</button>
-      <button class="btn btn-danger btn-sm" onclick="openRejectModal(${m.id})">✗ ${gmt('reject-btn')||'Ablehnen'}</button>
-    </div>`;
-    const desc=m['description_'+gmLang]||m.description_de||m.description_en||'';
-    const task=m['task_'+gmLang]||m.task_de||m.task_en||'';
-    return `<div class="mission-card ${sc}" id="mcard-${m.mission_id}">
-      <div class="mission-header">
-        <span class="mission-icon">${icon}</span>
-        <div style="flex:1;">
-          <div style="font-weight:700;font-size:.9rem;">${esc(m['name_'+gmLang]||m.mission_name||m.name||'')} ${indoor}</div>
-          ${desc?`<div style="font-size:.85rem;color:var(--text-dim);">${esc(desc)}</div>`:''}
-          ${task?`<div style="font-size:.85rem;color:var(--orange);">→ ${esc(task)}</div>`:''}
-          <small>${m.points} Punkt${m.points!==1?'e':''}</small>
+    const task = m['task_'+gmLang] || m.task_de || m.task_en || '';
+    const actions = m.status==='pending' ? `<div class="gcard__actions">
+      <button class="btn btn-success btn-sm" onclick="reviewSub(${m.id},'accept')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        ${esc(gmt('accept-btn')||'Accept')} · ${m.points} PT
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="openRejectModal(${m.id})" style="color:var(--red-light);">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        ${esc(gmt('reject-btn')||'Reject')}
+      </button>
+    </div>` : '';
+    return `<article class="gcard ${CARD_STATE[stKey]}" id="mcard-${m.mission_id}">
+      ${thumbHtml}
+      <div class="gcard__body">
+        <div class="gcard__title-row">
+          <div class="gcard__title">${esc(m['name_'+gmLang]||m.mission_name||m.name||'')} ${indoor}</div>
+          <span class="${PILL_CLS[stKey]}">${esc(PILL_TXT[stKey])}</span>
         </div>
-        <span class="badge badge-${bc}">${m.status}</span>
+        ${task?`<div class="gcard__task"><span class="arrow">→</span><span>${esc(task)}</span></div>`:''}
+        ${actions}
       </div>
-      ${media}${actions}
-    </div>`;
+      <span class="score-pill">${m.points} PT</span>
+    </article>`;
   }).join('');
 }
 
@@ -2072,6 +2484,36 @@ async function reviewSub(tmId,action){
   await API(`/api/submissions/${tmId}/review`,{method:'POST',body:{action,gameId:currentGameId}});
   if(selectedTeamId)selectTeam(selectedTeamId);
   toast(gmt('accepted-toast')||'Angenommen!','success');
+  playAcceptChime();
+}
+
+// Two-note "ding" played when an accept resolves. Gated on the Settings ›
+// Sound-on-accept toggle (gm_sound_accept). Synthesised so we don't need
+// an audio asset; first GM click on a button satisfies the autoplay rule.
+// Reuses a single AudioContext across chimes — browsers cap concurrent
+// contexts (~6 in Chrome) and the context may start suspended after the
+// autoplay block, so resume() before each play.
+let _chimeCtx = null;
+function playAcceptChime(){
+  if(localStorage.getItem('gm_sound_accept') !== '1') return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    if(!_chimeCtx) _chimeCtx = new AC();
+    if(_chimeCtx.state === 'suspended') _chimeCtx.resume();
+    const ctx  = _chimeCtx;
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1318, ctx.currentTime + 0.09);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(_){ /* ignore — audio is best-effort */ }
 }
 function openRejectModal(tmId){pendingRejectSubId=tmId;pendingRejectGameId=currentGameId;document.getElementById('reject-reason').value='';document.getElementById('reject-modal').style.display='flex';}
 async function confirmReject(){
@@ -2085,14 +2527,17 @@ async function confirmReject(){
 
 function renderRankings(rankings){
   const list=document.getElementById('rankings-list');
-  if(!rankings.length){list.innerHTML='<p style="font-size:.8rem;color:var(--text-muted);">Noch keine Teams.</p>';return;}
+  if(!rankings.length){list.innerHTML='<p style="font-size:.8rem;color:var(--text-muted);">'+(gmt('no-teams-yet')||'Noch keine Teams.')+'</p>';return;}
+  // Mockup 07 markup: pos / stripe / name / pts. The stripe is an inline
+  // 3×18px element coloured by teamColor(r) — same hash the team chips use.
   list.innerHTML=rankings.map((r,i)=>`
     <div class="ranking-row">
       <span class="ranking-pos">${i+1}</span>
+      <span class="ranking-stripe" style="background:${teamColor(r)};"></span>
       <span class="ranking-name">${esc(r.name)}</span>
-      <span class="ranking-score">${r.score}pt</span>
+      <span class="ranking-score">${r.score} PT</span>
     </div>`).join('');
-  rankings.forEach(r=>{const el=document.getElementById(`tscore-${r.id}`);if(el)el.textContent=`${r.score}pt`;});
+  rankings.forEach(r=>{const el=document.getElementById(`tscore-${r.id}`);if(el)el.textContent=`${r.score} PT`;});
 }
 
 function onSubmissionNew({teamId,missionId}){
@@ -2113,14 +2558,38 @@ function updateTimer(state){
   const el=document.getElementById('gm-timer');
   const m=Math.floor(state.remaining/60).toString().padStart(2,'0');
   const s=(state.remaining%60).toString().padStart(2,'0');
-  el.textContent=`${m}:${s}`;
+  // innerHTML (not textContent) so the dimmed/blinking colon span paints.
+  el.innerHTML=`${m}<span class="colon">:</span>${s}`;
   el.className='timer-display'+(state.remaining<=60&&state.running?' urgent':!state.running?' paused':'');
   document.getElementById('btn-timer-start').style.display=state.running?'none':'inline-flex';
   document.getElementById('btn-timer-pause').style.display=state.running?'inline-flex':'none';
 }
 function toggleTimerAdjust(){
   const panel=document.getElementById('timer-adjust-panel');
-  panel.style.display=panel.style.display==='none'?'block':'none';
+  if(!panel) return;
+  const isOpen = panel.style.display && panel.style.display!=='none';
+  if(isOpen){
+    closeTimerAdjust();
+  } else {
+    panel.style.display='block';
+    // Defer attaching so the click that opened the panel doesn't
+    // immediately re-close it via the document listener.
+    setTimeout(() => document.addEventListener('mousedown', _onTimerAdjustOutsideClick, true), 0);
+  }
+}
+function closeTimerAdjust(){
+  const panel=document.getElementById('timer-adjust-panel');
+  if(panel) panel.style.display='none';
+  document.removeEventListener('mousedown', _onTimerAdjustOutsideClick, true);
+}
+function _onTimerAdjustOutsideClick(e){
+  const panel = document.getElementById('timer-adjust-panel');
+  if(!panel || panel.style.display==='none') return;
+  // Don't close if the click landed inside the panel itself …
+  if(panel.contains(e.target)) return;
+  // … or on the toggle button (its own onclick will close us).
+  if(e.target.closest && e.target.closest('[onclick*="toggleTimerAdjust"]')) return;
+  closeTimerAdjust();
 }
 async function adjustTimer(seconds){
   await API(`/api/games/${currentGameId}/timer`,{method:'POST',body:{action:'adjust',seconds}});
@@ -2142,9 +2611,12 @@ async function loadGmChat(teamId){
   box.scrollTop=box.scrollHeight;
 }
 function gmBubble(m){
-  const fromGm=m.from_gm===1||m.from_gm===true;
-  const time=new Date(m.created_at||m.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}"><div class="chat-meta">${fromGm?'Du':esc(m.team_name||'Team')} · ${time}</div>${esc(m.content)}</div>`;
+  // Mockup 07: player msgs show a small uppercase team-name label above
+  // the content; GM msgs are bare green-tinted bubbles (no label, no
+  // timestamp inline — saves vertical space + reads cleaner).
+  const fromGm = m.from_gm===1 || m.from_gm===true;
+  if(fromGm) return `<div class="chat-bubble from-gm">${esc(m.content)}</div>`;
+  return `<div class="chat-bubble from-player"><div class="chat-team-label">${esc(m.team_name||'Team')}</div>${esc(m.content)}</div>`;
 }
 function onChatMessage(msg){
   if(!msg)return;
@@ -2154,8 +2626,9 @@ function onChatMessage(msg){
   // Only show player messages for the selected team
   if(msg.teamId===selectedTeamId){
     const box=document.getElementById('gm-chat-messages');
-    const time=new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-player"><div class="chat-meta">Team · ${time}</div>${esc(msg.content)}</div>`);
+    // Match the gmBubble player shape: uppercase team label + content.
+    const teamName = msg.teamName || (typeof currentGame === 'object' && currentGame?.teams?.find(t => t.id===msg.teamId)?.name) || 'Team';
+    box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-player"><div class="chat-team-label">${esc(teamName)}</div>${esc(msg.content)}</div>`);
     box.scrollTop=box.scrollHeight;
   }
   if(msg.teamId!==selectedTeamId){
@@ -2172,10 +2645,9 @@ async function sendGmChat(){
   const input=document.getElementById('gm-chat-input');
   const content=input.value.trim();if(!content||!selectedTeamId)return;
   input.value='';
-  // Optimistic
+  // Optimistic — bare green-tinted GM bubble per mockup 07.
   const box=document.getElementById('gm-chat-messages');
-  const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-gm"><div class="chat-meta">Du · ${now}</div>${esc(content)}</div>`);
+  box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-gm">${esc(content)}</div>`);
   box.scrollTop=box.scrollHeight;
   await API(`/api/games/${currentGameId}/chat`,{method:'POST',body:{teamId:selectedTeamId,content,fromGm:true}});
 }
@@ -2578,6 +3050,22 @@ async function loadSettings(){
   // Load github URL
   const gh = document.getElementById('s-github-url');
   if(gh && s.github_url) gh.value = s.github_url;
+  // Hydrate the Sound-on-accept toggle from localStorage. Mockup 08
+  // shows it in the on-state; gm_sound_accept persists the user's
+  // choice across sessions.
+  const soundOn = localStorage.getItem('gm_sound_accept') === '1';
+  const soundTgl = document.getElementById('s-sound-toggle');
+  const soundCb  = document.getElementById('s-sound-checkbox');
+  if(soundTgl) soundTgl.classList.toggle('is-on', soundOn);
+  if(soundCb)  soundCb.checked = soundOn;
+  // Reflect filled-state ticks on the timeout lang-tabs (✓ on tabs that
+  // already have content so the GM knows what's translated).
+  if(typeof refreshLangTickMarks === 'function'){
+    ['de','en','fr','it','es'].forEach(l => {
+      const el = document.getElementById('s-timeout-' + l);
+      if(el && typeof markLangTabFilled === 'function') markLangTabFilled('timeout', l, (el.value||'').trim() !== '');
+    });
+  }
   // Load version
   try {
     const v = await API('/api/version');
@@ -2612,7 +3100,10 @@ async function saveGeneralSettings(){
   const tout_fr=document.getElementById('s-timeout-fr')?.value||'';
   const tout_it=document.getElementById('s-timeout-it')?.value||'';
   const tout_es=document.getElementById('s-timeout-es')?.value||'';
-  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es}});
+  // GitHub URL moved into the General panel (was its own field on the
+  // Updates panel before mockup-08 settings); include it in the payload.
+  const github_url=document.getElementById('s-github-url')?.value||'';
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es,github_url}});
   toast(res.success?'Gespeichert!':res.error,res.success?'success':'error');
 }
 
@@ -3574,7 +4065,16 @@ async function loadCrMissions() {
     list.innerHTML = `<div class="empty"><p>${gmt('cr-no-missions')||'Noch keine CityRush-Missionen. Klicke ＋ Mission.'}</p></div>`;
     return;
   }
-  list.innerHTML = missions.map((m,i) => {
+  // Multiselect toolbar — mirrors the MiSSiONS pattern. The Export button
+  // only appears once at least one row is checked; exports just the
+  // selected missions instead of the whole mode.
+  const toolbar = `<div id="crms-toolbar" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-size:.85rem;">
+      <input type="checkbox" id="crms-select-all" onchange="toggleSelectAllCr(this)" style="accent-color:var(--orange);"> ${gmt('all')||'Alle'}
+    </label>
+    <button class="btn btn-ghost btn-sm" onclick="downloadSelectedCrMissions()" id="btn-crms-download" style="display:none;">${gmt('export-btn')||'⬇ Export'}</button>
+  </div>`;
+  list.innerHTML = toolbar + missions.map((m,i) => {
     const flags = [
       m.use_gps  ? '📍 GPS' : '',
       m.use_map  ? '🗺️ Karte' : '',
@@ -3583,7 +4083,8 @@ async function loadCrMissions() {
     ].filter(Boolean).join(' · ');
     return `<div class="mission-card" id="crmcard-${m.id}" draggable="true"
       ondragstart="crDragStart(event,${i})" ondragover="crDragOver(event,${i})" ondrop="crDrop(event,${i})" ondragend="crDragEnd()">
-      <div class="mission-header">
+      <div class="mission-header" style="align-items:flex-start;">
+        <input type="checkbox" class="crms-checkbox" data-id="${m.id}" onchange="onCrMsChange()" style="accent-color:var(--orange);margin-top:.2rem;margin-right:.25rem;width:16px;height:16px;flex-shrink:0;">
         <span style="font-family:var(--mono);color:var(--text-muted);font-size:.8rem;margin-right:.5rem;">${i+1}.</span>
         <div style="flex:1;">
           <div style="font-weight:700;">${esc(m.name_de||'(kein Name)')}</div>
@@ -3779,7 +4280,13 @@ function crMissionModal(m){
          just updates them. initCrMissionMapPicker() is called after the
          modal renders (showAddCrMission / showEditCrMission). -->
     <div class="field" data-tip="cr-map-picker" style="margin-bottom:.75rem;">
-      <label class="label" data-tip="cr-map-picker">${gmt('cr-m-map-picker')||'Karte (Klick zum Setzen, Marker ziehbar)'}</label>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.4rem;">
+        <label class="label" data-tip="cr-map-picker" style="margin-bottom:0;">${gmt('cr-m-map-picker')||'Karte (Klick zum Setzen, Marker ziehbar)'}</label>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-cr-use-loc" onclick="useCurrentLocationForCrPicker(this)" title="${gmt('cr-m-use-loc')||'Aktuellen Standort verwenden'}">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+          <span>${gmt('cr-m-use-loc')||'Aktuellen Standort verwenden'}</span>
+        </button>
+      </div>
       <div id="cr-mission-map" style="height:220px;border-radius:var(--radius);border:1px solid var(--border);background:#0a0a0a;overflow:hidden;"></div>
     </div>
     <!-- Mission options as iOS-style toggle rows. Each row's hidden
@@ -4499,6 +5006,51 @@ function initCrMissionMapPicker(){
   setTimeout(() => _crPickerMap.invalidateSize(), 200);
 }
 
+// "Use current location" — reads the browser's geolocation and drops the
+// marker there, useful when the GM is site-walking. Disables the button
+// while the request is in flight so a double-click can't queue two prompts.
+function useCurrentLocationForCrPicker(btn){
+  if(!('geolocation' in navigator)){
+    toast(gmt('geo-unsupported')||'Geolocation wird vom Browser nicht unterstützt.','error');
+    return;
+  }
+  const latInput    = document.getElementById('cr-lat');
+  const lngInput    = document.getElementById('cr-lng');
+  const radiusInput = document.getElementById('cr-radius');
+  if(btn){ btn.disabled = true; }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const la = pos.coords.latitude, ln = pos.coords.longitude;
+      if(latInput) latInput.value = la.toFixed(5);
+      if(lngInput) lngInput.value = ln.toFixed(5);
+      // Re-sync the Leaflet picker if it's up: move the marker, recenter, and
+      // make sure the radius circle re-anchors.
+      if(_crPickerMap){
+        const r = Math.max(5, parseFloat(radiusInput?.value) || 30);
+        if(_crPickerMarker){ _crPickerMarker.setLatLng([la, ln]); }
+        else { _crPickerMarker = L.marker([la, ln], { draggable: true }).addTo(_crPickerMap); }
+        if(_crPickerCircle){ _crPickerCircle.setLatLng([la, ln]); _crPickerCircle.setRadius(r); }
+        else {
+          _crPickerCircle = L.circle([la, ln], {
+            radius: r, color: '#ff6b00', fillColor: '#ff6b00', fillOpacity: 0.18, weight: 1.5,
+          }).addTo(_crPickerMap);
+        }
+        _crPickerMap.setView([la, ln], Math.max(_crPickerMap.getZoom(), 17));
+      }
+      toast(gmt('geo-set')||'Standort übernommen','success');
+      if(btn){ btn.disabled = false; }
+    },
+    (err) => {
+      const reason = err && err.code === 1
+        ? (gmt('geo-denied')||'Standortzugriff abgelehnt.')
+        : (gmt('geo-error')||'Standort konnte nicht ermittelt werden.');
+      toast(reason,'error');
+      if(btn){ btn.disabled = false; }
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
 async function autoTranslateCrField(field){
   const langs=['de','en','fr','it','es'];
   // Some textareas use a shorter id prefix than the field name we get called
@@ -4521,7 +5073,74 @@ async function autoTranslateCrField(field){
 }
 
 // Load CR modes when CityRush tab is opened
-// ── Multiselect helpers ──────────────────────────────────────────────────────
+// ── CityRush multiselect helpers ────────────────────────────────────────────
+// Same pattern as the MiSSiONS multiselect below — checkboxes + a toolbar
+// that only surfaces the Export button when at least one row is checked.
+function onCrMsChange(){
+  const boxes=document.querySelectorAll('.crms-checkbox');
+  const checked=[...boxes].filter(b=>b.checked);
+  const sa=document.getElementById('crms-select-all');
+  if(sa){ sa.indeterminate=checked.length>0&&checked.length<boxes.length; sa.checked=checked.length===boxes.length; }
+  const dlBtn=document.getElementById('btn-crms-download');
+  if(dlBtn) dlBtn.style.display=checked.length>0?'inline-flex':'none';
+}
+function toggleSelectAllCr(cb){
+  document.querySelectorAll('.crms-checkbox').forEach(b=>b.checked=cb.checked);
+  onCrMsChange();
+}
+function getSelectedCrMissionIds(){
+  return [...document.querySelectorAll('.crms-checkbox:checked')].map(b=>Number(b.dataset.id));
+}
+async function downloadSelectedCrMissions(){
+  const ids = getSelectedCrMissionIds();
+  if(!ids.length){ toast(gmt('pick-cr-missions')||'Keine CityRush-Missionen ausgewählt','warning'); return; }
+  if(!currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
+  // Reuse exportCrMissions' round-trippable shape but filter to the
+  // selected rows. We also pull each mission's hints so the export
+  // matches what the bulk Export does.
+  const all = await API(`/api/cr/missions?mode_id=${currentCrModeId}`);
+  const picked = all.filter(m => ids.includes(m.id));
+  const withHints = await Promise.all(picked.map(async m => {
+    const hints = await API(`/api/cr/hints/${m.id}`);
+    return {
+      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
+      points: m.points||10,
+      lat: m.lat, lng: m.lng, radius_meters: m.radius_meters||30,
+      use_map: !!m.use_map, use_gps: !!m.use_gps,
+      is_timed: !!m.is_timed, timer_seconds: m.timer_seconds||300,
+      penalty_interval: m.penalty_interval||60, penalty_points: m.penalty_points||2,
+      media_required: m.media_required||'none',
+      is_special: !!m.is_special, repeat_minutes: m.repeat_minutes||0,
+      has_answer: !!m.has_answer,
+      answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
+      description_de:m.description_de||'', description_en:m.description_en||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
+      task_de:m.task_de||'', task_en:m.task_en||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
+      hints: (hints||[]).map(h => ({
+        hint_type: h.hint_type === 'gps' ? 'gps' : 'answer',
+        text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'', text_es:h.text_es||'',
+        image_path: h.image_path || null,
+      })),
+    };
+  }));
+  const payload = {
+    format: 'cityrush-missions-export',
+    version: '1.0',
+    exported: new Date().toISOString(),
+    mode_name: currentCrModeName,
+    instructions: 'Upload via Settings → CityRush → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
+    missions: withHints,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `cityrush-missions-${(currentCrModeName||'mode').toLowerCase().replace(/[^a-z0-9]+/g,'-')}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast(`${withHints.length} ${gmt('cr-mission-suffix')||'Missionen'} exportiert`,'success');
+}
+
+// ── MiSSiONS multiselect helpers ────────────────────────────────────────────
 function onMsChange(){
   const boxes=document.querySelectorAll('.ms-checkbox');
   const checked=[...boxes].filter(b=>b.checked);
@@ -4689,39 +5308,76 @@ function closeModal(){document.getElementById('modal-overlay').style.display='no
 let _activeGameSubTab = 'missions';
 
 function switchSettingsTab(tab,el){
+  // Mockup 08 settings shell: items live in the sidebar, panels in main.
+  // Sidebar items use .is-active (mockup naming); content panels still
+  // use .active so the existing CSS .stab.active{display:block} works.
   document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('#settings-tabs .tab').forEach(t=>t.classList.remove('active'));
-  if(el) el.classList.add('active');
-  const subRow = document.getElementById('settings-subtabs');
+  document.querySelectorAll('.settings-side .item').forEach(t=>t.classList.remove('is-active'));
+  if(el) el.classList.add('is-active');
 
-  if(tab === 'games'){
-    // Show the Games sub-strip and route to whichever game type was last
-    // active (defaults to MiSSiONS on first visit). The parent Games
-    // button stays in the active state for the whole top-level row.
-    if(subRow) subRow.style.display = 'flex';
-    const btn = document.getElementById('st-' + _activeGameSubTab);
-    switchGameSubTab(_activeGameSubTab, btn);
-    return;
-  }
-
-  // Any non-Games tab hides the sub-strip and renders the matching panel
-  // directly (one-to-one with the legacy stab-* content IDs).
-  if(subRow) subRow.style.display = 'none';
   const panel = document.getElementById('stab-' + tab);
   if(panel) panel.classList.add('active');
-  if(tab==='rules') loadRulesetsSettings();
+
+  // Per-panel hooks. CityRush is now a top-level sidebar item (not nested
+  // behind a Games parent), so it triggers loadCrModes directly. We
+  // remember it for any callsite that still wants the "last visited
+  // sub-tab" behavior.
+  if(tab === 'missions' || tab === 'cityrush') _activeGameSubTab = tab;
+  if(tab === 'rules')    loadRulesetsSettings();
+  if(tab === 'cityrush') loadCrModes();
+  if(tab === 'manuals')  loadManualsList();
 }
 
-// Routes between the two Games sub-tabs (MiSSiONS / CityRush). Each maps
-// to one of the existing stab-missions / stab-cityrush content panels.
+// ── Manuals panel ──────────────────────────────────────────────────────────
+// Filters the visible manuals by the dropdown's language. The PDFs are
+// generated by `node handbook/scripts/build-pdfs.mjs` and copied into
+// /public/manuals/ on every build, so the in-app download links always
+// match the latest screenshots + markdown. Sizes are approximate — the
+// builder doesn't write them anywhere, so they're refreshed manually
+// when a manual grows enough to be worth updating.
+const MANUALS = [
+  // GM (operator) — both languages
+  { lang:'de', title:'GM-Handbuch',           file:'GM_Manual-de.pdf',       audience:'gm' },
+  { lang:'en', title:'GM Manual',             file:'GM_Manual-en.pdf',       audience:'gm' },
+  // Settings (admin) — both languages
+  { lang:'de', title:'Einstellungs-Handbuch', file:'SETTINGS_Manual-de.pdf', audience:'admin' },
+  { lang:'en', title:'Settings Manual',       file:'SETTINGS_Manual-en.pdf', audience:'admin' },
+  // Player — both languages
+  { lang:'de', title:'Spieler-Handbuch',      file:'PLAYER_Manual-de.pdf',   audience:'player' },
+  { lang:'en', title:'Player Manual',         file:'PLAYER_Manual-en.pdf',   audience:'player' },
+];
+function loadManualsList(){
+  const lang = document.getElementById('manuals-lang-filter')?.value || 'de';
+  const list = document.getElementById('manuals-list');
+  if(!list) return;
+  const inLang = MANUALS.filter(m => m.lang === lang);
+  if(!inLang.length){
+    list.innerHTML = `<div class="manuals-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <p>${gmt('no-manuals-yet')||'Noch keine Handbücher in dieser Sprache verfügbar.'}</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML = inLang.map(m => `
+    <a href="/manuals/${m.file}" target="_blank" rel="noopener" class="manual-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="manual-row__icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <div class="manual-row__body">
+        <div class="manual-row__title">${esc(m.title)}</div>
+        <div class="manual-row__meta">${esc(m.file)}${m.size?` · ${esc(m.size)}`:''}</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="manual-row__dl"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </a>`).join('');
+}
+
+// Backwards-compat shim — the old Games-parent + sub-tab dance is gone.
+// CityRush is its own sidebar item now, so switchGameSubTab() just
+// forwards to switchSettingsTab() for any legacy callers (e.g. resync
+// hooks fired by the dashboard return flow).
 function switchGameSubTab(sub, el){
   _activeGameSubTab = sub;
-  document.querySelectorAll('.stab').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('#settings-subtabs .tab').forEach(t=>t.classList.remove('active'));
-  if(el) el.classList.add('active');
-  const panel = document.getElementById('stab-' + sub);
-  if(panel) panel.classList.add('active');
-  if(sub === 'cityrush') loadCrModes();
+  // Find the matching sidebar item to keep the highlight in sync.
+  const sidebarItem = el || document.getElementById('st-' + sub);
+  switchSettingsTab(sub, sidebarItem);
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast-container').appendChild(el);setTimeout(()=>el.remove(),3500);}

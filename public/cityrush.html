@@ -13,20 +13,32 @@
 * { box-sizing:border-box; margin:0; padding:0; }
 body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
 
-/* ── Topbar ──
-   Same direction as play.html: warmer --bg3 surface, hairline border,
-   display font on the team name, neutral score chip (orange reserved
-   for action signals, not progress info). */
-.cr-topbar { display:flex; align-items:center; justify-content:space-between; padding:.65rem .8rem;
-  background:var(--bg3); border-bottom:1px solid var(--hairline); flex-shrink:0; gap:.5rem; }
-.cr-timer { font-family:var(--mono); font-size:1.4rem; letter-spacing:.04em; white-space:nowrap; font-weight:500; }
+/* ── CityRush player header — mockup 10. Score-pill (★ + mono points)
+   on the left, clock+timer in the middle, chat/rules/lang icon-btns on
+   the right (kept per user direction; mockup only shows the lang chip).
+   Same 3-col grid + dead-centred middle as the MiSSiONS player. */
+.cr-topbar { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px;
+  padding:12px 14px 10px; background:var(--bg3); border-bottom:1px solid var(--hairline); flex-shrink:0; }
+.cr-topbar .cr-left   { justify-self:start; display:flex; align-items:center; min-width:0; }
+.cr-topbar .cr-center { justify-self:center; display:inline-flex; align-items:center; gap:6px; color:var(--text-dim); }
+.cr-topbar .cr-center svg { width:13px; height:13px; stroke:currentColor; stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.cr-topbar .cr-right  { justify-self:end; display:flex; align-items:center; gap:6px; }
+.cr-timer { font:700 14px/1 var(--mono); color:var(--text); white-space:nowrap; letter-spacing:.03em; }
 .cr-timer.urgent { color:var(--red); animation:pulse-red 1s infinite; }
-.team-name-cr { font-family:var(--display); font-weight:800; font-size:1.1rem; letter-spacing:.06em; text-transform:uppercase;
-  flex:1; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-.cr-score-chip { font-family:var(--mono); color:var(--text); font-size:.9rem; font-weight:600;
-  background:rgba(255,255,255,0.06); border:1px solid var(--hairline);
-  border-radius:999px; padding:.2rem .65rem; flex-shrink:0;
-  white-space:nowrap; letter-spacing:.02em; }
+/* Hide the old team-name centerpiece — score-pill + topbar layout no
+   longer needs it. We keep the element so JS that reads team name from
+   sessionStorage still works; CSS hides it from the header. */
+.team-name-cr { display:none; }
+.cr-score-chip { display:none; }
+/* Mockup-style score-pill + icon-btn chips. */
+.score-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--hairline);font:700 12px/1 var(--mono);color:var(--text);letter-spacing:.02em;white-space:nowrap;}
+.score-pill svg{width:11px;height:11px;color:var(--orange);stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.score-pill .pt{color:var(--text-dim);}
+.cr-icon-btn{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--hairline);color:var(--text);cursor:pointer;font:700 11px/1 var(--body);letter-spacing:.06em;padding:0;position:relative;transition:color .12s,background .12s,border-color .12s;}
+.cr-icon-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);}
+.cr-icon-btn .icon{width:18px;height:18px;display:block;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.cr-icon-btn.active{border-color:var(--orange);color:var(--orange);}
+/* Legacy class kept so chat / rules back-buttons (which still use it) work. */
 .topbar-btn { background:var(--surface); border:1px solid var(--hairline); color:var(--text-dim);
   border-radius:var(--radius); padding:.4rem .65rem; cursor:pointer; font-size:.75rem;
   font-weight:700; text-transform:uppercase; white-space:nowrap; flex-shrink:0; position:relative; transition:color .12s,border-color .12s; }
@@ -48,33 +60,23 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .back-arrow { width:.95em; height:.95em; flex-shrink:0; display:inline-block; }
 .back-arrow svg { display:block; width:100%; height:100%; }
 @media (max-width:480px){
-  .cr-topbar { gap:.25rem; padding:.45rem .35rem; }
-  .cr-timer { font-size:1.05rem; }
-  .cr-score-chip { font-size:.75rem; padding:.1rem .35rem; }
-  .topbar-btn { width:34px; padding:.35rem 0; font-size:.7rem; text-align:center; }
-  #btn-v-lang { font-size:.65rem; }
-  /* On very narrow phones (e.g. iPhone SE) the row of 5 buttons + timer +
-     score + team name is the tightest line. Allow the team name to shrink
-     to zero width so the language button doesn't fall off the right edge. */
-  .team-name-cr { font-size:.85rem; }
-}
-@media (max-width:380px){
-  .cr-topbar { gap:.2rem; padding:.4rem .25rem; }
-  .topbar-btn { width:30px; font-size:.65rem; }
-  .cr-timer { font-size:.95rem; }
-  /* Hide the score chip on truly tiny screens — it's still visible inside
-     the mission view. The lang button must remain reachable. */
-  .cr-score-chip { display:none; }
+  .cr-topbar { gap:6px; padding:10px 10px 8px; }
+  .score-pill { padding:5px 9px; font-size:11px; }
+  .cr-icon-btn { width:32px; height:32px; }
+  .cr-icon-btn .icon { width:16px; height:16px; }
 }
 
 /* ── Views ── */
+/* Extra bottom padding to clear the bottom-pinned single-special star
+   button (56px + 18px gap + safe-area). The star button can be hidden
+   (0 or 2+ specials) but the padding stays so content never collides. */
 #view-mission { flex:1; min-height:0; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 1.5rem);
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6rem);
   padding-left:max(.5rem, env(safe-area-inset-left,0px));
   padding-right:max(.5rem, env(safe-area-inset-right,0px));
   box-sizing:border-box; }
 @media (max-width:480px){
-  #view-mission { padding:.5rem .5rem calc(env(safe-area-inset-bottom,0px) + 1.5rem); }
+  #view-mission { padding:.5rem .5rem calc(env(safe-area-inset-bottom,0px) + 6rem); }
 }
 /* While the team is frozen, give the mission tiles + popup a chilly look so
    the state is obvious even when the overlay has been dismissed. The page
@@ -128,10 +130,60 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 #view-map     { flex:1; display:none; position:relative; }
 #cr-map       { width:100%; height:100%; }
 
-/* ── Mission card ── */
-.cr-progress { text-align:center; margin-bottom:.75rem; }
-.cr-progress-bar { height:4px; background:var(--surface); border-radius:2px; overflow:hidden; margin-top:.3rem; }
-.cr-progress-fill { height:100%; background:var(--red); border-radius:2px; transition:width .4s; }
+/* ── Progress bar — mockup 10. 4px bar with an orange→peach gradient
+   and a meta row below: "STOP N / M" left + mode name right. */
+.cr-progress { padding:6px 18px 14px; }
+.cr-progress-bar { height:4px; background:var(--surface); border-radius:4px; overflow:hidden; }
+.cr-progress-fill { height:100%; background:linear-gradient(90deg, var(--orange), #ffb066); border-radius:4px; transition:width .4s; }
+.cr-progress-meta { display:flex; justify-content:space-between; margin-top:6px; font:500 11px/1 var(--mono); color:var(--text-muted); letter-spacing:.04em; }
+.cr-progress-meta .left { text-transform:uppercase; }
+
+/* ── Embedded map card — mockup 10. 200px tall, hairline, clickable
+   for fullscreen. Houses a small Leaflet instance (#cr-mini-map) plus a
+   distance pill "Xm away" in the top-left when the player has GPS. */
+.cr-map-card { margin:0 18px 14px; border:1px solid var(--hairline); border-radius:12px; overflow:hidden; background:#0a0a0a; position:relative; height:200px; cursor:pointer; }
+.cr-map-card #cr-mini-map { width:100%; height:100%; }
+.cr-map-card .arrived-pill { position:absolute; top:12px; left:12px; padding:6px 10px; background:rgba(15,14,13,.78); border:1px solid var(--hairline); border-radius:999px; color:var(--text-dim); font:600 10px/1 var(--body); letter-spacing:.14em; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; z-index:401; }
+.cr-map-card .arrived-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--orange); box-shadow:0 0 0 4px rgba(232,95,30,.18); animation:cr-pulse 1.4s infinite; }
+@keyframes cr-pulse { 0%{transform:scale(1);} 50%{transform:scale(1.4);} 100%{transform:scale(1);} }
+/* Fullscreen-tap affordance — a corner chip hinting tap = fullscreen. */
+.cr-map-card .fs-hint { position:absolute; top:12px; right:12px; padding:5px 8px; background:rgba(15,14,13,.78); border:1px solid var(--hairline); border-radius:6px; color:var(--text-dim); z-index:401; display:inline-flex; align-items:center; gap:5px; font:600 9px/1 var(--body); letter-spacing:.14em; text-transform:uppercase; }
+.cr-map-card .fs-hint svg { width:11px; height:11px; stroke:currentColor; stroke-width:1.8; fill:none; }
+
+/* ── Mockup-style mission tile + special variant ── */
+.cr-tiles-wrap { padding:0 18px; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+.cr-tiles-section { padding:0 18px; margin-top:6px; margin-bottom:14px; }
+.cr-tiles-section-label { font:700 10px/1 var(--body); letter-spacing:.22em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; padding-left:2px; }
+.cr-tiles-section--special .cr-tiles-section-label { color:#f4b400; }
+/* Special-mission tiles get a golden glow per user direction. Only
+   visible when 2+ specials exist (the section renders, otherwise the
+   special collapses to the single-special button below). */
+.cr-tile--special { border-color:rgba(244,180,0,.55)!important; box-shadow:0 0 0 1px rgba(244,180,0,.35) inset, 0 0 28px -8px rgba(244,180,0,.5); background:linear-gradient(160deg, rgba(244,180,0,.07), var(--surface)); }
+.cr-tile--special .name { color:#ffd86b; }
+.cr-tile--special .badges { color:#f4b400; }
+.cr-tile--special.current { box-shadow:0 0 0 1px rgba(244,180,0,.55) inset, 0 0 32px -6px rgba(244,180,0,.6); }
+
+/* Hints card — mockup 10. Dashed border, header row (HINTS + N left),
+   reveal pill below. Wired to the CURRENT mission only. */
+.cr-hints-card { margin:0 18px 14px; padding:14px 16px; background:var(--surface); border:1px dashed var(--hairline); border-radius:12px; }
+.cr-hints-card .ht-row { display:flex; align-items:center; justify-content:space-between; }
+.cr-hints-card .ht-title { font:700 11px/1 var(--body); letter-spacing:.18em; text-transform:uppercase; color:var(--text-muted); }
+.cr-hints-card .ht-count { font:500 11px/1 var(--mono); color:var(--text-muted); }
+.cr-hints-card .ht-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:var(--surface2); border:1px solid var(--hairline); color:var(--text-dim); font:600 11px/1 var(--body); margin-top:10px; cursor:pointer; transition:color .12s,border-color .12s; }
+.cr-hints-card .ht-pill:hover { color:var(--text); border-color:rgba(255,255,255,.22); }
+.cr-hints-card .ht-pill svg { width:12px; height:12px; stroke:currentColor; stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+/* Single-special-mission button — small round star button per user
+   direction. Pinned to the BOTTOM-CENTER of the viewport so it's always
+   reachable regardless of scroll position. Hidden when 0 or 2+ specials.
+   z-index keeps it above content but below overlays (selfie / frozen /
+   chat — those start at 1100+). */
+.cr-special-btn { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 18px); margin:0; display:flex; align-items:center; justify-content:center; width:56px; height:56px; border-radius:50%; background:linear-gradient(160deg, #f4b400, #c88a00); border:1px solid rgba(244,180,0,.7); color:#1a1200; cursor:pointer; box-shadow:0 0 28px -6px rgba(244,180,0,.6), inset 0 1px 0 rgba(255,255,255,.25); padding:0; transition:transform .12s, box-shadow .12s; z-index:500; }
+.cr-special-btn:hover { transform:translateX(-50%) translateY(-1px); box-shadow:0 4px 32px -4px rgba(244,180,0,.7), inset 0 1px 0 rgba(255,255,255,.3); }
+.cr-special-btn:active { transform:translateX(-50%) translateY(0); }
+.cr-special-btn svg { width:26px; height:26px; fill:currentColor; stroke:none; }
+
+/* Mission card ── */
 .cr-mission-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
 .cr-mission-header { padding:1rem; background:var(--bg3); border-bottom:1px solid var(--border); }
 .cr-mission-number { font-size:.75rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
@@ -205,52 +257,98 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 </head>
 <body>
 
+<!-- ── CityRush player header — mockup 10. 3-col grid: score-pill /
+     clock+timer / icon-btn chips. The dedicated map view button is
+     gone — tap the embedded map card to go fullscreen. Mission view
+     is the default; no button needed for it either. The legacy
+     team-name span is hidden via CSS but kept so sessionStorage-driven
+     name updates don't blow up. -->
 <div class="cr-topbar">
-  <div class="cr-timer" id="cr-game-timer">--:--</div>
-  <div class="team-name-cr">
-    <span id="cr-team-name-text">CityRush</span>
+  <div class="cr-left">
+    <span class="score-pill">
+      <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span id="cr-team-score">0</span> <span class="pt">PT</span>
+    </span>
+    <span class="team-name-cr"><span id="cr-team-name-text">CityRush</span></span>
   </div>
-  <span class="cr-score-chip" id="cr-team-score">0pt</span>
-  <div style="display:flex;gap:.35rem;flex-shrink:0;">
-    <!-- Stroked SVG line icons matching the play.html topbar so the
-         player has one consistent icon family across game types. -->
-    <button class="topbar-btn active" id="btn-v-mission" onclick="crShowView('mission')" title="Missions" aria-label="Missions">
-      <svg class="icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-    </button>
-    <button class="topbar-btn" id="btn-v-map" onclick="crShowView('map')" title="Map" aria-label="Map">
-      <svg class="icon" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-    </button>
-    <button class="topbar-btn" id="btn-v-chat" onclick="crShowView('chat')" title="Chat" aria-label="Chat" style="position:relative;">
+  <div class="cr-center">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+    <span class="cr-timer" id="cr-game-timer">--:--</span>
+  </div>
+  <div class="cr-right">
+    <button class="cr-icon-btn" id="btn-v-chat" onclick="crShowView('chat')" title="Chat" aria-label="Chat">
       <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span id="cr-chat-dot" style="position:absolute;top:1px;right:1px;width:8px;height:8px;border-radius:50%;background:var(--orange);display:none;"></span>
+      <span id="cr-chat-dot" style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--orange);display:none;border:2px solid var(--bg3);"></span>
     </button>
-    <button class="topbar-btn" id="btn-v-rules" onclick="showRulesView()" title="Rules" aria-label="Rules">
+    <button class="cr-icon-btn" id="btn-v-rules" onclick="showRulesView()" title="Rules" aria-label="Rules">
       <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     </button>
-    <button class="topbar-btn" id="btn-v-lang" onclick="crCycleLang()" title="Language">DE</button>
+    <button class="cr-icon-btn" id="btn-v-lang" onclick="crCycleLang()" title="Language">DE</button>
+    <!-- Hidden legacy buttons. crShowView('mission'|'map') keeps working
+         (called from chat-back / arrival overlay / popup). -->
+    <button id="btn-v-mission" onclick="crShowView('mission')" style="display:none;">m</button>
+    <button id="btn-v-map" onclick="crShowView('map')" style="display:none;">m</button>
   </div>
 </div>
 
-<!-- MISSION VIEW -->
+<!-- MISSION VIEW — mockup 10 layout: progress bar + meta / embedded map
+     card (tap-to-fullscreen) / special tiles (gold glow when 2+) /
+     single-special button (when exactly 1) / linear tile grid / hints
+     card (current mission). The legacy capture-team section is unused
+     now — capture lives inside special missions per user direction. -->
 <div id="view-mission">
   <div id="cr-loading" style="text-align:center;padding:2rem;color:var(--text-muted);">Laden…</div>
   <div id="cr-mission-wrap" style="display:none;">
-    <!-- Progress -->
+
+    <!-- Progress bar with mockup meta row. -->
     <div class="cr-progress">
-      <div id="cr-progress-text" style="font-size:.8rem;color:var(--text-muted);"></div>
       <div class="cr-progress-bar"><div class="cr-progress-fill" id="cr-progress-fill"></div></div>
+      <div class="cr-progress-meta">
+        <span class="left" id="cr-progress-text">STOP – / –</span>
+        <span class="right" id="cr-progress-mode"></span>
+      </div>
     </div>
-    <!-- Special missions (always-available, parallel) — appear above the
-         linear roster. Hidden block when there are none.
-         Two equal columns; `minmax(0, 1fr)` lets each tile shrink so its
-         content can never spill out of the viewport edge. -->
-    <div id="cr-special-section" style="display:none;margin-top:.5rem;">
-      <div class="cr-section-label" id="cr-lbl-special" style="color:var(--orange);">⭐ Spezial-Missionen</div>
-      <div id="cr-special-tiles" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:.5rem;margin-bottom:.75rem;"></div>
+
+    <!-- Embedded map. Tappable → fullscreen view (#view-map). Distance
+         pill in the top-left corner shows meters to the next target. -->
+    <div class="cr-map-card" id="cr-mini-map-card" onclick="crGoFullscreenMap()">
+      <div id="cr-mini-map"></div>
+      <div class="arrived-pill" id="cr-mini-distance-pill" style="display:none;">
+        <span class="dot"></span>
+        <span id="cr-mini-distance-text">– m</span>
+      </div>
+      <div class="fs-hint">
+        <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        <span id="cr-fs-hint-label">Vollbild</span>
+      </div>
     </div>
-    <!-- Linear mission tiles. Two columns, full-bleed-safe. -->
-    <div id="cr-tiles" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:.5rem;margin-top:.5rem;"></div>
-    <!-- Capture a team -->
+
+    <!-- Special-mission section. Visible only when 2+ specials exist;
+         the section's render branch is in renderSpecialSection(). When
+         exactly 1 special exists, this block is hidden and
+         #cr-special-btn appears instead. -->
+    <div class="cr-tiles-section cr-tiles-section--special" id="cr-special-section" style="display:none;">
+      <div class="cr-tiles-section-label" id="cr-lbl-special">⭐ Spezial-Missionen</div>
+      <div class="cr-tiles-wrap" id="cr-special-tiles"></div>
+    </div>
+
+    <!-- Linear missions tile grid. Whole tiles tap to open the detail
+         popup; the existing openMissionPopup() handler still works. -->
+    <div class="cr-tiles-wrap" id="cr-tiles"></div>
+
+    <!-- Hints card — surfaces the CURRENT mission's hints with a tap-to-
+         reveal pill (cost listed). renderCurrentHintsCard() populates it. -->
+    <div class="cr-hints-card" id="cr-hints-card" style="display:none;">
+      <div class="ht-row">
+        <span class="ht-title" id="cr-hints-title">Hinweise</span>
+        <span class="ht-count" id="cr-hints-count">– übrig</span>
+      </div>
+      <div id="cr-hints-pills"></div>
+    </div>
+
+    <!-- Capture-team section kept (display:none) for back-compat with
+         any callers still toggling it. Per user direction, capture
+         lives inside a special mission now. -->
     <div id="cr-capture-section" style="margin-top:1rem;display:none;">
       <div class="cr-section-label">Team fotografieren (+5 Punkte)</div>
       <div class="cr-teams-grid" id="cr-capture-teams"></div>
@@ -287,6 +385,14 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
     <button class="btn btn-success btn-lg" onclick="crSelfieUpload()" id="cr-selfie-upload-btn">✓ <span id="cr-selfie-upload-lbl">Hochladen & weiter</span></button>
   </div>
 </div>
+
+<!-- Single-special-mission button. Kept OUTSIDE #view-mission so that
+     `body.is-frozen` (which sets `filter:` on #view-mission) doesn't turn
+     #view-mission into the containing block for this fixed button and
+     drag it off-screen with the scrollable view. -->
+<button class="cr-special-btn" id="cr-special-btn" type="button" style="display:none;" onclick="crOpenSingleSpecial()" aria-label="Spezial-Mission" title="Spezial-Mission">
+  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+</button>
 
 <!-- FROZEN OVERLAY. Shown to a team that has just been frozen. The X button
      lets them dismiss it so they can still browse missions while frozen;
@@ -354,18 +460,19 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 </div>
 
 <style>
+  /* Mockup-10 tile pattern. Hairline border, 12px radius, 14px padding.
+     State variants: current (orange glow), pending (orange dim border),
+     done (green dim border), available/upcoming (default). */
   .cr-tile {
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:.85rem .8rem; cursor:pointer; transition:all .15s; min-height:128px;
-    display:flex; flex-direction:column; gap:.35rem;
-    min-width:0;            /* allow shrinking inside the 2-col grid track    */
-    overflow:hidden;        /* hard guard against any inner overflow          */
-    box-sizing:border-box;
+    background:var(--surface); border:1px solid var(--hairline); border-radius:12px;
+    padding:14px; cursor:pointer; transition:border-color .15s,background .15s; min-height:128px;
+    display:flex; flex-direction:column; gap:.4rem;
+    min-width:0; overflow:hidden; box-sizing:border-box; position:relative;
   }
-  .cr-tile:hover { border-color:var(--red-dim); }
-  .cr-tile.current { border-color:var(--red); box-shadow:0 0 12px rgba(212,43,43,.3); }
-  .cr-tile.pending { border-color:var(--orange); opacity:.9; }
-  .cr-tile.done    { border-color:#006628; opacity:.85; }
+  .cr-tile:hover { border-color:rgba(255,255,255,.18); background:var(--surface2); }
+  .cr-tile.current { border-color:rgba(232,95,30,.55); box-shadow:0 0 0 1px rgba(232,95,30,.35) inset, 0 0 24px -8px rgba(232,95,30,.5); }
+  .cr-tile.pending { border-color:rgba(232,95,30,.45); }
+  .cr-tile.done    { border-color:rgba(74,222,128,.45); }
   .cr-tile .num { font-family:var(--mono); font-size:.7rem; color:var(--text-muted); }
   /* Long mission names clamp at 2 lines + ellipsis so the tile can't grow. */
   .cr-tile .name {
@@ -387,11 +494,13 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
     padding:.15rem .45rem; border-radius:2px;
     max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .cr-tile.done    .status-pill { background:#003318; color:var(--green); }
-  .cr-tile.pending .status-pill { background:#4a2000; color:var(--orange); }
-  .cr-tile.current .status-pill { background:#4a2000; color:var(--orange); }
-  .cr-tile.available .status-pill { background:var(--surface2); color:var(--text-muted); }
-  .cr-tile.upcoming .status-pill { background:var(--surface2); color:var(--text-muted); }
+  /* Status-pill colours — soft tinted bg + matching text + hairline. */
+  .cr-tile.done    .status-pill { background:rgba(74,222,128,.14); color:var(--green); border:1px solid rgba(74,222,128,.25); }
+  .cr-tile.pending .status-pill { background:rgba(232,95,30,.14); color:var(--orange); border:1px solid rgba(232,95,30,.25); }
+  .cr-tile.current .status-pill { background:rgba(232,95,30,.14); color:var(--orange); border:1px solid rgba(232,95,30,.25); }
+  .cr-tile.available .status-pill { background:rgba(255,255,255,.04); color:var(--text-muted); border:1px solid var(--hairline); }
+  .cr-tile.upcoming .status-pill { background:rgba(255,255,255,.04); color:var(--text-muted); border:1px solid var(--hairline); }
+  .cr-tile--special .status-pill { background:rgba(244,180,0,.16); color:#f4b400; border:1px solid rgba(244,180,0,.35); }
   /* Inline hint chip inside the popup so revealed hints persist visibly. */
   .cr-hint-chip { background:rgba(255,107,0,.08); border-left:3px solid var(--orange);
     padding:.5rem .75rem; border-radius:0 var(--radius) var(--radius) 0; margin-bottom:.4rem;
@@ -401,16 +510,32 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 <!-- MAP VIEW -->
 <div id="view-map">
   <div id="cr-map"></div>
-  <!-- Anchored to the viewport (not the map) so the browser's chrome
-       can't hide it. Sits below the topbar on the right with a high
-       z-index, well clear of Leaflet's zoom controls and attribution. -->
+  <!-- Back button — anchored to the viewport so it's always reachable,
+       even while Leaflet's gestures are eating taps on the map itself.
+       Top-left corner, just below the safe-area inset. Calls
+       crShowView('mission') to return to the missions view. -->
+  <!-- Anchored ~72px below the safe-area inset so both buttons sit
+       INSIDE the map area, below the topbar (which is ~60-65px tall
+       including padding + icon-btns). Otherwise they overlap the
+       score-pill / chat / rules / lang chips in the topbar above. -->
+  <button id="cr-map-back" onclick="crShowView('mission')"
+    style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 72px);left:12px;z-index:1200;
+           display:none;align-items:center;gap:6px;
+           padding:.6rem .9rem;font:700 .8rem/1 var(--body);
+           letter-spacing:.06em;text-transform:uppercase;
+           background:var(--bg3);border:1px solid var(--hairline);color:var(--text);
+           border-radius:10px;cursor:pointer;
+           box-shadow:0 4px 16px rgba(0,0,0,.6);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+    <span id="cr-map-back-label">Zurück</span>
+  </button>
   <button id="cr-jump-me" onclick="jumpToMe()"
-    style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 64px);right:.75rem;z-index:1200;
+    style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 72px);right:12px;z-index:1200;
            display:none;align-items:center;gap:.35rem;
            padding:.6rem .9rem;font-size:.85rem;font-family:var(--body);font-weight:700;
            letter-spacing:.05em;text-transform:uppercase;
-           background:var(--surface);border:2px solid var(--red);color:var(--text);
-           border-radius:var(--radius);cursor:pointer;
+           background:var(--bg3);border:1px solid var(--hairline);color:var(--text);
+           border-radius:10px;cursor:pointer;
            box-shadow:0 4px 16px rgba(0,0,0,.6);">📍 <span id="cr-jump-me-label">Zu mir</span></button>
 </div>
 
@@ -515,6 +640,11 @@ let pendingMissionIds = new Set();        // regular missions waiting for GM rev
 let skippedMissionIds = new Set();        // regular missions skipped for 0 points
 let arrivedMissionIds = new Set();        // GPS arrivals unlocked for this team
 let myScore = 0;                         // team's current score
+// Module-scoped (NOT on window): only renderSpecialTiles() should mutate
+// this, and only crUpdateSpecialBtnVisibility() should read it. Assigning
+// window._specialBtnWanted from devtools / test scripts will NOT change
+// this `let` — it just creates an unrelated window property.
+let _specialBtnWanted = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 let capturedIsVideo = false;
@@ -1271,6 +1401,9 @@ async function loadProgress(){
       allMissions     = normalized.filter(m => !m.is_special);
       specialMissions = normalized.filter(m =>  m.is_special);
     }
+    // Capture the CR mode name so the progress bar can show "Altstadt-Tour"
+    // (or whatever) on the right per mockup 10.
+    if(cr.crMode && cr.crMode.name){ window.crModeName = cr.crMode.name; }
   } catch(e) {}
   updateLinearMissionState(data);
   arrivedMissionIds = _idSet(data.arrivedMissionIds);
@@ -1308,8 +1441,10 @@ async function refreshScore(){
 }
 function updateScoreDisplay(score){
   myScore = score;
+  // The score-pill markup now renders the "PT" suffix as a separate
+  // muted span (mockup 10), so we only set the number here.
   const el = document.getElementById('cr-team-score');
-  if(el) el.textContent = `${score}pt`;
+  if(el) el.textContent = `${score}`;
 }
 
 // renderAllMissions() was the old "list view" below the single mission card.
@@ -1326,12 +1461,26 @@ const revealedHints = { gps: {}, answer: {} };   // {type: {missionId: [hintObj]
 let popupMissionId = null;                       // which mission's popup is open
 
 function renderMission(){
-  // Progress bar (shared header)
+  // Progress bar (mockup 10 format: "STOP N / M" + mode name on the right).
+  // We index the current mission relative to the linear roster so the
+  // progress always reflects "where you are now" regardless of how many
+  // are done. Falls back to completed/total when no current mission.
   const done = completedCount();
-  const pct = totalMissions > 0 ? (done/totalMissions*100) : 0;
-  document.getElementById('cr-progress-text').textContent =
-    `${done} / ${totalMissions} ${t('completed')}`;
+  const linearMissions = allMissions.filter(m => !m.is_special);
+  const totalLinear = linearMissions.length || totalMissions;
+  const currentLinearIdx = currentMission
+    ? Math.max(0, linearMissions.findIndex(x => x.id === currentMission.id))
+    : Math.min(done, totalLinear - 1);
+  const stopNum = currentMission ? currentLinearIdx + 1 : done;
+  const pct = totalLinear > 0 ? (stopNum / totalLinear) * 100 : 0;
+  const progressText = document.getElementById('cr-progress-text');
+  if(progressText) progressText.textContent = `${t('stop')||'STOP'} ${stopNum} / ${totalLinear}`;
+  const modeLabel = document.getElementById('cr-progress-mode');
+  if(modeLabel) modeLabel.textContent = (window.crModeName || '');
   document.getElementById('cr-progress-fill').style.width = pct + '%';
+  // Render the mini-map + hints card once mission data exists.
+  updateMiniMap();
+  renderCurrentHintsCard();
   if(!currentMission){
     stopMissionTimer();
     renderTiles();
@@ -1352,14 +1501,50 @@ function renderMission(){
 }
 
 // Special-mission tiles — parallel to the linear roster, always available
-// (subject to per-mission cooldown). Disabled while cooldown is active.
+// (subject to per-mission cooldown). Per user direction:
+//   0 specials → hide both section + button
+//   1 special  → hide section, show the single-special button (golden CTA)
+//   2+ specials → show section as gold-glow tiles, hide button
+// Disabled tiles (cooldown / one-shot done) still render but aren't tappable.
 function renderSpecialTiles(){
   const section = document.getElementById('cr-special-section');
   const grid    = document.getElementById('cr-special-tiles');
   const label   = document.getElementById('cr-lbl-special');
+  const btn     = document.getElementById('cr-special-btn');
+  const btnLbl  = document.getElementById('cr-special-btn-label');
   if(!grid || !section) return;
-  if(label) label.textContent = '⭐ ' + (t('special_missions')||'Spezial-Missionen');
-  if(!specialMissions.length){ section.style.display = 'none'; grid.innerHTML = ''; return; }
+
+  // Zero specials: hide everything special-related.
+  if(!specialMissions.length){
+    section.style.display = 'none';
+    grid.innerHTML = '';
+    _specialBtnWanted = false;
+    crUpdateSpecialBtnVisibility();
+    return;
+  }
+
+  // Exactly one special: hide the tile section, show the small round
+  // star button. The mission's name surfaces via aria-label + title so
+  // assistive tech and hover tooltips still announce it; the visible
+  // affordance is just the star.
+  if(specialMissions.length === 1){
+    section.style.display = 'none';
+    grid.innerHTML = '';
+    _specialBtnWanted = true;
+    if(btn){
+      const only = specialMissions[0];
+      const name = only[`name_${lang}`] || only.name_de || (t('special_mission')||'Spezial-Mission');
+      btn.setAttribute('aria-label', name);
+      btn.setAttribute('title', name);
+    }
+    crUpdateSpecialBtnVisibility();
+    return;
+  }
+
+  // 2+ specials: hide the button, render tiles with the gold-glow variant.
+  _specialBtnWanted = false;
+  crUpdateSpecialBtnVisibility();
+  if(label) label.textContent = t('special_missions')||'Spezial-Missionen';
   section.style.display = 'block';
   const now = Date.now();
   grid.innerHTML = specialMissions.map(m => {
@@ -1380,15 +1565,115 @@ function renderSpecialTiles(){
       m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
       m.has_answer?'❓':'',
     ].filter(Boolean).join(' ');
-    const tileClasses = ['cr-tile', oneShot?'done':'current', disabled?'special-disabled':''].join(' ');
+    const tileClasses = ['cr-tile','cr-tile--special', oneShot?'done':'current', disabled?'special-disabled':''].join(' ');
     return `<div class="${tileClasses}" ${disabled?'':'onclick="openSpecialPopup('+m.id+')"'}
-      style="border-color:var(--orange);${disabled?'opacity:.55;cursor:not-allowed;':''}">
-      <span class="status-pill" style="background:#4a2000;color:var(--orange);">${status}</span>
+      ${disabled?'style="opacity:.55;cursor:not-allowed;"':''}>
+      <span class="status-pill">${status}</span>
       <div class="num">⭐</div>
       <div class="name">${esc(name)}</div>
-      <div class="badges" style="color:var(--orange);">${icons} · +${m.points}pt</div>
+      <div class="badges">${icons} · +${m.points}pt</div>
     </div>`;
   }).join('');
+}
+
+// Single-special-button click handler — opens the only special's popup.
+function crOpenSingleSpecial(){
+  if(specialMissions.length === 1) openSpecialPopup(specialMissions[0].id);
+}
+
+// Tap-the-embedded-map handler. Routes to the existing fullscreen #view-map.
+function crGoFullscreenMap(){ crShowView('map'); }
+
+// ── Embedded mini-map (mockup 10). Separate Leaflet instance bound to
+// #cr-mini-map, lazy-initialised on first render. Shows the player as
+// a blue dot + every show_on_map stop as a numbered marker (orange for
+// the current target, neutral otherwise). Updated whenever the player
+// moves or mission data changes.
+let crMiniMap = null, crMiniMyMarker = null, crMiniLayer = null;
+function initMiniMap(){
+  if(crMiniMap) return;
+  const el = document.getElementById('cr-mini-map');
+  if(!el || !window.L) return;
+  crMiniMap = L.map(el, { zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false, boxZoom:false, keyboard:false }).setView([47.3769, 8.5417], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19 }).addTo(crMiniMap);
+}
+function updateMiniMap(){
+  initMiniMap();
+  if(!crMiniMap) return;
+  if(!crMiniLayer) crMiniLayer = L.layerGroup().addTo(crMiniMap);
+  crMiniLayer.clearLayers();
+  // Player position.
+  if(typeof myLat === 'number' && typeof myLng === 'number'){
+    L.circleMarker([myLat,myLng], { radius:6, color:'#5AA0FF', fillColor:'#5AA0FF', fillOpacity:1, weight:2 }).addTo(crMiniLayer);
+    L.circleMarker([myLat,myLng], { radius:14, color:'#5AA0FF', fillColor:'#5AA0FF', fillOpacity:.18, weight:0 }).addTo(crMiniLayer);
+  }
+  // Show every show_on_map stop. The current mission gets the orange
+  // arrival ring + a bigger marker; others are small neutral dots.
+  const points = [];
+  allMissions.forEach((m,i) => {
+    if(m.is_special) return;
+    if(!m.use_map || !hasCrCoords(m)) return;
+    const isCurrent = currentMission && currentMission.id === m.id;
+    const isDone = isMissionCleared(m);
+    const fill = isCurrent ? '#E85F1E' : isDone ? '#4ADE80' : '#9B9690';
+    L.circleMarker([m.lat,m.lng], { radius:isCurrent?7:5, color:fill, fillColor:fill, fillOpacity:1, weight:2 }).addTo(crMiniLayer);
+    if(isCurrent){
+      L.circle([m.lat,m.lng], { radius:missionRadiusMeters(m), color:'#E85F1E', fillColor:'#E85F1E', fillOpacity:.12, weight:1 }).addTo(crMiniLayer);
+    }
+    points.push([m.lat,m.lng]);
+  });
+  if(typeof myLat === 'number' && typeof myLng === 'number') points.push([myLat,myLng]);
+  // Fit to all points; fall back to current mission if nothing else.
+  if(points.length >= 2){
+    try { crMiniMap.fitBounds(points, { padding:[20,20], maxZoom:17 }); } catch{}
+  } else if(currentMission && hasCrCoords(currentMission)){
+    crMiniMap.setView([currentMission.lat, currentMission.lng], 16);
+  }
+  setTimeout(() => crMiniMap.invalidateSize(), 50);
+  // Distance pill (top-left). Show meters to the current target.
+  const pill = document.getElementById('cr-mini-distance-pill');
+  const txt  = document.getElementById('cr-mini-distance-text');
+  if(pill && txt && currentMission && hasCrCoords(currentMission) && typeof myLat === 'number'){
+    const d = haversineMeters(myLat, myLng, currentMission.lat, currentMission.lng);
+    txt.textContent = d < 1000 ? `${Math.round(d)} m` : `${(d/1000).toFixed(1)} km`;
+    pill.style.display = 'inline-flex';
+  } else if(pill){
+    pill.style.display = 'none';
+  }
+}
+function haversineMeters(lat1, lng1, lat2, lng2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// ── Hints card (mockup 10). Shows the current mission's hint
+// reveal pill. Tap routes to the existing popup so the player can
+// actually reveal; visual surface lives here, business logic stays in
+// openMissionPopup().
+function renderCurrentHintsCard(){
+  const card  = document.getElementById('cr-hints-card');
+  const count = document.getElementById('cr-hints-count');
+  const pills = document.getElementById('cr-hints-pills');
+  if(!card) return;
+  const m = currentMission;
+  // No card unless we have a current mission with hints attached.
+  const hintList = (m && Array.isArray(m.hints)) ? m.hints : [];
+  if(!m || !hintList.length){ card.style.display = 'none'; return; }
+  const revealed = (revealedHints[m.use_gps ? 'gps' : 'answer'] || {})[m.id] || [];
+  const remaining = Math.max(0, hintList.length - revealed.length);
+  card.style.display = 'block';
+  if(count) count.textContent = `${remaining} ${t('hints_left')||'übrig'}`;
+  if(pills){
+    pills.innerHTML = remaining > 0
+      ? `<span class="ht-pill" onclick="openMissionPopup(${m.id})">
+          <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.7.5 1 1.3 1 2.1V18h6v-1.2c0-.8.3-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
+          ${t('reveal_hint')||'Hinweis aufdecken'}
+        </span>`
+      : '';
+  }
 }
 
 // Open the special-mission popup. Same UI as a regular mission popup but
@@ -2206,6 +2491,14 @@ function dismissArrived(){
   }
 }
 
+// Show the single-special button only when (a) renderSpecialTiles wants
+// it AND (b) the player is on the mission view. Called from both spots.
+function crUpdateSpecialBtnVisibility(){
+  const btn = document.getElementById('cr-special-btn');
+  if(!btn) return;
+  btn.style.display = (_specialBtnWanted && crActiveView === 'mission') ? 'flex' : 'none';
+}
+
 function playArrivalSound(){
   try {
     const ctx = new AudioContext();
@@ -2246,10 +2539,16 @@ function crShowView(v){
     if(dot) dot.style.display = 'none';
     crScrollChat();
   }
-  // The jump-to-me button only makes sense on the map view, and is fixed-
-  // positioned so we have to explicitly hide it on the missions/rules view.
+  // The jump-to-me + back buttons only make sense on the map view; both
+  // are fixed-positioned so we have to explicitly hide them elsewhere.
   const jm = document.getElementById('cr-jump-me');
+  const mb = document.getElementById('cr-map-back');
   if(jm) jm.style.display = v==='map' ? 'inline-flex' : 'none';
+  if(mb) mb.style.display = v==='map' ? 'inline-flex' : 'none';
+  // Special-mission button lives outside #view-mission (so freeze's CSS
+  // filter doesn't shift it off-screen). That means it stays visible
+  // across view changes unless we explicitly hide it on map/chat.
+  crUpdateSpecialBtnVisibility();
   if(v==='map'){
     initMap();
     setTimeout(()=>crMap.invalidateSize(), 150);
@@ -2300,6 +2599,10 @@ function makeMarkerIcon(label, isMe){
   });
 }
 function updateMyMapMarker(lat, lng){
+  // Always refresh the embedded mini-map regardless of fullscreen state —
+  // the mockup's map card is on the missions view, so it needs to update
+  // even when the fullscreen #cr-map isn't initialised.
+  updateMiniMap();
   if(!crMap) return;
   if(!myMarker){
     myMarker = L.marker([lat,lng], {icon:makeMarkerIcon('Ich',true)}).addTo(crMap);

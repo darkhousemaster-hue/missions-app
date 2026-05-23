@@ -98,7 +98,10 @@ async function captureLang(base, lang) {
   mkdirSync(outDir, { recursive: true });
 
   const browser = await chromium.launch({ headless: !HEADED });
-  const ctx = await browser.newContext({ viewport: { width: 480, height: 900 }, deviceScaleFactor: 2 });
+  // Desktop viewport so the settings UI renders in its wide-layout mode
+  // (sidebar + form-grid) rather than the responsive mobile stack. Matches
+  // the GM capture script's scale.
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   page.on('console', m => { if (m.type() === 'error') console.error('  [page]', m.text()); });
 

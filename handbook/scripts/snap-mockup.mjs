@@ -1,0 +1,13 @@
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+process.env.NODE_PATH = 'C:/Users/darkh/AppData/Roaming/npm/node_modules';
+require('node:module').Module._initPaths();
+const { chromium } = require('playwright');
+const b = await chromium.launch({ headless: true });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+const p = await ctx.newPage();
+await p.goto('file:///C:/projects/missions-app/mockups/09-player-join.html');
+await p.waitForTimeout(500);
+await p.screenshot({ path: 'C:/projects/missions-app/handbook/screenshots/verify/mockup-09.png' });
+console.log('saved');
+await b.close();

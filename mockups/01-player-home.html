@@ -36,7 +36,7 @@
   .legend-row .item svg { width: 14px; height: 14px; opacity: .85; }
   .legend-row .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-muted); }
 
-  .missions-list { padding: 0 18px 130px; display:flex; flex-direction:column; gap: 10px; }
+  .missions-list { padding: 0 18px 32px; display:flex; flex-direction:column; gap: 10px; }
 
   .mcard {
     position: relative;
@@ -72,24 +72,22 @@
     color: var(--green);
   }
 
-  /* Bottom action bar */
-  .action-bar {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 14px 0 56px;
-    display:flex; align-items:center; justify-content:center;
-    background: linear-gradient(180deg, transparent 0%, rgba(15,14,13,0.95) 35%, var(--bg) 100%);
+  /* Per-mission "Open" action — matches the live play.html, where the
+     camera is launched from inside a mission card the player has opened,
+     not from a persistent bottom bar. The hero card below uses this. */
+  .mcard__open {
+    margin-top: 10px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 11px 14px;
+    border-radius: var(--r-button);
+    background: var(--orange); color: #fff;
+    border: 0; cursor: pointer;
+    font: 700 12px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase;
+    box-shadow: 0 10px 26px -10px var(--orange);
   }
-  .camera-btn {
-    width: 68px; height: 68px;
-    border-radius: 50%;
-    background: var(--orange);
-    color: #fff;
-    border: 0;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow: 0 12px 32px -8px var(--orange);
-    cursor: pointer;
-  }
-  .camera-btn svg { width: 28px; height: 28px; }
+  .mcard__open svg { width: 14px; height: 14px; }
+  .mcard--open { grid-template-columns: 28px 1fr; }
+  .mcard--open .mcard__open { width: 100%; }
 </style>
 </head>
 <body>
@@ -148,17 +146,25 @@
           </span>
         </article>
 
-        <!-- Default cards -->
-        <article class="card mcard">
+        <!-- Opened mission — this is the one the player is currently
+             working on; the camera CTA lives inside the card so it only
+             shows when a mission is active, not as a global bottom bar. -->
+        <article class="card mcard mcard--open" style="border-color: rgba(232,95,30,0.45);">
           <div class="mcard__type">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
           <div class="mcard__body">
-            <div class="mcard__title">Inschrift entdecken</div>
+            <div class="row between" style="margin-bottom:4px;">
+              <div class="mcard__title">Inschrift entdecken</div>
+              <div class="mcard__points">15 PT</div>
+            </div>
             <div class="mcard__desc">An einer Fassade ist eine Jahreszahl in Stein gemeißelt.</div>
             <div class="mcard__task"><span class="arrow">→</span><span>Filmt die Inschrift und nennt das Jahr.</span></div>
+            <button class="mcard__open" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              Take video
+            </button>
           </div>
-          <div class="mcard__points">15 PT</div>
         </article>
 
         <article class="card mcard">
@@ -198,12 +204,6 @@
         </article>
 
       </div>
-    </div>
-
-    <div class="action-bar">
-      <button class="camera-btn" aria-label="Open camera">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>
-      </button>
     </div>
 
     <div class="phone__indicator"></div>

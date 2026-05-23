@@ -7,85 +7,257 @@
 <title>MiSSiONS — Join</title>
 <link rel="stylesheet" href="/css/app.css">
 <style>
-body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:var(--bg);}
-.join-wrap{width:100%;max-width:400px;}
-/* Player-side logo — always perfectly centered regardless of viewport
-   quirks. Flexbox guarantees it sits on the optical centre of the join
-   panel; the inner <img> and <h1> centre themselves via auto margins
-   and a flex column. */
-.logo-area{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;margin:0 auto 2.5rem;width:100%;}
-.logo-area img{display:block;height:64px;width:auto;margin:0 auto;mix-blend-mode:screen;}
-.logo-area h1{font-size:3rem;letter-spacing:.15em;color:var(--red);margin:.5rem auto 0;}
-.loc-sub{font-size:.85rem;color:var(--text-muted);margin-top:.3rem;}
-/* Game ID is metadata, not an action signal — keep it dim so the focus
-   stays on the location name + the join CTAs below. */
-.gameid-sub{font-family:var(--mono);font-size:.8rem;color:var(--text-dim);margin-top:.15rem;}
-.join-choice{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem;}
-.join-choice .btn-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;padding:1.25rem .75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;color:var(--text);font-family:var(--body);font-weight:700;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;text-align:center;transition:all .15s;}
-.join-choice .btn-choice .icon{font-size:1.6rem;line-height:1;}
-.join-choice .btn-choice:hover{border-color:var(--red);color:var(--red-light);background:rgba(212,43,43,.06);}
-.join-choice .btn-choice.disabled{opacity:.45;cursor:not-allowed;}
-.join-choice .btn-choice.disabled:hover{border-color:var(--border);color:var(--text);background:var(--surface);}
-.error-msg{color:var(--red-light);font-size:.85rem;margin-top:.4rem;min-height:1.2em;}
-.team-row{display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.4rem;}
-.team-row-name{flex:1;font-weight:600;}
-.team-row-pts{font-family:var(--mono);font-size:.75rem;color:var(--orange);}
-.back-link{display:inline-flex;align-items:center;gap:.3rem;background:transparent;border:none;color:var(--text-muted);font-family:var(--body);font-size:.85rem;cursor:pointer;padding:0;margin-bottom:.75rem;}
-.back-link:hover{color:var(--text);}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--text); font-family:var(--body); display:flex; flex-direction:column; }
+.shell { flex:1; display:flex; flex-direction:column; max-width:480px; margin:0 auto; width:100%; min-height:100vh; min-height:100dvh; }
+
+/* ── Header — mockup 09. Adventurerooms stamp + MiSSiONS wordmark +
+   pill with the game id. Tightened from mockup so everything fits at
+   ≥844px viewport without scrolling. */
+.join-header { padding:28px 24px 10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.join-header .stamp { font:700 9px/1 var(--body); letter-spacing:.32em; text-transform:uppercase; color:var(--text-dim); }
+.join-header .wordmark { font-family:var(--display); font-weight:800; font-size:34px; letter-spacing:.06em; color:var(--red); }
+.join-header .game-id { font:600 11px/1 var(--mono); color:var(--text-muted); letter-spacing:.04em; margin-top:4px; padding:5px 11px; border:1px solid var(--hairline); border-radius:999px; background:var(--surface); }
+.join-header .loc-sub { font:500 12px/1.3 var(--body); color:var(--text-muted); letter-spacing:.04em; margin-top:2px; }
+
+/* ── Body — vertical column with tight gaps; centered lead paragraph +
+   selfie square + team-name field + language picker, then the "Or
+   join existing team" link (only when teams exist). */
+.join-body { padding:14px 22px 14px; display:flex; flex-direction:column; gap:14px; flex:1; }
+.join-body .lead { font:500 13px/1.5 var(--body); color:var(--text-dim); text-align:center; padding:0 8px; }
+
+.selfie-square {
+  width:144px; height:144px; margin:0 auto;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255,255,255,0.06), transparent 60%),
+    var(--surface);
+  border:1px dashed var(--hairline);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  color:var(--text-muted); gap:8px; position:relative; cursor:pointer;
+  padding:0; overflow:hidden;
+}
+.selfie-square svg { width:34px; height:34px; stroke:currentColor; stroke-width:1.5; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.selfie-square .label { font:600 10px/1 var(--body); letter-spacing:.22em; text-transform:uppercase; }
+.selfie-square .preview { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:50%; display:none; }
+.selfie-square.has-image .preview { display:block; }
+.selfie-square.has-image .default-content { display:none; }
+.selfie-default { display:flex; flex-direction:column; align-items:center; gap:8px; }
+
+.name-field {
+  background:var(--surface); border:1px solid var(--hairline);
+  border-radius:12px; padding:12px 16px;
+}
+.name-field .label { font:700 10px/1 var(--body); letter-spacing:.18em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+.name-field input {
+  width:100%; background:transparent; border:0; color:var(--text);
+  font:700 20px/1.1 var(--display); letter-spacing:.04em;
+  outline:none; text-transform:uppercase;
+  padding:0;
+}
+.name-field input::placeholder { color:var(--text-muted); text-transform:uppercase; font-family:var(--display); letter-spacing:.04em; }
+
+.lang-section { text-align:center; }
+.lang-label { font:600 10px/1 var(--body); letter-spacing:.22em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+.lang-picker { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+.lang-tab {
+  padding:7px 11px; border-radius:999px;
+  background:var(--surface); border:1px solid var(--hairline);
+  color:var(--text-dim); font:600 12px/1 var(--body); letter-spacing:.04em;
+  cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+  user-select:none;
+}
+.lang-tab:hover { color:var(--text); }
+.lang-tab.is-active { color:var(--text); background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.25); }
+
+/* "Or join an existing team" — only surfaces when teams already exist.
+   Small text link to keep the create-new flow as the dominant CTA. */
+.join-existing-link {
+  background:transparent; border:0; cursor:pointer; padding:8px 4px;
+  font:500 12px/1.4 var(--body); color:var(--text-dim);
+  text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.join-existing-link:hover { color:var(--text); }
+.join-existing-link span { color:var(--orange); font-weight:700; }
+
+.error-msg { color:var(--red-light); font-size:.85rem; text-align:center; min-height:1.2em; }
+
+/* ── Bottom CTA — full-width orange "Join game →". */
+.join-cta { padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 14px); display:flex; gap:10px; }
+.join-cta .btn {
+  flex:1; padding:13px 20px; font:700 13px/1 var(--body);
+  letter-spacing:.06em; text-transform:uppercase;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border-radius:10px; border:0; cursor:pointer;
+}
+.join-cta .btn-primary {
+  background:var(--orange); color:#fff;
+  box-shadow:0 10px 26px -10px var(--orange);
+}
+.join-cta .btn-primary:hover { background:#ff7438; }
+.join-cta .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+.join-cta .btn svg { width:14px; height:14px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ── Join existing team panel — alternate view, slides in from the
+   create-new screen via showJoinExisting(). Same header stays; the
+   body content swaps. */
+.back-link {
+  display:inline-flex; align-items:center; gap:6px;
+  background:transparent; border:0; color:var(--text-dim);
+  font:600 12px/1 var(--body); letter-spacing:.06em;
+  cursor:pointer; padding:6px 0; margin-bottom:10px;
+}
+.back-link:hover { color:var(--text); }
+.back-link svg { width:14px; height:14px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.je-title { font-family:var(--display); font-weight:800; font-size:22px; letter-spacing:.06em; text-transform:uppercase; color:var(--text); margin-bottom:14px; }
+.team-row {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px; background:var(--surface); border:1px solid var(--hairline);
+  border-radius:12px; margin-bottom:10px;
+}
+.team-row .selfie {
+  width:40px; height:40px; border-radius:50%;
+  object-fit:cover; border:1px solid var(--hairline); flex-shrink:0;
+  background:var(--surface2);
+}
+.team-row .name { flex:1; font:700 14px/1 var(--display); letter-spacing:.04em; text-transform:uppercase; color:var(--text); }
+.team-row .pts { font:600 12px/1 var(--mono); color:var(--text-muted); }
+.team-row .join-btn {
+  padding:8px 14px; border-radius:10px;
+  background:var(--orange); color:#fff; border:0;
+  font:700 11px/1 var(--body); letter-spacing:.06em; text-transform:uppercase;
+  cursor:pointer;
+}
+.team-row .join-btn:hover { background:#ff7438; }
+
+#screen-loading, #screen-error { padding:40px 24px; text-align:center; color:var(--text-muted); }
+#screen-error h2 { color:var(--red-light); margin-bottom:8px; font:800 22px/1 var(--display); letter-spacing:.06em; text-transform:uppercase; }
+#screen-error p { color:var(--text-dim); font:500 13px/1.5 var(--body); margin-top:4px; }
+
+/* ── Selfie camera modal — full-screen camera with shutter / flip /
+   cancel; review pane with retake / accept. */
+#selfie-modal {
+  position:fixed; inset:0; background:#000; z-index:900;
+  display:none; flex-direction:column;
+}
+#selfie-video, #selfie-shot { flex:1; width:100%; object-fit:cover; display:block; }
+#selfie-shot { display:none; }
+.sm-bar {
+  padding:18px 14px calc(env(safe-area-inset-bottom,0px) + 18px);
+  background:#111; display:flex; gap:14px; align-items:center; justify-content:center; flex-shrink:0;
+}
+.sm-bar .sm-btn {
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+  color:#fff; padding:10px 14px; border-radius:10px;
+  font:700 12px/1 var(--body); letter-spacing:.06em; text-transform:uppercase; cursor:pointer;
+}
+.sm-bar .sm-btn:hover { background:rgba(255,255,255,.14); }
+.sm-bar .sm-shutter {
+  width:64px; height:64px; border-radius:50%;
+  border:3px solid #fff; background:rgba(255,255,255,.15);
+  cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.sm-bar .sm-shutter:hover { background:rgba(255,255,255,.25); }
+.sm-bar .sm-accept {
+  background:var(--orange); color:#fff; border:1px solid var(--orange);
+}
+.sm-bar .sm-accept:hover { background:#ff7438; }
 </style>
 </head>
 <body>
-<div class="join-wrap">
-  <div class="logo-area">
-    <img src="/assets/logo.png" alt="AR">
-    <h1><span>MiSSi</span><span>ONS</span></h1>
+<div class="shell">
+
+  <header class="join-header">
+    <div class="stamp">Adventurerooms</div>
+    <div class="wordmark" id="mockup-wordmark">MiSSiONS</div>
+    <div class="game-id" id="game-id-display">GAME · –</div>
     <div class="loc-sub" id="location-info"></div>
-    <div class="gameid-sub" id="game-id-display"></div>
+  </header>
+
+  <!-- Loading -->
+  <div id="screen-loading"><p>Laden…</p></div>
+
+  <!-- Error -->
+  <div id="screen-error" style="display:none;">
+    <h2 id="err-title">Fehler</h2>
+    <p id="error-detail">Ungültiger Code oder Spiel beendet.</p>
+    <p id="err-ask-gm">Bitte den Spielleiter um einen neuen Code.</p>
   </div>
 
-  <div id="screen-loading"><p style="color:var(--text-muted);text-align:center;">Laden…</p></div>
+  <!-- Create-new screen (mockup default) -->
+  <div id="screen-create" class="join-body" style="display:none;">
+    <p class="lead" id="lead-text">Mach ein Selfie und wähle einen Teamnamen. Andere Teams sehen euer Selfie in der Rangliste.</p>
 
-  <div id="screen-error" style="display:none;text-align:center;">
-    <h2 style="color:var(--red-light);margin-bottom:.75rem;">Fehler</h2>
-    <p style="color:var(--text-dim);" id="error-detail">Ungültiger Code oder Spiel beendet.</p>
-    <p style="color:var(--text-dim);margin-top:.5rem;">Bitte den Spielleiter um einen neuen Code.</p>
-  </div>
-
-  <div id="screen-join" style="display:none;">
-    <!-- Two big buttons: pick "create new" or "join existing" up front. -->
-    <div class="join-choice" id="join-choice">
-      <button class="btn-choice" id="btn-go-new"  onclick="switchTab('new')">
-        <span class="icon">＋</span><span>Neues Team erstellen</span>
-      </button>
-      <button class="btn-choice" id="btn-go-join" onclick="switchTab('join')">
-        <span class="icon">👥</span>
-        <span>Team beitreten</span>
-        <small id="btn-go-join-count" style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted);"></small>
-      </button>
-    </div>
-
-    <!-- New team panel -->
-    <div id="panel-new" style="display:none;">
-      <button class="back-link" onclick="showChoice()">← Zurück</button>
-      <div class="field">
-        <label class="label">Teamname</label>
-        <input id="team-name" class="input" type="text" placeholder="Teamname eingeben…"
-               maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="words">
+    <button type="button" class="selfie-square" id="selfie-btn" onclick="openSelfieCamera()" aria-label="Selfie aufnehmen">
+      <img class="preview" id="selfie-preview" alt="">
+      <div class="default-content selfie-default">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/><circle cx="12" cy="13" r="4"/></svg>
+        <div class="label" id="selfie-cta-label">Tippen zum Aufnehmen</div>
       </div>
-      <p class="error-msg" id="error-msg"></p>
-      <button class="btn btn-primary btn-full btn-lg" id="btn-join" onclick="joinAsNew()">
-        MiSSiON starten →
-      </button>
+    </button>
+
+    <div class="name-field">
+      <div class="label" id="team-name-label">Teamname</div>
+      <input id="team-name" type="text" placeholder="Teamname eingeben…" maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="words">
     </div>
 
-    <!-- Join existing team panel -->
-    <div id="panel-join" style="display:none;">
-      <button class="back-link" onclick="showChoice()">← Zurück</button>
-      <div id="teams-list"></div>
-      <p style="font-size:.8rem;color:var(--text-muted);margin-top:.75rem;text-align:center;">
-        Du siehst dieselben MiSSiONS und kannst unabhängig Medien einreichen.
-      </p>
+    <div class="lang-section">
+      <div class="lang-label" id="lang-label">Sprache</div>
+      <div class="lang-picker" id="lang-picker">
+        <button class="lang-tab" data-lang="de" onclick="setJoinLang('de',this)">DE</button>
+        <button class="lang-tab" data-lang="en" onclick="setJoinLang('en',this)">EN</button>
+        <button class="lang-tab" data-lang="fr" onclick="setJoinLang('fr',this)">FR</button>
+        <button class="lang-tab" data-lang="it" onclick="setJoinLang('it',this)">IT</button>
+        <button class="lang-tab" data-lang="es" onclick="setJoinLang('es',this)">ES</button>
+      </div>
     </div>
+
+    <!-- Or join an existing team — only renders when teams exist. -->
+    <button type="button" class="join-existing-link" id="join-existing-link" style="display:none;" onclick="showJoinExisting()">
+      <span id="join-existing-link-label">Oder einem bestehenden Team beitreten</span>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+    </button>
+
+    <p class="error-msg" id="error-msg"></p>
+  </div>
+
+  <!-- Join existing team screen -->
+  <div id="screen-join-existing" class="join-body" style="display:none;">
+    <button class="back-link" onclick="showCreate()">
+      <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+      <span id="back-label">Zurück</span>
+    </button>
+    <h3 class="je-title" id="je-title">Team beitreten</h3>
+    <div id="teams-list"></div>
+    <p style="font:400 12px/1.5 var(--body); color:var(--text-muted); text-align:center; margin-top:8px;" id="je-hint">
+      Du siehst dieselben Missionen und kannst unabhängig Medien einreichen.
+    </p>
+  </div>
+
+  <!-- Bottom CTA — only visible on create-new -->
+  <div class="join-cta" id="cta-create" style="display:none;">
+    <button class="btn btn-primary" id="btn-join" onclick="joinAsNew()">
+      <span id="btn-join-label">Spiel beitreten</span>
+      <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Selfie camera modal -->
+<div id="selfie-modal">
+  <video id="selfie-video" autoplay muted playsinline></video>
+  <img id="selfie-shot" alt="">
+  <div class="sm-bar" id="sm-bar-capture">
+    <button class="sm-btn" id="sm-cancel" onclick="closeSelfieCamera()">✕</button>
+    <button class="sm-shutter" id="sm-shutter" onclick="takeSelfie()" aria-label="Aufnehmen">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
+    <button class="sm-btn" id="sm-flip" onclick="flipSelfieCamera()">⟲</button>
+  </div>
+  <div class="sm-bar" id="sm-bar-review" style="display:none;">
+    <button class="sm-btn" id="sm-retake" onclick="retakeSelfie()">↺ <span id="sm-retake-lbl">Erneut</span></button>
+    <button class="sm-btn sm-accept" id="sm-accept" onclick="acceptSelfie()">✓ <span id="sm-accept-lbl">Übernehmen</span></button>
   </div>
 </div>
 
@@ -94,11 +266,9 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;pad
 const params = new URLSearchParams(window.location.search);
 const gameId = params.get('game');
 let existingTeams = [];
+let isCityRush = false;
 
-// Minimal i18n. join.html has no language picker — auto-detect from the
-// browser language and fall back to German (the original UI language).
-// localStorage carries the language pick made on /play or /cityrush so a
-// returning player sees join.html in the same language they last used.
+// ── i18n ──────────────────────────────────────────────────────────────────
 const JOIN_LANGS = ['de','en','fr','it','es'];
 function _detectJoinLang() {
   const stored = localStorage.getItem('m_lang') || localStorage.getItem('cr_lang');
@@ -108,62 +278,198 @@ function _detectJoinLang() {
 }
 let joinLang = _detectJoinLang();
 const JOIN_T = {
-  de: {loading:'Laden…', error:'Fehler', invalid:'Ungültiger Code oder Spiel beendet.', ask_gm:'Bitte den Spielleiter um einen neuen Code.', game_ended:'Dieses Spiel ist bereits beendet.', create_team:'Neues Team erstellen', join_team:'Team beitreten', back:'← Zurück', teamname:'Teamname', teamname_ph:'Teamname eingeben…', start:'MiSSiON starten →', team_hint:'Du siehst dieselben MiSSiONS und kannst unabhängig Medien einreichen.', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.', waiting:'Warte…', join_btn:'Beitreten', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.'},
-  en: {loading:'Loading…', error:'Error', invalid:'Invalid code or game ended.', ask_gm:'Please ask the Gamemaster for a new code.', game_ended:'This game has already ended.', create_team:'Create new team', join_team:'Join team', back:'← Back', teamname:'Team name', teamname_ph:'Enter team name…', start:'Start MiSSiON →', team_hint:'You see the same MiSSiONS and can submit media independently.', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.', waiting:'Waiting…', join_btn:'Join', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.'},
-  fr: {loading:'Chargement…', error:'Erreur', invalid:'Code invalide ou partie terminée.', ask_gm:'Demande un nouveau code au Gamemaster.', game_ended:'Cette partie est déjà terminée.', create_team:'Créer une nouvelle équipe', join_team:'Rejoindre une équipe', back:'← Retour', teamname:'Nom d\'équipe', teamname_ph:'Saisir le nom de l\'équipe…', start:'Commencer la MiSSiON →', team_hint:'Tu vois les mêmes MiSSiONS et peux envoyer des médias indépendamment.', enter_name:'Veuillez saisir un nom d\'équipe.', min_chars:'Le nom doit faire au moins 2 caractères.', waiting:'Attente…', join_btn:'Rejoindre', conn_err:'Erreur de connexion. Réessaie.', err_default:'Erreur. Réessaie.'},
-  it: {loading:'Caricamento…', error:'Errore', invalid:'Codice non valido o partita terminata.', ask_gm:'Chiedi al Gamemaster un nuovo codice.', game_ended:'Questa partita è già terminata.', create_team:'Crea una nuova squadra', join_team:'Unisciti a una squadra', back:'← Indietro', teamname:'Nome squadra', teamname_ph:'Inserisci il nome della squadra…', start:'Avvia MiSSiON →', team_hint:'Vedi le stesse MiSSiONS e puoi inviare media in modo indipendente.', enter_name:'Inserisci il nome della squadra.', min_chars:'Il nome deve avere almeno 2 caratteri.', waiting:'Attendi…', join_btn:'Unisciti', conn_err:'Errore di connessione. Riprova.', err_default:'Errore. Riprova.'},
-  es: {loading:'Cargando…', error:'Error', invalid:'Código no válido o partida finalizada.', ask_gm:'Pide al Gamemaster un nuevo código.', game_ended:'Esta partida ya ha terminado.', create_team:'Crear nuevo equipo', join_team:'Unirse a un equipo', back:'← Volver', teamname:'Nombre del equipo', teamname_ph:'Escribe el nombre del equipo…', start:'Iniciar MiSSiON →', team_hint:'Verás las mismas MiSSiONS y podrás enviar contenido de forma independiente.', enter_name:'Introduce el nombre del equipo.', min_chars:'El nombre debe tener al menos 2 caracteres.', waiting:'Esperando…', join_btn:'Unirse', conn_err:'Error de conexión. Inténtalo de nuevo.', err_default:'Error. Inténtalo de nuevo.'},
+  de: {loading:'Laden…', error:'Fehler', invalid:'Ungültiger Code oder Spiel beendet.', ask_gm:'Bitte den Spielleiter um einen neuen Code.', game_ended:'Dieses Spiel ist bereits beendet.',
+       lead:'Mach ein Selfie und wähle einen Teamnamen. Andere Teams sehen euer Selfie in der Rangliste.',
+       selfie_cta:'Tippen zum Aufnehmen', teamname:'Teamname', teamname_ph:'Teamname eingeben…',
+       lang_label:'Sprache', join_existing:'Oder einem bestehenden Team beitreten', back:'Zurück',
+       je_title:'Team beitreten', je_hint:'Du siehst dieselben Missionen und kannst unabhängig Medien einreichen.',
+       join_btn:'Beitreten', start:'Spiel beitreten', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.',
+       waiting:'Warte…', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.',
+       cam_denied:'Kamera-Zugriff abgelehnt.', cam_unavailable:'Kamera nicht verfügbar.',
+       sm_retake:'Erneut', sm_accept:'Übernehmen'},
+  en: {loading:'Loading…', error:'Error', invalid:'Invalid code or game ended.', ask_gm:'Please ask the Gamemaster for a new code.', game_ended:'This game has already ended.',
+       lead:'Take a selfie and pick a team name. Other teams will see your selfie on the rankings.',
+       selfie_cta:'Tap to capture', teamname:'Team name', teamname_ph:'Type a team name…',
+       lang_label:'Language', join_existing:'Or join an existing team', back:'Back',
+       je_title:'Join an existing team', je_hint:'You see the same missions and can submit media independently.',
+       join_btn:'Join', start:'Join game', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.',
+       waiting:'Waiting…', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.',
+       cam_denied:'Camera access denied.', cam_unavailable:'Camera not available.',
+       sm_retake:'Retake', sm_accept:'Use'},
+  fr: {loading:'Chargement…', error:'Erreur', invalid:'Code invalide ou partie terminée.', ask_gm:'Demande un nouveau code au Gamemaster.', game_ended:'Cette partie est déjà terminée.',
+       lead:'Fais un selfie et choisis un nom d’équipe. Les autres équipes verront votre selfie dans le classement.',
+       selfie_cta:'Toucher pour capturer', teamname:'Nom d’équipe', teamname_ph:'Saisir le nom de l’équipe…',
+       lang_label:'Langue', join_existing:'Ou rejoindre une équipe existante', back:'Retour',
+       je_title:'Rejoindre une équipe', je_hint:'Tu vois les mêmes missions et peux envoyer des médias indépendamment.',
+       join_btn:'Rejoindre', start:'Rejoindre la partie', enter_name:'Saisis un nom d’équipe.', min_chars:'Le nom doit faire au moins 2 caractères.',
+       waiting:'Attente…', conn_err:'Erreur de connexion. Réessaie.', err_default:'Erreur. Réessaie.',
+       cam_denied:'Accès caméra refusé.', cam_unavailable:'Caméra non disponible.',
+       sm_retake:'Refaire', sm_accept:'Utiliser'},
+  it: {loading:'Caricamento…', error:'Errore', invalid:'Codice non valido o partita terminata.', ask_gm:'Chiedi al Gamemaster un nuovo codice.', game_ended:'Questa partita è già terminata.',
+       lead:'Fate un selfie e scegliete un nome squadra. Le altre squadre vedranno il selfie nella classifica.',
+       selfie_cta:'Tocca per scattare', teamname:'Nome squadra', teamname_ph:'Inserisci il nome…',
+       lang_label:'Lingua', join_existing:'Oppure unisciti a una squadra esistente', back:'Indietro',
+       je_title:'Unisciti a una squadra', je_hint:'Vedi le stesse missioni e puoi inviare media in modo indipendente.',
+       join_btn:'Unisciti', start:'Entra nella partita', enter_name:'Inserisci il nome della squadra.', min_chars:'Il nome deve avere almeno 2 caratteri.',
+       waiting:'Attendi…', conn_err:'Errore di connessione. Riprova.', err_default:'Errore. Riprova.',
+       cam_denied:'Accesso fotocamera negato.', cam_unavailable:'Fotocamera non disponibile.',
+       sm_retake:'Riprova', sm_accept:'Usa'},
+  es: {loading:'Cargando…', error:'Error', invalid:'Código no válido o partida finalizada.', ask_gm:'Pide al Gamemaster un nuevo código.', game_ended:'Esta partida ya ha terminado.',
+       lead:'Hazte un selfie y elige un nombre de equipo. Otros equipos verán vuestro selfie en la clasificación.',
+       selfie_cta:'Toca para capturar', teamname:'Nombre del equipo', teamname_ph:'Escribe el nombre…',
+       lang_label:'Idioma', join_existing:'O únete a un equipo existente', back:'Volver',
+       je_title:'Unirse a un equipo', je_hint:'Verás las mismas misiones y podrás enviar contenido de forma independiente.',
+       join_btn:'Unirse', start:'Unirse a la partida', enter_name:'Introduce el nombre del equipo.', min_chars:'El nombre debe tener al menos 2 caracteres.',
+       waiting:'Esperando…', conn_err:'Error de conexión. Inténtalo de nuevo.', err_default:'Error. Inténtalo de nuevo.',
+       cam_denied:'Acceso a cámara denegado.', cam_unavailable:'Cámara no disponible.',
+       sm_retake:'Repetir', sm_accept:'Usar'},
 };
 function jt(k) { return (JOIN_T[joinLang] || JOIN_T.de)[k] || k; }
+
 function ensureCrPlayerKey() {
   if (sessionStorage.getItem('crPlayerKey')) return;
-  var k = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+  const k = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
     : 'pk_' + Math.random().toString(36).slice(2) + Date.now();
   sessionStorage.setItem('crPlayerKey', k);
 }
 
 document.documentElement.lang = joinLang;
-document.getElementById('game-id-display').textContent = gameId ? '#' + gameId : '';
-// Translate the static strings sitting in the markup. Hoisted from an IIFE
-// so the per-location language restriction below can re-call it after
-// snapping joinLang to whatever the location actually permits.
-function _applyJoinTranslations(){
-  document.documentElement.lang = joinLang;
-  const loading = document.querySelector('#screen-loading p');
-  if(loading) loading.textContent = jt('loading');
-  const errH = document.querySelector('#screen-error h2');
-  if(errH) errH.textContent = jt('error');
-  const errDetail = document.getElementById('error-detail');
-  if(errDetail) errDetail.textContent = jt('invalid');
-  const askGm = document.querySelector('#screen-error p:last-of-type');
-  if(askGm) askGm.textContent = jt('ask_gm');
-  const btnNewLbl = document.querySelector('#btn-go-new span:not(.icon)');
-  if(btnNewLbl) btnNewLbl.textContent = jt('create_team');
-  const btnJoinLbl = document.querySelector('#btn-go-join > span:not(.icon)');
-  if(btnJoinLbl) btnJoinLbl.textContent = jt('join_team');
-  document.querySelectorAll('.back-link').forEach(b => b.textContent = jt('back'));
-  const teamLabel = document.querySelector('#panel-new .label');
-  if(teamLabel) teamLabel.textContent = jt('teamname');
-  const teamInput = document.getElementById('team-name');
-  if(teamInput) teamInput.placeholder = jt('teamname_ph');
-  const startBtn = document.getElementById('btn-join');
-  if(startBtn) startBtn.textContent = jt('start');
-  const teamHint = document.querySelector('#panel-join p');
-  if(teamHint) teamHint.textContent = jt('team_hint');
-}
-_applyJoinTranslations();
+document.getElementById('game-id-display').textContent = gameId ? ('GAME · ' + gameId) : 'GAME · –';
 
-// Snap joinLang to the location's allowed list if the auto-detected language
-// isn't permitted there. Called after the game fetch in the DOMContentLoaded
-// handler below.
-function _applyJoinAllowedLangs(csv){
+function _applyJoinTranslations() {
+  document.documentElement.lang = joinLang;
+  const $ = id => document.getElementById(id);
+  $('screen-loading').firstElementChild.textContent = jt('loading');
+  $('err-title').textContent = jt('error');
+  $('error-detail').textContent = jt('invalid');
+  $('err-ask-gm').textContent = jt('ask_gm');
+  $('lead-text').textContent = jt('lead');
+  $('selfie-cta-label').textContent = jt('selfie_cta');
+  $('team-name-label').textContent = jt('teamname');
+  $('team-name').placeholder = jt('teamname_ph');
+  $('lang-label').textContent = jt('lang_label');
+  $('join-existing-link-label').textContent = jt('join_existing');
+  $('back-label').textContent = jt('back');
+  $('je-title').textContent = jt('je_title');
+  $('je-hint').textContent = jt('je_hint');
+  $('btn-join-label').textContent = jt('start');
+  $('sm-retake-lbl').textContent = jt('sm_retake');
+  $('sm-accept-lbl').textContent = jt('sm_accept');
+  // Mark the active language tab.
+  document.querySelectorAll('#lang-picker .lang-tab').forEach(t => t.classList.toggle('is-active', t.dataset.lang === joinLang));
+}
+
+function setJoinLang(lang) {
+  if (!JOIN_LANGS.includes(lang) || lang === joinLang) return;
+  joinLang = lang;
+  localStorage.setItem('m_lang', joinLang);
+  localStorage.setItem('cr_lang', joinLang);
+  _applyJoinTranslations();
+  // _applyJoinTranslations writes the base "Or join existing team" label;
+  // the (n) count suffix is owned by refreshJoinExistingVisibility, so
+  // re-run it after each lang switch.
+  refreshJoinExistingVisibility();
+}
+
+// Snap to the location's allowed language list if our pick isn't permitted.
+function _applyJoinAllowedLangs(csv) {
   const arr = String(csv || '').split(',').map(s => s.trim()).filter(l => JOIN_LANGS.includes(l));
-  if (arr.length === 0 || arr.includes(joinLang)) return;
-  joinLang = arr[0];
-  localStorage.setItem('m_lang', joinLang);  // so /play and /cityrush also pick it up
+  if (arr.length === 0) return;
+  // Restrict the picker buttons to the allowed set.
+  document.querySelectorAll('#lang-picker .lang-tab').forEach(t => {
+    t.style.display = arr.includes(t.dataset.lang) ? '' : 'none';
+  });
+  if (!arr.includes(joinLang)) {
+    joinLang = arr[0];
+    localStorage.setItem('m_lang', joinLang);
+    localStorage.setItem('cr_lang', joinLang);
+  }
   _applyJoinTranslations();
 }
 
+_applyJoinTranslations();
+
+// ── Selfie capture ────────────────────────────────────────────────────────
+// We hold the captured Blob in memory until the player taps Join — at that
+// point team creation runs first, and we then POST the selfie against the
+// new team id. If capture is skipped, team creation still succeeds.
+let selfieStream = null;
+let selfieFacing = 'user';
+let selfieBlob   = null;
+let selfieObjectUrl = null;
+
+async function openSelfieCamera() {
+  const modal = document.getElementById('selfie-modal');
+  modal.style.display = 'flex';
+  document.getElementById('sm-bar-capture').style.display = 'flex';
+  document.getElementById('sm-bar-review').style.display = 'none';
+  document.getElementById('selfie-video').style.display = 'block';
+  document.getElementById('selfie-shot').style.display = 'none';
+  try {
+    selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: selfieFacing }, audio: false });
+    document.getElementById('selfie-video').srcObject = selfieStream;
+  } catch (e) {
+    alert(e.name === 'NotAllowedError' ? jt('cam_denied') : jt('cam_unavailable'));
+    closeSelfieCamera();
+  }
+}
+function closeSelfieCamera() {
+  if (selfieStream) { selfieStream.getTracks().forEach(t => t.stop()); selfieStream = null; }
+  document.getElementById('selfie-modal').style.display = 'none';
+  // If the player dismissed without tapping Accept, the blob is unreachable —
+  // revoke it so the URL doesn't leak for the rest of the tab's lifetime.
+  // `has-image` is only set by acceptSelfie(); its absence means "discarded".
+  const accepted = document.getElementById('selfie-btn').classList.contains('has-image');
+  if (!accepted && selfieObjectUrl) {
+    URL.revokeObjectURL(selfieObjectUrl);
+    selfieObjectUrl = null;
+    selfieBlob = null;
+  }
+}
+async function flipSelfieCamera() {
+  selfieFacing = selfieFacing === 'user' ? 'environment' : 'user';
+  if (selfieStream) selfieStream.getTracks().forEach(t => t.stop());
+  try {
+    selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: selfieFacing }, audio: false });
+    document.getElementById('selfie-video').srcObject = selfieStream;
+  } catch (e) { /* ignore */ }
+}
+function takeSelfie() {
+  const v = document.getElementById('selfie-video');
+  if (!v.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  // Square crop centered on the video so the selfie matches the round preview.
+  const side = Math.min(v.videoWidth, v.videoHeight);
+  canvas.width = side; canvas.height = side;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(v, (v.videoWidth - side)/2, (v.videoHeight - side)/2, side, side, 0, 0, side, side);
+  canvas.toBlob(b => {
+    selfieBlob = b;
+    if (selfieObjectUrl) URL.revokeObjectURL(selfieObjectUrl);
+    selfieObjectUrl = URL.createObjectURL(b);
+    const shot = document.getElementById('selfie-shot');
+    shot.src = selfieObjectUrl;
+    document.getElementById('selfie-video').style.display = 'none';
+    shot.style.display = 'block';
+    document.getElementById('sm-bar-capture').style.display = 'none';
+    document.getElementById('sm-bar-review').style.display = 'flex';
+  }, 'image/jpeg', 0.9);
+}
+function retakeSelfie() {
+  document.getElementById('selfie-video').style.display = 'block';
+  document.getElementById('selfie-shot').style.display = 'none';
+  document.getElementById('sm-bar-capture').style.display = 'flex';
+  document.getElementById('sm-bar-review').style.display = 'none';
+}
+function acceptSelfie() {
+  const sq = document.getElementById('selfie-btn');
+  const img = document.getElementById('selfie-preview');
+  img.src = selfieObjectUrl;
+  sq.classList.add('has-image');
+  closeSelfieCamera();
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   if (!gameId) { show('error'); return; }
 
@@ -172,8 +478,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const storedTeam = sessionStorage.getItem('teamId');
   if (storedGame === gameId && storedTeam) {
     ensureCrPlayerKey();
-    var g = await fetch('/api/games/' + gameId).then(function(r) { return r.json(); }).catch(function() { return null; });
-    var pg = (g && g.crMode) ? '/cityrush.html' : '/play.html';
+    const g = await fetch('/api/games/' + gameId).then(r => r.json()).catch(() => null);
+    const pg = (g && g.crMode) ? '/cityrush.html' : '/play.html';
     window.location.href = pg + '?game=' + gameId + '&team=' + storedTeam;
     return;
   }
@@ -188,133 +494,172 @@ window.addEventListener('DOMContentLoaded', async () => {
       show('error'); return;
     }
 
+    isCityRush = !!game.crMode;
+
     if (game.location) {
       document.getElementById('location-info').textContent = '📍 ' + game.location.name;
-      // If the location restricts the language list, snap joinLang into the
-      // allowed set before the player even sees the join screen.
       if (game.location.allowed_langs) _applyJoinAllowedLangs(game.location.allowed_langs);
     }
-    // If game has CityRush mode AND no normal missions, go to cityrush page
-    if (game.crMode) {
-      document.getElementById('location-info').textContent += '  🏃 CityRush: ' + game.crMode.name;
+    if (isCityRush) {
+      const cur = document.getElementById('location-info').textContent;
+      document.getElementById('location-info').textContent = (cur ? cur + '  ' : '') + '🏃 CityRush: ' + game.crMode.name;
     }
 
     existingTeams = game.teams || [];
-    renderTeamsList();
-    refreshJoinChoice();
+    refreshJoinExistingVisibility();
 
-    show('join');
-    showChoice();   // start at the two-button choice screen
+    showCreate();
     const inp = document.getElementById('team-name');
-    inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') joinAsNew(); });
-  } catch(e) {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') joinAsNew(); });
+  } catch (e) {
     show('error');
   }
 });
 
+function refreshJoinExistingVisibility() {
+  const link = document.getElementById('join-existing-link');
+  if (!link) return;
+  link.style.display = existingTeams.length > 0 ? 'flex' : 'none';
+  if (existingTeams.length > 0) {
+    document.getElementById('join-existing-link-label').textContent =
+      jt('join_existing') + ' (' + existingTeams.length + ')';
+  }
+}
+
+// Built with DOM APIs (not innerHTML) so team.selfie_path, team.name and
+// team.score never flow through HTML parsing — defence in depth against a
+// future server change that returns user-controlled bytes here.
 function renderTeamsList() {
   const list = document.getElementById('teams-list');
   list.innerHTML = '';
-  existingTeams.forEach(function(t) {
+  existingTeams.forEach(team => {
     const row = document.createElement('div');
     row.className = 'team-row';
-    row.innerHTML =
-      '<span class="team-row-name">' + esc(t.name) + '</span>' +
-      '<span class="team-row-pts">' + t.score + ' pt</span>';
+
+    if (team.selfie_path) {
+      const img = document.createElement('img');
+      img.className = 'selfie';
+      img.alt = '';
+      img.src = '/uploads/' + team.selfie_path;
+      row.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'selfie';
+      row.appendChild(ph);
+    }
+
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = team.name;
+    row.appendChild(name);
+
+    const pts = document.createElement('span');
+    pts.className = 'pts';
+    pts.textContent = team.score + ' PT';
+    row.appendChild(pts);
+
     const btn = document.createElement('button');
-    btn.className = 'btn btn-secondary btn-sm';
+    btn.className = 'join-btn';
     btn.textContent = jt('join_btn');
-    btn.addEventListener('click', function() { joinExisting(t.id, t.name); });
+    btn.addEventListener('click', () => joinExisting(team.id, team.name));
     row.appendChild(btn);
+
     list.appendChild(row);
   });
 }
 
-function switchTab(tab) {
-  // "Join existing" is disabled when no teams exist yet — bail out so the
-  // choice screen stays the entry point.
-  if(tab === 'join' && existingTeams.length === 0) return;
-  document.getElementById('join-choice').style.display = 'none';
-  document.getElementById('panel-new').style.display   = tab === 'new'  ? 'block' : 'none';
-  document.getElementById('panel-join').style.display  = tab === 'join' ? 'block' : 'none';
-  if(tab === 'new'){
-    const inp = document.getElementById('team-name');
-    if(inp) inp.focus();
-  }
+function showCreate() {
+  show('create');
+  document.getElementById('cta-create').style.display = 'flex';
+  refreshJoinExistingVisibility();
 }
-// Show the two-button landing.
-function showChoice() {
-  document.getElementById('join-choice').style.display = 'grid';
-  document.getElementById('panel-new').style.display   = 'none';
-  document.getElementById('panel-join').style.display  = 'none';
-  refreshJoinChoice();
-}
-// Reflect current team count in the join button (count + disabled state).
-function refreshJoinChoice() {
-  const cnt = existingTeams.length;
-  const lbl = document.getElementById('btn-go-join-count');
-  if(lbl) lbl.textContent = cnt > 0 ? `(${cnt})` : '';
-  const btn = document.getElementById('btn-go-join');
-  if(btn) btn.classList.toggle('disabled', cnt === 0);
+function showJoinExisting() {
+  show('join-existing');
+  document.getElementById('cta-create').style.display = 'none';
+  renderTeamsList();
 }
 
 async function joinAsNew() {
   const name = document.getElementById('team-name').value.trim();
   const err  = document.getElementById('error-msg');
   const btn  = document.getElementById('btn-join');
+  const lbl  = document.getElementById('btn-join-label');
   if (!name) { err.textContent = jt('enter_name'); return; }
   if (name.length < 2) { err.textContent = jt('min_chars'); return; }
   btn.disabled = true;
-  btn.textContent = jt('waiting');
+  lbl.textContent = jt('waiting');
   err.textContent = '';
 
   try {
     ensureCrPlayerKey();
-    var anchor = sessionStorage.getItem('crPlayerKey');
+    const anchor = sessionStorage.getItem('crPlayerKey');
     const res = await fetch('/api/games/' + gameId + '/teams', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, gps_anchor_key: anchor })
-    }).then(function(r) { return r.json(); });
+    }).then(r => r.json());
 
-    if (res.id) {
-      sessionStorage.setItem('teamId',   String(res.id));
-      sessionStorage.setItem('teamName', res.name);
-      sessionStorage.setItem('gameId',   gameId);
-      // Check if this game has CityRush
-      const gameInfo = await fetch('/api/games/' + gameId).then(r=>r.json()).catch(()=>null);
-      const targetPage = (gameInfo && gameInfo.crMode) ? '/cityrush.html' : '/play.html';
-      window.location.href = targetPage + '?game=' + gameId + '&team=' + res.id;
-    } else {
+    if (!res.id) {
       err.textContent = res.error || jt('err_default');
-      btn.disabled = false;
-      btn.textContent = jt('start');
+      btn.disabled = false; lbl.textContent = jt('start');
+      return;
     }
-  } catch(e) {
+
+    // Upload the selfie if we captured one. Failure isn't fatal — team
+    // already exists, the player can re-take a selfie later (CityRush
+    // prompts again at game start; MiSSiONS shows the team without one).
+    if (selfieBlob) {
+      try {
+        const fd = new FormData();
+        fd.append('media', selfieBlob, 'selfie.jpg');
+        await fetch('/api/games/' + gameId + '/teams/' + res.id + '/selfie', { method: 'POST', body: fd });
+      } catch (e) { /* swallow — selfie is best-effort */ }
+    }
+
+    sessionStorage.setItem('teamId',   String(res.id));
+    sessionStorage.setItem('teamName', res.name);
+    sessionStorage.setItem('gameId',   gameId);
+    const targetPage = isCityRush ? '/cityrush.html' : '/play.html';
+    window.location.href = targetPage + '?game=' + gameId + '&team=' + res.id;
+  } catch (e) {
     err.textContent = jt('conn_err');
-    btn.disabled = false;
-    btn.textContent = jt('start');
+    btn.disabled = false; lbl.textContent = jt('start');
   }
 }
 
+let _joinInFlight = false;
 async function joinExisting(teamId, teamName) {
-  ensureCrPlayerKey();
-  sessionStorage.setItem('teamId',   String(teamId));
-  sessionStorage.setItem('teamName', teamName);
-  sessionStorage.setItem('gameId',   gameId);
-  const gInfo = await fetch('/api/games/' + gameId).then(r=>r.json()).catch(()=>null);
-  const pg = (gInfo && gInfo.crMode) ? '/cityrush.html' : '/play.html';
-  window.location.href = pg + '?game=' + gameId + '&team=' + teamId;
+  // Several team rows each have their own Join button, so disabling a
+  // single button isn't enough — guard the entire flow against re-entry.
+  if (_joinInFlight) return;
+  _joinInFlight = true;
+  const err = document.getElementById('error-msg');
+  try {
+    ensureCrPlayerKey();
+    // If the player captured a selfie before deciding to join an existing
+    // team, upload it now to overwrite the team's existing selfie.
+    if (selfieBlob) {
+      try {
+        const fd = new FormData();
+        fd.append('media', selfieBlob, 'selfie.jpg');
+        await fetch('/api/games/' + gameId + '/teams/' + teamId + '/selfie', { method: 'POST', body: fd });
+      } catch (e) { /* swallow — selfie is best-effort */ }
+    }
+    sessionStorage.setItem('teamId',   String(teamId));
+    sessionStorage.setItem('teamName', teamName);
+    sessionStorage.setItem('gameId',   gameId);
+    const pg = isCityRush ? '/cityrush.html' : '/play.html';
+    window.location.href = pg + '?game=' + gameId + '&team=' + teamId;
+  } catch (e) {
+    _joinInFlight = false;
+    if (err) err.textContent = jt('conn_err');
+  }
 }
 
 function show(s) {
-  ['loading', 'error', 'join'].forEach(function(n) {
-    document.getElementById('screen-' + n).style.display = n === s ? 'block' : 'none';
+  ['loading', 'error', 'create', 'join-existing'].forEach(n => {
+    document.getElementById('screen-' + n).style.display = n === s ? (n === 'loading' || n === 'error' ? 'block' : 'flex') : 'none';
   });
-}
-
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 </script>
 </body>

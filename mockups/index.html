@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="_shared.css">
 <style>
   body { padding: 60px 24px; }
+
   .board-header {
     max-width: 1400px; margin: 0 auto 40px;
     text-align: center;
@@ -25,7 +26,7 @@
   .board-header p {
     font: 400 14px/1.6 var(--body);
     color: var(--text-dim);
-    max-width: 580px; margin: 0 auto;
+    max-width: 620px; margin: 0 auto;
   }
   .board-header .note {
     margin-top: 16px;
@@ -33,24 +34,41 @@
     color: var(--text-muted);
   }
 
-  .triptych {
-    display: flex; gap: 48px;
-    justify-content: center; align-items: flex-start; flex-wrap: wrap;
-    margin: 0 auto;
+  .section-label {
+    max-width: 1400px; margin: 56px auto 18px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--hairline-2);
+    padding-bottom: 10px;
+  }
+  .section-label h2 {
+    font-family: var(--display); font-weight: 800;
+    font-size: 18px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text);
+    margin: 0;
+  }
+  .section-label .meta {
+    font: 500 11px/1 var(--mono);
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .row {
+    max-width: 1400px; margin: 0 auto;
+    display: flex; flex-wrap: wrap; gap: 36px; justify-content: center;
   }
 
   .frame {
-    display:flex; flex-direction:column; align-items:center; gap: 14px;
+    display: flex; flex-direction: column; gap: 14px;
   }
   .frame__caption {
-    text-align: center; max-width: 380px;
+    text-align: center; max-width: 380px; align-self: center;
   }
   .frame__caption .label {
     font: 600 10px/1 var(--body); letter-spacing: 0.24em; text-transform: uppercase;
     color: var(--text-muted); margin-bottom: 8px;
   }
-  .frame__caption h2 {
-    font: 700 18px/1.2 var(--body);
+  .frame__caption h3 {
+    font: 700 16px/1.2 var(--body);
     margin: 0 0 6px;
     color: var(--text);
   }
@@ -60,14 +78,53 @@
     margin: 0;
   }
 
+  /* Phones */
   iframe.phone-iframe {
     width: 414px; height: 868px;
     border: 0;
     border-radius: 48px;
+    background: transparent;
   }
 
+  /* Desktops — scaled down so 3 fit on a wide board */
+  .desktop-wrap {
+    width: 720px; height: 480px;
+    overflow: hidden;
+    border-radius: 14px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.45);
+  }
+  .desktop-wrap iframe {
+    width: 1320px;   /* slightly wider than the 1280 frame to absorb padding */
+    height: 880px;
+    border: 0;
+    transform: scale(0.546);
+    transform-origin: top left;
+    background: transparent;
+  }
+  .desktop-wrap--wide {
+    width: 1080px; height: 700px;
+  }
+  .desktop-wrap--wide iframe {
+    transform: scale(0.82);
+  }
+
+  /* Open-in-tab link */
+  .frame__open {
+    text-align: center; align-self: center;
+    font: 600 10px/1 var(--body);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 6px 12px;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    transition: color .15s, border-color .15s;
+  }
+  .frame__open:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+
   .footer-note {
-    max-width: 700px; margin: 60px auto 0;
+    max-width: 760px; margin: 60px auto 0;
     text-align: center;
     font: 400 12px/1.7 var(--body);
     color: var(--text-muted);
@@ -84,44 +141,171 @@
 <header class="board-header">
   <div class="stamp">Concept board · internal review</div>
   <h1>MiSSiONS Redesign</h1>
-  <p>Three key screens of the proposed UI/UX direction. Same brand identity, restrained palette, single iconography family, status-coloured signals, language-tabbed editors, team color identity.</p>
-  <div class="note">Open the individual files for a clean per-screen view. Inspect with browser DevTools to read the spacing / type stack.</div>
+  <p>All visible screens of the v1.3.0 direction. Single accent palette, one icon family, status-coloured signals, language-tabbed editors, team color identity. Phone frames for player surfaces, desktop frames for GM surfaces.</p>
+  <div class="note">Open the individual files for a clean per-screen view (especially the desktop frames — at full size). The map-picker is also a working geolocation demo.</div>
 </header>
 
-<div class="triptych">
+<!-- ────────────────────────── GAMEMASTER (desktop) ──────────────────── -->
 
+<div class="section-label">
+  <h2>Gamemaster · Desktop</h2>
+  <span class="meta">04 — 08 · 1280 × 800 baseline</span>
+</div>
+
+<div class="row">
   <div class="frame">
-    <iframe class="phone-iframe" src="01-player-home.html" loading="eager"></iframe>
+    <div class="desktop-wrap"><iframe src="04-gm-landing.html" loading="lazy"></iframe></div>
     <div class="frame__caption">
-      <div class="label">Screen 1 · Player</div>
-      <h2>MiSSiONS Home</h2>
-      <p>Restrained mission cards, one icon family, status colours doing the work (green = done, orange = next action). Single fat camera button as the anchor CTA.</p>
+      <div class="label">Screen 04 · GM</div>
+      <h3>Landing</h3>
+      <p>Wordmark, location grid as airy tiles, CityRush as a distinct route tile in orange. Settings tucked into the foot.</p>
     </div>
+    <a class="frame__open" href="04-gm-landing.html" target="_blank">Open full</a>
   </div>
 
   <div class="frame">
-    <iframe class="phone-iframe" src="02-gm-dashboard.html" loading="eager"></iframe>
+    <div class="desktop-wrap"><iframe src="05-gm-game-select.html" loading="lazy"></iframe></div>
     <div class="frame__caption">
-      <div class="label">Screen 2 · Gamemaster</div>
-      <h2>Game Dashboard</h2>
-      <p>Team color stripes for identity. Three matching top-bar icons (QR / overflow / lang) — no more orange-on-everything. Rankings + chat condensed into one bottom zone. No freeze button on MiSSiONS games.</p>
+      <div class="label">Screen 05 · GM</div>
+      <h3>Game select</h3>
+      <p>Kicker + title hierarchy. New-game form is a single card; recent games are hairline cards with icon-only QR / delete actions.</p>
     </div>
+    <a class="frame__open" href="05-gm-game-select.html" target="_blank">Open full</a>
   </div>
 
   <div class="frame">
-    <iframe class="phone-iframe" src="03-add-mission-modal.html" loading="eager"></iframe>
+    <div class="desktop-wrap"><iframe src="06-gm-new-game.html" loading="lazy"></iframe></div>
     <div class="frame__caption">
-      <div class="label">Screen 3 · Settings</div>
-      <h2>Add MiSSiON</h2>
-      <p>Language-tabbed editor (DE ✓ / EN ✓ / FR / IT ✓ / ES) replaces five stacked fields per language. Segmented controls, real toggles, proper steppers. Airy.</p>
+      <div class="label">Screen 06 · GM</div>
+      <h3>New game · QR</h3>
+      <p>Two-column layout: identifier + URL + actions on the left, big scannable QR on the right. "Game created" is a green kicker.</p>
     </div>
+    <a class="frame__open" href="06-gm-new-game.html" target="_blank">Open full</a>
+  </div>
+</div>
+
+<div class="row" style="margin-top: 48px;">
+  <div class="frame">
+    <div class="desktop-wrap desktop-wrap--wide"><iframe src="07-gm-dashboard-desktop.html" loading="lazy"></iframe></div>
+    <div class="frame__caption">
+      <div class="label">Screen 07 · GM</div>
+      <h3>Dashboard · Desktop</h3>
+      <p>Sidebar layout — main mission column + a fixed 380px chat / map / rankings panel on the right. Team color stripes carry identity. Replaces the mobile dashboard at &gt; 1024px.</p>
+    </div>
+    <a class="frame__open" href="07-gm-dashboard-desktop.html" target="_blank">Open full</a>
   </div>
 
+  <div class="frame">
+    <div class="desktop-wrap desktop-wrap--wide"><iframe src="08-gm-settings.html" loading="lazy"></iframe></div>
+    <div class="frame__caption">
+      <div class="label">Screen 08 · GM</div>
+      <h3>Settings</h3>
+      <p>Two-level navigation: top-level <strong>App</strong> / <strong>Games</strong> groups, with MiSSiONS / CityRush as Games sub-items. Two-column form, language-tabbed timeout message, segmented controls, real toggles.</p>
+    </div>
+    <a class="frame__open" href="08-gm-settings.html" target="_blank">Open full</a>
+  </div>
+</div>
+
+<!-- ────────────────────────── PLAYER (phone) ────────────────────────── -->
+
+<div class="section-label">
+  <h2>Player · Phone</h2>
+  <span class="meta">01 · 09 · 10 — 390 × 844</span>
+</div>
+
+<div class="row">
+  <div class="frame">
+    <iframe class="phone-iframe" src="01-player-home.html" loading="lazy"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 01 · Player</div>
+      <h3>MiSSiONS Home</h3>
+      <p>Restrained mission cards, one icon family, status colours doing the work. Single camera anchor CTA.</p>
+    </div>
+    <a class="frame__open" href="01-player-home.html" target="_blank">Open full</a>
+  </div>
+
+  <div class="frame">
+    <iframe class="phone-iframe" src="09-player-join.html" loading="lazy"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 09 · Player</div>
+      <h3>Join screen</h3>
+      <p>First touch — selfie capture, team-name input, language pick. Game-ID pill confirms the right code was scanned.</p>
+    </div>
+    <a class="frame__open" href="09-player-join.html" target="_blank">Open full</a>
+  </div>
+
+  <div class="frame">
+    <iframe class="phone-iframe" src="10-cityrush-player.html" loading="lazy"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 10 · Player</div>
+      <h3>CityRush · Linear stop</h3>
+      <p>Progress bar, mini map with arrival ring + heading arrow, mission card, photo / answer split CTA, hint accordion. Bottom: map · camera · specials.</p>
+    </div>
+    <a class="frame__open" href="10-cityrush-player.html" target="_blank">Open full</a>
+  </div>
+</div>
+
+<!-- ────────────────────────── EDITOR + MODAL ────────────────────────── -->
+
+<div class="section-label">
+  <h2>Editors &amp; modals</h2>
+  <span class="meta">03 · 11 · 12</span>
+</div>
+
+<div class="row">
+  <div class="frame">
+    <iframe class="phone-iframe" src="03-add-mission-modal.html" loading="lazy"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 03 · Settings</div>
+      <h3>Add MiSSiON</h3>
+      <p>Language-tabbed editor (DE ✓ / EN ✓ / FR / IT ✓ / ES) replaces five stacked fields per language. Segmented controls, real toggles, proper steppers.</p>
+    </div>
+    <a class="frame__open" href="03-add-mission-modal.html" target="_blank">Open full</a>
+  </div>
+
+  <div class="frame">
+    <div class="desktop-wrap"><iframe src="11-map-picker.html" loading="lazy"></iframe></div>
+    <div class="frame__caption">
+      <div class="label">Screen 11 · Modal</div>
+      <h3>Map picker</h3>
+      <p>Click to drop, drag to refine, orange ring shows arrival radius. <strong>Use current location</strong> button reads the browser's GPS — a working demo in this mockup.</p>
+    </div>
+    <a class="frame__open" href="11-map-picker.html" target="_blank">Open full</a>
+  </div>
+
+  <div class="frame">
+    <iframe class="phone-iframe" src="12-add-cr-mission.html" loading="lazy"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 12 · Settings</div>
+      <h3>Add CityRush mission</h3>
+      <p>The CR-flavoured variant: mini map + Use current location, lat/lng/radius, answer toggle with accepted-answers field, hide-until-arrival, special-mission toggle, hint reveals.</p>
+    </div>
+    <a class="frame__open" href="12-add-cr-mission.html" target="_blank">Open full</a>
+  </div>
+</div>
+
+<!-- ────────────────────────── Historic / mobile dashboard ──────────── -->
+
+<div class="section-label">
+  <h2>Reference · Mobile dashboard</h2>
+  <span class="meta">02 · stacked layout used &lt; 900px</span>
+</div>
+
+<div class="row">
+  <div class="frame">
+    <iframe class="phone-iframe" src="02-gm-dashboard.html" loading="lazy"></iframe>
+    <div class="frame__caption">
+      <div class="label">Screen 02 · GM (mobile)</div>
+      <h3>Dashboard · Mobile</h3>
+      <p>Same content + colour discipline as 07, in the responsive fallback that the live app collapses to under 900px. Kept around to confirm the small-screen story.</p>
+    </div>
+    <a class="frame__open" href="02-gm-dashboard.html" target="_blank">Open full</a>
+  </div>
 </div>
 
 <div class="footer-note">
   These are static HTML concepts under <code>mockups/</code> — they don't ship with the app.
-  Open <code>mockups/index.html</code> in any browser to view, or open each <code>0X-*.html</code> file directly.
+  Open <code>mockups/index.html</code> in any browser to view, or open each <code>NN-*.html</code> file directly. The desktop frames look best at full size.
 </div>
 
 </body>

@@ -1,8 +1,9 @@
 # missions-app — handoff
 
-Snapshot of the project as of **v1.3.0-dev (local, unpushed)** on top of the
-shipped **v1.2.2** for the next person (or next Claude session) picking this
-up. Skim this first; it shortens onboarding from a day to about an hour.
+Snapshot of the project as of **v2.0.0** (the redesign + handbook release,
+shipped from the v1.3.0-dev sprint) on top of the previously shipped
+**v1.2.2** for the next person (or next Claude session) picking this up.
+Skim this first; it shortens onboarding from a day to about an hour.
 
 If something here disagrees with the code, the code wins. Update this file
 when you change behaviour worth knowing about.

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MiSSiONS — Add CityRush mission (mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { display:flex; align-items:center; justify-content:center; padding: 40px 20px; }
+
+  .modal-header {
+    padding: 50px 22px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .modal-subtitle { font: 500 10px/1 var(--body); letter-spacing: 0.22em; text-transform: uppercase; color: var(--orange); margin-bottom: 4px; }
+
+  .modal-body { padding: 0 22px 110px; }
+  .field { margin-bottom: 16px; }
+
+  .lang-strip {
+    display: flex; gap: 6px; flex-wrap: nowrap; margin-bottom: 22px;
+    padding-bottom: 18px; border-bottom: 1px solid var(--hairline-2);
+  }
+
+  .name-wrap { position: relative; }
+  .name-wrap .input { padding-right: 110px; font: 600 16px/1 var(--body); }
+  .name-wrap .auto-btn {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: var(--surface); border: 1px solid var(--hairline); color: var(--text-dim);
+    padding: 6px 10px; border-radius: 999px;
+    font: 600 10px/1 var(--body); letter-spacing: 0.05em; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .name-wrap .auto-btn svg { width: 11px; height: 11px; }
+
+  .section-head {
+    display: flex; align-items: center; gap: 10px; margin: 22px 0 12px;
+  }
+  .section-head .label {
+    font: 700 11px/1 var(--body);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .section-head .line { flex: 1; height: 1px; background: var(--hairline-2); }
+
+  /* Mini map (visual only) */
+  .mini-map {
+    position: relative;
+    height: 160px;
+    border-radius: var(--r-button);
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    background: #0a0a0a;
+    margin-bottom: 10px;
+  }
+  .mini-map svg.tiles { width: 100%; height: 100%; display: block; }
+  .mini-map .radius {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 90px; height: 90px;
+    border: 1.5px solid rgba(232,95,30,0.6);
+    background: rgba(232,95,30,0.16);
+    border-radius: 50%; pointer-events: none;
+  }
+  .mini-map .marker {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%);
+    color: var(--orange);
+  }
+  .mini-map .marker svg { width: 30px; height: 30px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.45)); }
+
+  .use-loc-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    width: 100%;
+    justify-content: center;
+    border-radius: var(--r-button);
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    color: var(--text);
+    font: 600 12px/1 var(--body); letter-spacing: 0.04em;
+    cursor: pointer;
+    margin-bottom: 12px;
+  }
+  .use-loc-btn svg { width: 14px; height: 14px; color: var(--orange); }
+
+  .coords-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .coords-row .input { font-family: var(--mono); }
+
+  /* Toggle rows */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-button);
+    margin-bottom: 8px;
+  }
+  .toggle-row .text { font: 500 13px/1.3 var(--body); }
+  .toggle-row .sub { font: 400 11px/1.3 var(--body); color: var(--text-muted); margin-top: 2px; }
+
+  .modal-footer {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 18px 36px;
+    display: flex; gap: 10px;
+    background: linear-gradient(180deg, transparent 0%, rgba(15,14,13,0.98) 50%);
+    backdrop-filter: blur(8px);
+  }
+  .modal-footer .btn { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="phone__notch"></div>
+  <div class="phone__screen">
+
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-bar__right">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M0 6.5L2 4.5L4 6.5L6 4.5L8 6.5L10 4.5L12 6.5L14 4.5L16 6.5V10H0V6.5Z" fill="currentColor" opacity=".85"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11" fill="none"><rect x="0.5" y="0.5" width="18" height="10" rx="2" stroke="currentColor" opacity=".85"/><rect x="2" y="2" width="14" height="7" rx="1" fill="currentColor"/></svg>
+      </div>
+    </div>
+
+    <div class="scroll">
+
+      <header class="modal-header">
+        <div>
+          <div class="modal-subtitle">CityRush</div>
+          <div class="modal-title">Add Mission</div>
+        </div>
+        <button class="icon-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <div class="modal-body">
+
+        <div class="lang-strip">
+          <span class="lang-tab"><span class="tick">✓</span>DE</span>
+          <span class="lang-tab is-active"><span class="tick">✓</span>EN</span>
+          <span class="lang-tab">FR</span>
+          <span class="lang-tab">IT</span>
+          <span class="lang-tab">ES</span>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Mission name</div>
+          <div class="name-wrap">
+            <input class="input" type="text" value="Sculpture riddle">
+            <button class="auto-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+              Auto-translate
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Description</div>
+          <textarea class="textarea" rows="2">A bronze sculpture stands in front of the town hall.</textarea>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Task</div>
+          <textarea class="textarea" rows="2">Which animal does the figure hold in its hand? Type the answer below.</textarea>
+        </div>
+
+        <!-- ─── Location section ────────────────────────────────────────── -->
+        <div class="section-head">
+          <span class="label">Location</span>
+          <span class="line"></span>
+        </div>
+
+        <div class="mini-map">
+          <svg class="tiles" viewBox="0 0 380 160" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1c1c1a"/>
+                <stop offset="100%" stop-color="#11100e"/>
+              </linearGradient>
+              <pattern id="g2" width="22" height="22" patternUnits="userSpaceOnUse">
+                <path d="M 22 0 L 0 0 0 22" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect width="380" height="160" fill="url(#bg2)"/>
+            <rect width="380" height="160" fill="url(#g2)"/>
+            <path d="M 0 100 Q 100 90 200 110 T 380 120" stroke="rgba(90,160,255,0.18)" stroke-width="14" fill="none"/>
+            <path d="M 30 50 L 360 60" stroke="rgba(255,255,255,0.08)" stroke-width="3" fill="none"/>
+            <path d="M 100 20 L 110 150" stroke="rgba(255,255,255,0.07)" stroke-width="2" fill="none"/>
+            <path d="M 240 20 L 250 150" stroke="rgba(255,255,255,0.07)" stroke-width="2" fill="none"/>
+          </svg>
+          <div class="radius"></div>
+          <div class="marker">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 2 4 5.6 4 10c0 6.5 8 12 8 12s8-5.5 8-12c0-4.4-3-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
+          </div>
+        </div>
+
+        <button class="use-loc-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/>
+          </svg>
+          Use current location
+        </button>
+
+        <div class="coords-row">
+          <div>
+            <div class="field-label">Latitude</div>
+            <input class="input" type="text" value="47.37206">
+          </div>
+          <div>
+            <div class="field-label">Longitude</div>
+            <input class="input" type="text" value="8.54138">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin-bottom: 4px;">
+          <div>
+            <div class="field-label">Arrival radius (m)</div>
+            <input class="input" type="number" value="25">
+          </div>
+          <div class="stepper">
+            <button type="button">−5</button>
+            <span class="stepper__value">25</span>
+            <button type="button">+5</button>
+          </div>
+        </div>
+
+        <!-- ─── Answer / Media section ─────────────────────────────────── -->
+        <div class="section-head">
+          <span class="label">Submission</span>
+          <span class="line"></span>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="text">Answer required</div>
+            <div class="sub">Players type a text answer. Photo / video disabled.</div>
+          </div>
+          <div class="toggle is-on"></div>
+        </div>
+
+        <div class="field" style="margin-top: 10px;">
+          <div class="field-label">Accepted answers</div>
+          <input class="input" type="text" value="Owl | Eule | Hibou | Civetta | Búho">
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="text">Hide until arrival</div>
+            <div class="sub">Description + task only show after the GPS hit.</div>
+          </div>
+          <div class="toggle"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="text">Special mission</div>
+            <div class="sub">Replayable, off the linear sequence, cooldown applies.</div>
+          </div>
+          <div class="toggle"></div>
+        </div>
+
+        <!-- ─── Hints section ─────────────────────────────────────────── -->
+        <div class="section-head">
+          <span class="label">Hints</span>
+          <span class="line"></span>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Hint 1 (−5 PT)</div>
+          <input class="input" type="text" value="It's a bird of wisdom in Greek myth.">
+        </div>
+        <div class="field">
+          <div class="field-label">Hint 2 (−10 PT)</div>
+          <input class="input" type="text" placeholder="Add another reveal…">
+        </div>
+
+        <div class="field">
+          <div class="field-label">Points</div>
+          <div class="stepper">
+            <button type="button">−</button>
+            <span class="stepper__value">40</span>
+            <button type="button">+</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn">Cancel</button>
+      <button class="btn btn--primary">Save mission</button>
+    </div>
+
+    <div class="phone__indicator"></div>
+  </div>
+</div>
+
+</body>
+</html>

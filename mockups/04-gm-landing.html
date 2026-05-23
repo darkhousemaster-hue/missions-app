@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MiSSiONS — GM landing (mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { display:flex; align-items:center; justify-content:center; padding: 40px 20px; min-height: 100vh; }
+
+  .ll-hero {
+    text-align: center;
+    padding: 56px 24px 28px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    position: relative;
+  }
+  /* Language picker — floats top-right of the hero. Mirrors the live
+     gm.html landing, where the picker sits next to the version chip. */
+  .ll-langs {
+    position: absolute; top: 18px; right: 24px;
+    display: flex; gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 4px;
+  }
+  .ll-langs .ll-lang {
+    padding: 6px 11px;
+    border-radius: 999px;
+    font: 700 11px/1 var(--body);
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .ll-langs .ll-lang.is-active { background: var(--text); color: var(--bg); }
+  .ll-logo {
+    width: 120px; height: 120px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ll-logo img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    /* The shipped logo PNG has a dark background — screen-blend so it
+       sits cleanly on the warm-dark surface, matching the live gm.html. */
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 18px 40px rgba(232, 95, 30, 0.25));
+  }
+  .ll-wordmark {
+    font-family: var(--display); font-weight: 800;
+    font-size: 56px; letter-spacing: 0.06em; line-height: 1;
+    color: var(--text);
+  }
+  .ll-tagline {
+    font: 500 12px/1 var(--body);
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .ll-section {
+    max-width: 900px; margin: 16px auto 0;
+  }
+  .ll-section-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .ll-section-title {
+    font: 700 11px/1 var(--body);
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .ll-section-count { font: 500 12px/1 var(--mono); color: var(--text-muted); }
+
+  .loc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .loc-tile {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-card);
+    padding: 28px 22px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s, transform .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    min-height: 144px; justify-content: center;
+  }
+  .loc-tile:hover {
+    border-color: rgba(255,255,255,0.18);
+    background: var(--surface-2);
+    transform: translateY(-1px);
+  }
+  .loc-tile__icon { color: var(--text-dim); }
+  .loc-tile__icon svg { width: 22px; height: 22px; }
+  .loc-tile__name {
+    font: 700 15px/1.1 var(--body);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--text);
+  }
+  .loc-tile--cr {
+    background: linear-gradient(160deg, rgba(232,95,30,0.10), rgba(232,95,30,0.02));
+    border-color: rgba(232,95,30,0.32);
+  }
+  .loc-tile--cr:hover {
+    border-color: rgba(232,95,30,0.55);
+    background: linear-gradient(160deg, rgba(232,95,30,0.14), rgba(232,95,30,0.04));
+  }
+  .loc-tile--cr .loc-tile__icon { color: var(--orange); }
+  .loc-tile--cr .loc-tile__name { color: var(--orange); }
+
+  .ll-foot { text-align: center; margin-top: 28px; }
+  .ll-foot .btn { color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="desktop">
+  <div class="desktop__chrome">
+    <span class="dot dot--red"></span><span class="dot dot--yel"></span><span class="dot dot--grn"></span>
+    <span class="url">gm.advrm.local / GM</span>
+    <span class="spacer"></span>
+    <span class="mono">v1.3.0-dev</span>
+  </div>
+
+  <div class="desktop__body">
+    <div class="dt-scroll" style="padding-top:0;">
+
+      <div class="ll-hero">
+        <div class="ll-langs">
+          <span class="ll-lang is-active">DE</span>
+          <span class="ll-lang">EN</span>
+          <span class="ll-lang">FR</span>
+          <span class="ll-lang">IT</span>
+          <span class="ll-lang">ES</span>
+        </div>
+        <div class="ll-logo">
+          <img src="../public/assets/logo.png" alt="Adventurerooms">
+        </div>
+        <div class="ll-wordmark">MiSSi<span style="opacity:.85">ONS</span></div>
+        <div class="ll-tagline">Adventurerooms · Gamemaster</div>
+      </div>
+
+      <div class="ll-section">
+        <div class="ll-section-head">
+          <span class="ll-section-title">Pick a starting point</span>
+        </div>
+
+        <div class="loc-grid">
+          <div class="loc-tile">
+            <div class="loc-tile__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="loc-tile__name">Altstadt</div>
+          </div>
+          <div class="loc-tile">
+            <div class="loc-tile__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="loc-tile__name">Stadtpark</div>
+          </div>
+          <div class="loc-tile">
+            <div class="loc-tile__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="loc-tile__name">Hauptbahnhof</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ll-section" style="margin-top:32px;">
+        <div class="ll-section-head">
+          <span class="ll-section-title">Or pick a CityRush route</span>
+        </div>
+        <div class="loc-grid">
+          <div class="loc-tile loc-tile--cr" style="grid-column: span 3;">
+            <div class="loc-tile__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l-3 8h3l-2 8 7-10h-4l3-6z"/></svg>
+            </div>
+            <div class="loc-tile__name">CityRush</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ll-foot">
+        <button class="btn btn--ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

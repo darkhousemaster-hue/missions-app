@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MiSSiONS — Map picker (mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { display:flex; align-items:center; justify-content:center; padding: 40px 20px; min-height: 100vh; }
+
+  .picker-card { width: min(820px, calc(100% - 80px)); max-height: calc(100% - 60px); }
+  .picker-card .modal-card__body { padding: 18px 22px 22px; }
+
+  .picker-head-sub {
+    display: flex; align-items: center; gap: 10px;
+    margin: 2px 0 0;
+  }
+  .picker-head-sub .pill { font: 600 10px/1 var(--body); letter-spacing: 0.06em; }
+
+  /* The actual map area. We fake a Leaflet/OSM tile look with a layered SVG so
+     the mockup stays self-contained — no Leaflet, no tile requests. */
+  .map-area {
+    position: relative;
+    height: 320px;
+    border-radius: var(--r-button);
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    background: #0a0a0a;
+    margin-bottom: 14px;
+  }
+  .map-area__tiles { width: 100%; height: 100%; display: block; }
+  .map-area__radius {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 110px; height: 110px;
+    border: 1.5px solid rgba(232, 95, 30, 0.6);
+    background: rgba(232, 95, 30, 0.16);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .map-area__marker {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%);
+    color: var(--orange);
+  }
+  .map-area__marker svg { width: 36px; height: 36px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.45)); }
+
+  .map-area__controls {
+    position: absolute; top: 10px; left: 10px;
+    display: flex; flex-direction: column;
+    background: rgba(15,14,13,0.85);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+  }
+  .map-area__controls button {
+    width: 30px; height: 30px;
+    background: transparent;
+    border: 0; color: var(--text);
+    font: 700 16px/1 var(--body);
+    cursor: pointer;
+  }
+  .map-area__controls button + button { border-top: 1px solid var(--hairline-2); }
+
+  .map-area__use-loc {
+    position: absolute; bottom: 12px; left: 12px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: rgba(15,14,13,0.85);
+    border: 1px solid var(--hairline);
+    color: var(--text);
+    font: 600 12px/1 var(--body); letter-spacing: 0.02em;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background .15s, border-color .15s;
+  }
+  .map-area__use-loc:hover {
+    background: rgba(15,14,13,0.92);
+    border-color: rgba(232,95,30,0.55);
+  }
+  .map-area__use-loc svg { width: 14px; height: 14px; color: var(--orange); }
+
+  .picker-hint {
+    font: 400 11px/1.5 var(--body);
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+  .picker-hint code { background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); font-size: 10px; }
+
+  .coords-grid {
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .coords-grid .field-label { margin-bottom: 6px; }
+  .coords-grid .input { font-family: var(--mono); }
+  .coords-grid .radius { display: flex; flex-direction: column; }
+  .coords-grid .radius .stepper { align-self: stretch; }
+
+  /* Subtle "loading…" toast that appears while geolocation is in flight */
+  .geo-toast {
+    position: absolute; top: 12px; right: 12px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(15,14,13,0.85);
+    border: 1px solid var(--hairline);
+    color: var(--text-dim);
+    font: 600 11px/1 var(--body); letter-spacing: 0.04em;
+    backdrop-filter: blur(4px);
+    opacity: 0; transform: translateY(-4px);
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+  }
+  .geo-toast.is-on { opacity: 1; transform: translateY(0); }
+  .geo-toast svg { width: 12px; height: 12px; animation: spin 1s linear infinite; color: var(--orange); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="modal-scrim">
+  <div class="modal-card picker-card">
+
+    <div class="modal-card__head">
+      <div>
+        <h3>Pick location</h3>
+        <div class="picker-head-sub">
+          <span class="pill">Skulptur-Rätsel · Stop 2</span>
+          <span class="muted" style="font-size:11px;">Click anywhere on the map to drop the marker.</span>
+        </div>
+      </div>
+      <button class="icon-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-card__body">
+
+      <div class="map-area">
+        <!-- Fake OSM-style map tiles via SVG. Two muted color layers + a grid + a
+             few "street" polylines. Just enough to read as "a map" without
+             actually loading Leaflet in a static mockup. -->
+        <svg class="map-area__tiles" viewBox="0 0 780 320" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1c1c1a"/>
+              <stop offset="100%" stop-color="#11100e"/>
+            </linearGradient>
+            <pattern id="g1" width="32" height="32" patternUnits="userSpaceOnUse">
+              <path d="M 32 0 L 0 0 0 32" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect width="780" height="320" fill="url(#bg)"/>
+          <rect width="780" height="320" fill="url(#g1)"/>
+          <!-- "river" / blocks -->
+          <path d="M 0 200 Q 200 180 400 210 T 780 220" stroke="rgba(90,160,255,0.18)" stroke-width="22" fill="none"/>
+          <!-- streets -->
+          <path d="M 60 80 L 720 90" stroke="rgba(255,255,255,0.08)" stroke-width="4" fill="none"/>
+          <path d="M 60 140 L 720 150" stroke="rgba(255,255,255,0.07)" stroke-width="3" fill="none"/>
+          <path d="M 60 260 L 720 270" stroke="rgba(255,255,255,0.07)" stroke-width="3" fill="none"/>
+          <path d="M 140 30 L 150 300" stroke="rgba(255,255,255,0.07)" stroke-width="3" fill="none"/>
+          <path d="M 280 30 L 290 300" stroke="rgba(255,255,255,0.07)" stroke-width="3" fill="none"/>
+          <path d="M 420 30 L 430 300" stroke="rgba(255,255,255,0.07)" stroke-width="3" fill="none"/>
+          <path d="M 560 30 L 570 300" stroke="rgba(255,255,255,0.07)" stroke-width="3" fill="none"/>
+          <!-- "park" blob -->
+          <path d="M 480 60 Q 540 50 580 80 Q 600 130 560 150 Q 500 160 470 130 Q 460 90 480 60 Z" fill="rgba(74,222,128,0.10)" stroke="rgba(74,222,128,0.18)" stroke-width="1"/>
+          <text x="510" y="115" fill="rgba(255,255,255,0.20)" font-family="Inter, sans-serif" font-size="10" letter-spacing="0.2em">PARK</text>
+          <!-- label scattered -->
+          <text x="80" y="60" fill="rgba(255,255,255,0.20)" font-family="Inter, sans-serif" font-size="9" letter-spacing="0.18em">BAHNHOFSTR.</text>
+          <text x="80" y="290" fill="rgba(255,255,255,0.18)" font-family="Inter, sans-serif" font-size="9" letter-spacing="0.18em">LIMMATQUAI</text>
+        </svg>
+
+        <div class="map-area__radius"></div>
+        <div class="map-area__marker">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 2 4 5.6 4 10c0 6.5 8 12 8 12s8-5.5 8-12c0-4.4-3-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
+        </div>
+
+        <div class="map-area__controls">
+          <button aria-label="Zoom in">+</button>
+          <button aria-label="Zoom out">−</button>
+        </div>
+
+        <button class="map-area__use-loc" id="use-loc-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3"/><path d="M12 19v3"/>
+            <path d="M2 12h3"/><path d="M19 12h3"/>
+          </svg>
+          Use current location
+        </button>
+
+        <div class="geo-toast" id="geo-toast">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/></svg>
+          <span>Locating…</span>
+        </div>
+      </div>
+
+      <p class="picker-hint">
+        Click the map to drop the marker, then drag to refine. The orange ring shows the arrival radius — players have to be inside it for the mission to unlock. <strong style="color:var(--text-dim);">Use current location</strong> reads the browser's GPS, useful for site-walking when the GM is at the spot itself.
+      </p>
+
+      <div class="coords-grid">
+        <div>
+          <div class="field-label">Latitude</div>
+          <input class="input" type="text" value="47.37206" id="lat">
+        </div>
+        <div>
+          <div class="field-label">Longitude</div>
+          <input class="input" type="text" value="8.54138" id="lng">
+        </div>
+        <div class="radius">
+          <div class="field-label">Radius (m)</div>
+          <div class="stepper">
+            <button type="button">−</button>
+            <span class="stepper__value">25</span>
+            <button type="button">+</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-card__foot">
+      <button class="btn">Cancel</button>
+      <button class="btn btn--primary">Save coordinates</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Tiny inline demo of the geolocation flow. Pure mockup behaviour — no
+     network. Toggles the "Locating…" toast and (on a real browser permission
+     grant) writes lat/lng into the visible inputs so reviewers can confirm
+     the UX. The real app wires this up in gm.html via the same API. -->
+<script>
+(function(){
+  const btn = document.getElementById('use-loc-btn');
+  const toast = document.getElementById('geo-toast');
+  const latI  = document.getElementById('lat');
+  const lngI  = document.getElementById('lng');
+  if(!btn) return;
+  btn.addEventListener('click', () => {
+    toast.classList.add('is-on');
+    if(!('geolocation' in navigator)){
+      setTimeout(() => { toast.classList.remove('is-on'); alert('Geolocation not supported by this browser.'); }, 400);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        latI.value = pos.coords.latitude.toFixed(5);
+        lngI.value = pos.coords.longitude.toFixed(5);
+        toast.classList.remove('is-on');
+      },
+      (err) => {
+        toast.classList.remove('is-on');
+        alert('Could not get location: ' + (err.message || err.code));
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+})();
+</script>
+
+</body>
+</html>

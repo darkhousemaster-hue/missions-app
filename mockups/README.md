@@ -6,13 +6,22 @@ public/ static mount, or any build step. Treat them as a visual sketchbook.
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `index.html` | Concept board, shows all three phone mockups side-by-side via iframes |
-| `01-player-home.html` | Redesigned player MiSSiONS home screen (mobile) |
-| `02-gm-dashboard.html` | Redesigned GM dashboard with team color stripes (mobile/tablet) |
-| `03-add-mission-modal.html` | Redesigned Add MiSSiON modal with language-tabbed editor |
-| `_shared.css` | Brand tokens + reusable components shared by the three screens |
+| File | Purpose | Frame |
+|---|---|---|
+| `index.html` | Concept board — all screens side-by-side via iframes | mixed |
+| `01-player-home.html` | Player MiSSiONS home (mission list + camera CTA) | phone |
+| `02-gm-dashboard.html` | GM dashboard, mobile/tablet fallback (< 900px) | phone |
+| `03-add-mission-modal.html` | Add MiSSiON modal with language-tabbed editor | phone |
+| `04-gm-landing.html` | GM landing — wordmark + location grid + CityRush tile | desktop |
+| `05-gm-game-select.html` | GM game-select — new-game form card + recent games | desktop |
+| `06-gm-new-game.html` | GM new-game · QR display + join URL | desktop |
+| `07-gm-dashboard-desktop.html` | GM dashboard, desktop layout (1024+) with right panel | desktop |
+| `08-gm-settings.html` | GM settings — two-level sidebar (App / Games) + form panel | desktop |
+| `09-player-join.html` | Player join — selfie + team name + language pick | phone |
+| `10-cityrush-player.html` | CityRush player — mini map + linear stop + hints + bottom nav | phone |
+| `11-map-picker.html` | Map picker modal with **Use current location** (working geo demo) | desktop modal |
+| `12-add-cr-mission.html` | Add CityRush mission — mini map + GPS + answer + hint reveals | phone |
+| `_shared.css` | Brand tokens + reusable phone / desktop frame + components |
 
 ## How to view
 
@@ -39,6 +48,17 @@ For a quick local server if you want all three to load reliably:
 npx --yes http-server mockups -p 5173 -c-1
 # then visit http://localhost:5173
 ```
+
+## Coverage
+
+Pages live in `public/`:
+
+- `gm.html` (5 screens + N modals) → **04, 05, 06, 07, 08, 11, 12** (and **03** for the MiSSiONS add modal). Same patterns extend to the other modals (Edit / Add CR Mode / Submission review / Freeze / Broadcast / Export — not separately mocked).
+- `play.html` (MiSSiONS player) → **01**.
+- `cityrush.html` (CityRush player) → **10**.
+- `join.html` (pre-game team join) → **09**.
+
+The dashboard exists in two frames: **07** (desktop, default in v1.3.0+) and **02** (mobile fallback under 900px). The other modals not separately mocked re-use the patterns from **03** (lang tabs, segmented controls, toggle rows, steppers) and **11** (the modal-card frame).
 
 ## What's being proposed
 
