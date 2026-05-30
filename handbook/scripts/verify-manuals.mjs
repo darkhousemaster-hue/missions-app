@@ -31,7 +31,7 @@ await page.evaluate(() => switchSettingsTab('manuals', document.getElementById('
 await page.waitForTimeout(400);
 
 // Capture screenshots for each language
-for (const lang of ['de', 'en']) {
+for (const lang of ['de', 'en', 'fr', 'it', 'es']) {
   await page.selectOption('#manuals-lang-filter', lang);
   await page.waitForTimeout(300);
   await page.screenshot({ path: `C:/projects/missions-app/handbook/screenshots/verify/manuals-${lang}.png`, fullPage: false });

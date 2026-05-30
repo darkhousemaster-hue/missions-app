@@ -26,29 +26,56 @@ const args   = Object.fromEntries(process.argv.slice(2).map(a => a.startsWith('-
 const HEADED = !!args.headed;
 const LANGS  = args.lang ? [args.lang] : ['de', 'en'];
 
-// Per-shot captions in both languages.
+// Per-shot captions in all five UI languages.
 const DESC = {
   // ── PART 1: MiSSiONS player ───────────────────────────────────────────────
   'm-01-join':            { de: 'Beitritts-Bildschirm: Selfie aufnehmen, Teamnamen eingeben, Sprache wählen.',
-                            en: 'Join screen: take a selfie, enter the team name, pick a language.' },
+                            en: 'Join screen: take a selfie, enter the team name, pick a language.',
+                            fr: 'Écran de connexion : prendre un selfie, saisir le nom d’équipe, choisir la langue.',
+                            it: 'Schermata di accesso: scattare un selfie, inserire il nome della squadra, scegliere la lingua.',
+                            es: 'Pantalla de acceso: hazte un selfie, escribe el nombre del equipo y elige el idioma.' },
   'm-02-join-existing':   { de: 'Bestehendem Team beitreten: Liste der laufenden Teams mit Punktestand.',
-                            en: 'Join an existing team: list of running teams with their current score.' },
+                            en: 'Join an existing team: list of running teams with their current score.',
+                            fr: 'Rejoindre une équipe existante : liste des équipes en cours avec leur score.',
+                            it: 'Unisciti a una squadra esistente: elenco delle squadre attive con il punteggio.',
+                            es: 'Únete a un equipo existente: lista de los equipos activos con su puntuación.' },
   'm-03-home':            { de: 'MiSSiONS-Spielerübersicht: Missionskarten mit Filter-Leiste und Status-Pillen.',
-                            en: 'MiSSiONS player home: mission cards with the filter strip and status pills.' },
+                            en: 'MiSSiONS player home: mission cards with the filter strip and status pills.',
+                            fr: 'Accueil joueur MiSSiONS : cartes de mission avec barre de filtres et pastilles de statut.',
+                            it: 'Home giocatore MiSSiONS: schede missione con la barra dei filtri e le pillole di stato.',
+                            es: 'Inicio del jugador MiSSiONS: tarjetas de misión con la barra de filtros y las píldoras de estado.' },
   'm-04-mission-detail':  { de: 'Missions-Detailansicht: Aufgabe, Punkte und Aufnahme-/Upload-Buttons.',
-                            en: 'Mission detail sheet: task, points and the capture / upload buttons.' },
+                            en: 'Mission detail sheet: task, points and the capture / upload buttons.',
+                            fr: 'Détail de mission : la tâche, les points et les boutons de capture / envoi.',
+                            it: 'Dettaglio missione: il compito, i punti e i pulsanti di scatto / caricamento.',
+                            es: 'Detalle de la misión: la tarea, los puntos y los botones de captura / subida.' },
   'm-05-chat':            { de: 'Chat-Tab: 1-zu-1-Konversation mit dem Spielleiter.',
-                            en: 'Chat tab: 1-to-1 conversation with the Gamemaster.' },
+                            en: 'Chat tab: 1-to-1 conversation with the Gamemaster.',
+                            fr: 'Onglet Chat : conversation 1-à-1 avec le Gamemaster.',
+                            it: 'Scheda Chat: conversazione 1 a 1 con il Gamemaster.',
+                            es: 'Pestaña Chat: conversación 1 a 1 con el Gamemaster.' },
 
   // ── PART 2: CityRush player ───────────────────────────────────────────────
   'cr-01-home':           { de: 'CityRush-Spieleransicht: Mini-Karte, Fortschritt und Missionskacheln in Reihenfolge.',
-                            en: 'CityRush player home: mini-map, progress bar and mission tiles in route order.' },
+                            en: 'CityRush player home: mini-map, progress bar and mission tiles in route order.',
+                            fr: 'Accueil joueur CityRush : mini-carte, barre de progression et tuiles de mission en ordre.',
+                            it: 'Home giocatore CityRush: mini-mappa, barra di avanzamento e tessere missione in ordine.',
+                            es: 'Inicio del jugador CityRush: mini-mapa, barra de progreso y casillas de misión en orden.' },
   'cr-02-special-btn':    { de: 'Goldener Stern unten — Schnellzugriff auf die einzige Sondermission.',
-                            en: 'Gold star at the bottom — shortcut to the lone special mission.' },
+                            en: 'Gold star at the bottom — shortcut to the lone special mission.',
+                            fr: 'Étoile dorée en bas : raccourci vers l’unique mission spéciale.',
+                            it: 'Stella dorata in basso: scorciatoia per l’unica missione speciale.',
+                            es: 'Estrella dorada abajo: acceso directo a la única misión especial.' },
   'cr-03-fullscreen-map': { de: 'Vollbild-Karte: tippen auf die Mini-Karte; alle Stopps als Marker.',
-                            en: 'Fullscreen map: tap the mini-map; every stop appears as a marker.' },
+                            en: 'Fullscreen map: tap the mini-map; every stop appears as a marker.',
+                            fr: 'Carte plein écran : touchez la mini-carte ; chaque étape apparaît comme un marqueur.',
+                            it: 'Mappa a tutto schermo: tocca la mini-mappa; ogni tappa appare come un marker.',
+                            es: 'Mapa a pantalla completa: toca el mini-mapa; cada parada aparece como un marcador.' },
   'cr-04-frozen':         { de: 'Eingefroren: blau gefärbtes Banner oben, Abgabe gesperrt bis Timer abläuft.',
-                            en: 'Frozen: blue banner at the top, submissions locked until the timer expires.' },
+                            en: 'Frozen: blue banner at the top, submissions locked until the timer expires.',
+                            fr: 'Gelé : bandeau bleu en haut, envois verrouillés jusqu’à la fin du minuteur.',
+                            it: 'Congelati: banner blu in alto, invii bloccati fino allo scadere del timer.',
+                            es: 'Congelados: banner azul arriba, envíos bloqueados hasta que termine el temporizador.' },
 };
 
 async function snap(page, dir, lang, name) {

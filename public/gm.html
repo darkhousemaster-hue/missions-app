@@ -5336,15 +5336,24 @@ function switchSettingsTab(tab,el){
 // builder doesn't write them anywhere, so they're refreshed manually
 // when a manual grows enough to be worth updating.
 const MANUALS = [
-  // GM (operator) — both languages
-  { lang:'de', title:'GM-Handbuch',           file:'GM_Manual-de.pdf',       audience:'gm' },
-  { lang:'en', title:'GM Manual',             file:'GM_Manual-en.pdf',       audience:'gm' },
-  // Settings (admin) — both languages
-  { lang:'de', title:'Einstellungs-Handbuch', file:'SETTINGS_Manual-de.pdf', audience:'admin' },
-  { lang:'en', title:'Settings Manual',       file:'SETTINGS_Manual-en.pdf', audience:'admin' },
-  // Player — both languages
-  { lang:'de', title:'Spieler-Handbuch',      file:'PLAYER_Manual-de.pdf',   audience:'player' },
-  { lang:'en', title:'Player Manual',         file:'PLAYER_Manual-en.pdf',   audience:'player' },
+  // GM (operator) — all five languages
+  { lang:'de', title:'GM-Handbuch',             file:'GM_Manual-de.pdf',       audience:'gm' },
+  { lang:'en', title:'GM Manual',               file:'GM_Manual-en.pdf',       audience:'gm' },
+  { lang:'fr', title:'Manuel du Gamemaster',    file:'GM_Manual-fr.pdf',       audience:'gm' },
+  { lang:'it', title:'Manuale del Gamemaster',  file:'GM_Manual-it.pdf',       audience:'gm' },
+  { lang:'es', title:'Manual del Gamemaster',   file:'GM_Manual-es.pdf',       audience:'gm' },
+  // Settings (admin) — all five languages
+  { lang:'de', title:'Einstellungs-Handbuch',   file:'SETTINGS_Manual-de.pdf', audience:'admin' },
+  { lang:'en', title:'Settings Manual',         file:'SETTINGS_Manual-en.pdf', audience:'admin' },
+  { lang:'fr', title:'Manuel des réglages',     file:'SETTINGS_Manual-fr.pdf', audience:'admin' },
+  { lang:'it', title:'Manuale delle impostazioni', file:'SETTINGS_Manual-it.pdf', audience:'admin' },
+  { lang:'es', title:'Manual de ajustes',       file:'SETTINGS_Manual-es.pdf', audience:'admin' },
+  // Player — all five languages
+  { lang:'de', title:'Spieler-Handbuch',        file:'PLAYER_Manual-de.pdf',   audience:'player' },
+  { lang:'en', title:'Player Manual',           file:'PLAYER_Manual-en.pdf',   audience:'player' },
+  { lang:'fr', title:'Manuel du joueur',        file:'PLAYER_Manual-fr.pdf',   audience:'player' },
+  { lang:'it', title:'Manuale del giocatore',   file:'PLAYER_Manual-it.pdf',   audience:'player' },
+  { lang:'es', title:'Manual del jugador',      file:'PLAYER_Manual-es.pdf',   audience:'player' },
 ];
 function loadManualsList(){
   const lang = document.getElementById('manuals-lang-filter')?.value || 'de';
