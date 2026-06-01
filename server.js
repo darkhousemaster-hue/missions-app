@@ -164,6 +164,20 @@ app.post('/api/update', async (req,res) => {
     if (!remoteOk.ok) return fail('Update failed: could not configure the GitHub remote.');
   }
 
+  // Short-circuit when already on the latest commit. ls-remote queries the
+  // remote tip directly and touches no local refs, so this works even when
+  // the app directory is also the machine you push from — where a normal
+  // fetch can hit a benign "cannot lock ref 'refs/remotes/origin/main'".
+  const remoteRef = await run('git', ['ls-remote', 'origin', 'refs/heads/main']);
+  if (remoteRef.ok && remoteRef.stdout.trim()) {
+    const remoteSha = remoteRef.stdout.trim().split(/\s+/)[0];
+    const headSha = (await run('git', ['rev-parse', 'HEAD'])).stdout.trim();
+    if (remoteSha && headSha && remoteSha === headSha) {
+      log.push(`Already up to date — running the latest version (${remoteSha.slice(0, 7)}). No restart needed.`);
+      return res.json({ success: true, upToDate: true, log: log.join('\n') });
+    }
+  }
+
   const dirty = await run('git', ['status', '--porcelain', '--untracked-files=no']);
   if (!dirty.ok) return fail('Update failed: could not inspect the local Git status.');
   if (dirty.stdout.trim()) {
@@ -592,15 +606,16 @@ app.post('/api/games/:gameId/timer', (req,res) => {
   } else if(action==='pause' && game.timer_running && game.timer_started_at) {
     db.updateGame(req.params.gameId,{timer_paused_elapsed: now-game.timer_started_at, timer_running:0});
   } else if(action==='adjust' && typeof seconds==='number') {
-    // Add or subtract seconds from the total duration
+    // Add or subtract seconds from the total duration. getTimerState derives
+    // `remaining` live as (timer_duration - elapsed), so changing the duration
+    // alone shifts the remaining time immediately — whether the clock is
+    // running or paused. Do NOT also move timer_started_at: that changes
+    // `elapsed` by the same amount and exactly cancels the duration change
+    // (net zero while running), and because timer_duration is floored at 10s
+    // but the started_at shift isn't, a large subtract could even invert into
+    // an increase. One line, both bugs gone.
     const newDuration = Math.max(10, (game.timer_duration||3600) + seconds);
     db.updateGame(req.params.gameId,{timer_duration: newDuration});
-    // If running, also adjust started_at so remaining time changes immediately
-    if(game.timer_running && game.timer_started_at) {
-      // Extending: move started_at further back (more time remaining)
-      // Subtracting: move started_at forward (less time remaining)
-      db.updateGame(req.params.gameId,{timer_started_at: game.timer_started_at - seconds*1000});
-    }
   }
   const updated=db.getGame(req.params.gameId);
   const state=getTimerState(updated);

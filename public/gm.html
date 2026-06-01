@@ -3821,7 +3821,12 @@ async function runUpdate(){
   try {
     const res=await API('/api/update',{method:'POST',body:{password:settingsPassword}});
     log.textContent=res.log||'';
-    if(res.success){
+    if(res.success && res.upToDate){
+      // Already on the latest commit — the server stays up, so don't reload
+      // (a reload here would be harmless but the "restarting" toast would lie).
+      toast((gmLang==='de'?'Bereits aktuell — keine Aktualisierung nötig.':gmLang==='fr'?'Déjà à jour — aucune mise à jour nécessaire.':gmLang==='it'?'Già aggiornato — nessun aggiornamento necessario.':gmLang==='es'?'Ya actualizado — no hace falta actualizar.':'Already up to date — no update needed.'),'success');
+      btn.disabled=false;
+    } else if(res.success){
       toast(gmt('update-ok')||'Update erfolgreich! App startet neu...','success');
       setTimeout(()=>window.location.reload(),3000);
     } else {
