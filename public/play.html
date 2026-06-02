@@ -197,7 +197,16 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 #cam-preview  { flex:1; width:100%; object-fit:cover; display:block; }
 #cap-img { flex:1; width:100%; object-fit:contain; display:none; background:#000; }
 #cap-vid { flex:1; width:100%; display:none; background:#000; }
-.cam-bar { padding:.75rem 1rem; background:#111; display:flex; gap:.75rem; align-items:center; justify-content:center; flex-shrink:0; }
+.cam-bar { padding:.75rem 1rem calc(.75rem + env(safe-area-inset-bottom,0px)); background:#111; display:flex; gap:.75rem; align-items:center; justify-content:center; flex-shrink:0; box-sizing:border-box; width:100%; }
+/* Review bar: two text buttons (retake / upload). Long localized labels
+   (e.g. German "↺ Neu aufnehmen" + "✓ Hochladen") overflowed the viewport
+   because the centered flex row had no width cap. Make the two share the
+   row, shrinkable, never exceeding it. */
+#cam-bar-review .btn { flex:1 1 0; min-width:0; max-width:50%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; justify-content:center; }
+/* Capture bar: keep the round shutter intrinsic, let the side buttons
+   shrink so cancel/flip labels can't push it off-center. */
+#cam-bar-capture .topbar-btn { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#cam-bar-capture .shutter { flex:0 0 auto; }
 .shutter {
   width:64px; height:64px; border-radius:50%; border:3px solid #fff;
   background:rgba(255,255,255,.15); cursor:pointer; font-size:1.5rem;
@@ -841,11 +850,14 @@ async function refreshTeamScore(){
 }
 
 function onAccepted(missionId) {
-  const card = document.getElementById(`mc-${missionId}`); if (!card) return;
-  card.className = 'p-mission-card accepted';
-  const footer = document.getElementById(`mf-${missionId}`);
-  if (footer) footer.innerHTML = `<span class="pill pill-accepted">${t('accepted')}</span>`;
   toast(t('mission_accepted')||'✓ Mission angenommen!', 'success');
+  // Re-fetch + re-render rather than hand-patching DOM. The old code set
+  // card.className='accepted' (green outline) and wrote to a non-existent
+  // `mf-${id}` footer, so the real status pill (mcard__pending-tag, still
+  // reading "REJECTED" from the prior round) was never replaced — leaving a
+  // green-outlined card that still said REJECTED. loadMissions() pulls the
+  // authoritative status and repaints the open detail modal too.
+  loadMissions();
   refreshTeamScore();
 }
 
@@ -999,17 +1011,11 @@ async function doUpload() {
     if (ub) ub.style.display = 'none';
     if (xhr.status === 200) {
       toast(t('uploading_review')||'Hochgeladen! Wird geprüft…', 'success');
-      // Update card to pending with thumbnail
-      const card = document.getElementById(`mc-${currentMissionId}`);
-      if (card) card.className = 'p-mission-card pending';
-      const footer = document.getElementById(`mf-${currentMissionId}`);
-      if (footer) {
-        const thumbUrl = URL.createObjectURL(blobToUpload);
-        const thumbHtml = isVid
-          ? `<video class="sub-thumb-video" src="${thumbUrl}" onclick="openLightbox('${thumbUrl}',true)" muted></video>`
-          : `<img class="sub-thumb" src="${thumbUrl}" onclick="openLightbox('${thumbUrl}',false)" alt="thumb">`;
-        footer.innerHTML = `<span class="pill pill-pending">${t('pending')}</span>${thumbHtml}`;
-      }
+      // Repaint from server truth (status is now 'pending'). The old code
+      // hand-patched a non-existent `mf-` footer and only flipped the card
+      // class, which left a stale status pill behind — same class of bug as
+      // the accept handler.
+      loadMissions();
     } else {
       toast(t('upload_failed')||'Upload fehlgeschlagen', 'error');
     }
@@ -1112,17 +1118,8 @@ async function uploadFromGallery(event, missionId, mediaType) {
     if(ub) ub.style.display = 'none';
     if(xhr.status === 200){
       toast(t('uploading_review')||'Hochgeladen! Wird geprüft…', 'success');
-      const card = document.getElementById(`mc-${missionId}`);
-      if(card) card.className = 'p-mission-card pending';
-      const footer = document.getElementById(`mf-${missionId}`);
-      if(footer){
-        const isVid = mediaType==='video';
-        const src = URL.createObjectURL(file);
-        const thumb = isVid
-          ? `<video class="sub-thumb-video" src="${src}" muted></video>`
-          : `<img class="sub-thumb" src="${src}" alt="thumb">`;
-        footer.innerHTML = `<span class="pill pill-pending">${t('pending')}</span>${thumb}`;
-      }
+      // Repaint from server truth rather than the old dead-`mf-` footer patch.
+      loadMissions();
     } else { toast(t('upload_failed')||'Upload fehlgeschlagen', 'error'); }
   };
   xhr.onerror = () => { if(ub) ub.style.display='none'; toast(t('upload_failed')||'Upload fehlgeschlagen','error'); };
