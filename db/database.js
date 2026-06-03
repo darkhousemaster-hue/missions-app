@@ -250,6 +250,11 @@ try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(
 // Team selfie taken at the start of the game so the GM can see who's who.
 // `selfie_path` is the uploads-relative path; stays NULL until uploaded.
 try { db.exec("ALTER TABLE teams ADD COLUMN selfie_path TEXT"); } catch(e) {}
+// Ranking tie-breaker: epoch-ms of the team's most recent score change. When
+// two teams are level on points, the one that REACHED that total first ranks
+// higher (smaller last_score_at). Stamped by every score-writing path. Default
+// 0 so pre-existing teams fall back to joined_at order until they next score.
+try { db.exec("ALTER TABLE teams ADD COLUMN last_score_at INTEGER DEFAULT 0"); } catch(e) {}
 // Game media export — populated after the GM renders the photo-collage MP4
 // from the dashboard. NULL until the first render. The path is relative to
 // UPLOAD_DIR (e.g. "ABC12345/collage.mp4"). generated_at is a unix-epoch ms.
@@ -365,8 +370,36 @@ const isSetup       = () => true;
 const setupPassword = pw => setSetting('password_hash', bcrypt.hashSync(pw,10));
 const verifyPassword = pw => { const h=getSetting('password_hash'); return h?bcrypt.compareSync(pw,h):false; };
 const changePassword = (op,np) => { if(!verifyPassword(op)) return false; setupPassword(np); return true; };
-const getSettings = () => { const o={}; db.prepare('SELECT key,value FROM settings').all().forEach(r=>{ if(r.key!=='password_hash') o[r.key]=r.value; }); return o; };
-const updateSettings = obj => { const u=db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)'); runTx(()=>{ for(const[k,v] of Object.entries(obj)) u.run(k,v); }); };
+// Keys that carry secrets and must never be exposed via GET /api/settings nor
+// be writable through the generic settings PUT (which takes arbitrary keys).
+const SETTINGS_SECRET_KEYS = new Set(['password_hash', 'gm_token_secret']);
+const getSettings = () => { const o={}; db.prepare('SELECT key,value FROM settings').all().forEach(r=>{ if(!SETTINGS_SECRET_KEYS.has(r.key)) o[r.key]=r.value; }); return o; };
+const updateSettings = obj => { const u=db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)'); runTx(()=>{ for(const[k,v] of Object.entries(obj)){ if(SETTINGS_SECRET_KEYS.has(k)) continue; u.run(k,v); } }); };
+
+// ── GM auth token ──────────────────────────────────────────────────────────
+// A long-lived bearer token so the dashboard doesn't have to resend the raw
+// password on every privileged request. The token is just the password-gated
+// secret; we persist a random secret (created once, survives restarts) and
+// hand the client an opaque value derived from it. Rotating the password does
+// NOT rotate this (keeps existing sessions working); call rotateGmToken() if
+// you ever need to invalidate everything.
+const crypto = require('crypto');
+const getGmTokenSecret = () => {
+  let s = getSetting('gm_token_secret');
+  if(!s){ s = crypto.randomBytes(32).toString('hex'); setSetting('gm_token_secret', s); }
+  return s;
+};
+// Opaque token = HMAC(secret, "gm"). Stable across restarts, reveals nothing
+// about the password, and verifying needs only the stored secret.
+const issueGmToken = () => crypto.createHmac('sha256', getGmTokenSecret()).update('gm').digest('hex');
+const verifyGmToken = tok => {
+  if(!tok || typeof tok !== 'string') return false;
+  const expected = issueGmToken();
+  // constant-time compare
+  const a = Buffer.from(tok); const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
+const rotateGmToken = () => { setSetting('gm_token_secret', crypto.randomBytes(32).toString('hex')); };
 
 // ── Modes ─────────────────────────────────────────────────────────────────────
 const getModes   = () => db.prepare('SELECT m.*, r.name as ruleset_name FROM modes m LEFT JOIN rulesets r ON r.id=m.ruleset_id ORDER BY m.name').all();
@@ -497,9 +530,15 @@ const createTeam = ({game_id, name, gps_anchor_key=null}) => {
   return teamId;
 };
 const getRankings = gameId => db.prepare(`
-  SELECT t.id, t.name, t.score,
+  SELECT t.id, t.name, t.score, t.last_score_at,
     (SELECT COUNT(*) FROM team_missions tm WHERE tm.team_id=t.id AND tm.status='accepted') as completed
-  FROM teams t WHERE t.game_id=? ORDER BY t.score DESC, completed DESC`).all(gameId);
+  FROM teams t WHERE t.game_id=?
+  ORDER BY t.score DESC,
+    -- Tie-break: among equal scores, the team that REACHED the total first
+    -- ranks higher. last_score_at=0 means "never scored / pre-migration" —
+    -- push those last by treating 0 as the largest possible value.
+    CASE WHEN t.last_score_at > 0 THEN t.last_score_at ELSE 9223372036854775807 END ASC,
+    t.joined_at ASC, completed DESC`).all(gameId);
 
 // ── Team Missions ─────────────────────────────────────────────────────────────
 const getTeamMissions = teamId => db.prepare(`
@@ -521,7 +560,7 @@ const acceptSubmission = id => {
   const sub=getSubmissionById(id); if(!sub) return;
   const pts=getMission(sub.mission_id)?.points||1;
   db.prepare('UPDATE team_missions SET status=?,reviewed_at=? WHERE id=?').run('accepted',Date.now(),id);
-  db.prepare('UPDATE teams SET score=score+? WHERE id=?').run(pts,sub.team_id);
+  db.prepare('UPDATE teams SET score=score+?, last_score_at=? WHERE id=?').run(pts,Date.now(),sub.team_id);
 };
 const rejectSubmission = (id,msg) =>
   db.prepare('UPDATE team_missions SET status=?,rejection_message=?,media_path=NULL,reviewed_at=? WHERE id=?').run('rejected',msg,Date.now(),id);
@@ -783,7 +822,10 @@ const listCrSpecialProgressForGame = gameId =>
   db.prepare('SELECT * FROM cr_special_progress WHERE game_id=?').all(gameId);
 const addTeamScore = (teamId, delta) => {
   if(!delta) return;
-  db.prepare('UPDATE teams SET score = score + ? WHERE id = ?').run(delta, teamId);
+  // Only advance the tie-break clock on a score INCREASE — a penalty
+  // (negative delta) shouldn't change "who reached this total first".
+  if(delta > 0) db.prepare('UPDATE teams SET score = score + ?, last_score_at = ? WHERE id = ?').run(delta, Date.now(), teamId);
+  else          db.prepare('UPDATE teams SET score = score + ? WHERE id = ?').run(delta, teamId);
 };
 
 // ── Team-wide GPS arrival ─────────────────────────────────────────────────────
@@ -863,7 +905,7 @@ const reviewCrCapture = (id, accept, bonusPoints) => {
   if (accept) {
     db.prepare('UPDATE cr_team_captures SET status=? WHERE id=?').run('accepted', id);
     const cap = db.prepare('SELECT * FROM cr_team_captures WHERE id=?').get(id);
-    if (cap) db.prepare('UPDATE teams SET score=score+? WHERE id=?').run(bonusPoints||5, cap.team_id);
+    if (cap) db.prepare('UPDATE teams SET score=score+?, last_score_at=? WHERE id=?').run(bonusPoints||5, Date.now(), cap.team_id);
   } else {
     db.prepare('UPDATE cr_team_captures SET status=? WHERE id=?').run('rejected', id);
   }
@@ -910,6 +952,7 @@ module.exports = {
   // else; reach for `_db` only when adding a new helper would be overkill.
   _db: db,
   getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
+  issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,

@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const cron       = require('node-cron');
 const db         = require('./db/database');
 const collage    = require('./lib/collage');
+const profanity  = require('./lib/profanity');
 
 const app    = express();
 const server = http.createServer(app);
@@ -28,8 +29,33 @@ const upload       = multer({ storage, limits: { fileSize: 200*1024*1024 } });
 const uploadSingle = multer({ dest: path.join(UPLOAD_DIR,'templates'), limits: { fileSize: 20*1024*1024 } });
 
 app.use(express.json({ limit: '50mb' }));
+
+// ── Baseline security headers ───────────────────────────────────────────────
+// Deliberately conservative: no Content-Security-Policy here. The pages load
+// Leaflet from a CDN, Google Fonts, inline <script>/<style>, and data:/blob:
+// images — a CSP strict enough to be worth adding would need careful testing
+// against all of that, so it's intentionally left out to avoid breaking the
+// app. These three headers are safe everywhere and cost nothing at runtime.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');     // don't MIME-sniff uploads into executable types
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');         // clickjacking guard for the GM dashboard
+  res.setHeader('Referrer-Policy', 'no-referrer');        // don't leak the (tunnel) URL to third parties
+  next();
+});
+
 app.use(express.static(path.join(__dirname,'public')));
-app.use('/uploads', express.static(UPLOAD_DIR));
+
+// Uploaded media is user-supplied. Serve it with nosniff (set above) AND force
+// anything that isn't a recognised image/video to download instead of render,
+// so a team can't upload an .html/.svg payload and get a same-origin script
+// execution via its /uploads URL. Images/videos still display inline as normal.
+app.use('/uploads', express.static(UPLOAD_DIR, {
+  setHeaders: (res, filePath) => {
+    if (!/\.(jpe?g|png|gif|webp|mp4|webm|mov|m4v)$/i.test(filePath)) {
+      res.setHeader('Content-Disposition', 'attachment');
+    }
+  },
+}));
 
 function getTimerState(game) {
   const now = Date.now();
@@ -40,15 +66,44 @@ function getTimerState(game) {
   return { remaining: Math.max(0,Math.floor((game.timer_duration*1000 - elapsed)/1000)), running:!!game.timer_running, total:game.timer_duration };
 }
 
+// ── GM authentication ───────────────────────────────────────────────────────
+// A request is GM-authenticated if it presents EITHER a valid long-lived token
+// (Authorization: Bearer <tok>, or body.token) OR the raw password (body
+// .password). Accepting both keeps every existing client working unchanged
+// while letting the dashboard stop resending the password on every call.
+function isGmAuthed(req){
+  const hdr = req.headers['authorization'] || '';
+  const bearer = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
+  const token = bearer || (req.body && req.body.token);
+  if(token && db.verifyGmToken(token)) return true;
+  if(req.body && req.body.password && db.verifyPassword(req.body.password)) return true;
+  return false;
+}
+// Express middleware form for routes that are purely GM-gated.
+function gmAuth(req,res,next){
+  if(isGmAuthed(req)) return next();
+  return res.status(401).json({error:'Unauthorized'});
+}
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 app.get('/api/setup-status', (req,res) => res.json({isSetup:true}));
 app.post('/api/setup',       (req,res) => res.json({success:true}));
-app.post('/api/settings/verify', (req,res) => res.json({valid:db.verifyPassword(req.body.password)}));
-app.post('/api/settings/change-password', (req,res) => res.json({success:db.changePassword(req.body.oldPassword,req.body.newPassword)}));
+// On success, also hand back a long-lived token the client can use instead of
+// resending the password. Old clients that ignore `token` keep working.
+app.post('/api/settings/verify', (req,res) => {
+  const valid = db.verifyPassword(req.body.password);
+  res.json({valid, token: valid ? db.issueGmToken() : null});
+});
+app.post('/api/settings/change-password', (req,res) => {
+  const success = db.changePassword(req.body.oldPassword,req.body.newPassword);
+  // Keep existing GM sessions valid after a password change (token secret is
+  // independent of the password). Return a fresh token for convenience.
+  res.json({success, token: success ? db.issueGmToken() : null});
+});
 app.get('/api/settings',  (req,res) => res.json(db.getSettings()));
 app.put('/api/settings',  (req,res) => {
-  const {password,...s} = req.body;
-  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  const {password,token,...s} = req.body;  // strip auth fields so they aren't persisted as settings
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.updateSettings(s); res.json({success:true});
 });
 
@@ -109,7 +164,7 @@ app.post('/api/translate', async (req,res) => {
 // ── Update from GitHub ────────────────────────────────────────────────────────
 app.post('/api/update', async (req,res) => {
   const { password } = req.body;
-  if (!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  if (!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const { execFile } = require('child_process');
   const appDir = __dirname;
   const log = [];
@@ -239,17 +294,17 @@ app.get('/api/version', (req,res) => {
 // ── Modes ─────────────────────────────────────────────────────────────────────
 app.get('/api/modes', (req,res) => res.json(db.getModes()));
 app.post('/api/modes', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60);
   res.json({id,success:true});
 });
 app.put('/api/modes/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try { db.updateMode(req.params.id, req.body); res.json({success:true}); }
   catch(e) { res.status(400).json({error:e.message}); }
 });
 app.delete('/api/modes/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try { db.deleteMode(req.params.id); res.json({success:true}); }
   catch(e) { res.status(400).json({error:e.message}); }
 });
@@ -257,17 +312,17 @@ app.delete('/api/modes/:id', (req,res) => {
 // ── Rulesets ─────────────────────────────────────────────────────────────────
 app.get('/api/rulesets', (req,res) => res.json(db.getRulesets()));
 app.post('/api/rulesets', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const id = db.createRuleset(req.body.name, req.body.rules_list||'[]');
   res.json({id,success:true});
 });
 app.put('/api/rulesets/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.updateRuleset(req.params.id, {name:req.body.name, rules_list:req.body.rules_list||'[]'});
   res.json({success:true});
 });
 app.delete('/api/rulesets/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try { db.deleteRuleset(req.params.id); res.json({success:true}); }
   catch(e) { res.status(400).json({error:e.message}); }
 });
@@ -276,16 +331,16 @@ app.delete('/api/rulesets/:id', (req,res) => {
 app.get('/api/locations', (req,res) => res.json(db.getLocations()));
 app.post('/api/locations', (req,res) => {
   const {password,...d}=req.body;
-  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const {timer_default:_ctd, ...locCreateData} = d; locCreateData.allow_photo=d.allow_photo!==undefined?d.allow_photo:1; locCreateData.allow_video=d.allow_video!==undefined?d.allow_video:1; locCreateData.allow_indoor=d.allow_indoor!==undefined?d.allow_indoor:1; res.json({id:db.createLocation(locCreateData),success:true});
 });
 app.put('/api/locations/:id', (req,res) => {
   const {password,...d}=req.body;
-  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const {timer_default:_td, ...locData} = d; locData.allow_photo=d.allow_photo!==undefined?d.allow_photo:1; locData.allow_video=d.allow_video!==undefined?d.allow_video:1; locData.allow_indoor=d.allow_indoor!==undefined?d.allow_indoor:1; db.updateLocation(req.params.id,locData); res.json({success:true});
 });
 app.delete('/api/locations/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.deleteLocation(req.params.id); res.json({success:true});
 });
 
@@ -298,16 +353,16 @@ app.get('/api/missions', (req,res) => {
 });
 app.post('/api/missions', (req,res) => {
   const {password,...d}=req.body;
-  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const newId=db.createMission(d); io.emit('settings_updated',{type:'missions'}); res.json({id:newId,success:true});
 });
 app.put('/api/missions/:id', (req,res) => {
   const {password,...d}=req.body;
-  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.updateMission(req.params.id,d); io.emit('settings_updated',{type:'missions'}); res.json({success:true});
 });
 app.delete('/api/missions/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.deleteMission(req.params.id);
   io.emit('settings_updated', {type:'missions'});
   res.json({success:true});
@@ -358,7 +413,7 @@ app.post('/api/games', (req,res) => {
 });
 
 app.delete('/api/games/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try {
     const dir=path.join(UPLOAD_DIR,req.params.id);
     if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
@@ -406,7 +461,9 @@ app.post('/api/games/:id/collage', (req,res) => {
   const g = endedGameOr404(req.params.id, res);
   if(!g) return;
   const jobId = uuidv4().slice(0,8);
-  const job   = { gameId: g.id, step: 0, total: 1, phase: 'starting', started_at: Date.now() };
+  // total:0 + phase:'collecting' so the client shows "preparing" rather than a
+  // misleading "0/1" until generateCollage reports the real step count.
+  const job   = { gameId: g.id, step: 0, total: 0, phase: 'collecting', started_at: Date.now() };
   collageJobs.set(jobId, job);
   collage.generateCollage(db._db, g.id, UPLOAD_DIR, (p) => {
     job.step  = p.step; job.total = p.total; job.phase = p.phase;
@@ -445,13 +502,22 @@ app.post('/api/games/:gameId/teams', (req,res) => {
   const game=db.getGame(req.params.gameId);
   if(!game) return res.status(404).json({error:'Game not found'});
   if(game.status==='ended') return res.status(400).json({error:'Game has ended'});
+  // Validate the name itself (also guards against a missing/blank body.name,
+  // which previously threw on .toLowerCase()).
+  const rawName = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  if(rawName.length < 2) return res.status(400).json({error:'Team name too short.', error_code:'too_short'});
+  if(rawName.length > 30) return res.status(400).json({error:'Team name too long.', error_code:'too_long'});
+  // Profanity / hate-speech filter (server-side, authoritative).
+  if(!profanity.isClean(rawName)) {
+    return res.status(400).json({error:'That team name isn\'t allowed. Please choose another.', error_code:'profanity'});
+  }
   // Check for duplicate team name
   const existingTeams=db.getTeams(req.params.gameId);
-  const nameTaken=existingTeams.some(t=>t.name.toLowerCase()===req.body.name.toLowerCase());
-  if(nameTaken) return res.status(400).json({error:'Team name already taken. Please choose a different name.'});
+  const nameTaken=existingTeams.some(t=>t.name.toLowerCase()===rawName.toLowerCase());
+  if(nameTaken) return res.status(400).json({error:'Team name already taken. Please choose a different name.', error_code:'taken'});
   const teamId=db.createTeam({
     game_id:req.params.gameId,
-    name:req.body.name,
+    name:rawName,
     gps_anchor_key: req.body.gps_anchor_key || req.body.gpsAnchorKey || null,
   });
   const team=db.getTeam(teamId);
@@ -648,7 +714,7 @@ function _moveHintFileIntoPlace(req){
 }
 
 app.post('/api/cr/hints/:missionId', upload.single('image'), (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const imagePath = _moveHintFileIntoPlace(req);
   const id = db.createCrHint({
     mission_id: req.params.missionId,
@@ -663,7 +729,7 @@ app.post('/api/cr/hints/:missionId', upload.single('image'), (req,res) => {
 });
 
 app.put('/api/cr/hints/:id', upload.single('image'), (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const existing = db.getCrHint(req.params.id);
   if(!existing) return res.status(404).json({error:'Not found'});
   const newPath  = _moveHintFileIntoPlace(req);
@@ -680,13 +746,13 @@ app.put('/api/cr/hints/:id', upload.single('image'), (req,res) => {
 });
 
 app.delete('/api/cr/hints/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.deleteCrHint(req.params.id);
   res.json({success:true});
 });
 
 app.post('/api/cr/hints/reorder/:missionId', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.reorderCrHints(req.params.missionId, req.body.order);
   res.json({success:true});
 });
@@ -735,19 +801,19 @@ function crMediaMatchesMission(mission, mediaPath) {
 // ── CR Modes ──────────────────────────────────────────────────────────────────
 app.get('/api/cr/modes', (req,res) => res.json(db.getCrModes()));
 app.post('/api/cr/modes', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs} = req.body;
   const id = db.createCrMode({name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs});
   res.json({id, success:true});
 });
 app.put('/api/cr/modes/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs} = req.body;
   db.updateCrMode(req.params.id, {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs});
   res.json({success:true});
 });
 app.delete('/api/cr/modes/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try {
     db.deleteCrMode(req.params.id);
     io.emit('settings_updated', {type:'cr_modes'});
@@ -761,20 +827,20 @@ app.delete('/api/cr/modes/:id', (req,res) => {
 app.get('/api/cr/missions', (req,res) => res.json(db.getCrMissions(req.query.mode_id)));
 app.post('/api/cr/missions', (req,res) => {
   const {password,...data} = req.body;
-  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const id = db.createCrMission(data);
   io.emit('settings_updated', {type:'cr_missions'});
   res.json({id, success:true});
 });
 app.put('/api/cr/missions/:id', (req,res) => {
   const {password,...data} = req.body;
-  if(!db.verifyPassword(password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.updateCrMission(req.params.id, data);
   io.emit('settings_updated', {type:'cr_missions'});
   res.json({success:true});
 });
 app.delete('/api/cr/missions/:id', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try {
     db.deleteCrMission(req.params.id);
     io.emit('settings_updated', {type:'cr_missions'});
@@ -784,7 +850,7 @@ app.delete('/api/cr/missions/:id', (req,res) => {
   }
 });
 app.post('/api/cr/missions/reorder', (req,res) => {
-  if(!db.verifyPassword(req.body.password)) return res.status(401).json({error:'Unauthorized'});
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.reorderCrMissions(req.body.mode_id, req.body.order);
   res.json({success:true});
 });

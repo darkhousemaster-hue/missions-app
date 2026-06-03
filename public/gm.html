@@ -951,7 +951,7 @@ const GMT={
   'export-blurb':'Lade alle angenommenen Fotos und Videos als ZIP herunter, oder erstelle ein Foto-Collage-Video. Videos sind nur im ZIP enthalten.',
   'export-zip-btn':'ZIP herunterladen (alle Medien)',
   'export-collage-btn':'Foto-Collage rendern',
-  'export-rendering':'Wird gerendert…','export-done':'Fertig — Download startet…',
+  'export-rendering':'Wird gerendert…','export-done':'Fertig — Download startet…','export-collecting':'Fotos werden gesammelt…','export-stitching':'Wird zusammengefügt…','export-no-photos':'Keine akzeptierten Fotos zum Rendern.',
   // Submission review buttons (on each mission card)
   'accept-btn':'Annehmen','pill-pending':'Ausstehend','pill-done':'Erledigt','pill-rejected':'Abgelehnt','pill-open':'Offen','pill-skipped':'Übersprungen','stop-prefix':'STOPP','stop-special':'SPEZIAL','no-missions-game':'Keine MiSSiONS in diesem Spiel.','open-lightbox':'Vergrößern','reject-btn':'Ablehnen',
   // Per-location language allow-list (Add/Edit Location modal)
@@ -1065,7 +1065,7 @@ const GMT={
   'export-blurb':'Download every accepted photo and video as a ZIP, or render a photo-collage video. Videos are only in the ZIP.',
   'export-zip-btn':'Download ZIP (all media)',
   'export-collage-btn':'Render photo collage',
-  'export-rendering':'Rendering…','export-done':'Done — download starting…',
+  'export-rendering':'Rendering…','export-done':'Done — download starting…','export-collecting':'Collecting photos…','export-stitching':'Stitching together…','export-no-photos':'No accepted photos to render.',
   'accept-btn':'Accept','pill-pending':'Pending','pill-done':'Done','pill-rejected':'Rejected','pill-open':'Open','pill-skipped':'Skipped','stop-prefix':'STOP','stop-special':'SPECIAL','no-missions-game':'No missions in this game.','open-lightbox':'Enlarge','reject-btn':'Reject',
   'loc-allowed-langs':'Allowed languages',
   'loc-allowed-langs-hint':'Only these languages will appear for players at this location.',
@@ -1176,7 +1176,7 @@ const GMT={
   'export-blurb':"Téléchargez toutes les photos et vidéos acceptées en ZIP, ou créez une vidéo-collage de photos. Les vidéos ne sont incluses que dans le ZIP.",
   'export-zip-btn':'Télécharger ZIP (tous les médias)',
   'export-collage-btn':'Créer la vidéo-collage',
-  'export-rendering':'Rendu en cours…','export-done':'Terminé — téléchargement…',
+  'export-rendering':'Rendu en cours…','export-done':'Terminé — téléchargement…','export-collecting':'Collecte des photos…','export-stitching':'Assemblage…','export-no-photos':'Aucune photo acceptée à monter.',
   'accept-btn':'Accepter','pill-pending':'En attente','pill-done':'Terminé','pill-rejected':'Refusé','pill-open':'Ouvert','pill-skipped':'Sauté','stop-prefix':'ÉTAPE','stop-special':'SPÉCIAL','no-missions-game':'Aucune mission dans cette partie.','open-lightbox':'Agrandir','reject-btn':'Refuser',
   'loc-allowed-langs':'Langues autorisées',
   'loc-allowed-langs-hint':"Seules ces langues apparaîtront pour les joueurs à ce lieu.",
@@ -1287,7 +1287,7 @@ const GMT={
   'export-blurb':'Scarica tutte le foto e i video accettati come ZIP, oppure crea un video-collage di foto. I video sono solo nel ZIP.',
   'export-zip-btn':'Scarica ZIP (tutti i media)',
   'export-collage-btn':'Crea video-collage',
-  'export-rendering':'Rendering in corso…','export-done':'Pronto — download in corso…',
+  'export-rendering':'Rendering in corso…','export-done':'Pronto — download in corso…','export-collecting':'Raccolta foto…','export-stitching':'Unione in corso…','export-no-photos':'Nessuna foto accettata da montare.',
   'accept-btn':'Accetta','pill-pending':'In attesa','pill-done':'Fatto','pill-rejected':'Rifiutato','pill-open':'Aperto','pill-skipped':'Saltata','stop-prefix':'TAPPA','stop-special':'SPECIALE','no-missions-game':'Nessuna missione in questa partita.','open-lightbox':'Ingrandisci','reject-btn':'Rifiuta',
   'loc-allowed-langs':'Lingue consentite',
   'loc-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questo luogo.',
@@ -1398,7 +1398,7 @@ const GMT={
   'export-blurb':'Descarga todas las fotos y vídeos aceptados como ZIP, o crea un vídeo-collage de fotos. Los vídeos solo están en el ZIP.',
   'export-zip-btn':'Descargar ZIP (todos los medios)',
   'export-collage-btn':'Crear vídeo-collage',
-  'export-rendering':'Renderizando…','export-done':'¡Listo! Descargando…',
+  'export-rendering':'Renderizando…','export-done':'¡Listo! Descargando…','export-collecting':'Recopilando fotos…','export-stitching':'Uniendo…','export-no-photos':'No hay fotos aceptadas para montar.',
   'accept-btn':'Aceptar','pill-pending':'Pendiente','pill-done':'Hecho','pill-rejected':'Rechazado','pill-open':'Abierta','pill-skipped':'Saltada','stop-prefix':'PARADA','stop-special':'ESPECIAL','no-missions-game':'Sin misiones en esta partida.','open-lightbox':'Ampliar','reject-btn':'Rechazar',
   'loc-allowed-langs':'Idiomas permitidos',
   'loc-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este lugar.',
@@ -1530,7 +1530,16 @@ let currentModeId=1,currentModeName='MiSSiONS';
 let tplLang='de'; // which language's template we're editing
 // rulesList already declared above
 
-const API=(url,o={})=>fetch(url,{headers:{'Content-Type':'application/json'},...o,body:o.body?JSON.stringify(o.body):undefined}).then(r=>r.json());
+// gmToken (set at unlock) lets us authenticate privileged calls without
+// resending the raw password each time. It's attached as a Bearer header;
+// the server still accepts body.password too, so anything that already sends
+// the password keeps working as a fallback.
+let gmToken = sessionStorage.getItem('gm_token') || null;
+const API=(url,o={})=>{
+  const headers={'Content-Type':'application/json',...(o.headers||{})};
+  if(gmToken && !headers['Authorization']) headers['Authorization']='Bearer '+gmToken;
+  return fetch(url,{...o,headers,body:o.body?JSON.stringify(o.body):undefined}).then(r=>r.json());
+};
 
 // ── Init ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',async()=>{
@@ -1843,13 +1852,30 @@ async function startCollageRender(){
   // Poll until phase === 'done' or 'error'
   const bar = document.getElementById('collage-progress-bar');
   const lbl = document.getElementById('collage-progress-label');
+  const renderingTxt = gmt('export-rendering')||'Wird gerendert…';
+  const collectingTxt = gmt('export-collecting')||'Fotos werden gesammelt…';
+  const stitchingTxt  = gmt('export-stitching')||'Wird zusammengefügt…';
   const poll = setInterval(async () => {
     let s;
     try { s = await API(`/api/games/${currentGameId}/collage/status/${job.job_id}`); }
     catch(e){ /* keep trying — transient */ return; }
-    if(bar && s.total) bar.style.width = (100 * s.step / s.total).toFixed(0) + '%';
-    if(lbl) lbl.textContent = (gmt('export-rendering')||'Wird gerendert…') +
-      ' (' + s.step + '/' + s.total + (s.phase==='concat' ? ' · concat' : '') + ')';
+    // Drive the bar off step/total once we know the total; before that (the
+    // 'collecting' phase) show an indeterminate-ish small fill so it's clearly
+    // alive rather than stuck at 0.
+    if(bar){
+      if(s.total) bar.style.width = (100 * s.step / s.total).toFixed(0) + '%';
+      else bar.style.width = '4%';
+    }
+    if(lbl){
+      if(s.phase === 'collecting' || !s.total){
+        lbl.textContent = collectingTxt;
+      } else if(s.phase === 'concat'){
+        lbl.textContent = stitchingTxt;
+      } else {
+        // render phase: "Rendering 12 / 86"
+        lbl.textContent = renderingTxt + ' (' + s.step + ' / ' + s.total + ')';
+      }
+    }
     if(s.phase === 'done'){
       clearInterval(poll);
       if(bar) bar.style.width='100%';
@@ -1858,10 +1884,15 @@ async function startCollageRender(){
       setTimeout(() => { window.location.href = s.url; }, 400);
     } else if(s.phase === 'error'){
       clearInterval(poll);
-      toast((gmt('error-prefix')||'Fehler:') + ' ' + (s.error||'render failed'), 'error');
+      // Friendly message for the one expected domain error (no photos to use).
+      const friendly = s.error === 'NO_PHOTOS'
+        ? (gmt('export-no-photos')||'Keine akzeptierten Fotos zum Rendern.')
+        : (s.error||'render failed');
+      toast((gmt('error-prefix')||'Fehler:') + ' ' + friendly, 'error');
+      if(box) box.style.display='none';
       if(renderBtn){ renderBtn.disabled=false; renderBtn.textContent = '🎬 ' + (gmt('export-collage-btn')||'Foto-Collage rendern'); }
     }
-  }, 1500);
+  }, 1000);
 }
 
 async function downloadQRWithTemplate(){
@@ -1904,11 +1935,13 @@ async function downloadQRWithTemplate(){
 
 async function deleteGame(gameId,e){
   e.stopPropagation();
-  if(!settingsPassword){
+  // A returning GM already holds a token (sessionStorage) — no need to prompt.
+  if(!settingsPassword && !gmToken){
     const pw=prompt('Passwort eingeben:');if(!pw)return;
     const v=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
     if(!v.valid){toast(gmt('wrong-pw')||'Falsches Passwort','error');return;}
     settingsPassword=pw;
+    if(v.token){gmToken=v.token;sessionStorage.setItem('gm_token',v.token);}
   }
   if(!confirm(`Spiel ${gameId} löschen? Alle Medien werden gelöscht.`))return;
   const res=await API(`/api/games/${gameId}`,{method:'DELETE',body:{password:settingsPassword}});
@@ -2923,18 +2956,22 @@ function upsertGmTeamMarker(tid, lat, lng){
   const name  = gmTeamName(tid);
   const html  = `<div style="background:var(--red);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">${esc(label)}</div>`;
   const icon  = L.divIcon({className:'', html, iconSize:[30,30], iconAnchor:[15,15]});
+  // Leaflet renders popup/tooltip *strings* as HTML, so a team name like
+  // `<img onerror=…>` would execute in the GM's browser (which holds the
+  // settings password). Escape before handing the name to Leaflet.
+  const safeName = esc(name);
   let mk = gmCrMarkers[tid];
   if(mk){
     mk.setLatLng([lat, lng]);
     mk.setIcon(icon);
-    if(mk.getPopup()) mk.setPopupContent(name);
-    else mk.bindPopup(name);
-    if(mk.getTooltip()) mk.setTooltipContent(name);
-    else mk.bindTooltip(name, {permanent:false, direction:'top', offset:[0,-16]});
+    if(mk.getPopup()) mk.setPopupContent(safeName);
+    else mk.bindPopup(safeName);
+    if(mk.getTooltip()) mk.setTooltipContent(safeName);
+    else mk.bindTooltip(safeName, {permanent:false, direction:'top', offset:[0,-16]});
   } else {
     mk = L.marker([lat, lng], {icon}).addTo(gmCrMap)
-      .bindPopup(name)
-      .bindTooltip(name, {permanent:false, direction:'top', offset:[0,-16]});
+      .bindPopup(safeName)
+      .bindTooltip(safeName, {permanent:false, direction:'top', offset:[0,-16]});
     gmCrMarkers[tid] = mk;
   }
 }
@@ -3027,7 +3064,13 @@ function showSettingsGate(){
 async function verifyGate(){
   const pw=document.getElementById('gate-pw').value;
   const res=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
-  if(res.valid){settingsPassword=pw;document.getElementById('gate-err').textContent='';await loadSettings();showScreen('screen-settings');}
+  if(res.valid){
+    settingsPassword=pw;
+    // Prefer the long-lived token for subsequent privileged calls so the raw
+    // password isn't resent every time. settingsPassword stays as a fallback.
+    if(res.token){ gmToken=res.token; sessionStorage.setItem('gm_token', res.token); }
+    document.getElementById('gate-err').textContent='';await loadSettings();showScreen('screen-settings');
+  }
   else document.getElementById('gate-err').textContent=gmt('wrong-pw')||'Falsches Passwort. / Incorrect password.';
 }
 
@@ -3846,7 +3889,7 @@ async function changePassword(){
   const msg=document.getElementById('sec-msg');
   if(nw!==nw2){msg.style.color='var(--red-light)';msg.textContent=gmt('pw-mismatch')||'Passwörter stimmen nicht überein.';return;}
   const res=await API('/api/settings/change-password',{method:'POST',body:{oldPassword:old,newPassword:nw}});
-  if(res.success){settingsPassword=nw;msg.style.color='var(--green)';msg.textContent=gmt('pw-changed')||'Passwort geändert!';}
+  if(res.success){settingsPassword=nw;if(res.token){gmToken=res.token;sessionStorage.setItem('gm_token',res.token);}msg.style.color='var(--green)';msg.textContent=gmt('pw-changed')||'Passwort geändert!';}
   else{msg.style.color='var(--red-light)';msg.textContent=gmt('wrong-pw')||'Falsches Passwort.';}
 }
 

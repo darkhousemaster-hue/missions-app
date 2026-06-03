@@ -2641,10 +2641,13 @@ function onGpsUpdate({teamId:tid, lat, lng, playerKey}){
   initMap();
   const markerKey = `${tid}_${playerKey || 'legacy'}`;
   const team = allTeams.find(t=>t.id===tid);
-  const label = team ? team.name.substring(0,3).toUpperCase() : '?';
+  // Escape: the label goes into a divIcon's innerHTML and the popup string is
+  // parsed as HTML by Leaflet, so an unescaped rival team name would run script
+  // in every other player's browser.
+  const label = esc(team ? team.name.substring(0,3).toUpperCase() : '?');
   if(teamMarkers[markerKey]) teamMarkers[markerKey].setLatLng([lat,lng]);
   else teamMarkers[markerKey] = L.marker([lat,lng],{icon:makeMarkerIcon(label,false)}).addTo(crMap)
-    .bindPopup(team?team.name:'Team');
+    .bindPopup(esc(team?team.name:'Team'));
 }
 
 // ── Team capture ──────────────────────────────────────────────────────────────

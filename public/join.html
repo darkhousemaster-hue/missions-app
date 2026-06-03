@@ -285,6 +285,7 @@ const JOIN_T = {
        je_title:'Team beitreten', je_hint:'Du siehst dieselben Missionen und kannst unabhängig Medien einreichen.',
        join_btn:'Beitreten', start:'Spiel beitreten', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.',
        waiting:'Warte…', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.',
+       name_blocked:'Dieser Teamname ist nicht erlaubt. Bitte wähle einen anderen.', name_taken:'Teamname bereits vergeben. Bitte wähle einen anderen.',
        cam_denied:'Kamera-Zugriff abgelehnt.', cam_unavailable:'Kamera nicht verfügbar.',
        sm_retake:'Erneut', sm_accept:'Übernehmen'},
   en: {loading:'Loading…', error:'Error', invalid:'Invalid code or game ended.', ask_gm:'Please ask the Gamemaster for a new code.', game_ended:'This game has already ended.',
@@ -294,6 +295,7 @@ const JOIN_T = {
        je_title:'Join an existing team', je_hint:'You see the same missions and can submit media independently.',
        join_btn:'Join', start:'Join game', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.',
        waiting:'Waiting…', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.',
+       name_blocked:'That team name isn’t allowed. Please choose another.', name_taken:'Team name already taken. Please choose another.',
        cam_denied:'Camera access denied.', cam_unavailable:'Camera not available.',
        sm_retake:'Retake', sm_accept:'Use'},
   fr: {loading:'Chargement…', error:'Erreur', invalid:'Code invalide ou partie terminée.', ask_gm:'Demande un nouveau code au Gamemaster.', game_ended:'Cette partie est déjà terminée.',
@@ -303,6 +305,7 @@ const JOIN_T = {
        je_title:'Rejoindre une équipe', je_hint:'Tu vois les mêmes missions et peux envoyer des médias indépendamment.',
        join_btn:'Rejoindre', start:'Rejoindre la partie', enter_name:'Saisis un nom d’équipe.', min_chars:'Le nom doit faire au moins 2 caractères.',
        waiting:'Attente…', conn_err:'Erreur de connexion. Réessaie.', err_default:'Erreur. Réessaie.',
+       name_blocked:'Ce nom d’équipe n’est pas autorisé. Choisis-en un autre.', name_taken:'Nom d’équipe déjà pris. Choisis-en un autre.',
        cam_denied:'Accès caméra refusé.', cam_unavailable:'Caméra non disponible.',
        sm_retake:'Refaire', sm_accept:'Utiliser'},
   it: {loading:'Caricamento…', error:'Errore', invalid:'Codice non valido o partita terminata.', ask_gm:'Chiedi al Gamemaster un nuovo codice.', game_ended:'Questa partita è già terminata.',
@@ -312,6 +315,7 @@ const JOIN_T = {
        je_title:'Unisciti a una squadra', je_hint:'Vedi le stesse missioni e puoi inviare media in modo indipendente.',
        join_btn:'Unisciti', start:'Entra nella partita', enter_name:'Inserisci il nome della squadra.', min_chars:'Il nome deve avere almeno 2 caratteri.',
        waiting:'Attendi…', conn_err:'Errore di connessione. Riprova.', err_default:'Errore. Riprova.',
+       name_blocked:'Questo nome squadra non è consentito. Scegline un altro.', name_taken:'Nome squadra già in uso. Scegline un altro.',
        cam_denied:'Accesso fotocamera negato.', cam_unavailable:'Fotocamera non disponibile.',
        sm_retake:'Riprova', sm_accept:'Usa'},
   es: {loading:'Cargando…', error:'Error', invalid:'Código no válido o partida finalizada.', ask_gm:'Pide al Gamemaster un nuevo código.', game_ended:'Esta partida ya ha terminado.',
@@ -321,6 +325,7 @@ const JOIN_T = {
        je_title:'Unirse a un equipo', je_hint:'Verás las mismas misiones y podrás enviar contenido de forma independiente.',
        join_btn:'Unirse', start:'Unirse a la partida', enter_name:'Introduce el nombre del equipo.', min_chars:'El nombre debe tener al menos 2 caracteres.',
        waiting:'Esperando…', conn_err:'Error de conexión. Inténtalo de nuevo.', err_default:'Error. Inténtalo de nuevo.',
+       name_blocked:'Ese nombre de equipo no está permitido. Elige otro.', name_taken:'Nombre de equipo ya en uso. Elige otro.',
        cam_denied:'Acceso a cámara denegado.', cam_unavailable:'Cámara no disponible.',
        sm_retake:'Repetir', sm_accept:'Usar'},
 };
@@ -600,7 +605,11 @@ async function joinAsNew() {
     }).then(r => r.json());
 
     if (!res.id) {
-      err.textContent = res.error || jt('err_default');
+      // Prefer a localized message keyed off the server's machine code; fall
+      // back to the server's English text, then a generic default.
+      const codeMap = { profanity:'name_blocked', taken:'name_taken', too_short:'enter_name', too_long:'name_blocked' };
+      const key = codeMap[res.error_code];
+      err.textContent = (key && jt(key)) || res.error || jt('err_default');
       btn.disabled = false; lbl.textContent = jt('start');
       return;
     }
