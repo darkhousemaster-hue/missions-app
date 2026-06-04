@@ -255,6 +255,13 @@ try { db.exec("ALTER TABLE teams ADD COLUMN selfie_path TEXT"); } catch(e) {}
 // higher (smaller last_score_at). Stamped by every score-writing path. Default
 // 0 so pre-existing teams fall back to joined_at order until they next score.
 try { db.exec("ALTER TABLE teams ADD COLUMN last_score_at INTEGER DEFAULT 0"); } catch(e) {}
+// Image rotation chosen by the GM in the lightbox. Degrees clockwise, one of
+// 0/90/180/270. Stored (not baked into the file) so it's lossless + reversible
+// and applied consistently in the dashboard, ZIP export and collage. Photos
+// live in team_missions / cr_submissions; selfies on teams.
+try { db.exec("ALTER TABLE team_missions ADD COLUMN media_rotation INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_submissions ADD COLUMN media_rotation INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE teams ADD COLUMN selfie_rotation INTEGER DEFAULT 0"); } catch(e) {}
 // Game media export — populated after the GM renders the photo-collage MP4
 // from the dashboard. NULL until the first render. The path is relative to
 // UPLOAD_DIR (e.g. "ABC12345/collage.mp4"). generated_at is a unix-epoch ms.
@@ -550,6 +557,11 @@ const getTeamMissions = teamId => db.prepare(`
   WHERE tm.team_id=? ORDER BY tm.id`).all(teamId);
 const getSubmission          = (tid,mid) => db.prepare('SELECT * FROM team_missions WHERE team_id=? AND mission_id=?').get(tid,mid);
 const getSubmissionById      = id => db.prepare('SELECT * FROM team_missions WHERE id=?').get(id);
+// Rotation setters. Normalise to 0/90/180/270 clockwise.
+const _normRot = d => ((Math.round(Number(d) / 90) % 4) + 4) % 4 * 90;
+const setSubmissionRotation   = (id, deg) => db.prepare('UPDATE team_missions SET media_rotation=? WHERE id=?').run(_normRot(deg), id);
+const setCrSubmissionRotation = (id, deg) => db.prepare('UPDATE cr_submissions SET media_rotation=? WHERE id=?').run(_normRot(deg), id);
+const setTeamSelfieRotation   = (teamId, deg) => db.prepare('UPDATE teams SET selfie_rotation=? WHERE id=?').run(_normRot(deg), teamId);
 const getAcceptedSubmissions = tid => db.prepare(`
   SELECT tm.*, m.media_type FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
   WHERE tm.team_id=? AND tm.status='accepted' AND tm.media_path IS NOT NULL`).all(tid);
@@ -961,6 +973,7 @@ module.exports = {
   getTeam,getTeams,createTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
   submitMission,acceptSubmission,rejectSubmission,
+  setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,
   saveMessage,getMessages,
   getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,
   getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,

@@ -448,10 +448,10 @@ function endedGameOr404(id, res) {
 
 // 1) Zip download — streams every accepted submission + team selfies. Names
 //    inside the zip are `<team-slug>/<NN>-<mission-slug>.<ext>`.
-app.get('/api/games/:id/media.zip', (req,res) => {
+app.get('/api/games/:id/media.zip', async (req,res) => {
   if(!endedGameOr404(req.params.id, res)) return;
-  try { collage.streamZip(db._db, req.params.id, UPLOAD_DIR, res); }
-  catch(e) { console.error('zip error:', e); res.status(500).json({ error: e.message }); }
+  try { await collage.streamZip(db._db, req.params.id, UPLOAD_DIR, res); }
+  catch(e) { console.error('zip error:', e); if(!res.headersSent) res.status(500).json({ error: e.message }); }
 });
 
 // 2) Collage POST — kick off the render, return a job id immediately. We
@@ -640,6 +640,35 @@ app.post('/api/submissions/:id/review', (req,res) => {
   io.to(`gm_${gameId}`).emit('submission_reviewed',{submissionId:sub.id,action,teamId:sub.team_id,missionId:sub.mission_id});
   io.to(`gm_${gameId}`).emit('rankings_update',db.getRankings(gameId));
   res.json({success:true});
+});
+
+// ── Media rotation ──────────────────────────────────────────────────────────
+// The GM can rotate a sideways photo/selfie from the lightbox. We persist the
+// chosen rotation (degrees clockwise, 0/90/180/270) rather than re-encoding the
+// file, so it's lossless + reversible and applied consistently in the
+// dashboard, the ZIP export and the collage. GM-gated.
+app.post('/api/submissions/:id/rotate', gmAuth, (req,res) => {
+  const sub = db.getSubmissionById(Number(req.params.id));
+  if(!sub) return res.status(404).json({error:'Not found'});
+  const deg = Number(req.body.rotation);
+  db.setSubmissionRotation(sub.id, deg);
+  const updated = db.getSubmissionById(sub.id);
+  res.json({success:true, rotation: updated.media_rotation});
+});
+app.post('/api/cr/submissions/:id/rotate', gmAuth, (req,res) => {
+  const sub = db.getCrSubmission(Number(req.params.id));
+  if(!sub) return res.status(404).json({error:'Not found'});
+  db.setCrSubmissionRotation(sub.id, Number(req.body.rotation));
+  const updated = db.getCrSubmission(sub.id);
+  res.json({success:true, rotation: updated.media_rotation});
+});
+app.post('/api/games/:gameId/teams/:teamId/selfie/rotate', gmAuth, (req,res) => {
+  const team = db.getTeam(Number(req.params.teamId));
+  if(!team) return res.status(404).json({error:'Not found'});
+  db.setTeamSelfieRotation(team.id, Number(req.body.rotation));
+  const updated = db.getTeam(team.id);
+  io.to(`gm_${req.params.gameId}`).emit('team_selfie_updated', {teamId: team.id, selfiePath: updated.selfie_path, rotation: updated.selfie_rotation});
+  res.json({success:true, rotation: updated.selfie_rotation});
 });
 
 // ── Game rules (for player) ────────────────────────────────────────────────────

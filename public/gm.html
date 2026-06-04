@@ -2002,11 +2002,12 @@ async function openDashboard(gameId){
   // Re-rendering the chip (rather than prepend-ing an <img>) makes sure the
   // template's click-to-zoom handler is wired even on chips that were created
   // before the selfie existed.
-  socket.on('team_selfie_updated', ({teamId, selfiePath}) => {
+  socket.on('team_selfie_updated', ({teamId, selfiePath, rotation}) => {
+    const rot = Number(rotation)||0;
     // Update cached team so any subsequent renderTeamsBar() picks it up.
     if(currentGame && currentGame.teams){
       const t = currentGame.teams.find(x => x.id === teamId);
-      if(t) t.selfie_path = selfiePath;
+      if(t){ t.selfie_path = selfiePath; t.selfie_rotation = rot; }
     }
     // Repaint the affected chip in-place. We don't full-rerender the bar
     // because that would lose hover/focus state on other chips.
@@ -2023,6 +2024,8 @@ async function openDashboard(gameId){
       if(el){
         el.src = `/uploads/${selfiePath}?t=${Date.now()}`;
         el.style.display = 'inline-block';
+        el.style.transform = rot ? `rotate(${rot}deg)` : '';
+        el.onclick = () => openGmSelfieLightbox(`/uploads/${selfiePath}`, teamId, rot);
       }
     }
     // Toast so the GM notices the new face without having to click anything.
@@ -2211,8 +2214,9 @@ function _teamChipInner(t){
   // then an absolutely-positioned orange dot in the corner for pending.
   // Clicking the selfie thumbnail opens the fullscreen lightbox without
   // re-triggering selectTeam().
+  const selfieRot = Number(t.selfie_rotation)||0;
   const selfie = t.selfie_path
-    ? `<img class="team-chip-selfie" id="tselfie-${t.id}" src="/uploads/${t.selfie_path}" alt="" style="cursor:zoom-in;" onerror="this.style.display='none'" onclick="event.stopPropagation();openGmSelfieLightbox(this.src)">`
+    ? `<img class="team-chip-selfie" id="tselfie-${t.id}" src="/uploads/${t.selfie_path}" alt="" style="cursor:zoom-in;${selfieRot?`transform:rotate(${selfieRot}deg);`:''}" onerror="this.style.display='none'" onclick="event.stopPropagation();openGmSelfieLightbox('/uploads/${t.selfie_path}',${t.id},${selfieRot})">`
     : '';
   return `
     <div class="tchip__stripe" style="background:${teamColor(t)};"></div>
@@ -2275,8 +2279,11 @@ async function selectTeam(teamId){
   const selfieEl = document.getElementById('detail-team-selfie');
   if(selfieEl){
     if(data.selfie_path){
+      const rot = Number(data.selfie_rotation)||0;
       selfieEl.src = `/uploads/${data.selfie_path}?t=${Date.now()}`;
       selfieEl.style.display = 'inline-block';
+      selfieEl.style.transform = rot ? `rotate(${rot}deg)` : '';
+      selfieEl.onclick = () => openGmSelfieLightbox(`/uploads/${data.selfie_path}`, data.id, rot);
     } else {
       selfieEl.removeAttribute('src');
       selfieEl.style.display = 'none';
@@ -2388,9 +2395,12 @@ async function renderCrTeamMissions(teamId){
     if(sub && sub.media_path){
       const src = `/uploads/${sub.media_path}`;
       const isVideo = m.media_required === 'video' || /\.(mp4|webm|mov)$/i.test(sub.media_path);
+      const rot = Number(sub.media_rotation)||0;
+      const rotStyle = rot ? ` style="transform:rotate(${rot}deg)"` : '';
+      const lb = `openLightbox('${src}',${isVideo},{rotateUrl:'/api/cr/submissions/${sub.id}/rotate',rotation:${rot}})`;
       const media = isVideo
-        ? `<video src="${src}" muted preload="metadata" onclick="event.stopPropagation();openLightbox('${src}',true)"></video>`
-        : `<img src="${src}" alt="" onclick="event.stopPropagation();openLightbox('${src}',false)">`;
+        ? `<video src="${src}" muted preload="metadata"${rotStyle} onclick="event.stopPropagation();${lb}"></video>`
+        : `<img src="${src}" alt=""${rotStyle} onclick="event.stopPropagation();${lb}">`;
       thumbHtml = `<div class="gcard__thumb">${media}</div>`;
     } else {
       thumbHtml = `<div class="gcard__thumb gcard__thumb--plain">${typeIcon}</div>`;
@@ -2484,9 +2494,13 @@ function renderTeamMissions(missions){
     let thumbHtml;
     if(m.media_path && (m.status==='pending' || m.status==='accepted')){
       const src = `/uploads/${m.media_path}`;
-      const media = m.media_type==='video'
-        ? `<video src="${src}" muted preload="metadata" onclick="event.stopPropagation();openLightbox('${src}',true)" title="${gmt('open-lightbox')||'Enlarge'}"></video>`
-        : `<img src="${src}" alt="" onclick="event.stopPropagation();openLightbox('${src}',false)">`;
+      const rot = Number(m.media_rotation)||0;
+      const rotStyle = rot ? ` style="transform:rotate(${rot}deg)"` : '';
+      const isVideo = m.media_type==='video';
+      const lb = `openLightbox('${src}',${isVideo},{rotateUrl:'/api/submissions/${m.id}/rotate',rotation:${rot}})`;
+      const media = isVideo
+        ? `<video src="${src}" muted preload="metadata"${rotStyle} onclick="event.stopPropagation();${lb}" title="${gmt('open-lightbox')||'Enlarge'}"></video>`
+        : `<img src="${src}" alt=""${rotStyle} onclick="event.stopPropagation();${lb}">`;
       thumbHtml = `<div class="gcard__thumb">${media}</div>`;
     } else {
       thumbHtml = `<div class="gcard__thumb gcard__thumb--plain">${typeIcon}</div>`;
@@ -2518,8 +2532,13 @@ function renderTeamMissions(missions){
 }
 
 // Lightbox
-function openLightbox(url,isVid){
-  let rotation=0;
+// opts (optional): { rotateUrl, rotation } — when rotateUrl is given, the
+// Rotate button PERSISTS the new rotation to the server (POST rotateUrl
+// {rotation}) so it sticks in the dashboard, ZIP export and collage. Without
+// it the rotate button is view-only (legacy behaviour).
+function openLightbox(url,isVid,opts){
+  opts = opts || {};
+  let rotation = ((Number(opts.rotation)||0) % 360 + 360) % 360;
   const d=document.createElement('div');
   d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9000;display:flex;align-items:center;justify-content:center;';
   d.onclick=()=>d.remove();
@@ -2528,7 +2547,15 @@ function openLightbox(url,isVid){
   bar.style.cssText='position:fixed;top:1rem;right:1rem;display:flex;gap:.5rem;z-index:9001;';
   const rotBtn=document.createElement('button');
   rotBtn.className='btn btn-secondary btn-sm';rotBtn.textContent='↻ ' + (gmt('lightbox-rotate')||'Drehen');
-  rotBtn.onclick=e=>{e.stopPropagation();rotation=(rotation+90)%360;el.style.transform=`rotate(${rotation}deg)`;};
+  rotBtn.onclick=e=>{
+    e.stopPropagation();
+    rotation=(rotation+90)%360;
+    el.style.transform=`rotate(${rotation}deg)`;
+    if(opts.rotateUrl){
+      // Persist; best-effort (view still updates even if the save fails).
+      API(opts.rotateUrl,{method:'POST',body:{rotation}}).catch(()=>{});
+    }
+  };
   const closeBtn=document.createElement('button');
   closeBtn.className='btn btn-danger btn-sm';closeBtn.textContent='✕';
   closeBtn.onclick=e=>{e.stopPropagation();d.remove();};
@@ -2537,6 +2564,7 @@ function openLightbox(url,isVid){
   const el=isVid?document.createElement('video'):document.createElement('img');
   el.src=url;
   el.style.cssText='max-width:90vw;max-height:85vh;border-radius:4px;transition:transform .25s;';
+  if(rotation) el.style.transform=`rotate(${rotation}deg)`;
   if(isVid){el.controls=true;el.onclick=e=>e.stopPropagation();}
   d.appendChild(el);
   document.body.appendChild(d);
@@ -2864,15 +2892,18 @@ async function thawTeam(){
 }
 
 // ── Selfie lightbox ─────────────────────────────────────────────────────────
-function openGmSelfieLightbox(url){
-  const lb  = document.getElementById('gm-selfie-lightbox');
-  const img = document.getElementById('gm-selfie-lightbox-img');
-  if(!lb || !img || !url) return;
-  img.src = url;
-  lb.style.display = 'flex';
+// Routes through the shared openLightbox so selfies get the same rotate (with
+// server persistence) + close UI as submission photos. teamId/rotation enable
+// the persisting rotate button; called without them it's still view-only.
+function openGmSelfieLightbox(url, teamId, rotation){
+  if(!url) return;
+  const opts = (teamId != null)
+    ? { rotateUrl:`/api/games/${currentGameId}/teams/${teamId}/selfie/rotate`, rotation:Number(rotation)||0 }
+    : { rotation:Number(rotation)||0 };
+  openLightbox(url, false, opts);
 }
+// Kept for back-compat with the static lightbox markup's ✕/backdrop handlers.
 function closeGmSelfieLightbox(e){
-  // Don't dismiss when clicking the image itself; only the dark surround / ✕.
   if(e && e.target && e.target.id === 'gm-selfie-lightbox-img') return;
   const lb = document.getElementById('gm-selfie-lightbox');
   if(lb) lb.style.display = 'none';
