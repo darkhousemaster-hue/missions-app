@@ -507,9 +507,16 @@ app.post('/api/games/:gameId/teams', (req,res) => {
   const rawName = typeof req.body.name === 'string' ? req.body.name.trim() : '';
   if(rawName.length < 2) return res.status(400).json({error:'Team name too short.', error_code:'too_short'});
   if(rawName.length > 30) return res.status(400).json({error:'Team name too long.', error_code:'too_long'});
-  // Profanity / hate-speech filter (server-side, authoritative).
-  if(!profanity.isClean(rawName)) {
-    return res.status(400).json({error:'That team name isn\'t allowed. Please choose another.', error_code:'profanity'});
+  // Profanity / hate-speech filter (server-side, authoritative). GM-configurable
+  // in Settings → Profanity: an enable toggle (default ON) plus a custom word
+  // list merged with the built-in multi-language list.
+  const settings = db.getSettings();
+  const filterOn = settings.profanity_enabled !== '0'; // default enabled
+  if(filterOn) {
+    const customWords = profanity.parseWordList(settings.profanity_custom_words);
+    if(!profanity.isClean(rawName, customWords)) {
+      return res.status(400).json({error:'That team name isn\'t allowed. Please choose another.', error_code:'profanity'});
+    }
   }
   // Check for duplicate team name
   const existingTeams=db.getTeams(req.params.gameId);
