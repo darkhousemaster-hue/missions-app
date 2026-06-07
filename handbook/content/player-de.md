@@ -1,5 +1,5 @@
 ---
-title: "MiSSiONS / CityRush Spielerhandbuch"
+title: "MiSSiONS / Rail Adventure Spielerhandbuch"
 subtitle: "Für Teams, die mit dem Handy spielen"
 lang: de
 manifest: player-de
@@ -20,7 +20,7 @@ Es gibt zwei Spielarten — das Handbuch deckt beide ab:
   zusammengestellte Missionsliste ab; ihr ladet pro Mission ein
   Foto oder Video hoch, der GM nimmt es an oder lehnt es ab, und
   ihr sammelt Punkte.
-- **Teil 2, CityRush-Spiele.** Ein GPS-Modus. Die Karte zeigt den
+- **Teil 2, Rail Adventure Spiele.** Ein GPS-Modus. Die Karte zeigt den
   nächsten Stopp; euer Team läuft physisch dorthin, die App
   schaltet die Aufgabe bei Ankunft frei, ihr reicht sie vor Ort
   ein. Dazu kommen optionale „Spezial-Missionen" und eine
@@ -145,27 +145,27 @@ Nützlich für:
 Tippen, **Senden**, fertig. **Zurück** in der Topbar bringt euch
 wieder zu den Missionen.
 
-::part:2:CityRush-Spiele spielen
+::part:2:Rail Adventure Spiele spielen
 
-CityRush ist der GPS-Modus. Statt eine Fotoliste an einem Ort
+Rail Adventure ist der GPS-Modus. Statt eine Fotoliste an einem Ort
 abzuarbeiten, läuft euer Team physisch zwischen Stopps auf einer
 Karte. Der nächste Stopp wird angezeigt; ihr kommt an, die Aufgabe
 schaltet frei, ihr reicht ein, ihr geht weiter. Spezial-Missionen
 und eine PvP-Einfriermechanik kommen oben drauf.
 
 Die Bildschirme ähneln MiSSiONS, enthalten aber eine Karte und ein
-paar CityRush-spezifische Elemente.
+paar Rail Adventure spezifische Elemente.
 
-# Die CityRush-Spieleransicht
+# Die Rail Adventure Spieleransicht
 
 ::shot:cr-01-home
 
-Die CityRush-Spieleransicht ersetzt die MiSSiONS-Missionsliste durch
+Die Rail Adventure Spieleransicht ersetzt die MiSSiONS-Missionsliste durch
 etwas Räumliches. Von oben nach unten:
 
 - **Topbar** — Punktestand links, Timer mittig, Chat/Regeln/Sprache
   rechts. Gleiches Prinzip wie bei MiSSiONS.
-- **Fortschrittsleiste** — `STOPP n / N` und der CityRush-Modusname.
+- **Fortschrittsleiste** — `STOPP n / N` und der Rail Adventure Modusname.
 - **Mini-Karte** — eure Position (oranger Punkt) und alle
   Missionsstopps. Antippen für Vollbild.
 - **Missionskacheln** in Routenreihenfolge. Jede zeigt die Stopp-
@@ -238,7 +238,7 @@ euch auch früher **auftauen**, wenn die Lage es rechtfertigt.
 
 So vermeidet ihr es: Lasst euch nicht in Sichtweite anderer Teams
 fotografieren und wechselt die Route, wenn euch jemand zu folgen
-scheint. (Ja, CityRush ist auch ein Schleich-Spiel.)
+scheint. (Ja, Rail Adventure ist auch ein Schleich-Spiel.)
 
 ---
 
@@ -269,9 +269,9 @@ der „arbeitende" Teil des Spiels ist vorbei.
 - **Nutzt früh den Chat.** Wenn eine Mission nicht machbar ist
   (Ort zu, Requisite fehlt), schreibt dem GM gleich, statt zu
   hadern. Er kann sie ersetzen oder streichen.
-- **Achtet auf den Akku.** GPS in CityRush plus Kamera in beiden
+- **Achtet auf den Akku.** GPS in Rail Adventure plus Kamera in beiden
   Modi saugen den Akku schnell leer. Powerbank mitnehmen.
-- **In CityRush: Spezial-Missionen zwischen Stopps machen, nicht
+- **In Rail Adventure: Spezial-Missionen zwischen Stopps machen, nicht
   am Stopp.** Stopps schalten bei Ankunft frei; eine Spezial-
   Mission genau dort macht den Geofence-Aufenthalt unnötig lang.
 
@@ -304,7 +304,7 @@ iOS Safari verlangt, dass du den Kamerazugriff in den Einstellungen
 unter Safari → Kamera auf „Fragen" oder „Erlauben" setzt. Danach
 die Seite neu laden.
 
-**Eine CityRush-Mission bleibt gesperrt, obwohl wir vor Ort sind.**
+**Eine Rail Adventure Mission bleibt gesperrt, obwohl wir vor Ort sind.**
 Eure GPS-Genauigkeit ist eventuell schlecht. Geht ins Freie, weg
 von Gebäuden, und wartet 5–10 Sekunden. Wenn es immer noch nicht
 freischaltet, kann der GM die Ankunft manuell vom Dashboard aus

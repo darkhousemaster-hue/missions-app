@@ -28,7 +28,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .ll-langs .ll-lang:hover{color:var(--text);}
 .ll-langs .ll-lang.is-active{background:var(--text);color:var(--bg);}
 /* Sectioned location picker. "Pick a starting point" sits above the
-   location tiles; "Or pick a CityRush route" sits above the CityRush
+   location tiles; "Or pick a Rail Adventure route" sits above the Rail Adventure
    tile when at least one CR mode exists. */
 .ll-section{width:100%;max-width:720px;}
 .ll-section-title{font:700 .68rem/1 var(--body);letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.5rem;padding-left:.15rem;}
@@ -37,7 +37,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .location-card:hover{border-color:rgba(255,255,255,0.18);background:var(--surface2);transform:translateY(-1px);}
 .location-card .ll-icon{color:var(--text-dim);display:flex;align-items:center;justify-content:center;}
 .location-card .ll-icon svg{width:20px;height:20px;}
-/* CityRush tile sits alone in its own grid; render it as a single horizontal
+/* Rail Adventure tile sits alone in its own grid; render it as a single horizontal
    row (icon + label) so it stays compact, instead of stacked like a square
    location tile. */
 .location-card--cr{background:linear-gradient(160deg,rgba(232,95,30,0.10),rgba(232,95,30,0.02));border-color:rgba(232,95,30,0.32);color:var(--orange);flex-direction:row;min-height:64px;padding:.85rem 1rem;gap:.65rem;}
@@ -194,7 +194,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
     <h1><span>MiSSi</span><span>ONS</span></h1>
     <p id="ll-tagline">Adventurerooms · Spielleiter</p>
   </div>
-  <!-- Two sections: locations first, CityRush below. The CR section is
+  <!-- Two sections: locations first, Rail Adventure below. The CR section is
        hidden by loadLanding() when no CR modes exist. Section titles
        are paint-only via the GMT dict; the grids are populated by
        loadLanding() (location tiles) / fixed markup (the CR tile). -->
@@ -203,11 +203,11 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
     <div id="location-grid" class="location-grid"></div>
   </div>
   <div class="ll-section" id="ll-section-cr" style="display:none;">
-    <div class="ll-section-title" id="ll-cr-pick">Oder eine CityRush-Route</div>
+    <div class="ll-section-title" id="ll-cr-pick">Oder eine Rail Adventure Route</div>
     <div class="location-grid">
       <div class="location-card location-card--cr" id="ll-cr-tile" onclick="selectCityRushLocation()" style="grid-column:1/-1;">
         <div class="ll-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l-3 8h3l-2 8 7-10h-4l3-6z"/></svg></div>
-        <div>CityRush</div>
+        <div>Rail Adventure</div>
       </div>
     </div>
   </div>
@@ -233,7 +233,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
         <select id="mode-select" class="select"></select>
       </div>
       <div class="field" id="cr-mode-select-wrap">
-        <label class="label" id="gs-cr-mode-label" for="cr-mode-select">CityRush-Modus</label>
+        <label class="label" id="gs-cr-mode-label" for="cr-mode-select">Rail Adventure Modus</label>
         <select id="cr-mode-select" class="select">
           <option value="">— Modus wählen —</option>
         </select>
@@ -502,7 +502,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
         <span>Standorte</span>
       </button>
       <button class="item is-sub" onclick="switchSettingsTab('missions',this)" id="st-missions">MiSSiONS</button>
-      <button class="item is-sub" onclick="switchSettingsTab('cityrush',this)" id="st-cityrush">CityRush</button>
+      <button class="item is-sub" onclick="switchSettingsTab('cityrush',this)" id="st-cityrush">Rail Adventure</button>
       <button class="item" onclick="switchSettingsTab('rules',this)" id="st-rules">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
         <span>Regeln</span>
@@ -775,15 +775,15 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
         <div id="manuals-list" style="margin-top:24px;max-width:860px;"></div>
       </div>
 
-      <!-- CityRush -->
+      <!-- Rail Adventure -->
       <div id="stab-cityrush" class="stab">
         <div class="card mb-2">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
-            <h3 id="s-cr-title">🏃 CityRush Modi</h3>
+            <h3 id="s-cr-title">🏃 Rail Adventure Modi</h3>
             <button class="btn btn-primary btn-sm" onclick="showAddCrMode()" id="s-cr-add-mode">＋ Modus</button>
           </div>
           <p id="s-cr-info" style="font-size:.85rem;color:var(--text-muted);margin-bottom:.75rem;">
-            CityRush nutzt GPS-Ortung. Spieler folgen nichtlinearen Missionen durch verschiedene Städte.
+            Rail Adventure nutzt GPS-Ortung. Spieler folgen nichtlinearen Missionen durch verschiedene Städte.
           </p>
           <div id="cr-mode-tabs" class="tabs" style="flex-wrap:wrap;border:none;margin-bottom:.5rem;"></div>
           <div id="cr-mode-panel" style="display:none;">
@@ -803,7 +803,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
           </div>
           <div id="cr-empty" style="text-align:center;padding:2rem;color:var(--text-muted);">
             <div style="font-size:2rem;margin-bottom:.5rem;">🏃</div>
-            <p id="s-cr-empty-text">Noch kein CityRush-Modus. Klicke ＋ Modus.</p>
+            <p id="s-cr-empty-text">Noch kein Rail Adventure Modus. Klicke ＋ Modus.</p>
           </div>
         </div>
       </div>
@@ -909,14 +909,14 @@ function inlineIcon(name, sizeCls){
   return sizeCls ? svg.replace('class="icon ICN"', `class="icon ${sizeCls} ICN"`) : svg;
 }
 const GMT={
-  de:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'CityRush nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein CityRush-Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine CityRush-Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
+  de:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'Rail Adventure nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein Rail Adventure Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine Rail Adventure Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
   // CR mission modal labels
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (Meter)','cr-m-points':'Punkte',
   'cr-m-gps':'📍 GPS-Trigger','cr-m-map':'🗺️ Karte anzeigen','cr-m-timed':'⏱ Zeitlimit',
   'cr-m-gps-hint':'Hinweis für Spieler (GPS-Trigger)','cr-m-time-secs':'Zeit (Sekunden)','cr-m-pen-int':'Penalty alle X Sek.','cr-m-pen-pts':'Penalty (Punkte)',
   'cr-m-media':'Medientyp','cr-m-media-none':'— Keine —','cr-m-has-answer':'❓ Frage mit Antwort (Spieler müssen die korrekte Antwort tippen)',
   'cr-m-answer-label':'Korrekte Antwort (mind. eine Sprache)','cr-m-hints-label':'💡 Hinweise (optional)','cr-m-add-hint':'＋ Hinweis','cr-m-no-hints':'Noch keine Hinweise.',
-  'cr-m-tab-desc':'📖 Beschreibung','cr-m-tab-task':'🎯 Aufgabe','cr-m-add-title':'CityRush Mission hinzufügen','cr-m-edit-title':'CityRush Mission bearbeiten','cr-m-create':'Erstellen','cr-m-save':'Speichern','cr-m-cancel':'Abbrechen','cr-m-auto':'🌐 Auto',
+  'cr-m-tab-desc':'📖 Beschreibung','cr-m-tab-task':'🎯 Aufgabe','cr-m-add-title':'Rail Adventure Mission hinzufügen','cr-m-edit-title':'Rail Adventure Mission bearbeiten','cr-m-create':'Erstellen','cr-m-save':'Speichern','cr-m-cancel':'Abbrechen','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Aufgabe & Beschreibung erst nach Ankunft anzeigen',
   'cr-m-hide-tip':'Spieler sehen nur den Hinweis, bis sie am GPS-Ziel ankommen. Erst danach werden Beschreibung und Aufgabe sichtbar.',
   // ── Tooltips (DE) ──────────────────────────────────────────────────────────
@@ -936,15 +936,15 @@ const GMT={
   'tip-mission-indoor':'MiSSiON kann auch in Innenräumen erfüllt werden.',
   'tip-mission-desc':'Hintergrund/Story für die Spieler.',
   'tip-mission-task':'Was die Spieler konkret tun sollen.',
-  'tip-cr-mode-name':'Anzeigename des CityRush-Modus.',
-  'tip-cr-mode-ruleset':'Regelwerk, das bei diesem CityRush-Modus angezeigt wird.',
-  'tip-cr-mode-allow':'Welche Medienarten in CityRush-Missionen dieses Modus erlaubt sind.',
-  'tip-cr-mode-timer':'Standard-Spieldauer in Minuten, wenn ein neues CityRush-Spiel in diesem Modus erstellt wird.',
+  'tip-cr-mode-name':'Anzeigename des Rail Adventure Modus.',
+  'tip-cr-mode-ruleset':'Regelwerk, das bei diesem Rail Adventure Modus angezeigt wird.',
+  'tip-cr-mode-allow':'Welche Medienarten in Rail Adventure Missionen dieses Modus erlaubt sind.',
+  'tip-cr-mode-timer':'Standard-Spieldauer in Minuten, wenn ein neues Rail Adventure Spiel in diesem Modus erstellt wird.',
   'cr-mode-timer-label':'Standard-Dauer (Minuten)',
   'tip-cr-lat':'Geografische Breite des Ziels (Dezimalgrad, z.B. 47.47620).',
   'tip-cr-lng':'Geografische Länge des Ziels (Dezimalgrad).',
   'tip-cr-radius':'Wie nah die Spieler am Ziel sein müssen, damit "Angekommen" ausgelöst wird (Meter).',
-  'tip-cr-points':'Maximale Punkte für diese CityRush-Mission (Strafpunkte werden abgezogen).',
+  'tip-cr-points':'Maximale Punkte für diese Rail Adventure Mission (Strafpunkte werden abgezogen).',
   'tip-cr-gps':'Spieler müssen physisch zum Ziel laufen, bevor sie die Mission lösen können.',
   'tip-cr-map':'Mission als Markierung auf der Karte zeigen. Ohne diesen Haken wissen die Spieler nicht, wohin sie sollen.',
   'tip-cr-timed':'Mit Zeitlimit: Strafpunkte fallen an, sobald die Zeit überschritten wird.',
@@ -956,15 +956,15 @@ const GMT={
   'tip-cr-answer':'Korrekte Antwort(en) — Vergleich ist tolerant gegenüber Groß-/Kleinschreibung und Leerzeichen.',
   'tip-cr-hint':'Optionaler Text, der angezeigt wird, solange die Spieler noch zum Ziel laufen.',
   'tip-cr-hide-until-arrival':'Beschreibung und Aufgabe werden erst nach Ankunft am Ziel angezeigt.',
-  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-pick':'Standort wählen','ll-cr-pick':'Oder eine CityRush-Route','ll-tagline':'Adventurerooms · Spielleiter','ll-empty':'Keine Standorte.','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-cr-mode-label':'CityRush-Modus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','gs-new-cr':'CityRush starten','gs-kicker-loc':'Standort','gs-kicker-cr':'CityRush','gs-cr-pick':'Modus wählen','gs-open':'Öffnen','gs-st-ended':'beendet','gs-st-playing':'läuft','gs-st-waiting':'wartet','gs-none':'Noch keine Spiele.','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-kicker':'Spiel erstellt','ng-title':'Übergib den Code','ng-subtitle':'Spieler treten dem Spiel bei, indem sie den QR-Code scannen oder den Link auf ihrem Handy öffnen. Sie wählen einen Teamnamen und machen ein Selfie — sobald sie drin sind, erscheinen sie im Dashboard.','ng-game-id-label':'Spiel-ID','ng-join-url-label':'Beitrittslink','ng-qr-hint':'Zum Beitreten scannen','ng-qr-dl':'QR','ng-copy-1':'Kopieren','ng-copy-2':'Kopieren','ng-copied':'Kopiert!','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','tab-map-label':'Karte','chat-reply-to':'Antwort an','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemein','s-gen-subtitle':'App-weite Konfiguration. Die meisten Teams ändern diese Einstellungen nur einmal beim Setup.','s-unlocked':'Entsperrt','sg-app':'App','sg-games':'Spiele','s-url-help':'Der Cloudflare-Tunnel, über den Spieler beitreten. „Erkennen" liest tunnel-url.txt.','s-timeout-help':'Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.','s-gh-label':'GitHub-Repo-URL','s-gh-help':'Wird vom In-App-Updater für git pull und das Versions-Badge verwendet.','s-sound-label':'Ton bei Annahme','s-sound-help':'Spielt einen kurzen Ton, wenn der GM eine Einreichung annimmt.','s-sound-on':'Aktiviert','s-sound-perm':'Browser-Berechtigung beim ersten Klick erforderlich.','s-loc-lang-title':'Standardsprache wird <em>pro Standort</em> gesetzt','s-cancel':'Abbrechen','st-manuals':'Handbücher','s-manuals-title':'Handbücher','s-manuals-subtitle':'Lade hier die PDF-Handbücher in deiner Sprache herunter.','s-manuals-lang':'Sprache','s-manuals-lang-help':'Nur Handbücher in dieser Sprache anzeigen.','no-manuals-yet':'Noch keine Handbücher in dieser Sprache verfügbar.','s-update-hint':'Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe Allgemein) und startet den Server neu.','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','updating':'Aktualisiere…','selfie-uploaded':'Selfie hochgeladen','s-collage-title':'Collage-Timing','s-collage-subtitle':'Steuert das Tempo des Foto-Collage-Videos am Spielende.','s-collage-photo-label':'Fotodauer (Sekunden)','s-collage-photo-help':'Wie lange jedes Team-Foto angezeigt wird.','s-collage-cover-label':'Titelbild-Dauer (Sekunden)','s-collage-cover-help':'Wie lange die Team-Titelkarte (Selfie + Name) angezeigt wird.','s-collage-xfade-label':'Überblendung (Sekunden)','s-collage-xfade-help':'Dauer der Überblendung zwischen Bildern. 0 = harte Schnitte.','s-collage-save':'Speichern','st-profanity-label':'Wortfilter','s-prof-title':'Wortfilter für Teamnamen','s-prof-subtitle':'Blockt anstößige Teamnamen. Eine mehrsprachige Standardliste ist eingebaut; eigene Wörter kannst du unten ergänzen.','s-prof-enabled-label':'Filter aktiviert','s-prof-enabled-help':'Wenn deaktiviert, werden Teamnamen nicht geprüft.','s-prof-words-label':'Eigene gesperrte Wörter','s-prof-words-help':'Ein Wort pro Zeile (oder durch Komma getrennt). Groß-/Kleinschreibung, Akzente und Leetspeak werden automatisch erkannt. Ganze Wörter werden gesperrt, nicht Wortteile.','s-prof-save':'Speichern',
+  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-pick':'Standort wählen','ll-cr-pick':'Oder eine Rail Adventure Route','ll-tagline':'Adventurerooms · Spielleiter','ll-empty':'Keine Standorte.','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-cr-mode-label':'Rail Adventure Modus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','gs-new-cr':'Rail Adventure starten','gs-kicker-loc':'Standort','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Modus wählen','gs-open':'Öffnen','gs-st-ended':'beendet','gs-st-playing':'läuft','gs-st-waiting':'wartet','gs-none':'Noch keine Spiele.','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-kicker':'Spiel erstellt','ng-title':'Übergib den Code','ng-subtitle':'Spieler treten dem Spiel bei, indem sie den QR-Code scannen oder den Link auf ihrem Handy öffnen. Sie wählen einen Teamnamen und machen ein Selfie — sobald sie drin sind, erscheinen sie im Dashboard.','ng-game-id-label':'Spiel-ID','ng-join-url-label':'Beitrittslink','ng-qr-hint':'Zum Beitreten scannen','ng-qr-dl':'QR','ng-copy-1':'Kopieren','ng-copy-2':'Kopieren','ng-copied':'Kopiert!','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','tab-map-label':'Karte','chat-reply-to':'Antwort an','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemein','s-gen-subtitle':'App-weite Konfiguration. Die meisten Teams ändern diese Einstellungen nur einmal beim Setup.','s-unlocked':'Entsperrt','sg-app':'App','sg-games':'Spiele','s-url-help':'Der Cloudflare-Tunnel, über den Spieler beitreten. „Erkennen" liest tunnel-url.txt.','s-timeout-help':'Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.','s-gh-label':'GitHub-Repo-URL','s-gh-help':'Wird vom In-App-Updater für git pull und das Versions-Badge verwendet.','s-sound-label':'Ton bei Annahme','s-sound-help':'Spielt einen kurzen Ton, wenn der GM eine Einreichung annimmt.','s-sound-on':'Aktiviert','s-sound-perm':'Browser-Berechtigung beim ersten Klick erforderlich.','s-loc-lang-title':'Standardsprache wird <em>pro Standort</em> gesetzt','s-cancel':'Abbrechen','st-manuals':'Handbücher','s-manuals-title':'Handbücher','s-manuals-subtitle':'Lade hier die PDF-Handbücher in deiner Sprache herunter.','s-manuals-lang':'Sprache','s-manuals-lang-help':'Nur Handbücher in dieser Sprache anzeigen.','no-manuals-yet':'Noch keine Handbücher in dieser Sprache verfügbar.','s-update-hint':'Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe Allgemein) und startet den Server neu.','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','updating':'Aktualisiere…','selfie-uploaded':'Selfie hochgeladen','s-collage-title':'Collage-Timing','s-collage-subtitle':'Steuert das Tempo des Foto-Collage-Videos am Spielende.','s-collage-photo-label':'Fotodauer (Sekunden)','s-collage-photo-help':'Wie lange jedes Team-Foto angezeigt wird.','s-collage-cover-label':'Titelbild-Dauer (Sekunden)','s-collage-cover-help':'Wie lange die Team-Titelkarte (Selfie + Name) angezeigt wird.','s-collage-xfade-label':'Überblendung (Sekunden)','s-collage-xfade-help':'Dauer der Überblendung zwischen Bildern. 0 = harte Schnitte.','s-collage-save':'Speichern','st-profanity-label':'Wortfilter','s-prof-title':'Wortfilter für Teamnamen','s-prof-subtitle':'Blockt anstößige Teamnamen. Eine mehrsprachige Standardliste ist eingebaut; eigene Wörter kannst du unten ergänzen.','s-prof-enabled-label':'Filter aktiviert','s-prof-enabled-help':'Wenn deaktiviert, werden Teamnamen nicht geprüft.','s-prof-words-label':'Eigene gesperrte Wörter','s-prof-words-help':'Ein Wort pro Zeile (oder durch Komma getrennt). Groß-/Kleinschreibung, Akzente und Leetspeak werden automatisch erkannt. Ganze Wörter werden gesperrt, nicht Wortteile.','s-prof-save':'Speichern',
   // ── Settings UI fallbacks ─────────────────────────────────────────────────
   'no-tunnel':'Kein Tunnel gefunden.','mode-placeholder':'z.B. ADVANCED',
   'location-label':'Standort','add-loc':'Standort hinzufügen','edit-loc':'Standort bearbeiten',
   'loc-spec':'Standort-MiSSiONS','add-mission':'MiSSiON hinzufügen','edit-mission':'MiSSiON bearbeiten',
   'desc-hint':'Story / Hintergrund','task-hint':'Aufgabe für Spieler',
-  'copy-to':'Kopieren nach…','hint':'Hinweis','cr-mission-suffix':'CityRush-Missionen',
+  'copy-to':'Kopieren nach…','hint':'Hinweis','cr-mission-suffix':'Rail Adventure Missionen',
   'cr-m-name':'Name',
-  // ── Special CityRush mission settings ─────────────────────────────────────
+  // ── Special Rail Adventure mission settings ─────────────────────────────────────
   'cr-m-special':'⭐ Spezial-Mission (jederzeit verfügbar, GPS-unabhängig)',
   'cr-m-special-cooldown':'Begrenzt auf X (Minuten zwischen Versuchen, 0 = aus)',
   'tip-cr-special':'Spezial-Missionen können jederzeit gespielt werden, brauchen kein GPS und stören die normale Reihenfolge nicht.',
@@ -976,9 +976,9 @@ const GMT={
   'cr-m-answer-hints-help':'Werden nach Ankunft einzeln aufgedeckt. Helfen, die Aufgabe zu lösen.','enter-text':'Bitte zuerst Text eingeben','all-filled':'Alle Felder schon ausgefüllt','tpl-uploaded':'Vorlage hochgeladen!','pw-mismatch':'Passwörter stimmen nicht überein.','pw-changed':'Passwort geändert!','rules-copied':'Regeln kopiert!','rule-copied':'Regel kopiert!','copy-rule-title':'Regel kopieren nach…','target-rs':'Ziel-Regelwerk','no-other-rs':'Kein anderes Regelwerk vorhanden.','del-mode-confirm':'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht.','del-rs-confirm':'Regelwerk löschen? Modi werden auf Standard zurückgesetzt.','del-loc-confirm':'Standort und alle MiSSiONS löschen?','del-mission-confirm':'MiSSiON löschen?','add-rs':'＋ Regelwerk','ruleset':'Regelwerk','remove':'Entfernen',
   // Toasts, tooltips, confirms — added in the i18n-coverage sweep.
   'freeze-team-tip':'Team einfrieren','thaw-team-tip':'Team auftauen','thaw-label':'Auftauen','freeze-label':'Einfrieren',
-  'pick-cr-mode':'Bitte CityRush-Modus auswählen','error-prefix':'Fehler:','no-qr-yet':'Noch kein QR-Code',
+  'pick-cr-mode':'Bitte Rail Adventure Modus auswählen','error-prefix':'Fehler:','no-qr-yet':'Noch kein QR-Code',
   'deleted':'Gelöscht','game-ended-toast':'Spiel beendet!','enter-reason':'Bitte Begründung eingeben',
-  'cr-rejected-notified':'CityRush: Abgelehnt & Team benachrichtigt.','accepted-toast':'Angenommen!',
+  'cr-rejected-notified':'Rail Adventure: Abgelehnt & Team benachrichtigt.','accepted-toast':'Angenommen!',
   'rejected-notified':'Abgelehnt & Team benachrichtigt.','enter-minutes':'Minuten eingeben',
   'broadcast-sent':'Broadcast gesendet!','pick-team':'Bitte ein Team wählen',
   'already-frozen-team':'Dieses Team wurde bereits eingefroren','tunnel-detected':'Tunnel erkannt:',
@@ -986,7 +986,7 @@ const GMT={
   'mode-created':'Modus erstellt!','mission-created':'MiSSiON erstellt!','tpl-deleted':'Vorlage gelöscht',
   'update-ok':'Update erfolgreich! App startet neu…','update-failed':'Update fehlgeschlagen.',
   'ruleset-created':'Regelwerk erstellt!','cannot-del-default-rs':'Standard-Regelwerk kann nicht gelöscht werden.',
-  'cr-mode-created':'CityRush Modus erstellt!','pick-mode-first':'Erst einen Modus auswählen',
+  'cr-mode-created':'Rail Adventure Modus erstellt!','pick-mode-first':'Erst einen Modus auswählen',
   'cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
   'hint-saved':'Hinweis gespeichert!','c-del-hint':'Hinweis löschen?','hint-not-found':'Hinweis nicht gefunden',
   'invalid-json':'Ungültige JSON-Datei','invalid-format':'Kein gültiges Format (missions-Array fehlt)',
@@ -994,9 +994,9 @@ const GMT={
   'mode-label-modal':'Modus','no-rulesets':'Keine Regelwerke.',
   'edit-tip':'Bearbeiten','delete-tip':'Löschen','copy-to-rs-tip':'In anderes Regelwerk kopieren',
   'auto-translate-tip':'Auto-übersetzen','chat-msg-fallback':'Nachricht…',
-  'cr-error-cr-mode-name-modal':'CityRush Modus hinzufügen','cr-edit-mode-modal':'Modus bearbeiten',
+  'cr-error-cr-mode-name-modal':'Rail Adventure Modus hinzufügen','cr-edit-mode-modal':'Modus bearbeiten',
   'no-cr-mode':'— Kein Regelwerk —','allowed-media':'Erlaubte Medien',
-  'cr-mode-name-eg':'z.B. Altstadt-Tour','cr-mode-delete-confirm':'CityRush Modus "{name}" und alle Missionen löschen?',
+  'cr-mode-name-eg':'z.B. Altstadt-Tour','cr-mode-delete-confirm':'Rail Adventure Modus "{name}" und alle Missionen löschen?',
   'export-btn':'⬇ Export','import-btn':'⬆ Import','s-import-btn':'⬆ Import','s-cr-import':'⬆ Import',
   'copy-to-mode-btn':'⎘ Kopieren nach Modus…',
   'cr-hint-add':'Hinweis hinzufügen','cr-hint-edit':'Hinweis bearbeiten',
@@ -1016,7 +1016,7 @@ const GMT={
   'loc-allowed-langs':'Erlaubte Sprachen',
   'loc-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler an diesem Standort.',
   'cr-allowed-langs':'Erlaubte Sprachen',
-  'cr-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.',
+  'cr-allowed-langs-hint':'Nur diese Sprachen erscheinen für Spieler in diesem Rail Adventure Modus.',
   'lightbox-rotate':'Drehen','st-games':'Spiele',
   'cr-m-map-picker':'Karte (Klick zum Setzen, Marker ziehbar)','cr-m-use-loc':'Aktuellen Standort verwenden','geo-unsupported':'Geolocation wird vom Browser nicht unterstützt.','geo-denied':'Standortzugriff abgelehnt.','geo-error':'Standort konnte nicht ermittelt werden.','geo-set':'Standort übernommen',
   'indoor-hint':'Mission lässt sich auch drinnen durchführen.',
@@ -1025,18 +1025,19 @@ const GMT={
   'cr-m-timed-sub':'Penalty greift, wenn das Limit überschritten wird.',
   'cr-m-special-sub':'Erscheint im ⭐-Bereich, ohne lineare Reihenfolge.',
   'cr-m-has-answer-sub':'Spieler tippen die richtige Antwort. Schließt Foto/Video aus.',
+  'cr-m-puzzle':'🧩 Bilderpuzzle','cr-m-puzzle-sub':'Spieler setzen ein Bild zusammen. Lösen schließt die Mission ab.','cr-m-puzzle-grid':'Schwierigkeit','cr-m-puzzle-easy':'3×3 (leicht)','cr-m-puzzle-medium':'4×4 (mittel)','cr-m-puzzle-hard':'5×5 (schwer)','cr-m-puzzle-image':'Bild','cr-m-puzzle-pick':'Bild wählen','cr-m-puzzle-ratio':'Beste Bildgröße: Hochformat 3:4 (z. B. 1200 × 1600 px) — passt optimal auf den Spielerbildschirm. Andere Formate werden zugeschnitten.',
   // 📖 Manuals download (button in settings topbar, next to language switch)
   'manuals-tip':'Handbücher herunterladen','manuals-title':'Handbücher',
   'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
   'manuals-gm':'GM-Handbuch','manuals-settings':'Einstellungs-Handbuch',
   'manuals-others':'Andere Sprachen'},
-  en:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 CityRush Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No CityRush mode yet. Click ＋ Mode.','cr-no-missions':'No CityRush missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
+  en:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No Rail Adventure mode yet. Click ＋ Mode.','cr-no-missions':'No Rail Adventure missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
   'cr-m-gps-hint':'Hint for players (GPS trigger)','cr-m-time-secs':'Time (seconds)','cr-m-pen-int':'Penalty every X sec.','cr-m-pen-pts':'Penalty (points)',
   'cr-m-media':'Media type','cr-m-media-none':'— None —','cr-m-has-answer':'❓ Question with answer (players must type the correct answer)',
   'cr-m-answer-label':'Correct answer (at least one language)','cr-m-hints-label':'💡 Hints (optional)','cr-m-add-hint':'＋ Hint','cr-m-no-hints':'No hints yet.',
-  'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Task','cr-m-add-title':'Add CityRush Mission','cr-m-edit-title':'Edit CityRush Mission','cr-m-create':'Create','cr-m-save':'Save','cr-m-cancel':'Cancel','cr-m-auto':'🌐 Auto',
+  'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Task','cr-m-add-title':'Add Rail Adventure Mission','cr-m-edit-title':'Edit Rail Adventure Mission','cr-m-create':'Create','cr-m-save':'Save','cr-m-cancel':'Cancel','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Hide task & description until arrival',
   'cr-m-hide-tip':'Players see only the hint until they reach the GPS target. The description and task are revealed on arrival.',
   // ── Tooltips (EN) ──────────────────────────────────────────────────────────
@@ -1056,15 +1057,15 @@ const GMT={
   'tip-mission-indoor':'Mission can also be completed indoors.',
   'tip-mission-desc':'Background story shown to players.',
   'tip-mission-task':'What players actually have to do.',
-  'tip-cr-mode-name':'Display name of the CityRush mode.',
-  'tip-cr-mode-ruleset':'Ruleset shown to players in this CityRush mode.',
+  'tip-cr-mode-name':'Display name of the Rail Adventure mode.',
+  'tip-cr-mode-ruleset':'Ruleset shown to players in this Rail Adventure mode.',
   'tip-cr-mode-allow':'Which media types are allowed on missions in this mode.',
-  'tip-cr-mode-timer':'Default game duration in minutes when creating a new CityRush game in this mode.',
+  'tip-cr-mode-timer':'Default game duration in minutes when creating a new Rail Adventure game in this mode.',
   'cr-mode-timer-label':'Default duration (minutes)',
   'tip-cr-lat':'Target latitude (decimal degrees, e.g. 47.47620).',
   'tip-cr-lng':'Target longitude (decimal degrees).',
   'tip-cr-radius':'How close players need to be to count as arrived (meters).',
-  'tip-cr-points':'Max points for this CityRush mission (penalties are deducted from this).',
+  'tip-cr-points':'Max points for this Rail Adventure mission (penalties are deducted from this).',
   'tip-cr-gps':'Players must physically reach the target before they can complete the mission.',
   'tip-cr-map':'Show the mission as a marker on the map. Without this, players don\'t know where to go.',
   'tip-cr-timed':'Time-limited: penalty points start once the limit is exceeded.',
@@ -1076,12 +1077,12 @@ const GMT={
   'tip-cr-answer':'The correct answer(s) — matching is case-insensitive and trims whitespace.',
   'tip-cr-hint':'Optional text shown while players are still walking to the target.',
   'tip-cr-hide-until-arrival':'Description and task only appear after the player arrives.',
-  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-pick':'Pick a starting point','ll-cr-pick':'Or pick a CityRush route','ll-tagline':'Adventurerooms · Gamemaster','ll-empty':'No locations yet.','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-cr-mode-label':'CityRush Mode','gs-recent':'Recent Games','gs-new':'New Game','gs-new-cr':'Start CityRush','gs-kicker-loc':'Location','gs-kicker-cr':'CityRush','gs-cr-pick':'Pick a mode','gs-open':'Open','gs-st-ended':'ended','gs-st-playing':'running','gs-st-waiting':'waiting','gs-none':'No games yet.','ng-title':'New Game Created','ng-back':'Back','ng-kicker':'Game created','ng-title':'Hand out the code','ng-subtitle':'Players join by scanning the QR or opening the link on their phones. They pick a team name and take a selfie — you’ll see them appear in the dashboard the moment they’re in.','ng-game-id-label':'Game ID','ng-join-url-label':'Join URL','ng-qr-hint':'Scan to join','ng-qr-dl':'QR','ng-copy-1':'Copy','ng-copy-2':'Copy','ng-copied':'Copied!','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','tab-map-label':'Map','chat-reply-to':'Reply to','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General','s-gen-subtitle':'App-wide configuration. Most teams won’t touch these once set up.','s-unlocked':'Unlocked','sg-app':'App','sg-games':'Games','s-url-help':'The Cloudflare quick-tunnel hostname players reach you on. “Detect” reads tunnel-url.txt.','s-timeout-help':'Shown to players when their game timer hits zero. Per-language.','s-gh-label':'GitHub repo URL','s-gh-help':'Used by the in-app updater for git pull and the version badge.','s-sound-label':'Sound on accept','s-sound-help':'Plays a short chime when the GM accepts a submission.','s-sound-on':'Enabled','s-sound-perm':'Browser permission required on first click.','s-loc-lang-title':'Default language is set <em>per location</em>','s-cancel':'Cancel','st-manuals':'Manuals','s-manuals-title':'Manuals','s-manuals-subtitle':'Download the PDF manuals in your language here.','s-manuals-lang':'Language','s-manuals-lang-help':'Only show manuals in this language.','no-manuals-yet':'No manuals available in this language yet.','s-update-hint':'Pulls the latest version from the configured GitHub repo (see General) and restarts the server.','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','updating':'Updating…','selfie-uploaded':'Selfie uploaded','s-collage-title':'Collage Timing','s-collage-subtitle':'Controls the pace of the end-of-game photo collage video.','s-collage-photo-label':'Photo duration (seconds)','s-collage-photo-help':'How long each team photo is shown.','s-collage-cover-label':'Cover duration (seconds)','s-collage-cover-help':'How long the team title card (selfie + name) is shown.','s-collage-xfade-label':'Crossfade (seconds)','s-collage-xfade-help':'Length of the fade between images. 0 = hard cuts.','s-collage-save':'Save','st-profanity-label':'Word filter','s-prof-title':'Team-name word filter','s-prof-subtitle':'Blocks offensive team names. A multi-language list is built in; add your own words below.','s-prof-enabled-label':'Filter enabled','s-prof-enabled-help':'When off, team names are not checked.','s-prof-words-label':'Custom blocked words','s-prof-words-help':'One word per line (or comma-separated). Case, accents and leetspeak are handled automatically. Whole words are blocked, not substrings.','s-prof-save':'Save',
+  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-pick':'Pick a starting point','ll-cr-pick':'Or pick a Rail Adventure route','ll-tagline':'Adventurerooms · Gamemaster','ll-empty':'No locations yet.','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-cr-mode-label':'Rail Adventure Mode','gs-recent':'Recent Games','gs-new':'New Game','gs-new-cr':'Start Rail Adventure','gs-kicker-loc':'Location','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Pick a mode','gs-open':'Open','gs-st-ended':'ended','gs-st-playing':'running','gs-st-waiting':'waiting','gs-none':'No games yet.','ng-title':'New Game Created','ng-back':'Back','ng-kicker':'Game created','ng-title':'Hand out the code','ng-subtitle':'Players join by scanning the QR or opening the link on their phones. They pick a team name and take a selfie — you’ll see them appear in the dashboard the moment they’re in.','ng-game-id-label':'Game ID','ng-join-url-label':'Join URL','ng-qr-hint':'Scan to join','ng-qr-dl':'QR','ng-copy-1':'Copy','ng-copy-2':'Copy','ng-copied':'Copied!','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','tab-map-label':'Map','chat-reply-to':'Reply to','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General','s-gen-subtitle':'App-wide configuration. Most teams won’t touch these once set up.','s-unlocked':'Unlocked','sg-app':'App','sg-games':'Games','s-url-help':'The Cloudflare quick-tunnel hostname players reach you on. “Detect” reads tunnel-url.txt.','s-timeout-help':'Shown to players when their game timer hits zero. Per-language.','s-gh-label':'GitHub repo URL','s-gh-help':'Used by the in-app updater for git pull and the version badge.','s-sound-label':'Sound on accept','s-sound-help':'Plays a short chime when the GM accepts a submission.','s-sound-on':'Enabled','s-sound-perm':'Browser permission required on first click.','s-loc-lang-title':'Default language is set <em>per location</em>','s-cancel':'Cancel','st-manuals':'Manuals','s-manuals-title':'Manuals','s-manuals-subtitle':'Download the PDF manuals in your language here.','s-manuals-lang':'Language','s-manuals-lang-help':'Only show manuals in this language.','no-manuals-yet':'No manuals available in this language yet.','s-update-hint':'Pulls the latest version from the configured GitHub repo (see General) and restarts the server.','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','updating':'Updating…','selfie-uploaded':'Selfie uploaded','s-collage-title':'Collage Timing','s-collage-subtitle':'Controls the pace of the end-of-game photo collage video.','s-collage-photo-label':'Photo duration (seconds)','s-collage-photo-help':'How long each team photo is shown.','s-collage-cover-label':'Cover duration (seconds)','s-collage-cover-help':'How long the team title card (selfie + name) is shown.','s-collage-xfade-label':'Crossfade (seconds)','s-collage-xfade-help':'Length of the fade between images. 0 = hard cuts.','s-collage-save':'Save','st-profanity-label':'Word filter','s-prof-title':'Team-name word filter','s-prof-subtitle':'Blocks offensive team names. A multi-language list is built in; add your own words below.','s-prof-enabled-label':'Filter enabled','s-prof-enabled-help':'When off, team names are not checked.','s-prof-words-label':'Custom blocked words','s-prof-words-help':'One word per line (or comma-separated). Case, accents and leetspeak are handled automatically. Whole words are blocked, not substrings.','s-prof-save':'Save',
   'no-tunnel':'No tunnel found.','mode-placeholder':'e.g. ADVANCED',
   'location-label':'Location','add-loc':'Add Location','edit-loc':'Edit Location',
   'loc-spec':'location-specific MiSSiONS','add-mission':'Add MiSSiON','edit-mission':'Edit MiSSiON',
   'desc-hint':'Story / background','task-hint':'What players have to do',
-  'copy-to':'Copy to…','hint':'Hint','cr-mission-suffix':'CityRush missions',
+  'copy-to':'Copy to…','hint':'Hint','cr-mission-suffix':'Rail Adventure missions',
   'cr-m-special':'⭐ Special mission (always available, no GPS required)',
   'cr-m-special-cooldown':'Cooldown X (minutes between attempts, 0 = off)',
   'tip-cr-special':'Special missions can be played at any time, need no GPS, and don\'t disturb the linear roster.',
@@ -1091,9 +1092,9 @@ const GMT={
   'cr-m-answer-hints-label':'Task hints (after arrival)',
   'cr-m-answer-hints-help':'Revealed one at a time after arrival. Help players solve the task.','enter-text':'Enter text first','all-filled':'All fields already filled','tpl-uploaded':'Template uploaded!','pw-mismatch':'Passwords do not match.','pw-changed':'Password changed!','rules-copied':'Rules copied!','rule-copied':'Rule copied!','copy-rule-title':'Copy Rule To…','target-rs':'Target Ruleset','no-other-rs':'No other rulesets available.','del-mode-confirm':'Delete mode? All missions in this mode will also be deleted.','del-rs-confirm':'Delete ruleset? Modes will fall back to Standard.','del-loc-confirm':'Delete location and all its missions?','del-mission-confirm':'Delete this mission?','add-rs':'＋ Ruleset','ruleset':'Ruleset','remove':'Remove',
   'freeze-team-tip':'Freeze team','thaw-team-tip':'Thaw team','thaw-label':'Thaw','freeze-label':'Freeze',
-  'pick-cr-mode':'Please pick a CityRush mode','error-prefix':'Error:','no-qr-yet':'No QR code yet',
+  'pick-cr-mode':'Please pick a Rail Adventure mode','error-prefix':'Error:','no-qr-yet':'No QR code yet',
   'deleted':'Deleted','game-ended-toast':'Game ended!','enter-reason':'Please enter a reason',
-  'cr-rejected-notified':'CityRush: rejected & team notified.','accepted-toast':'Accepted!',
+  'cr-rejected-notified':'Rail Adventure: rejected & team notified.','accepted-toast':'Accepted!',
   'rejected-notified':'Rejected & team notified.','enter-minutes':'Enter minutes',
   'broadcast-sent':'Broadcast sent!','pick-team':'Please pick a team',
   'already-frozen-team':'This team is already frozen','tunnel-detected':'Tunnel detected:',
@@ -1101,7 +1102,7 @@ const GMT={
   'mode-created':'Mode created!','mission-created':'MiSSiON created!','tpl-deleted':'Template deleted',
   'update-ok':'Update successful! Restarting app…','update-failed':'Update failed.',
   'ruleset-created':'Ruleset created!','cannot-del-default-rs':"Default ruleset can't be deleted.",
-  'cr-mode-created':'CityRush mode created!','pick-mode-first':'Pick a mode first',
+  'cr-mode-created':'Rail Adventure mode created!','pick-mode-first':'Pick a mode first',
   'cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
   'hint-saved':'Hint saved!','c-del-hint':'Delete hint?','hint-not-found':'Hint not found',
   'invalid-json':'Invalid JSON file','invalid-format':'Invalid format (missions array missing)',
@@ -1109,9 +1110,9 @@ const GMT={
   'mode-label-modal':'Mode','no-rulesets':'No rulesets.',
   'edit-tip':'Edit','delete-tip':'Delete','copy-to-rs-tip':'Copy to another ruleset',
   'auto-translate-tip':'Auto-translate','chat-msg-fallback':'Message…',
-  'cr-error-cr-mode-name-modal':'Add CityRush mode','cr-edit-mode-modal':'Edit mode',
+  'cr-error-cr-mode-name-modal':'Add Rail Adventure mode','cr-edit-mode-modal':'Edit mode',
   'no-cr-mode':'— No ruleset —','allowed-media':'Allowed media',
-  'cr-mode-name-eg':'e.g. Old Town Tour','cr-mode-delete-confirm':'Delete CityRush mode "{name}" and all its missions?',
+  'cr-mode-name-eg':'e.g. Old Town Tour','cr-mode-delete-confirm':'Delete Rail Adventure mode "{name}" and all its missions?',
   'export-btn':'⬇ Export','import-btn':'⬆ Import','s-import-btn':'⬆ Import','s-cr-import':'⬆ Import',
   'copy-to-mode-btn':'⎘ Copy to mode…',
   'cr-hint-add':'Add hint','cr-hint-edit':'Edit hint',
@@ -1128,7 +1129,7 @@ const GMT={
   'loc-allowed-langs':'Allowed languages',
   'loc-allowed-langs-hint':'Only these languages will appear for players at this location.',
   'cr-allowed-langs':'Allowed languages',
-  'cr-allowed-langs-hint':'Only these languages will appear for players in this CityRush mode.',
+  'cr-allowed-langs-hint':'Only these languages will appear for players in this Rail Adventure mode.',
   'lightbox-rotate':'Rotate','st-games':'Games',
   'cr-m-map-picker':'Map (click to set, drag the marker to refine)','cr-m-use-loc':'Use current location','geo-unsupported':'Geolocation isn’t supported by this browser.','geo-denied':'Location access denied.','geo-error':'Could not get location.','geo-set':'Location set',
   'indoor-hint':'Mission can also be completed indoors.',
@@ -1137,17 +1138,18 @@ const GMT={
   'cr-m-timed-sub':'A penalty kicks in when the limit is exceeded.',
   'cr-m-special-sub':'Appears in the ⭐ tray, outside the linear order.',
   'cr-m-has-answer-sub':'Players type the correct answer. Excludes photo/video.',
+  'cr-m-puzzle':'🧩 Image puzzle','cr-m-puzzle-sub':'Players reassemble an image. Solving completes the mission.','cr-m-puzzle-grid':'Difficulty','cr-m-puzzle-easy':'3×3 (easy)','cr-m-puzzle-medium':'4×4 (medium)','cr-m-puzzle-hard':'5×5 (hard)','cr-m-puzzle-image':'Image','cr-m-puzzle-pick':'Choose image','cr-m-puzzle-ratio':'Best image size: portrait 3:4 (e.g. 1200 × 1600 px) — fits the player screen best. Other ratios are cropped.',
   'manuals-tip':'Download manuals','manuals-title':'Manuals',
   'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
   'manuals-others':'Other languages'},
-  fr:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modes CityRush','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'CityRush utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode CityRush. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission CityRush. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
+  fr:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modes Rail Adventure','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode Rail Adventure. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission Rail Adventure. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
   'cr-m-gps-hint':'Indice pour les joueurs (GPS)','cr-m-time-secs':'Temps (secondes)','cr-m-pen-int':'Pénalité toutes les X sec.','cr-m-pen-pts':'Pénalité (points)',
   'cr-m-media':'Type de média','cr-m-media-none':'— Aucun —','cr-m-has-answer':'❓ Question avec réponse (les joueurs doivent saisir la bonne réponse)',
   'cr-m-answer-label':'Bonne réponse (au moins une langue)','cr-m-hints-label':'💡 Indices (optionnel)','cr-m-add-hint':'＋ Indice','cr-m-no-hints':'Aucun indice.',
-  'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Tâche','cr-m-add-title':'Ajouter une mission CityRush','cr-m-edit-title':'Modifier la mission CityRush','cr-m-create':'Créer','cr-m-save':'Sauvegarder','cr-m-cancel':'Annuler','cr-m-auto':'🌐 Auto',
+  'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Tâche','cr-m-add-title':'Ajouter une mission Rail Adventure','cr-m-edit-title':'Modifier la mission Rail Adventure','cr-m-create':'Créer','cr-m-save':'Sauvegarder','cr-m-cancel':'Annuler','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Cacher la tâche & description avant l\'arrivée',
   'cr-m-hide-tip':'Les joueurs ne voient que l\'indice jusqu\'à leur arrivée à la cible GPS. La description et la tâche apparaissent ensuite.',
   // ── Tooltips (FR) ──────────────────────────────────────────────────────────
@@ -1167,10 +1169,10 @@ const GMT={
   'tip-mission-indoor':'La mission peut aussi être effectuée en intérieur.',
   'tip-mission-desc':'Histoire/contexte montré aux joueurs.',
   'tip-mission-task':'Ce que les joueurs doivent faire.',
-  'tip-cr-mode-name':'Nom d\'affichage du mode CityRush.',
+  'tip-cr-mode-name':'Nom d\'affichage du mode Rail Adventure.',
   'tip-cr-mode-ruleset':'Jeu de règles affiché aux joueurs dans ce mode.',
   'tip-cr-mode-allow':'Types de médias autorisés sur les missions de ce mode.',
-  'tip-cr-mode-timer':'Durée par défaut (minutes) à la création d\'une partie CityRush dans ce mode.',
+  'tip-cr-mode-timer':'Durée par défaut (minutes) à la création d\'une partie Rail Adventure dans ce mode.',
   'cr-mode-timer-label':'Durée par défaut (minutes)',
   'tip-cr-lat':'Latitude de la cible (degrés décimaux, ex. 47.47620).',
   'tip-cr-lng':'Longitude de la cible (degrés décimaux).',
@@ -1187,12 +1189,12 @@ const GMT={
   'tip-cr-answer':'La/les bonne(s) réponse(s) — comparaison insensible à la casse et aux espaces.',
   'tip-cr-hint':'Texte optionnel affiché pendant que les joueurs marchent vers la cible.',
   'tip-cr-hide-until-arrival':'Description et tâche n\'apparaissent qu\'après l\'arrivée.',
-  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-pick':'Choisir un lieu','ll-cr-pick':'Ou un parcours CityRush','ll-tagline':'Adventurerooms · Maître du jeu','ll-empty':'Pas encore de lieux.','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-cr-mode-label':'Mode CityRush','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','gs-new-cr':'Démarrer CityRush','gs-kicker-loc':'Lieu','gs-kicker-cr':'CityRush','gs-cr-pick':'Choisir un mode','gs-open':'Ouvrir','gs-st-ended':'terminé','gs-st-playing':'en cours','gs-st-waiting':'en attente','gs-none':'Pas encore de parties.','ng-title':'Partie créée','ng-back':'Retour','ng-kicker':'Partie créée','ng-title':'Distribue le code','ng-subtitle':'Les joueurs rejoignent la partie en scannant le QR ou en ouvrant le lien sur leur téléphone. Ils choisissent un nom d’équipe et prennent un selfie — tu les verras apparaître dans le tableau de bord.','ng-game-id-label':'ID de partie','ng-join-url-label':'Lien d’accès','ng-qr-hint':'Scanner pour rejoindre','ng-qr-dl':'QR','ng-copy-1':'Copier','ng-copy-2':'Copier','ng-copied':'Copié !','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','tab-map-label':'Carte','chat-reply-to':'Répondre à','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Général','s-gen-subtitle':'Configuration globale de l’app. La plupart des équipes ne touchent à cela qu’à l’installation.','s-unlocked':'Déverrouillé','sg-app':'App','sg-games':'Parties','s-url-help':'Le tunnel Cloudflare via lequel les joueurs rejoignent. « Détecter » lit tunnel-url.txt.','s-timeout-help':'Affiché aux joueurs lorsque le minuteur arrive à zéro. Par langue.','s-gh-label':'URL du dépôt GitHub','s-gh-help':'Utilisé par la mise à jour intégrée pour git pull et le badge de version.','s-sound-label':'Son à l’acceptation','s-sound-help':'Joue un court signal quand le GM accepte une soumission.','s-sound-on':'Activé','s-sound-perm':'Autorisation du navigateur requise au premier clic.','s-loc-lang-title':'La langue par défaut est définie <em>par lieu</em>','s-cancel':'Annuler','st-manuals':'Manuels','s-manuals-title':'Manuels','s-manuals-subtitle':'Téléchargez ici les manuels PDF dans votre langue.','s-manuals-lang':'Langue','s-manuals-lang-help':'Afficher uniquement les manuels dans cette langue.','no-manuals-yet':'Aucun manuel disponible dans cette langue pour l’instant.','s-update-hint':'Tire la dernière version du dépôt GitHub configuré (voir Général) et redémarre le serveur.','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','updating':'Mise à jour…','selfie-uploaded':'Selfie envoyé','s-collage-title':'Minutage du collage','s-collage-subtitle':'Contrôle le rythme de la vidéo-collage de fin de partie.','s-collage-photo-label':'Durée par photo (secondes)','s-collage-photo-help':'Combien de temps chaque photo d’équipe est affichée.','s-collage-cover-label':'Durée de la couverture (secondes)','s-collage-cover-help':'Combien de temps la carte titre (selfie + nom) est affichée.','s-collage-xfade-label':'Fondu (secondes)','s-collage-xfade-help':'Durée du fondu entre les images. 0 = coupes franches.','s-collage-save':'Sauvegarder','st-profanity-label':'Filtre de mots','s-prof-title':'Filtre de mots pour les noms d’équipe','s-prof-subtitle':'Bloque les noms d’équipe offensants. Une liste multilingue est intégrée ; ajoute tes propres mots ci-dessous.','s-prof-enabled-label':'Filtre activé','s-prof-enabled-help':'Désactivé, les noms d’équipe ne sont pas vérifiés.','s-prof-words-label':'Mots bloqués personnalisés','s-prof-words-help':'Un mot par ligne (ou séparés par des virgules). La casse, les accents et le leetspeak sont gérés automatiquement. Les mots entiers sont bloqués, pas les fragments.','s-prof-save':'Sauvegarder',
+  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-pick':'Choisir un lieu','ll-cr-pick':'Ou un parcours Rail Adventure','ll-tagline':'Adventurerooms · Maître du jeu','ll-empty':'Pas encore de lieux.','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-cr-mode-label':'Mode Rail Adventure','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','gs-new-cr':'Démarrer Rail Adventure','gs-kicker-loc':'Lieu','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Choisir un mode','gs-open':'Ouvrir','gs-st-ended':'terminé','gs-st-playing':'en cours','gs-st-waiting':'en attente','gs-none':'Pas encore de parties.','ng-title':'Partie créée','ng-back':'Retour','ng-kicker':'Partie créée','ng-title':'Distribue le code','ng-subtitle':'Les joueurs rejoignent la partie en scannant le QR ou en ouvrant le lien sur leur téléphone. Ils choisissent un nom d’équipe et prennent un selfie — tu les verras apparaître dans le tableau de bord.','ng-game-id-label':'ID de partie','ng-join-url-label':'Lien d’accès','ng-qr-hint':'Scanner pour rejoindre','ng-qr-dl':'QR','ng-copy-1':'Copier','ng-copy-2':'Copier','ng-copied':'Copié !','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','tab-map-label':'Carte','chat-reply-to':'Répondre à','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Général','s-gen-subtitle':'Configuration globale de l’app. La plupart des équipes ne touchent à cela qu’à l’installation.','s-unlocked':'Déverrouillé','sg-app':'App','sg-games':'Parties','s-url-help':'Le tunnel Cloudflare via lequel les joueurs rejoignent. « Détecter » lit tunnel-url.txt.','s-timeout-help':'Affiché aux joueurs lorsque le minuteur arrive à zéro. Par langue.','s-gh-label':'URL du dépôt GitHub','s-gh-help':'Utilisé par la mise à jour intégrée pour git pull et le badge de version.','s-sound-label':'Son à l’acceptation','s-sound-help':'Joue un court signal quand le GM accepte une soumission.','s-sound-on':'Activé','s-sound-perm':'Autorisation du navigateur requise au premier clic.','s-loc-lang-title':'La langue par défaut est définie <em>par lieu</em>','s-cancel':'Annuler','st-manuals':'Manuels','s-manuals-title':'Manuels','s-manuals-subtitle':'Téléchargez ici les manuels PDF dans votre langue.','s-manuals-lang':'Langue','s-manuals-lang-help':'Afficher uniquement les manuels dans cette langue.','no-manuals-yet':'Aucun manuel disponible dans cette langue pour l’instant.','s-update-hint':'Tire la dernière version du dépôt GitHub configuré (voir Général) et redémarre le serveur.','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','updating':'Mise à jour…','selfie-uploaded':'Selfie envoyé','s-collage-title':'Minutage du collage','s-collage-subtitle':'Contrôle le rythme de la vidéo-collage de fin de partie.','s-collage-photo-label':'Durée par photo (secondes)','s-collage-photo-help':'Combien de temps chaque photo d’équipe est affichée.','s-collage-cover-label':'Durée de la couverture (secondes)','s-collage-cover-help':'Combien de temps la carte titre (selfie + nom) est affichée.','s-collage-xfade-label':'Fondu (secondes)','s-collage-xfade-help':'Durée du fondu entre les images. 0 = coupes franches.','s-collage-save':'Sauvegarder','st-profanity-label':'Filtre de mots','s-prof-title':'Filtre de mots pour les noms d’équipe','s-prof-subtitle':'Bloque les noms d’équipe offensants. Une liste multilingue est intégrée ; ajoute tes propres mots ci-dessous.','s-prof-enabled-label':'Filtre activé','s-prof-enabled-help':'Désactivé, les noms d’équipe ne sont pas vérifiés.','s-prof-words-label':'Mots bloqués personnalisés','s-prof-words-help':'Un mot par ligne (ou séparés par des virgules). La casse, les accents et le leetspeak sont gérés automatiquement. Les mots entiers sont bloqués, pas les fragments.','s-prof-save':'Sauvegarder',
   'no-tunnel':'Aucun tunnel trouvé.','mode-placeholder':'p. ex. ADVANCED',
   'location-label':'Lieu','add-loc':'Ajouter un lieu','edit-loc':'Modifier le lieu',
   'loc-spec':'MiSSiONS spécifiques au lieu','add-mission':'Ajouter une MiSSiON','edit-mission':'Modifier la MiSSiON',
   'desc-hint':'Histoire / contexte','task-hint':'Ce que les joueurs doivent faire',
-  'copy-to':'Copier vers…','hint':'Indice','cr-mission-suffix':'missions CityRush',
+  'copy-to':'Copier vers…','hint':'Indice','cr-mission-suffix':'missions Rail Adventure',
   'cr-m-special':'⭐ Mission spéciale (toujours disponible, sans GPS)',
   'cr-m-special-cooldown':'Pause X (minutes entre les tentatives, 0 = désactivé)',
   'tip-cr-special':'Les missions spéciales sont jouables à tout moment, sans GPS, et n\'affectent pas l\'ordre des missions principales.',
@@ -1202,9 +1204,9 @@ const GMT={
   'cr-m-answer-hints-label':'Indices de tâche (après l\'arrivée)',
   'cr-m-answer-hints-help':'Révélés un par un après l\'arrivée. Aident à résoudre la tâche.','enter-text':'Entrer du texte d\'abord','all-filled':'Tous les champs sont remplis','tpl-uploaded':'Modèle téléversé!','pw-mismatch':'Les mots de passe ne correspondent pas.','pw-changed':'Mot de passe modifié!','rules-copied':'Règles copiées!','rule-copied':'Règle copiée!','copy-rule-title':'Copier la règle vers…','target-rs':'Jeu de règles cible','no-other-rs':'Aucun autre jeu de règles.','del-mode-confirm':'Supprimer le mode? Toutes les missions seront supprimées.','del-rs-confirm':'Supprimer le jeu de règles? Les modes reviendront au Standard.','del-loc-confirm':'Supprimer le lieu et toutes ses missions?','del-mission-confirm':'Supprimer cette mission?','add-rs':'＋ Jeu de règles','ruleset':'Jeu de règles','remove':'Supprimer',
   'freeze-team-tip':'Geler une équipe','thaw-team-tip':"Dégeler l'équipe",'thaw-label':'Dégeler','freeze-label':'Geler',
-  'pick-cr-mode':'Choisis un mode CityRush','error-prefix':'Erreur :','no-qr-yet':'Pas encore de QR',
+  'pick-cr-mode':'Choisis un mode Rail Adventure','error-prefix':'Erreur :','no-qr-yet':'Pas encore de QR',
   'deleted':'Supprimé','game-ended-toast':'Partie terminée !','enter-reason':'Veuillez saisir un motif',
-  'cr-rejected-notified':'CityRush : refusé, équipe notifiée.','accepted-toast':'Accepté !',
+  'cr-rejected-notified':'Rail Adventure : refusé, équipe notifiée.','accepted-toast':'Accepté !',
   'rejected-notified':'Refusé, équipe notifiée.','enter-minutes':'Saisir les minutes',
   'broadcast-sent':'Annonce envoyée !','pick-team':'Choisis une équipe',
   'already-frozen-team':'Cette équipe est déjà gelée','tunnel-detected':'Tunnel détecté :',
@@ -1212,7 +1214,7 @@ const GMT={
   'mode-created':'Mode créé !','mission-created':'MiSSiON créée !','tpl-deleted':'Modèle supprimé',
   'update-ok':'Mise à jour réussie ! Redémarrage…','update-failed':'Échec de la mise à jour.',
   'ruleset-created':'Jeu de règles créé !','cannot-del-default-rs':'Le jeu de règles par défaut ne peut pas être supprimé.',
-  'cr-mode-created':'Mode CityRush créé !','pick-mode-first':"Choisis d'abord un mode",
+  'cr-mode-created':'Mode Rail Adventure créé !','pick-mode-first':"Choisis d'abord un mode",
   'cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
   'hint-saved':'Indice enregistré !','c-del-hint':"Supprimer l'indice ?",'hint-not-found':'Indice introuvable',
   'invalid-json':'Fichier JSON invalide','invalid-format':'Format invalide (tableau missions manquant)',
@@ -1220,9 +1222,9 @@ const GMT={
   'mode-label-modal':'Mode','no-rulesets':'Aucun jeu de règles.',
   'edit-tip':'Modifier','delete-tip':'Supprimer','copy-to-rs-tip':'Copier vers un autre jeu de règles',
   'auto-translate-tip':'Traduire automatiquement','chat-msg-fallback':'Message…',
-  'cr-error-cr-mode-name-modal':'Ajouter un mode CityRush','cr-edit-mode-modal':'Modifier le mode',
+  'cr-error-cr-mode-name-modal':'Ajouter un mode Rail Adventure','cr-edit-mode-modal':'Modifier le mode',
   'no-cr-mode':'— Aucun jeu de règles —','allowed-media':'Médias autorisés',
-  'cr-mode-name-eg':'p. ex. Vieille ville','cr-mode-delete-confirm':'Supprimer le mode CityRush "{name}" et toutes ses missions ?',
+  'cr-mode-name-eg':'p. ex. Vieille ville','cr-mode-delete-confirm':'Supprimer le mode Rail Adventure "{name}" et toutes ses missions ?',
   'export-btn':'⬇ Exporter','import-btn':'⬆ Importer','s-import-btn':'⬆ Importer','s-cr-import':'⬆ Importer',
   'copy-to-mode-btn':'⎘ Copier vers un mode…',
   'cr-hint-add':'Ajouter un indice','cr-hint-edit':"Modifier l'indice",
@@ -1239,7 +1241,7 @@ const GMT={
   'loc-allowed-langs':'Langues autorisées',
   'loc-allowed-langs-hint':"Seules ces langues apparaîtront pour les joueurs à ce lieu.",
   'cr-allowed-langs':'Langues autorisées',
-  'cr-allowed-langs-hint':'Seules ces langues apparaîtront pour les joueurs dans ce mode CityRush.',
+  'cr-allowed-langs-hint':'Seules ces langues apparaîtront pour les joueurs dans ce mode Rail Adventure.',
   'lightbox-rotate':'Tourner','st-games':'Jeux',
   'cr-m-map-picker':'Carte (cliquer pour placer, marqueur déplaçable)','cr-m-use-loc':'Utiliser ma position','geo-unsupported':'La géolocalisation n’est pas prise en charge.','geo-denied':'Accès à la position refusé.','geo-error':'Impossible d’obtenir la position.','geo-set':'Position définie',
   'indoor-hint':"La mission peut aussi être réalisée à l'intérieur.",
@@ -1248,17 +1250,18 @@ const GMT={
   'cr-m-timed-sub':"Une pénalité s'applique au-delà de la limite.",
   'cr-m-special-sub':"Apparaît dans la zone ⭐, hors séquence linéaire.",
   'cr-m-has-answer-sub':"Les joueurs tapent la bonne réponse. Exclut photo/vidéo.",
+  'cr-m-puzzle':'🧩 Puzzle d’image','cr-m-puzzle-sub':'Les joueurs reconstituent une image. La résoudre termine la mission.','cr-m-puzzle-grid':'Difficulté','cr-m-puzzle-easy':'3×3 (facile)','cr-m-puzzle-medium':'4×4 (moyen)','cr-m-puzzle-hard':'5×5 (difficile)','cr-m-puzzle-image':'Image','cr-m-puzzle-pick':'Choisir une image','cr-m-puzzle-ratio':'Taille idéale : portrait 3:4 (ex. 1200 × 1600 px) — s’adapte le mieux à l’écran du joueur. Les autres formats sont rognés.',
   'manuals-tip':'Télécharger les manuels','manuals-title':'Manuels',
   'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
   'manuals-others':'Autres langues'},
-  it:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modalità CityRush','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'CityRush usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità CityRush. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione CityRush. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
+  it:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modalità Rail Adventure','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'Rail Adventure usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità Rail Adventure. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione Rail Adventure. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
   'cr-m-gps-hint':'Suggerimento per i giocatori (GPS)','cr-m-time-secs':'Tempo (secondi)','cr-m-pen-int':'Penalità ogni X sec.','cr-m-pen-pts':'Penalità (punti)',
   'cr-m-media':'Tipo di media','cr-m-media-none':'— Nessuno —','cr-m-has-answer':'❓ Domanda con risposta (i giocatori devono inserire la risposta corretta)',
   'cr-m-answer-label':'Risposta corretta (almeno una lingua)','cr-m-hints-label':'💡 Suggerimenti (opzionale)','cr-m-add-hint':'＋ Suggerimento','cr-m-no-hints':'Nessun suggerimento.',
-  'cr-m-tab-desc':'📖 Descrizione','cr-m-tab-task':'🎯 Compito','cr-m-add-title':'Aggiungi missione CityRush','cr-m-edit-title':'Modifica missione CityRush','cr-m-create':'Crea','cr-m-save':'Salva','cr-m-cancel':'Annulla','cr-m-auto':'🌐 Auto',
+  'cr-m-tab-desc':'📖 Descrizione','cr-m-tab-task':'🎯 Compito','cr-m-add-title':'Aggiungi missione Rail Adventure','cr-m-edit-title':'Modifica missione Rail Adventure','cr-m-create':'Crea','cr-m-save':'Salva','cr-m-cancel':'Annulla','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Nascondi compito e descrizione fino all\'arrivo',
   'cr-m-hide-tip':'I giocatori vedono solo il suggerimento finché non arrivano al punto GPS. Solo allora vengono mostrati descrizione e compito.',
   // ── Tooltips (IT) ──────────────────────────────────────────────────────────
@@ -1278,10 +1281,10 @@ const GMT={
   'tip-mission-indoor':'La missione può essere svolta anche al chiuso.',
   'tip-mission-desc':'Sfondo/storia mostrato ai giocatori.',
   'tip-mission-task':'Cosa devono fare concretamente i giocatori.',
-  'tip-cr-mode-name':'Nome visualizzato della modalità CityRush.',
+  'tip-cr-mode-name':'Nome visualizzato della modalità Rail Adventure.',
   'tip-cr-mode-ruleset':'Set di regole mostrato ai giocatori in questa modalità.',
   'tip-cr-mode-allow':'Tipi di media consentiti nelle missioni di questa modalità.',
-  'tip-cr-mode-timer':'Durata predefinita (minuti) creando una nuova partita CityRush in questa modalità.',
+  'tip-cr-mode-timer':'Durata predefinita (minuti) creando una nuova partita Rail Adventure in questa modalità.',
   'cr-mode-timer-label':'Durata predefinita (minuti)',
   'tip-cr-lat':'Latitudine target (gradi decimali, es. 47.47620).',
   'tip-cr-lng':'Longitudine target (gradi decimali).',
@@ -1298,12 +1301,12 @@ const GMT={
   'tip-cr-answer':'Le risposte corrette — confronto case-insensitive e con spazi normalizzati.',
   'tip-cr-hint':'Testo opzionale mostrato mentre i giocatori camminano verso il target.',
   'tip-cr-hide-until-arrival':'Descrizione e compito appaiono solo dopo l\'arrivo.',
-  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-pick':'Scegli un luogo','ll-cr-pick':'O un percorso CityRush','ll-tagline':'Adventurerooms · Game master','ll-empty':'Nessuna sede.','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-cr-mode-label':'Modalità CityRush','gs-recent':'Partite recenti','gs-new':'Nuova partita','gs-new-cr':'Avvia CityRush','gs-kicker-loc':'Sede','gs-kicker-cr':'CityRush','gs-cr-pick':'Scegli una modalità','gs-open':'Apri','gs-st-ended':'finita','gs-st-playing':'in corso','gs-st-waiting':'in attesa','gs-none':'Ancora nessuna partita.','ng-title':'Partita creata','ng-back':'Indietro','ng-kicker':'Partita creata','ng-title':'Distribuisci il codice','ng-subtitle':'I giocatori entrano scansionando il QR o aprendo il link sul telefono. Scelgono un nome di squadra e fanno un selfie — appariranno nella dashboard appena entrano.','ng-game-id-label':'ID partita','ng-join-url-label':'Link di accesso','ng-qr-hint':'Scansiona per entrare','ng-qr-dl':'QR','ng-copy-1':'Copia','ng-copy-2':'Copia','ng-copied':'Copiato!','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','tab-map-label':'Mappa','chat-reply-to':'Rispondi a','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Generale','s-gen-subtitle':'Configurazione globale dell’app. La maggior parte dei team la imposta una sola volta.','s-unlocked':'Sbloccato','sg-app':'App','sg-games':'Partite','s-url-help':'Il tunnel Cloudflare con cui i giocatori entrano. „Rileva" legge tunnel-url.txt.','s-timeout-help':'Mostrato ai giocatori al termine del timer. Per lingua.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usato dall’aggiornatore interno per git pull e il badge versione.','s-sound-label':'Suono all’accettazione','s-sound-help':'Riproduce un breve suono quando il GM accetta un invio.','s-sound-on':'Attivo','s-sound-perm':'Autorizzazione del browser richiesta al primo clic.','s-loc-lang-title':'La lingua predefinita è impostata <em>per sede</em>','s-cancel':'Annulla','st-manuals':'Manuali','s-manuals-title':'Manuali','s-manuals-subtitle':'Scarica qui i manuali PDF nella tua lingua.','s-manuals-lang':'Lingua','s-manuals-lang-help':'Mostra solo i manuali in questa lingua.','no-manuals-yet':'Nessun manuale disponibile in questa lingua per ora.','s-update-hint':'Scarica l’ultima versione dal repo GitHub configurato (vedi Generale) e riavvia il server.','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','updating':'Aggiornamento…','selfie-uploaded':'Selfie caricato','s-collage-title':'Tempi del collage','s-collage-subtitle':'Controlla il ritmo del video-collage di fine partita.','s-collage-photo-label':'Durata foto (secondi)','s-collage-photo-help':'Per quanto tempo viene mostrata ogni foto della squadra.','s-collage-cover-label':'Durata copertina (secondi)','s-collage-cover-help':'Per quanto tempo viene mostrata la card titolo (selfie + nome).','s-collage-xfade-label':'Dissolvenza (secondi)','s-collage-xfade-help':'Durata della dissolvenza tra le immagini. 0 = tagli netti.','s-collage-save':'Salva','st-profanity-label':'Filtro parole','s-prof-title':'Filtro parole per i nomi squadra','s-prof-subtitle':'Blocca i nomi squadra offensivi. È inclusa una lista multilingue; aggiungi le tue parole qui sotto.','s-prof-enabled-label':'Filtro attivo','s-prof-enabled-help':'Se disattivato, i nomi squadra non vengono controllati.','s-prof-words-label':'Parole bloccate personalizzate','s-prof-words-help':'Una parola per riga (o separate da virgole). Maiuscole, accenti e leetspeak sono gestiti automaticamente. Vengono bloccate parole intere, non frammenti.','s-prof-save':'Salva',
+  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-pick':'Scegli un luogo','ll-cr-pick':'O un percorso Rail Adventure','ll-tagline':'Adventurerooms · Game master','ll-empty':'Nessuna sede.','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-cr-mode-label':'Modalità Rail Adventure','gs-recent':'Partite recenti','gs-new':'Nuova partita','gs-new-cr':'Avvia Rail Adventure','gs-kicker-loc':'Sede','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Scegli una modalità','gs-open':'Apri','gs-st-ended':'finita','gs-st-playing':'in corso','gs-st-waiting':'in attesa','gs-none':'Ancora nessuna partita.','ng-title':'Partita creata','ng-back':'Indietro','ng-kicker':'Partita creata','ng-title':'Distribuisci il codice','ng-subtitle':'I giocatori entrano scansionando il QR o aprendo il link sul telefono. Scelgono un nome di squadra e fanno un selfie — appariranno nella dashboard appena entrano.','ng-game-id-label':'ID partita','ng-join-url-label':'Link di accesso','ng-qr-hint':'Scansiona per entrare','ng-qr-dl':'QR','ng-copy-1':'Copia','ng-copy-2':'Copia','ng-copied':'Copiato!','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','tab-map-label':'Mappa','chat-reply-to':'Rispondi a','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Generale','s-gen-subtitle':'Configurazione globale dell’app. La maggior parte dei team la imposta una sola volta.','s-unlocked':'Sbloccato','sg-app':'App','sg-games':'Partite','s-url-help':'Il tunnel Cloudflare con cui i giocatori entrano. „Rileva" legge tunnel-url.txt.','s-timeout-help':'Mostrato ai giocatori al termine del timer. Per lingua.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usato dall’aggiornatore interno per git pull e il badge versione.','s-sound-label':'Suono all’accettazione','s-sound-help':'Riproduce un breve suono quando il GM accetta un invio.','s-sound-on':'Attivo','s-sound-perm':'Autorizzazione del browser richiesta al primo clic.','s-loc-lang-title':'La lingua predefinita è impostata <em>per sede</em>','s-cancel':'Annulla','st-manuals':'Manuali','s-manuals-title':'Manuali','s-manuals-subtitle':'Scarica qui i manuali PDF nella tua lingua.','s-manuals-lang':'Lingua','s-manuals-lang-help':'Mostra solo i manuali in questa lingua.','no-manuals-yet':'Nessun manuale disponibile in questa lingua per ora.','s-update-hint':'Scarica l’ultima versione dal repo GitHub configurato (vedi Generale) e riavvia il server.','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','updating':'Aggiornamento…','selfie-uploaded':'Selfie caricato','s-collage-title':'Tempi del collage','s-collage-subtitle':'Controlla il ritmo del video-collage di fine partita.','s-collage-photo-label':'Durata foto (secondi)','s-collage-photo-help':'Per quanto tempo viene mostrata ogni foto della squadra.','s-collage-cover-label':'Durata copertina (secondi)','s-collage-cover-help':'Per quanto tempo viene mostrata la card titolo (selfie + nome).','s-collage-xfade-label':'Dissolvenza (secondi)','s-collage-xfade-help':'Durata della dissolvenza tra le immagini. 0 = tagli netti.','s-collage-save':'Salva','st-profanity-label':'Filtro parole','s-prof-title':'Filtro parole per i nomi squadra','s-prof-subtitle':'Blocca i nomi squadra offensivi. È inclusa una lista multilingue; aggiungi le tue parole qui sotto.','s-prof-enabled-label':'Filtro attivo','s-prof-enabled-help':'Se disattivato, i nomi squadra non vengono controllati.','s-prof-words-label':'Parole bloccate personalizzate','s-prof-words-help':'Una parola per riga (o separate da virgole). Maiuscole, accenti e leetspeak sono gestiti automaticamente. Vengono bloccate parole intere, non frammenti.','s-prof-save':'Salva',
   'no-tunnel':'Nessun tunnel trovato.','mode-placeholder':'es. ADVANCED',
   'location-label':'Luogo','add-loc':'Aggiungi luogo','edit-loc':'Modifica luogo',
   'loc-spec':'MiSSiONS specifiche del luogo','add-mission':'Aggiungi MiSSiON','edit-mission':'Modifica MiSSiON',
   'desc-hint':'Storia / contesto','task-hint':'Cosa devono fare i giocatori',
-  'copy-to':'Copia in…','hint':'Suggerimento','cr-mission-suffix':'missioni CityRush',
+  'copy-to':'Copia in…','hint':'Suggerimento','cr-mission-suffix':'missioni Rail Adventure',
   'cr-m-special':'⭐ Missione speciale (sempre disponibile, senza GPS)',
   'cr-m-special-cooldown':'Cooldown X (minuti tra i tentativi, 0 = disattivato)',
   'tip-cr-special':'Le missioni speciali sono giocabili in qualsiasi momento, senza GPS, e non interferiscono con l\'ordine principale.',
@@ -1313,9 +1316,9 @@ const GMT={
   'cr-m-answer-hints-label':'Suggerimenti compito (dopo l\'arrivo)',
   'cr-m-answer-hints-help':'Rivelati uno alla volta dopo l\'arrivo. Aiutano a risolvere il compito.','enter-text':'Inserire prima il testo','all-filled':'Tutti i campi sono già compilati','tpl-uploaded':'Modello caricato!','pw-mismatch':'Le password non corrispondono.','pw-changed':'Password modificata!','rules-copied':'Regole copiate!','rule-copied':'Regola copiata!','copy-rule-title':'Copia regola in…','target-rs':'Set di regole di destinazione','no-other-rs':'Nessun altro set di regole.','del-mode-confirm':'Eliminare la modalità? Tutte le missioni saranno eliminate.','del-rs-confirm':'Eliminare il set di regole? Le modalità torneranno allo Standard.','del-loc-confirm':'Eliminare il luogo e tutte le sue missioni?','del-mission-confirm':'Eliminare questa missione?','add-rs':'＋ Set di regole','ruleset':'Set di regole','remove':'Rimuovi',
   'freeze-team-tip':'Congela squadra','thaw-team-tip':'Scongela squadra','thaw-label':'Scongela','freeze-label':'Congela',
-  'pick-cr-mode':'Seleziona una modalità CityRush','error-prefix':'Errore:','no-qr-yet':'Ancora nessun QR',
+  'pick-cr-mode':'Seleziona una modalità Rail Adventure','error-prefix':'Errore:','no-qr-yet':'Ancora nessun QR',
   'deleted':'Eliminato','game-ended-toast':'Partita terminata!','enter-reason':'Inserisci un motivo',
-  'cr-rejected-notified':'CityRush: rifiutato e squadra avvisata.','accepted-toast':'Accettato!',
+  'cr-rejected-notified':'Rail Adventure: rifiutato e squadra avvisata.','accepted-toast':'Accettato!',
   'rejected-notified':'Rifiutato e squadra avvisata.','enter-minutes':'Inserisci i minuti',
   'broadcast-sent':'Annuncio inviato!','pick-team':'Scegli una squadra',
   'already-frozen-team':'Squadra già congelata','tunnel-detected':'Tunnel rilevato:',
@@ -1323,7 +1326,7 @@ const GMT={
   'mode-created':'Modalità creata!','mission-created':'MiSSiON creata!','tpl-deleted':'Modello eliminato',
   'update-ok':'Aggiornamento riuscito! Riavvio…','update-failed':'Aggiornamento fallito.',
   'ruleset-created':'Set di regole creato!','cannot-del-default-rs':'Set di regole predefinito non eliminabile.',
-  'cr-mode-created':'Modalità CityRush creata!','pick-mode-first':'Prima seleziona una modalità',
+  'cr-mode-created':'Modalità Rail Adventure creata!','pick-mode-first':'Prima seleziona una modalità',
   'cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
   'hint-saved':'Suggerimento salvato!','c-del-hint':'Eliminare il suggerimento?','hint-not-found':'Suggerimento non trovato',
   'invalid-json':'File JSON non valido','invalid-format':"Formato non valido (manca l'array missions)",
@@ -1331,9 +1334,9 @@ const GMT={
   'mode-label-modal':'Modalità','no-rulesets':'Nessun set di regole.',
   'edit-tip':'Modifica','delete-tip':'Elimina','copy-to-rs-tip':'Copia in un altro set di regole',
   'auto-translate-tip':'Traduzione automatica','chat-msg-fallback':'Messaggio…',
-  'cr-error-cr-mode-name-modal':'Aggiungi modalità CityRush','cr-edit-mode-modal':'Modifica modalità',
+  'cr-error-cr-mode-name-modal':'Aggiungi modalità Rail Adventure','cr-edit-mode-modal':'Modifica modalità',
   'no-cr-mode':'— Nessun set di regole —','allowed-media':'Media consentiti',
-  'cr-mode-name-eg':'es. Tour Centro Storico','cr-mode-delete-confirm':'Eliminare la modalità CityRush "{name}" e tutte le sue missioni?',
+  'cr-mode-name-eg':'es. Tour Centro Storico','cr-mode-delete-confirm':'Eliminare la modalità Rail Adventure "{name}" e tutte le sue missioni?',
   'export-btn':'⬇ Esporta','import-btn':'⬆ Importa','s-import-btn':'⬆ Importa','s-cr-import':'⬆ Importa',
   'copy-to-mode-btn':'⎘ Copia in modalità…',
   'cr-hint-add':'Aggiungi suggerimento','cr-hint-edit':'Modifica suggerimento',
@@ -1350,7 +1353,7 @@ const GMT={
   'loc-allowed-langs':'Lingue consentite',
   'loc-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questo luogo.',
   'cr-allowed-langs':'Lingue consentite',
-  'cr-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questa modalità CityRush.',
+  'cr-allowed-langs-hint':'Solo queste lingue saranno mostrate ai giocatori in questa modalità Rail Adventure.',
   'lightbox-rotate':'Ruota','st-games':'Partite',
   'cr-m-map-picker':'Mappa (clic per posizionare, marker trascinabile)','cr-m-use-loc':'Usa posizione attuale','geo-unsupported':'Geolocalizzazione non supportata dal browser.','geo-denied':'Accesso alla posizione negato.','geo-error':'Impossibile ottenere la posizione.','geo-set':'Posizione impostata',
   'indoor-hint':'La missione può essere svolta anche al chiuso.',
@@ -1359,17 +1362,18 @@ const GMT={
   'cr-m-timed-sub':'Si applica una penalità oltre il limite.',
   'cr-m-special-sub':"Compare nella sezione ⭐, fuori dall'ordine lineare.",
   'cr-m-has-answer-sub':'I giocatori scrivono la risposta corretta. Esclude foto/video.',
+  'cr-m-puzzle':'🧩 Puzzle d’immagine','cr-m-puzzle-sub':'I giocatori ricompongono un’immagine. Risolverlo completa la missione.','cr-m-puzzle-grid':'Difficoltà','cr-m-puzzle-easy':'3×3 (facile)','cr-m-puzzle-medium':'4×4 (medio)','cr-m-puzzle-hard':'5×5 (difficile)','cr-m-puzzle-image':'Immagine','cr-m-puzzle-pick':'Scegli immagine','cr-m-puzzle-ratio':'Dimensione ideale: verticale 3:4 (es. 1200 × 1600 px) — si adatta meglio allo schermo del giocatore. Gli altri formati vengono ritagliati.',
   'manuals-tip':'Scarica i manuali','manuals-title':'Manuali',
   'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
   'manuals-others':'Altre lingue'},
-  es:{'st-cityrush':'🏃 CityRush','s-cr-title':'🏃 Modos CityRush','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'CityRush usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo CityRush. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones CityRush. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
+  es:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modos Rail Adventure','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'Rail Adventure usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo Rail Adventure. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones Rail Adventure. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
   'cr-m-name':'Nombre','cr-m-lat':'Latitud','cr-m-lng':'Longitud','cr-m-radius':'Radio (metros)','cr-m-points':'Puntos',
   'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
   'cr-m-gps-hint':'Pista para los jugadores (GPS)','cr-m-time-secs':'Tiempo (segundos)','cr-m-pen-int':'Penalización cada X seg.','cr-m-pen-pts':'Penalización (puntos)',
   'cr-m-media':'Tipo de medio','cr-m-media-none':'— Ninguno —','cr-m-has-answer':'❓ Pregunta con respuesta (los jugadores deben escribir la respuesta correcta)',
   'cr-m-answer-label':'Respuesta correcta (al menos un idioma)','cr-m-hints-label':'💡 Pistas (opcional)','cr-m-add-hint':'＋ Pista','cr-m-no-hints':'Aún no hay pistas.',
-  'cr-m-tab-desc':'📖 Descripción','cr-m-tab-task':'🎯 Tarea','cr-m-add-title':'Añadir misión CityRush','cr-m-edit-title':'Editar misión CityRush','cr-m-create':'Crear','cr-m-save':'Guardar','cr-m-cancel':'Cancelar','cr-m-auto':'🌐 Auto',
+  'cr-m-tab-desc':'📖 Descripción','cr-m-tab-task':'🎯 Tarea','cr-m-add-title':'Añadir misión Rail Adventure','cr-m-edit-title':'Editar misión Rail Adventure','cr-m-create':'Crear','cr-m-save':'Guardar','cr-m-cancel':'Cancelar','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Ocultar tarea y descripción hasta la llegada',
   'cr-m-hide-tip':'Los jugadores solo ven la pista hasta llegar al punto GPS. Después se muestran la descripción y la tarea.',
   // ── Tooltips (ES) ──────────────────────────────────────────────────────────
@@ -1389,10 +1393,10 @@ const GMT={
   'tip-mission-indoor':'La misión también se puede completar en interior.',
   'tip-mission-desc':'Historia/contexto mostrado a los jugadores.',
   'tip-mission-task':'Qué deben hacer los jugadores en concreto.',
-  'tip-cr-mode-name':'Nombre visible del modo CityRush.',
+  'tip-cr-mode-name':'Nombre visible del modo Rail Adventure.',
   'tip-cr-mode-ruleset':'Conjunto de reglas mostrado a los jugadores en este modo.',
   'tip-cr-mode-allow':'Tipos de medios permitidos en las misiones de este modo.',
-  'tip-cr-mode-timer':'Duración por defecto (minutos) al crear una nueva partida CityRush en este modo.',
+  'tip-cr-mode-timer':'Duración por defecto (minutos) al crear una nueva partida Rail Adventure en este modo.',
   'cr-mode-timer-label':'Duración por defecto (minutos)',
   'tip-cr-lat':'Latitud del objetivo (grados decimales, p.ej. 47.47620).',
   'tip-cr-lng':'Longitud del objetivo (grados decimales).',
@@ -1409,12 +1413,12 @@ const GMT={
   'tip-cr-answer':'La/s respuesta/s correcta/s — la comparación ignora mayúsculas y espacios.',
   'tip-cr-hint':'Texto opcional que se muestra mientras los jugadores caminan hacia el objetivo.',
   'tip-cr-hide-until-arrival':'La descripción y la tarea solo aparecen tras la llegada del jugador.',
-  'tip-cr-hints':'Pistas que los jugadores pueden pedir una a una si se atascan.','ll-select':'Elige un lugar','ll-pick':'Elige un lugar','ll-cr-pick':'O una ruta CityRush','ll-tagline':'Adventurerooms · Maestro de juego','ll-empty':'Aún no hay ubicaciones.','ll-settings':'Ajustes','gs-back':'Atrás','gs-mode-label':'Modo de juego','gs-cr-mode-label':'Modo CityRush','gs-recent':'Partidas recientes','gs-new':'Nueva partida','gs-new-cr':'Iniciar CityRush','gs-kicker-loc':'Ubicación','gs-kicker-cr':'CityRush','gs-cr-pick':'Elegir un modo','gs-open':'Abrir','gs-st-ended':'terminado','gs-st-playing':'en curso','gs-st-waiting':'esperando','gs-none':'Aún no hay partidas.','ng-title':'Partida creada','ng-back':'Atrás','ng-kicker':'Partida creada','ng-title':'Reparte el código','ng-subtitle':'Los jugadores entran escaneando el QR o abriendo el enlace en su móvil. Eligen un nombre de equipo y se hacen un selfie — los verás aparecer en el panel en cuanto entren.','ng-game-id-label':'ID de partida','ng-join-url-label':'Enlace de acceso','ng-qr-hint':'Escanear para entrar','ng-qr-dl':'QR','ng-copy-1':'Copiar','ng-copy-2':'Copiar','ng-copied':'¡Copiado!','ng-template':'Con plantilla','ng-open':'Abrir panel','db-games':'Partidas','tb-start':'Iniciar','tb-pause':'Pausa','db-teams':'EQUIPOS','db-select-team':'Selecciona un equipo','tab-map-label':'Mapa','chat-reply-to':'Responder a','db-broadcast-info':'Enviar un mensaje a todos los equipos.','db-broadcast':'Enviar a todos','db-rankings':'CLASIFICACIÓN','sg-title':'Ajustes','sg-pw-label':'Contraseña','sg-back':'Atrás','sg-unlock':'Desbloquear','s-back':'Atrás','s-title':'AJUSTES','st-general':'General','st-locations':'Lugares','st-missions':'MiSSiONS','st-rules':'Reglas','st-template':'Plantilla QR','st-security':'Seguridad','st-updates':'Actualizaciones','s-gen-title':'General','s-gen-subtitle':'Configuración global de la app. La mayoría de equipos no la tocan después del setup.','s-unlocked':'Desbloqueado','sg-app':'App','sg-games':'Partidas','s-url-help':'El túnel Cloudflare por donde entran los jugadores. „Detectar" lee tunnel-url.txt.','s-timeout-help':'Se muestra a los jugadores cuando el temporizador llega a cero. Por idioma.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usado por el actualizador interno para git pull y la insignia de versión.','s-sound-label':'Sonido al aceptar','s-sound-help':'Reproduce un breve sonido cuando el GM acepta un envío.','s-sound-on':'Activado','s-sound-perm':'Se requiere permiso del navegador en el primer clic.','s-loc-lang-title':'El idioma predeterminado se define <em>por ubicación</em>','s-cancel':'Cancelar','st-manuals':'Manuales','s-manuals-title':'Manuales','s-manuals-subtitle':'Descarga aquí los manuales PDF en tu idioma.','s-manuals-lang':'Idioma','s-manuals-lang-help':'Mostrar solo manuales en este idioma.','no-manuals-yet':'No hay manuales disponibles en este idioma todavía.','s-update-hint':'Descarga la última versión del repo GitHub configurado (ver General) y reinicia el servidor.','s-url-label':'URL pública','s-detect':'Detectar','s-url-hint':'Ejecuta start-tunnel-windows.bat y luego pulsa Detectar.','s-timeout-label':'Mensaje de fin','s-save':'Guardar','s-add-loc':'+ Lugar','s-mode-label':'Modo:','s-add-mode':'+ Modo','s-add-mission':'+ MiSSiON','s-rules-title':'Reglas','s-add-rule':'+ Regla','s-rules-hint':'Marcadores: [photo] [video] [indoor]. Arrastra para reordenar.','s-rules-save':'Guardar','s-tpl-title':'Plantilla QR','s-tpl-size-label':'Tamaño de papel','s-tpl-upload-label':'Subir plantilla','s-tpl-drag-hint':'Arrastra el marcador del QR.','s-tpl-save':'Guardar posición','s-tpl-delete':'Eliminar plantilla','s-sec-title':'Cambiar contraseña','s-sec-old':'Contraseña actual','s-sec-new':'Nueva contraseña','s-sec-new2':'Confirmar','s-sec-save':'Actualizar','rej-title':'Rechazar envío','rej-hint':'El medio será eliminado.','rej-reason-label':'Motivo (mostrado al equipo)','rej-confirm':'Rechazar y notificar','qrm-title':'Código QR de acceso','s-add-rs':'＋ Conjunto de reglas','ruleset-label':'Conjunto de reglas','paper-size':'Tamaño de papel','update-title':'Actualizar app','update-btn':'Actualizar ahora','update-log':'Salida','github-label':'URL del repositorio GitHub','version-label':'Versión','modes-label':'Partidas','chat-ph-gm':'Mensaje…','qrm-close':'Cerrar','ng-qr-download':'⬇ QR','qrm-download':'⬇ Descargar QR','cancel':'Cancelar','create':'Crear','save':'Guardar','edit':'Editar','delete':'Eliminar','copy':'Copiar','rule':'Regla','add-mode':'＋ Modo','edit-mode':'Editar modo','min-label':'Minutos','per-game':'por partida','pool':'Pool (todos los lugares)','mission-name-label':'Nombre de la MiSSiON','loc-label':'Lugar','media-label':'Tipo de medio','indoor-label':'También en interior','desc-label':'Descripción','task-label':'Tarea','auto-translate':'🌐 Traducir automáticamente','no-rules':'Aún no hay reglas.','created':'¡Creado!','saved':'¡Guardado!','wrong-pw':'Contraseña incorrecta.','del':'Eliminar','no-missions':'Sin misiones.','all':'Todas','translating':'Traduciendo…','translated':'¡Traducido!','updating':'Actualizando…','selfie-uploaded':'Selfie subido','s-collage-title':'Tiempos del collage','s-collage-subtitle':'Controla el ritmo del vídeo-collage de fin de partida.','s-collage-photo-label':'Duración por foto (segundos)','s-collage-photo-help':'Cuánto tiempo se muestra cada foto del equipo.','s-collage-cover-label':'Duración de la portada (segundos)','s-collage-cover-help':'Cuánto tiempo se muestra la tarjeta de título (selfie + nombre).','s-collage-xfade-label':'Fundido (segundos)','s-collage-xfade-help':'Duración del fundido entre imágenes. 0 = cortes secos.','s-collage-save':'Guardar','st-profanity-label':'Filtro de palabras','s-prof-title':'Filtro de palabras para nombres de equipo','s-prof-subtitle':'Bloquea nombres de equipo ofensivos. Incluye una lista multilingüe; añade tus propias palabras abajo.','s-prof-enabled-label':'Filtro activado','s-prof-enabled-help':'Si se desactiva, los nombres de equipo no se comprueban.','s-prof-words-label':'Palabras bloqueadas personalizadas','s-prof-words-help':'Una palabra por línea (o separadas por comas). Mayúsculas, acentos y leetspeak se gestionan automáticamente. Se bloquean palabras enteras, no fragmentos.','s-prof-save':'Guardar',
+  'tip-cr-hints':'Pistas que los jugadores pueden pedir una a una si se atascan.','ll-select':'Elige un lugar','ll-pick':'Elige un lugar','ll-cr-pick':'O una ruta Rail Adventure','ll-tagline':'Adventurerooms · Maestro de juego','ll-empty':'Aún no hay ubicaciones.','ll-settings':'Ajustes','gs-back':'Atrás','gs-mode-label':'Modo de juego','gs-cr-mode-label':'Modo Rail Adventure','gs-recent':'Partidas recientes','gs-new':'Nueva partida','gs-new-cr':'Iniciar Rail Adventure','gs-kicker-loc':'Ubicación','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Elegir un modo','gs-open':'Abrir','gs-st-ended':'terminado','gs-st-playing':'en curso','gs-st-waiting':'esperando','gs-none':'Aún no hay partidas.','ng-title':'Partida creada','ng-back':'Atrás','ng-kicker':'Partida creada','ng-title':'Reparte el código','ng-subtitle':'Los jugadores entran escaneando el QR o abriendo el enlace en su móvil. Eligen un nombre de equipo y se hacen un selfie — los verás aparecer en el panel en cuanto entren.','ng-game-id-label':'ID de partida','ng-join-url-label':'Enlace de acceso','ng-qr-hint':'Escanear para entrar','ng-qr-dl':'QR','ng-copy-1':'Copiar','ng-copy-2':'Copiar','ng-copied':'¡Copiado!','ng-template':'Con plantilla','ng-open':'Abrir panel','db-games':'Partidas','tb-start':'Iniciar','tb-pause':'Pausa','db-teams':'EQUIPOS','db-select-team':'Selecciona un equipo','tab-map-label':'Mapa','chat-reply-to':'Responder a','db-broadcast-info':'Enviar un mensaje a todos los equipos.','db-broadcast':'Enviar a todos','db-rankings':'CLASIFICACIÓN','sg-title':'Ajustes','sg-pw-label':'Contraseña','sg-back':'Atrás','sg-unlock':'Desbloquear','s-back':'Atrás','s-title':'AJUSTES','st-general':'General','st-locations':'Lugares','st-missions':'MiSSiONS','st-rules':'Reglas','st-template':'Plantilla QR','st-security':'Seguridad','st-updates':'Actualizaciones','s-gen-title':'General','s-gen-subtitle':'Configuración global de la app. La mayoría de equipos no la tocan después del setup.','s-unlocked':'Desbloqueado','sg-app':'App','sg-games':'Partidas','s-url-help':'El túnel Cloudflare por donde entran los jugadores. „Detectar" lee tunnel-url.txt.','s-timeout-help':'Se muestra a los jugadores cuando el temporizador llega a cero. Por idioma.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usado por el actualizador interno para git pull y la insignia de versión.','s-sound-label':'Sonido al aceptar','s-sound-help':'Reproduce un breve sonido cuando el GM acepta un envío.','s-sound-on':'Activado','s-sound-perm':'Se requiere permiso del navegador en el primer clic.','s-loc-lang-title':'El idioma predeterminado se define <em>por ubicación</em>','s-cancel':'Cancelar','st-manuals':'Manuales','s-manuals-title':'Manuales','s-manuals-subtitle':'Descarga aquí los manuales PDF en tu idioma.','s-manuals-lang':'Idioma','s-manuals-lang-help':'Mostrar solo manuales en este idioma.','no-manuals-yet':'No hay manuales disponibles en este idioma todavía.','s-update-hint':'Descarga la última versión del repo GitHub configurado (ver General) y reinicia el servidor.','s-url-label':'URL pública','s-detect':'Detectar','s-url-hint':'Ejecuta start-tunnel-windows.bat y luego pulsa Detectar.','s-timeout-label':'Mensaje de fin','s-save':'Guardar','s-add-loc':'+ Lugar','s-mode-label':'Modo:','s-add-mode':'+ Modo','s-add-mission':'+ MiSSiON','s-rules-title':'Reglas','s-add-rule':'+ Regla','s-rules-hint':'Marcadores: [photo] [video] [indoor]. Arrastra para reordenar.','s-rules-save':'Guardar','s-tpl-title':'Plantilla QR','s-tpl-size-label':'Tamaño de papel','s-tpl-upload-label':'Subir plantilla','s-tpl-drag-hint':'Arrastra el marcador del QR.','s-tpl-save':'Guardar posición','s-tpl-delete':'Eliminar plantilla','s-sec-title':'Cambiar contraseña','s-sec-old':'Contraseña actual','s-sec-new':'Nueva contraseña','s-sec-new2':'Confirmar','s-sec-save':'Actualizar','rej-title':'Rechazar envío','rej-hint':'El medio será eliminado.','rej-reason-label':'Motivo (mostrado al equipo)','rej-confirm':'Rechazar y notificar','qrm-title':'Código QR de acceso','s-add-rs':'＋ Conjunto de reglas','ruleset-label':'Conjunto de reglas','paper-size':'Tamaño de papel','update-title':'Actualizar app','update-btn':'Actualizar ahora','update-log':'Salida','github-label':'URL del repositorio GitHub','version-label':'Versión','modes-label':'Partidas','chat-ph-gm':'Mensaje…','qrm-close':'Cerrar','ng-qr-download':'⬇ QR','qrm-download':'⬇ Descargar QR','cancel':'Cancelar','create':'Crear','save':'Guardar','edit':'Editar','delete':'Eliminar','copy':'Copiar','rule':'Regla','add-mode':'＋ Modo','edit-mode':'Editar modo','min-label':'Minutos','per-game':'por partida','pool':'Pool (todos los lugares)','mission-name-label':'Nombre de la MiSSiON','loc-label':'Lugar','media-label':'Tipo de medio','indoor-label':'También en interior','desc-label':'Descripción','task-label':'Tarea','auto-translate':'🌐 Traducir automáticamente','no-rules':'Aún no hay reglas.','created':'¡Creado!','saved':'¡Guardado!','wrong-pw':'Contraseña incorrecta.','del':'Eliminar','no-missions':'Sin misiones.','all':'Todas','translating':'Traduciendo…','translated':'¡Traducido!','updating':'Actualizando…','selfie-uploaded':'Selfie subido','s-collage-title':'Tiempos del collage','s-collage-subtitle':'Controla el ritmo del vídeo-collage de fin de partida.','s-collage-photo-label':'Duración por foto (segundos)','s-collage-photo-help':'Cuánto tiempo se muestra cada foto del equipo.','s-collage-cover-label':'Duración de la portada (segundos)','s-collage-cover-help':'Cuánto tiempo se muestra la tarjeta de título (selfie + nombre).','s-collage-xfade-label':'Fundido (segundos)','s-collage-xfade-help':'Duración del fundido entre imágenes. 0 = cortes secos.','s-collage-save':'Guardar','st-profanity-label':'Filtro de palabras','s-prof-title':'Filtro de palabras para nombres de equipo','s-prof-subtitle':'Bloquea nombres de equipo ofensivos. Incluye una lista multilingüe; añade tus propias palabras abajo.','s-prof-enabled-label':'Filtro activado','s-prof-enabled-help':'Si se desactiva, los nombres de equipo no se comprueban.','s-prof-words-label':'Palabras bloqueadas personalizadas','s-prof-words-help':'Una palabra por línea (o separadas por comas). Mayúsculas, acentos y leetspeak se gestionan automáticamente. Se bloquean palabras enteras, no fragmentos.','s-prof-save':'Guardar',
   'no-tunnel':'No se encontró ningún túnel.','mode-placeholder':'p. ej. ADVANCED',
   'location-label':'Lugar','add-loc':'Añadir lugar','edit-loc':'Editar lugar',
   'loc-spec':'MiSSiONS específicas del lugar','add-mission':'Añadir MiSSiON','edit-mission':'Editar MiSSiON',
   'desc-hint':'Historia / contexto','task-hint':'Qué deben hacer los jugadores',
-  'copy-to':'Copiar a…','hint':'Pista','cr-mission-suffix':'misiones CityRush',
+  'copy-to':'Copiar a…','hint':'Pista','cr-mission-suffix':'misiones Rail Adventure',
   'cr-m-special':'⭐ Misión especial (siempre disponible, sin GPS)',
   'cr-m-special-cooldown':'Pausa X (minutos entre intentos, 0 = desactivado)',
   'tip-cr-special':'Las misiones especiales se pueden jugar en cualquier momento, no requieren GPS y no alteran el orden lineal.',
@@ -1424,9 +1428,9 @@ const GMT={
   'cr-m-answer-hints-label':'Pistas de la tarea (tras llegar)',
   'cr-m-answer-hints-help':'Reveladas una a una tras llegar. Ayudan a resolver la tarea.','enter-text':'Introduce primero el texto','all-filled':'Todos los campos ya están rellenados','tpl-uploaded':'¡Plantilla subida!','pw-mismatch':'Las contraseñas no coinciden.','pw-changed':'¡Contraseña cambiada!','rules-copied':'¡Reglas copiadas!','rule-copied':'¡Regla copiada!','copy-rule-title':'Copiar regla a…','target-rs':'Conjunto de reglas destino','no-other-rs':'No hay otros conjuntos de reglas.','del-mode-confirm':'¿Eliminar el modo? Todas las misiones también se eliminarán.','del-rs-confirm':'¿Eliminar el conjunto de reglas? Los modos volverán a Standard.','del-loc-confirm':'¿Eliminar el lugar y todas sus misiones?','del-mission-confirm':'¿Eliminar esta misión?','add-rs':'＋ Conjunto de reglas','ruleset':'Conjunto de reglas','remove':'Quitar',
   'freeze-team-tip':'Congelar equipo','thaw-team-tip':'Descongelar equipo','thaw-label':'Descongelar','freeze-label':'Congelar',
-  'pick-cr-mode':'Elige un modo CityRush','error-prefix':'Error:','no-qr-yet':'Aún sin código QR',
+  'pick-cr-mode':'Elige un modo Rail Adventure','error-prefix':'Error:','no-qr-yet':'Aún sin código QR',
   'deleted':'Eliminado','game-ended-toast':'¡Partida terminada!','enter-reason':'Introduce un motivo',
-  'cr-rejected-notified':'CityRush: rechazado y equipo notificado.','accepted-toast':'¡Aceptado!',
+  'cr-rejected-notified':'Rail Adventure: rechazado y equipo notificado.','accepted-toast':'¡Aceptado!',
   'rejected-notified':'Rechazado y equipo notificado.','enter-minutes':'Introduce los minutos',
   'broadcast-sent':'¡Anuncio enviado!','pick-team':'Elige un equipo',
   'already-frozen-team':'Este equipo ya está congelado','tunnel-detected':'Túnel detectado:',
@@ -1434,7 +1438,7 @@ const GMT={
   'mode-created':'¡Modo creado!','mission-created':'¡MiSSiON creada!','tpl-deleted':'Plantilla eliminada',
   'update-ok':'¡Actualización correcta! Reiniciando…','update-failed':'Actualización fallida.',
   'ruleset-created':'¡Conjunto de reglas creado!','cannot-del-default-rs':'El conjunto de reglas predeterminado no se puede eliminar.',
-  'cr-mode-created':'¡Modo CityRush creado!','pick-mode-first':'Elige primero un modo',
+  'cr-mode-created':'¡Modo Rail Adventure creado!','pick-mode-first':'Elige primero un modo',
   'cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
   'hint-saved':'¡Pista guardada!','c-del-hint':'¿Eliminar la pista?','hint-not-found':'Pista no encontrada',
   'invalid-json':'Archivo JSON no válido','invalid-format':'Formato no válido (falta el array missions)',
@@ -1442,9 +1446,9 @@ const GMT={
   'mode-label-modal':'Modo','no-rulesets':'No hay conjuntos de reglas.',
   'edit-tip':'Editar','delete-tip':'Eliminar','copy-to-rs-tip':'Copiar a otro conjunto de reglas',
   'auto-translate-tip':'Traducir automáticamente','chat-msg-fallback':'Mensaje…',
-  'cr-error-cr-mode-name-modal':'Añadir modo CityRush','cr-edit-mode-modal':'Editar modo',
+  'cr-error-cr-mode-name-modal':'Añadir modo Rail Adventure','cr-edit-mode-modal':'Editar modo',
   'no-cr-mode':'— Sin conjunto de reglas —','allowed-media':'Medios permitidos',
-  'cr-mode-name-eg':'p. ej. Casco Antiguo','cr-mode-delete-confirm':'¿Eliminar el modo CityRush "{name}" y todas sus misiones?',
+  'cr-mode-name-eg':'p. ej. Casco Antiguo','cr-mode-delete-confirm':'¿Eliminar el modo Rail Adventure "{name}" y todas sus misiones?',
   'export-btn':'⬇ Exportar','import-btn':'⬆ Importar','s-import-btn':'⬆ Importar','s-cr-import':'⬆ Importar',
   'copy-to-mode-btn':'⎘ Copiar a modo…',
   'cr-hint-add':'Añadir pista','cr-hint-edit':'Editar pista',
@@ -1461,7 +1465,7 @@ const GMT={
   'loc-allowed-langs':'Idiomas permitidos',
   'loc-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este lugar.',
   'cr-allowed-langs':'Idiomas permitidos',
-  'cr-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este modo CityRush.',
+  'cr-allowed-langs-hint':'Solo estos idiomas aparecerán para los jugadores en este modo Rail Adventure.',
   'lightbox-rotate':'Girar','st-games':'Partidas',
   'cr-m-map-picker':'Mapa (clic para colocar, marcador arrastrable)','cr-m-use-loc':'Usar ubicación actual','geo-unsupported':'Geolocalización no soportada por el navegador.','geo-denied':'Acceso a la ubicación denegado.','geo-error':'No se pudo obtener la ubicación.','geo-set':'Ubicación establecida',
   'indoor-hint':'La misión también se puede realizar en interiores.',
@@ -1470,6 +1474,7 @@ const GMT={
   'cr-m-timed-sub':'Se aplica una penalización al superar el límite.',
   'cr-m-special-sub':'Aparece en la sección ⭐, fuera del orden lineal.',
   'cr-m-has-answer-sub':'Los jugadores escriben la respuesta correcta. Excluye foto/vídeo.',
+  'cr-m-puzzle':'🧩 Puzle de imagen','cr-m-puzzle-sub':'Los jugadores recomponen una imagen. Resolverlo completa la misión.','cr-m-puzzle-grid':'Dificultad','cr-m-puzzle-easy':'3×3 (fácil)','cr-m-puzzle-medium':'4×4 (medio)','cr-m-puzzle-hard':'5×5 (difícil)','cr-m-puzzle-image':'Imagen','cr-m-puzzle-pick':'Elegir imagen','cr-m-puzzle-ratio':'Tamaño ideal: vertical 3:4 (p. ej. 1200 × 1600 px) — se adapta mejor a la pantalla del jugador. Otros formatos se recortan.',
   'manuals-tip':'Descargar manuales','manuals-title':'Manuales',
   'manuals-blurb':'Descarga los manuales PDF actuales. El maintainer los actualiza cuando hay cambios importantes.',
   'manuals-gm':'Manual del GM','manuals-settings':'Manual de ajustes',
@@ -1625,7 +1630,7 @@ async function loadLanding(){
   } else {
     grid.innerHTML = locs.map(l=>`<div class="location-card" onclick="selectLocation(${l.id},'${esc(l.name)}')">${pinIcon}<div>${esc(l.name)}</div></div>`).join('');
   }
-  // CityRush is exclusive from MiSSiONS — it gets its own section, hidden
+  // Rail Adventure is exclusive from MiSSiONS — it gets its own section, hidden
   // outright when no CR modes exist (rather than rendered as a styled card
   // that does nothing). selectCityRushLocation() is on the tile itself.
   const crSection = document.getElementById('ll-section-cr');
@@ -1635,7 +1640,7 @@ async function loadLanding(){
 // The "New Game" button has both an SVG icon and a label span. These two
 // helpers swap just the label (keeps the icon intact) without re-rendering
 // the whole button, so the topbar visual language stays consistent across
-// the MiSSiONS and CityRush variants of this screen.
+// the MiSSiONS and Rail Adventure variants of this screen.
 function _setNewGameLabel(text){
   const span = document.getElementById('gs-new');
   if(span) span.textContent = text;
@@ -1671,8 +1676,8 @@ async function copyToClipboard(text, btn){
 }
 async function selectCityRushLocation(){
   selectedLocationId='cityrush';
-  _setGsKicker(gmt('gs-kicker-cr')||'CityRush');
-  document.getElementById('gs-location-name').textContent='CityRush';
+  _setGsKicker(gmt('gs-kicker-cr')||'Rail Adventure');
+  document.getElementById('gs-location-name').textContent='Rail Adventure';
   showScreen('screen-game-select');
   // Show only CR modes, hide normal mode selector
   const crModes=await API('/api/cr/modes');
@@ -1683,7 +1688,7 @@ async function selectCityRushLocation(){
     crSel.innerHTML='<option value="">— '+(gmt('gs-cr-pick')||'Modus wählen')+' —</option>'+
       crModes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   }
-  _setNewGameLabel(gmt('gs-new-cr')||'CityRush starten');
+  _setNewGameLabel(gmt('gs-new-cr')||'Rail Adventure starten');
   await loadGames('cityrush');
 }
 async function selectLocation(id,name){
@@ -1691,7 +1696,7 @@ async function selectLocation(id,name){
   _setGsKicker(gmt('gs-kicker-loc')||'Standort');
   document.getElementById('gs-location-name').textContent=name;
   showScreen('screen-game-select');
-  // Restore normal mode selector; hide the CR picker (CityRush has its own
+  // Restore normal mode selector; hide the CR picker (Rail Adventure has its own
   // entry point on the landing screen and uses its own location id).
   document.getElementById('mode-select-wrap').style.display='block';
   document.getElementById('cr-mode-select-wrap').style.display='none';
@@ -1701,11 +1706,11 @@ async function selectLocation(id,name){
   const sel=document.getElementById('mode-select');
   sel.innerHTML=modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   sel.value=currentModeId;
-  // Load CityRush modes
+  // Load Rail Adventure modes
   const crModes=await API('/api/cr/modes');
   const crSel=document.getElementById('cr-mode-select');
   if(crSel){
-    crSel.innerHTML='<option value="">— Kein CityRush —</option>'+
+    crSel.innerHTML='<option value="">— Kein Rail Adventure —</option>'+
       crModes.map(m=>`<option value="${m.id}">🏃 ${esc(m.name)}</option>`).join('');
   }
   await loadGames(id);
@@ -1773,8 +1778,8 @@ async function createNewGame(){
   const crModeId = isCityRush
     ? Number(document.getElementById('cr-mode-select')?.value)||null
     : null;
-  if(isCityRush && !crModeId){toast(gmt('pick-cr-mode')||'Bitte CityRush-Modus auswählen','warning');btn.disabled=false;return;}
-  // For CityRush, use a virtual location_id of 0 (no location needed)
+  if(isCityRush && !crModeId){toast(gmt('pick-cr-mode')||'Bitte Rail Adventure Modus auswählen','warning');btn.disabled=false;return;}
+  // For Rail Adventure, use a virtual location_id of 0 (no location needed)
   const locId = isCityRush ? null : selectedLocationId;
   const res=await API('/api/games',{method:'POST',body:{location_id:locId,mode_id:modeId,cr_mode_id:crModeId,is_cityrush:isCityRush?1:0}});
   btn.disabled=false;
@@ -2082,18 +2087,18 @@ async function openDashboard(gameId){
   socket.on('submission_new',onSubmissionNew);
   socket.on('submission_reviewed',onSubmissionReviewed);
   socket.on('rankings_update',renderRankings);
-  // CityRush: a player uploaded a photo/video that's waiting for GM approval.
+  // Rail Adventure: a player uploaded a photo/video that's waiting for GM approval.
   socket.on('cr_submission_new', ({teamId}) => {
     bumpPending(teamId, +1);
     if(teamId === selectedTeamId) selectTeam(teamId);   // re-render team detail
-    toast('📥 CityRush: Neue Einreichung!', 'warning');
+    toast('📥 Rail Adventure: Neue Einreichung!', 'warning');
   });
   socket.on('cr_submission_reviewed', ({teamId}) => {
     // Use the authoritative count from the server rather than guessing.
     refreshPendingCounts();
     if(teamId === selectedTeamId) selectTeam(teamId);
   });
-  // CityRush: a team auto-completed (no media) — refresh the dashboard so
+  // Rail Adventure: a team auto-completed (no media) — refresh the dashboard so
   // the team detail and rankings update without a manual reload.
   socket.on('cr_mission_completed', ({teamId}) => {
     if(teamId === selectedTeamId) selectTeam(teamId);
@@ -2126,7 +2131,7 @@ let currentGame=null;
 async function refreshDashboard(gameId){
   currentGame=await API(`/api/games/${gameId}`);
   const game=currentGame;
-  // CityRush-only UI bits (map tab on the right rail, freeze/thaw on the
+  // Rail Adventure only UI bits (map tab on the right rail, freeze/thaw on the
   // team header) are hidden for MiSSiONS games. Re-evaluated on every
   // refresh in case the game type ever flips mid-session.
   const isCr = !!game.crMode;
@@ -2143,7 +2148,7 @@ async function refreshDashboard(gameId){
   }
   renderTeamsBar(game.teams);
   renderRankings(await API(`/api/games/${gameId}/rankings`));
-  // For CityRush games, seed any cached GPS positions onto the map so the GM
+  // For Rail Adventure games, seed any cached GPS positions onto the map so the GM
   // sees teams that haven't broadcast a fresh tick yet. We also cache the
   // mission list so the GM map can show every mission (regardless of which
   // teams have reached them yet).
@@ -2319,7 +2324,7 @@ async function selectTeam(teamId){
   }
   // Toggle freeze/thaw buttons based on current frozen state.
   paintTeamDetailFreezeButtons(teamId);
-  // If this game has a CityRush mode, render CR missions; otherwise normal missions.
+  // If this game has a Rail Adventure mode, render CR missions; otherwise normal missions.
   if(currentGame && currentGame.crMode){
     await renderCrTeamMissions(teamId);
     centerGmMapOnTeam(teamId);     // pan/zoom the CR map to this team's last known fix
@@ -2331,7 +2336,7 @@ async function selectTeam(teamId){
   await loadGmChat(teamId);
 }
 
-// Re-centre the GM CityRush map on a team's most recent GPS marker. If the
+// Re-centre the GM Rail Adventure map on a team's most recent GPS marker. If the
 // map isn't ready yet (panel hasn't been opened) we lazily switch it on and
 // invalidate the size first so Leaflet doesn't render at 0×0.
 function centerGmMapOnTeam(teamId){
@@ -2367,7 +2372,7 @@ async function renderCrTeamMissions(teamId){
   const list=document.getElementById('team-missions-list');
   const cr=await API(`/api/games/${currentGameId}/cr`);
   if(!cr.active||!cr.missions||!cr.missions.length){
-    list.innerHTML='<div class="empty"><p>Keine CityRush-Missionen.</p></div>';return;
+    list.innerHTML='<div class="empty"><p>Keine Rail Adventure Missionen.</p></div>';return;
   }
   const progressByMission = {};
   (cr.missionProgress||[])
@@ -2488,7 +2493,7 @@ async function confirmCrReject(){
   const btn = document.getElementById('rej-confirm');
   if(btn) btn.onclick = confirmReject;
   if(selectedTeamId) selectTeam(selectedTeamId);
-  toast(gmt('cr-rejected-notified')||'CityRush: Abgelehnt & Team benachrichtigt.','warning');
+  toast(gmt('cr-rejected-notified')||'Rail Adventure: Abgelehnt & Team benachrichtigt.','warning');
 }
 
 function renderTeamMissions(missions){
@@ -2809,10 +2814,10 @@ function isTeamFrozenNow(teamId){
 function paintTeamDetailFreezeButtons(teamId){
   const freezeBtn = document.getElementById('btn-freeze-team');
   const thawBtn   = document.getElementById('btn-thaw-team');
-  // Freeze is a CityRush-only mechanic (caught-on-camera PvP penalty).
+  // Freeze is a Rail Adventure only mechanic (caught-on-camera PvP penalty).
   // MiSSiONS games run one team per location with no rival interaction,
   // so freeze has no game purpose there — hide both buttons regardless
-  // of frozen state when the current game isn't a CityRush one.
+  // of frozen state when the current game isn't a Rail Adventure one.
   const isCr = !!(currentGame && currentGame.crMode);
   if(!isCr){
     if(freezeBtn) freezeBtn.style.display = 'none';
@@ -2939,7 +2944,7 @@ function closeGmSelfieLightbox(e){
 let gmCrMissionLayer = null;     // L.layerGroup holding all CR mission markers
 let gmCrMissionsCache = [];      // last-known cr.missions payload (for re-rendering)
 
-/** Initialise GM CityRush Leaflet map once (hidden panel ok). */
+/** Initialise GM Rail Adventure Leaflet map once (hidden panel ok). */
 function ensureGmCrMap(){
   if(gmCrMap) return gmCrMap;
   const el = document.getElementById('gm-cr-map');
@@ -4200,7 +4205,7 @@ async function loadCrModes() {
   // Also populate cr-mode-select in game creation screen
   const sel = document.getElementById('cr-mode-select');
   if(sel) {
-    sel.innerHTML = '<option value="">— Kein CityRush —</option>' +
+    sel.innerHTML = '<option value="">— Kein Rail Adventure —</option>' +
       modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   }
   if(!currentCrModeId && modes.length) await selectCrMode(modes[0].id);
@@ -4229,7 +4234,7 @@ async function loadCrMissions() {
   const list = document.getElementById('cr-missions-list');
   if(!list) return;
   if(!missions.length) {
-    list.innerHTML = `<div class="empty"><p>${gmt('cr-no-missions')||'Noch keine CityRush-Missionen. Klicke ＋ Mission.'}</p></div>`;
+    list.innerHTML = `<div class="empty"><p>${gmt('cr-no-missions')||'Noch keine Rail Adventure Missionen. Klicke ＋ Mission.'}</p></div>`;
     return;
   }
   // Multiselect toolbar — mirrors the MiSSiONS pattern. The Export button
@@ -4296,7 +4301,7 @@ async function showAddCrMode(){
   const rulesets=await API('/api/rulesets');
   const rsOpts=`<option value="">${gmt('no-cr-mode')||'— Kein Regelwerk —'}</option>`+rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
-    <h3 class="modal-title">${gmt('cr-error-cr-mode-name-modal')||'CityRush Modus hinzufügen'}</h3>
+    <h3 class="modal-title">${gmt('cr-error-cr-mode-name-modal')||'Rail Adventure Modus hinzufügen'}</h3>
     <div class="field" data-tip="cr-mode-name"><label class="label" data-tip="cr-mode-name">Name</label><input id="cr-mode-name" class="input" placeholder="${gmt('cr-mode-name-eg')||'z.B. Altstadt-Tour'}" data-tip="cr-mode-name"></div>
     <div class="field" data-tip="cr-mode-ruleset"><label class="label" data-tip="cr-mode-ruleset">${gmt('ruleset')||'Regelwerk'}</label>
       <select id="cr-mode-ruleset" class="select" data-tip="cr-mode-ruleset">${rsOpts}</select></div>
@@ -4315,7 +4320,7 @@ async function showAddCrMode(){
     </div>
     <div class="field" data-tip="cr-mode-allowed-langs">
       <label class="label" data-tip="cr-mode-allowed-langs">${gmt('cr-allowed-langs')||'Erlaubte Sprachen'}</label>
-      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.'}</p>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler in diesem Rail Adventure Modus.'}</p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">${langCheckboxes('cr-mode-lang-')}</div>
     </div>
     <div class="modal-footer">
@@ -4336,7 +4341,7 @@ async function saveNewCrMode(){
     allowed_langs: readLangsByPrefix('cr-mode-lang-'),
   };
   const res=await API('/api/cr/modes',{method:'POST',body});
-  if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;await loadCrModes();toast(gmt('cr-mode-created')||'CityRush Modus erstellt!','success');}
+  if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;await loadCrModes();toast(gmt('cr-mode-created')||'Rail Adventure Modus erstellt!','success');}
 }
 async function editCurrentCrMode(){
   const [modes, rulesets] = await Promise.all([API('/api/cr/modes'), API('/api/rulesets')]);
@@ -4362,7 +4367,7 @@ async function editCurrentCrMode(){
     </div>
     <div class="field" data-tip="cr-mode-allowed-langs">
       <label class="label" data-tip="cr-mode-allowed-langs">${gmt('cr-allowed-langs')||'Erlaubte Sprachen'}</label>
-      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler in diesem CityRush-Modus.'}</p>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler in diesem Rail Adventure Modus.'}</p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">${langCheckboxes('cr-mode-lang-edit-', m.allowed_langs)}</div>
     </div>
     <div class="modal-footer">
@@ -4386,7 +4391,7 @@ async function saveEditCrMode(){
   currentCrModeName=name; closeModal(); loadCrModes();
 }
 async function deleteCurrentCrMode(){
-  if(!confirm((gmt('cr-mode-delete-confirm')||'CityRush Modus "{name}" und alle Missionen löschen?').replace('{name}', currentCrModeName)))return;
+  if(!confirm((gmt('cr-mode-delete-confirm')||'Rail Adventure Modus "{name}" und alle Missionen löschen?').replace('{name}', currentCrModeName)))return;
   await API(`/api/cr/modes/${currentCrModeId}`,{method:'DELETE',body:{password:settingsPassword}});
   currentCrModeId=null; currentCrModeName=''; loadCrModes();
 }
@@ -4549,6 +4554,43 @@ function crMissionModal(m){
         })}
       </div>
     </div>
+    <!-- Jigsaw puzzle toggle. Players drag image pieces to reassemble it;
+         solving auto-completes the mission. Mutually exclusive with media
+         (handled in getCrMissionData). -->
+    <div style="border-top:1px solid var(--border);padding-top:.75rem;margin-bottom:.75rem;">
+      <div class="toggle-row" style="margin-bottom:.6rem;"
+           onclick="toggleSwitch(this.querySelector('.toggle'),'cr-use-puzzle')">
+        <div>
+          <div class="toggle-row-text">${gmt('cr-m-puzzle')||'🧩 Bilderpuzzle'}</div>
+          <div class="toggle-row-sub">${gmt('cr-m-puzzle-sub')||'Spieler setzen ein Bild zusammen. Lösen schließt die Mission ab.'}</div>
+        </div>
+        <div class="toggle ${m&&m.use_puzzle?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-use-puzzle')"></div>
+      </div>
+      <input type="checkbox" id="cr-use-puzzle" ${chk('use_puzzle')} style="display:none;" onchange="crTogglePuzzle()">
+      <div id="cr-puzzle-section" style="${m&&m.use_puzzle?'':'display:none;'}">
+        <div class="grid-2" style="gap:.6rem;align-items:start;">
+          <div>
+            <label class="label">${gmt('cr-m-puzzle-grid')||'Schwierigkeit'}</label>
+            <select id="cr-puzzle-grid" class="select">
+              <option value="3" ${m&&m.puzzle_grid===3?'selected':(!m||!m.puzzle_grid?'selected':'')}>${gmt('cr-m-puzzle-easy')||'3×3 (leicht)'}</option>
+              <option value="4" ${m&&m.puzzle_grid===4?'selected':''}>${gmt('cr-m-puzzle-medium')||'4×4 (mittel)'}</option>
+              <option value="5" ${m&&m.puzzle_grid===5?'selected':''}>${gmt('cr-m-puzzle-hard')||'5×5 (schwer)'}</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">${gmt('cr-m-puzzle-image')||'Bild'}</label>
+            <label class="btn btn-secondary btn-full" style="cursor:pointer;">
+              🖼️ ${gmt('cr-m-puzzle-pick')||'Bild wählen'}
+              <input type="file" id="cr-puzzle-file" accept="image/*" style="display:none;" onchange="crPreviewPuzzleImage(event)">
+            </label>
+          </div>
+        </div>
+        <p style="font-size:.78rem;color:var(--text-muted);margin:.5rem 0 0;">${gmt('cr-m-puzzle-ratio')||'Beste Bildgröße: Hochformat 3:4 (z. B. 1200 × 1600 px) — passt optimal auf den Spielerbildschirm. Andere Formate werden zugeschnitten.'}</p>
+        <div id="cr-puzzle-preview" style="margin-top:.6rem;${m&&m.puzzle_image?'':'display:none;'}">
+          <img id="cr-puzzle-preview-img" src="${m&&m.puzzle_image?('/uploads/'+m.puzzle_image):''}" alt="" style="max-width:160px;max-height:213px;border-radius:var(--radius);border:1px solid var(--border);object-fit:cover;">
+        </div>
+      </div>
+    </div>
     <!-- Answer/question hints (multi-hint editor; revealed after arrival, or
          immediately for non-GPS answer missions). Collapsible <details>. -->
     <details id="cr-hints-editor" style="border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;margin-bottom:.75rem;" data-tip="cr-hints">
@@ -4611,6 +4653,43 @@ function crToggleAnswer(){
   }
   crSyncMediaAnswerExclusion();
 }
+// Puzzle toggle: show/hide the puzzle config; when on, force the media
+// segment to "none" (a puzzle mission is self-completing, no upload).
+function crTogglePuzzle(){
+  const chk=document.getElementById('cr-use-puzzle');
+  const sec=document.getElementById('cr-puzzle-section');
+  if(sec) sec.style.display=chk&&chk.checked?'block':'none';
+  if(chk&&chk.checked){
+    const mediaSel=document.getElementById('cr-media');
+    if(mediaSel){ mediaSel.value='none'; }
+    const ans=document.getElementById('cr-has-answer');
+    if(ans&&ans.checked){ ans.checked=false; crToggleAnswer(); }
+  }
+  crSyncMediaAnswerExclusion();
+}
+// Live preview of a freshly-picked puzzle image (before upload). The actual
+// upload happens on save, once the mission has an id.
+let _crPuzzleFile = null;
+function crPreviewPuzzleImage(e){
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  _crPuzzleFile = f;
+  const url = URL.createObjectURL(f);
+  const wrap = document.getElementById('cr-puzzle-preview');
+  const img = document.getElementById('cr-puzzle-preview-img');
+  if(img){ img.src = url; }
+  if(wrap){ wrap.style.display='block'; }
+}
+// Upload the picked puzzle image for a saved mission (multipart). Best-effort:
+// returns silently on no-file.
+async function uploadCrPuzzleImage(missionId){
+  if(!_crPuzzleFile) return;
+  const fd = new FormData();
+  fd.append('image', _crPuzzleFile, _crPuzzleFile.name);
+  const headers = {};
+  if(gmToken) headers['Authorization'] = 'Bearer ' + gmToken;
+  await fetch(`/api/cr/missions/${missionId}/puzzle-image`, { method:'POST', headers, body: fd }).catch(()=>{});
+}
 // Show/hide the cooldown row when the special-mission flag flips.
 function crToggleSpecial(){
   const chk = document.getElementById('cr-is-special');
@@ -4637,11 +4716,16 @@ function crReadNumber(id){
 }
 function getCrMissionData(){
   const ansOn   = document.getElementById('cr-has-answer')?.checked;
+  const puzzleOn = document.getElementById('cr-use-puzzle')?.checked;
   const mediaSel = document.getElementById('cr-media');
-  // Mutual exclusion enforcement: only one path persists.
-  const hasAnswer = ansOn && (!mediaSel || mediaSel.value === 'none') ? 1 : 0;
-  const mediaReq  = hasAnswer ? 'none' : (mediaSel?.value || 'none');
+  // Mutual exclusion enforcement: puzzle wins over answer wins over media,
+  // and a puzzle/answer mission never requires media.
+  const usePuzzle = puzzleOn ? 1 : 0;
+  const hasAnswer = !usePuzzle && ansOn && (!mediaSel || mediaSel.value === 'none') ? 1 : 0;
+  const mediaReq  = (usePuzzle || hasAnswer) ? 'none' : (mediaSel?.value || 'none');
   return {
+    use_puzzle: usePuzzle,
+    puzzle_grid: parseInt(document.getElementById('cr-puzzle-grid')?.value)||3,
     mode_id: currentCrModeId,
     name_de: document.getElementById('cr-name-de')?.value||'',
     name_en: document.getElementById('cr-name-en')?.value||'',
@@ -4698,12 +4782,12 @@ function _hasTempHintWork(){
 
 async function showAddCrMission(){
   if(!currentCrModeId){toast(gmt('pick-mode-first')||'Erst einen Modus auswählen','warning');return;}
-  _resetTempHints();
+  _resetTempHints(); _crPuzzleFile=null;
   // Refresh the cached mode list so the modal can filter media options
   // (uses a static cache to avoid awaiting inside the template).
   window._crModesCache = await API('/api/cr/modes');
   document.getElementById('modal-content').innerHTML=`
-    <h3 class="modal-title">${gmt('cr-m-add-title')||'CityRush Mission hinzufügen'}</h3>
+    <h3 class="modal-title">${gmt('cr-m-add-title')||'Rail Adventure Mission hinzufügen'}</h3>
     ${crMissionModal(null)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cr-m-cancel')||'Abbrechen'}</button>
@@ -4718,8 +4802,9 @@ async function saveNewCrMission(){
   const data=getCrMissionData();
   const res=await API('/api/cr/missions',{method:'POST',body:{password:settingsPassword,...data}});
   if(res.id){
+    if(_crPuzzleFile) await uploadCrPuzzleImage(res.id);
     if(_hasTempHintWork()) await saveCrHintsForMission(res.id);
-    _resetTempHints();
+    _resetTempHints(); _crPuzzleFile=null;
     closeModal();loadCrMissions();toast(gmt('cr-mission-created')||'Mission erstellt!','success');
   } else toast(res.error,'error');
 }
@@ -4730,9 +4815,9 @@ async function editCrMission(id){
   ]);
   window._crModesCache = modes;
   const m=missions.find(x=>x.id===id);if(!m)return;
-  _resetTempHints();
+  _resetTempHints(); _crPuzzleFile=null;
   document.getElementById('modal-content').innerHTML=`
-    <h3 class="modal-title">${gmt('cr-m-edit-title')||'CityRush Mission bearbeiten'}</h3>
+    <h3 class="modal-title">${gmt('cr-m-edit-title')||'Rail Adventure Mission bearbeiten'}</h3>
     ${crMissionModal(m)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cr-m-cancel')||'Abbrechen'}</button>
@@ -4748,8 +4833,9 @@ async function saveEditCrMission(id){
   const data2={password:settingsPassword,...data};
   const res=await API(`/api/cr/missions/${id}`,{method:'PUT',body:data2});
   if(res.success){
+    if(_crPuzzleFile) await uploadCrPuzzleImage(id);
     if(_hasTempHintWork()) await saveCrHintsForMission(id);
-    _resetTempHints();
+    _resetTempHints(); _crPuzzleFile=null;
     closeModal();loadCrMissions();toast(gmt('saved')||'Gespeichert!','success');
   }
 }
@@ -4984,7 +5070,7 @@ async function autoTranslateHint(hintId, type){
   toast(gmt('translated')||'Übersetzt!','success');
 }
 
-// ── CityRush mission export / import ─────────────────────────────────────────
+// ── Rail Adventure mission export / import ─────────────────────────────────────────
 async function exportCrMissions(){
   if(!currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
   const missions = await API(`/api/cr/missions?mode_id=${currentCrModeId}`);
@@ -5025,7 +5111,7 @@ async function exportCrMissions(){
     version: '1.0',
     exported: new Date().toISOString(),
     mode_name: currentCrModeName,
-    instructions: 'Upload via Settings → CityRush → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
+    instructions: 'Upload via Settings → Rail Adventure → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
     missions: withHints,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
@@ -5097,7 +5183,7 @@ async function importCrMissions(file){
   toast(`${ok} importiert${errors?', '+errors+' Fehler':''}!`, ok>0?'success':'error');
 }
 
-// ── CityRush mission map picker ─────────────────────────────────────────────
+// ── Rail Adventure mission map picker ─────────────────────────────────────────────
 // Embeds a small Leaflet picker inside the CR mission editor modal so the
 // GM can click to drop the target marker instead of typing decimals into
 // the lat/lng inputs. The lat/lng/radius inputs remain the source of truth;
@@ -5239,8 +5325,8 @@ async function autoTranslateCrField(field){
   toast(gmt('translated')||'Übersetzt!','success');
 }
 
-// Load CR modes when CityRush tab is opened
-// ── CityRush multiselect helpers ────────────────────────────────────────────
+// Load CR modes when Rail Adventure tab is opened
+// ── Rail Adventure multiselect helpers ────────────────────────────────────────────
 // Same pattern as the MiSSiONS multiselect below — checkboxes + a toolbar
 // that only surfaces the Export button when at least one row is checked.
 function onCrMsChange(){
@@ -5260,7 +5346,7 @@ function getSelectedCrMissionIds(){
 }
 async function downloadSelectedCrMissions(){
   const ids = getSelectedCrMissionIds();
-  if(!ids.length){ toast(gmt('pick-cr-missions')||'Keine CityRush-Missionen ausgewählt','warning'); return; }
+  if(!ids.length){ toast(gmt('pick-cr-missions')||'Keine Rail Adventure Missionen ausgewählt','warning'); return; }
   if(!currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
   // Reuse exportCrMissions' round-trippable shape but filter to the
   // selected rows. We also pull each mission's hints so the export
@@ -5296,7 +5382,7 @@ async function downloadSelectedCrMissions(){
     version: '1.0',
     exported: new Date().toISOString(),
     mode_name: currentCrModeName,
-    instructions: 'Upload via Settings → CityRush → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
+    instructions: 'Upload via Settings → Rail Adventure → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
     missions: withHints,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
@@ -5485,7 +5571,7 @@ function switchSettingsTab(tab,el){
   const panel = document.getElementById('stab-' + tab);
   if(panel) panel.classList.add('active');
 
-  // Per-panel hooks. CityRush is now a top-level sidebar item (not nested
+  // Per-panel hooks. Rail Adventure is now a top-level sidebar item (not nested
   // behind a Games parent), so it triggers loadCrModes directly. We
   // remember it for any callsite that still wants the "last visited
   // sub-tab" behavior.
@@ -5546,7 +5632,7 @@ function loadManualsList(){
 }
 
 // Backwards-compat shim — the old Games-parent + sub-tab dance is gone.
-// CityRush is its own sidebar item now, so switchGameSubTab() just
+// Rail Adventure is its own sidebar item now, so switchGameSubTab() just
 // forwards to switchSettingsTab() for any legacy callers (e.g. resync
 // hooks fired by the dashboard return flow).
 function switchGameSubTab(sub, el){

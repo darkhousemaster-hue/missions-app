@@ -17,11 +17,11 @@ l’app MiSSiONS. Il est organisé en trois parties :
 - **Partie 2, Configuration MiSSiONS.** Emplacements, modes,
   missions et les règles vues en jeu. C’est l’essentiel du
   travail quotidien.
-- **Partie 3, Configuration CityRush.** Un type de partie séparé
+- **Partie 3, Configuration Rail Adventure.** Un type de partie séparé
   avec ses propres modes, missions GPS-ciblées, indices et
   missions spéciales.
 
-CityRush est volontairement séparé, il partage l’enveloppe des
+Rail Adventure est volontairement séparé, il partage l’enveloppe des
 réglages mais a sa propre logique (cibles GPS, séquences
 d’indices, missions spéciales) qui ne s’applique pas aux parties
 MiSSiONS. Si tu n’en utilises qu’un des deux, tu peux sauter
@@ -35,7 +35,7 @@ le mot de passe lui-même. Le défaut après installation propre est
 
 > Les captures de ce manuel ont été prises sur une base de démo
 > propre avec trois emplacements (Altstadt, Stadtpark,
-> Hauptbahnhof), six missions et un mode CityRush avec trois
+> Hauptbahnhof), six missions et un mode Rail Adventure avec trois
 > missions. Ton installation réelle aura le même aspect avec tes
 > propres données.
 
@@ -222,30 +222,30 @@ bouton ⎘ copie une règle vers un autre jeu de règles. Appuie sur
 **Sauvegarder** quand fini ; les modifications non sauvegardées
 sont mises en évidence.
 
-::part:3:Configuration CityRush
+::part:3:Configuration Rail Adventure
 
-CityRush est un type de partie séparé. Les joueurs marchent
+Rail Adventure est un type de partie séparé. Les joueurs marchent
 physiquement vers des marqueurs sur une carte, arrivent à chaque
 cible et accomplissent une tâche là. Le panneau réglages
-CityRush reflète la disposition MiSSiONS mais avec des champs
+Rail Adventure reflète la disposition MiSSiONS mais avec des champs
 supplémentaires par mission pour coordonnées, séquences
 d’indices et missions spéciales. Les modes et missions
 configurés ici sont **uniquement** proposés quand le GM lance
-une partie CityRush ; ils n’apparaissent pas dans les parties
+une partie Rail Adventure ; ils n’apparaissent pas dans les parties
 MiSSiONS et vice versa.
 
-# Modes CityRush
+# Modes Rail Adventure
 
 ::shot:cr-01-modes-empty
 
-L’onglet CityRush fonctionne comme l’onglet MiSSiONS : une
+L’onglet Rail Adventure fonctionne comme l’onglet MiSSiONS : une
 rangée d’onglets de mode en haut, puis les missions du mode
 actif en dessous. Clique **+ Mode** à droite de la barre de
-modes pour créer un nouveau mode CityRush.
+modes pour créer un nouveau mode Rail Adventure.
 
 ::shot:cr-02-mode-add
 
-Un mode CityRush porte ses propres :
+Un mode Rail Adventure porte ses propres :
 
 - **Nom** : ce que le GM choisit dans le menu déroulant au
   démarrage d’une partie.
@@ -256,11 +256,11 @@ Un mode CityRush porte ses propres :
   mode.
 - **Durée par défaut (minutes)** : le minuteur de démarrage.
 
-# Missions CityRush
+# Missions Rail Adventure
 
 ::shot:cr-03-mission-add
 
-Une mission CityRush a tous les champs d’une mission MiSSiONS,
+Une mission Rail Adventure a tous les champs d’une mission MiSSiONS,
 plus les extras conscients de la position :
 
 - **Coordonnées GPS + rayon** : où est la cible et à quelle
@@ -318,7 +318,7 @@ pousse-les avant le lancement.
 ## Astuces pour le quotidien
 
 - Utilise **Auto-traduire** libéralement sur les missions
-  MiSSiONS et CityRush, avoir les cinq langues parfaites à la
+  MiSSiONS et Rail Adventure, avoir les cinq langues parfaites à la
   main est une corvée que l’IA fait assez bien la plupart du
   temps.
 - Les **missions Pool** (MiSSiONS uniquement) sont du
@@ -330,7 +330,7 @@ pousse-les avant le lancement.
   Utilise le drapeau **Aussi intérieur** sur les missions
   individuelles si tu les veux jouables par mauvais temps ;
   c’est une propriété séparée de Pool.
-- Pour CityRush, **teste toujours le rayon à pied**, le GPS d’un
+- Pour Rail Adventure, **teste toujours le rayon à pied**, le GPS d’un
   téléphone est rarement précis à moins de 5 mètres dans une
   zone construite, et un rayon trop serré laisse les équipes
   coincées.

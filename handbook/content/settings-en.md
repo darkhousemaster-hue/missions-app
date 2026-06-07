@@ -15,10 +15,10 @@ MiSSiONS app. It's organised in three parts:
   template you print for player access.
 - **Part 2, MiSSiONS configuration.** Locations, modes, missions, and
   the rules players see in-game. This is the bulk of day-to-day work.
-- **Part 3, CityRush configuration.** A separate game type with its
+- **Part 3, Rail Adventure configuration.** A separate game type with its
   own modes, GPS-targeted missions, hints, and special missions.
 
-CityRush is intentionally split out, it shares the settings shell but
+Rail Adventure is intentionally split out, it shares the settings shell but
 has its own logic (GPS targets, hint sequences, special missions) that
 doesn't apply to MiSSiONS games. If you only ever run one of the two,
 you can skip the other part.
@@ -31,7 +31,7 @@ possible.
 
 > The screenshots in this manual were captured on a clean demo
 > database seeded with three locations (Altstadt, Stadtpark,
-> Hauptbahnhof), six missions, and a CityRush mode with three
+> Hauptbahnhof), six missions, and a Rail Adventure mode with three
 > missions. Your real installation will look the same but show your
 > own data.
 
@@ -197,28 +197,28 @@ rules up and down to reorder; the 🌐 button on a rule auto-translates
 it; the ⎘ button copies a rule to another ruleset. Press **Save**
 when done, unsaved edits are highlighted.
 
-::part:3:CityRush configuration
+::part:3:Rail Adventure configuration
 
-CityRush is a separate game type. Players physically walk to map
+Rail Adventure is a separate game type. Players physically walk to map
 markers, arrive at each target, and complete a task there. The
-CityRush settings panel mirrors the MiSSiONS layout but with extra
+Rail Adventure settings panel mirrors the MiSSiONS layout but with extra
 fields per mission for coordinates, hint sequences, and special
 missions. Modes and missions configured here are **only** offered
-when the GM starts a CityRush game, they don't appear in MiSSiONS
+when the GM starts a Rail Adventure game, they don't appear in MiSSiONS
 games and vice versa.
 
-# CityRush modes
+# Rail Adventure modes
 
 ::shot:cr-01-modes-empty
 
-The CityRush tab works like the MiSSiONS tab: a row of mode tabs at
+The Rail Adventure tab works like the MiSSiONS tab: a row of mode tabs at
 the top, then the missions belonging to the active mode below. Click
-**+ Mode** at the right of the mode bar to create a new CityRush
+**+ Mode** at the right of the mode bar to create a new Rail Adventure
 mode.
 
 ::shot:cr-02-mode-add
 
-A CityRush mode carries its own:
+A Rail Adventure mode carries its own:
 
 - **Name**: what the GM picks from the dropdown when starting a
   game.
@@ -228,11 +228,11 @@ A CityRush mode carries its own:
   missions are allowed in this mode.
 - **Default duration (minutes)**: the timer the game starts with.
 
-# CityRush missions
+# Rail Adventure missions
 
 ::shot:cr-03-mission-add
 
-A CityRush mission has every field a MiSSiONS mission has, plus the
+A Rail Adventure mission has every field a MiSSiONS mission has, plus the
 location-aware extras:
 
 - **GPS coordinates + radius**: where the target is, and how close
@@ -281,7 +281,7 @@ new missions added mid-game, push them out before launch.
 
 ## Tips for daily operation
 
-- Use **Auto-translate** liberally on both MiSSiONS and CityRush
+- Use **Auto-translate** liberally on both MiSSiONS and Rail Adventure
   missions, getting all five languages right by hand is a chore the
   AI does well enough most of the time.
 - **Pool missions** (MiSSiONS only) are **filler**, not a
@@ -291,7 +291,7 @@ new missions added mid-game, push them out before launch.
   too few location-specific missions. Use the **Also indoor** flag
   on individual missions if you want them playable in bad weather;
   that's a separate property from Pool.
-- For CityRush, **always test the radius on foot**, the GPS in a
+- For Rail Adventure, **always test the radius on foot**, the GPS in a
   phone is rarely accurate to within 5 metres in a built-up area,
   and a too-tight radius leaves teams stuck.
 - **Export your missions occasionally** as a backup. The JSON is

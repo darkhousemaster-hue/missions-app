@@ -17,11 +17,11 @@ de la app MiSSiONS. Está organizado en tres partes:
 - **Parte 2, Configuración MiSSiONS.** Ubicaciones, modos,
   misiones y las reglas que los jugadores ven en partida. Es el
   grueso del trabajo diario.
-- **Parte 3, Configuración CityRush.** Un tipo de partida
+- **Parte 3, Configuración Rail Adventure.** Un tipo de partida
   separado con sus propios modos, misiones con objetivo GPS,
   pistas y misiones especiales.
 
-CityRush está separado a propósito, comparte el armazón de los
+Rail Adventure está separado a propósito, comparte el armazón de los
 ajustes pero tiene su propia lógica (objetivos GPS, secuencias de
 pistas, misiones especiales) que no aplica a las partidas
 MiSSiONS. Si solo usas uno de los dos, puedes saltarte la otra
@@ -35,7 +35,7 @@ en la pestaña Seguridad cuanto antes.
 
 > Las capturas de este manual se tomaron en una base de demo
 > limpia con tres ubicaciones (Altstadt, Stadtpark,
-> Hauptbahnhof), seis misiones y un modo CityRush con tres
+> Hauptbahnhof), seis misiones y un modo Rail Adventure con tres
 > misiones. Tu instalación real se verá igual pero con tus
 > propios datos.
 
@@ -220,29 +220,29 @@ reordenar; el botón 🌐 en una regla la auto-traduce; el botón ⎘
 copia una regla a otro conjunto. Pulsa **Guardar** cuando
 termines, las ediciones sin guardar se resaltan.
 
-::part:3:Configuración CityRush
+::part:3:Configuración Rail Adventure
 
-CityRush es un tipo de partida separado. Los jugadores caminan
+Rail Adventure es un tipo de partida separado. Los jugadores caminan
 físicamente hacia marcadores en un mapa, llegan a cada objetivo y
-completan una tarea allí. El panel de ajustes CityRush refleja el
+completan una tarea allí. El panel de ajustes Rail Adventure refleja el
 diseño de MiSSiONS pero con campos extra por misión para
 coordenadas, secuencias de pistas y misiones especiales. Los
 modos y misiones configurados aquí se ofrecen **solo** cuando el
-GM arranca una partida CityRush, no aparecen en las partidas
+GM arranca una partida Rail Adventure, no aparecen en las partidas
 MiSSiONS y viceversa.
 
-# Modos CityRush
+# Modos Rail Adventure
 
 ::shot:cr-01-modes-empty
 
-La pestaña CityRush funciona como la pestaña MiSSiONS: una fila
+La pestaña Rail Adventure funciona como la pestaña MiSSiONS: una fila
 de pestañas de modo arriba, luego las misiones del modo activo
 debajo. Haz clic en **+ Modo** a la derecha de la barra de modos
-para crear un nuevo modo CityRush.
+para crear un nuevo modo Rail Adventure.
 
 ::shot:cr-02-mode-add
 
-Un modo CityRush lleva sus propios:
+Un modo Rail Adventure lleva sus propios:
 
 - **Nombre**: lo que el GM elige del desplegable al arrancar una
   partida.
@@ -253,11 +253,11 @@ Un modo CityRush lleva sus propios:
 - **Duración por defecto (minutos)**: el temporizador con el que
   arranca la partida.
 
-# Misiones CityRush
+# Misiones Rail Adventure
 
 ::shot:cr-03-mission-add
 
-Una misión CityRush tiene cada campo que tiene una misión
+Una misión Rail Adventure tiene cada campo que tiene una misión
 MiSSiONS, más los extras conscientes de la ubicación:
 
 - **Coordenadas GPS + radio**: dónde está el objetivo y a qué
@@ -313,7 +313,7 @@ publícalas antes del lanzamiento.
 ## Consejos para la operación diaria
 
 - Usa **Traducir automáticamente** con liberalidad tanto en
-  misiones MiSSiONS como CityRush, tener los cinco idiomas
+  misiones MiSSiONS como Rail Adventure, tener los cinco idiomas
   perfectos a mano es una lata que la IA hace bastante bien la
   mayoría de las veces.
 - Las **misiones Pool** (solo MiSSiONS) son **relleno**, no un
@@ -324,7 +324,7 @@ publícalas antes del lanzamiento.
   específicas de ubicación. Usa la marca **También interior** en
   misiones individuales si las quieres jugables con mal tiempo;
   es una propiedad separada de Pool.
-- Para CityRush, **prueba siempre el radio a pie**, el GPS de un
+- Para Rail Adventure, **prueba siempre el radio a pie**, el GPS de un
   teléfono rara vez es preciso hasta 5 metros en una zona
   construida, y un radio demasiado ajustado deja a los equipos
   atascados.

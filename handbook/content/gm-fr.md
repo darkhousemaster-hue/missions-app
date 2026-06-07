@@ -20,7 +20,7 @@ deux types de partie distincts :
   partie à un emplacement physique, les joueurs rejoignent,
   parcourent une liste de missions photo/vidéo et tu valides leurs
   envois.
-- **Partie 2, parties CityRush.** Un mode piloté par GPS où les
+- **Partie 2, parties Rail Adventure.** Un mode piloté par GPS où les
   joueurs marchent physiquement vers des marqueurs sur une carte,
   arrivent à chaque cible et accomplissent la tâche sur place. Le
   tableau de bord est similaire mais ajoute une carte, des signaux
@@ -36,7 +36,7 @@ d’opérer, pas de configurer.
 
 > Les captures montrent une partie de démo avec deux équipes
 > (« Team Rot » / « Team Grün » pour MiSSiONS ; « Team Blau » /
-> « Team Gelb » pour CityRush). Tes vraies parties auront le même
+> « Team Gelb » pour Rail Adventure). Tes vraies parties auront le même
 > aspect avec tes propres noms d’équipe et missions.
 
 ::part:1:Animer des parties MiSSiONS
@@ -46,7 +46,7 @@ d’opérer, pas de configurer.
 ::shot:m-01-landing
 
 C’est ici que commence chaque session. Tu vois une tuile par
-emplacement plus une tuile CityRush en bas. Touche l’emplacement
+emplacement plus une tuile Rail Adventure en bas. Touche l’emplacement
 où ton groupe jouera ; l’app retient ton choix pour la fois
 suivante.
 
@@ -101,7 +101,7 @@ Ton centre de commande pour une partie en cours. Quatre zones :
   sélectionnée, ou la liste des équipes si aucune n’est
   sélectionnée.
 - **Panneau de droite** : onglets Chat et Diffusion. (Les parties
-  CityRush ajoutent un troisième onglet carte ici, voir Partie 2.)
+  Rail Adventure ajoutent un troisième onglet carte ici, voir Partie 2.)
 
 Le minuteur démarre à la durée configurée (60 minutes par défaut).
 Touche **▶ Démarrer** pour lancer le compte à rebours. Touche
@@ -222,9 +222,9 @@ Si tu trouves une mission avec des infos fausses ou une règle à
 changer, note-le et demande à la personne qui gère ton
 installation de mettre à jour entre les sessions.
 
-::part:2:Animer des parties CityRush
+::part:2:Animer des parties Rail Adventure
 
-CityRush est le type de partie piloté par GPS. Au lieu de faire
+Rail Adventure est le type de partie piloté par GPS. Au lieu de faire
 des missions à un seul endroit, les joueurs marchent physiquement
 entre des cibles sur une carte, arrivent à chaque cible et
 accomplissent la tâche sur place. Tout ce que tu sais de MiSSiONS
@@ -233,23 +233,23 @@ le chat, la diffusion, l’outil de gel, la lightbox — mais la
 partie démarre différemment et il y a un onglet **carte**
 supplémentaire.
 
-# Lancer une partie CityRush
+# Lancer une partie Rail Adventure
 
 ::shot:cr-01-landing
 
-Touche la tuile **CityRush** en bas de l’écran d’accueil au lieu
+Touche la tuile **Rail Adventure** en bas de l’écran d’accueil au lieu
 d’un des emplacements réguliers. La tuile montre une icône de
-coureur et un compteur des modes CityRush disponibles en dessous.
+coureur et un compteur des modes Rail Adventure disponibles en dessous.
 
 ::shot:cr-02-game-select
 
-L’écran de sélection de partie pour CityRush fonctionne comme
+L’écran de sélection de partie pour Rail Adventure fonctionne comme
 celui de MiSSiONS, mais le menu déroulant est le sélecteur de
-**mode CityRush** (Altstadt-Tour dans cette démo) au lieu du
+**mode Rail Adventure** (Altstadt-Tour dans cette démo) au lieu du
 sélecteur mode-par-emplacement. Choisis un mode, touche
 **+ Nouvelle partie** et l’app génère le QR + tableau de bord.
 
-# Le tableau de bord CityRush
+# Le tableau de bord Rail Adventure
 
 ::shot:cr-03-dashboard
 
@@ -262,15 +262,15 @@ fonctionnent exactement comme pour les parties MiSSiONS.
 Les différences sont toutes dans les **cartes de mission** et
 l’onglet **🗺️ carte**.
 
-# Les missions d’une équipe CityRush
+# Les missions d’une équipe Rail Adventure
 
 ::shot:cr-04-team-detail
 
-Chaque carte de mission CityRush ressemble à une carte MiSSiONS
+Chaque carte de mission Rail Adventure ressemble à une carte MiSSiONS
 avec quelques extras :
 
 - Un **numéro de séquence** à gauche (`1`, `2`, `3`…) : les
-  missions CityRush sont ordonnées et les joueurs les
+  missions Rail Adventure sont ordonnées et les joueurs les
   déverrouillent une à la fois. Une équipe doit arriver à la
   mission 1 avant que la mission 2 ne soit même visible.
 - Un préfixe **⭐** sur les **missions spéciales** : elles ne
@@ -305,11 +305,11 @@ toutes les équipes en même temps.
 > Si tu en as configuré une sans coordonnées, elle vit dans le
 > panneau ⭐ du joueur, pas sur cette carte.
 
-# Geler une équipe prise en photo (CityRush uniquement)
+# Geler une équipe prise en photo (Rail Adventure uniquement)
 
 ::shot:cr-06-freeze
 
-Le bouton **❄ Geler** est une mécanique PvP exclusive à CityRush
+Le bouton **❄ Geler** est une mécanique PvP exclusive à Rail Adventure
 construite autour du « pris en photo ». Le flux :
 
 1. L’équipe A repère l’équipe B quelque part sur le parcours et
@@ -339,9 +339,9 @@ C’est le **seul** usage légitime du bouton de gel. Ne l’utilise
 pas comme pause neutre, punition générique ou pour donner une
 pause à une équipe.
 
-Pourquoi CityRush seulement ? Dans les parties MiSSiONS chaque
+Pourquoi Rail Adventure seulement ? Dans les parties MiSSiONS chaque
 équipe fait sa propre liste à un seul endroit, donc rien à se
-prendre en photo. Les équipes CityRush partagent un parcours,
+prendre en photo. Les équipes Rail Adventure partagent un parcours,
 d’où l’existence de la mécanique « pris en photo ».
 
 Rappel sur la direction de la fenêtre : tu l’ouvres depuis le
@@ -382,7 +382,7 @@ Avant de partir :
 
 Tu peux laisser le tableau de bord ouvert et revenir plus tard ;
 les parties terminées restent dans la liste sous leur emplacement
-(ou sous CityRush).
+(ou sous Rail Adventure).
 
 ---
 
@@ -441,7 +441,7 @@ donné le mauvais code, termine cette partie (ou ignore-la) et
 fais-les rejoindre la bonne. Pas de migration ; elles repartent à
 zéro.
 
-**Une équipe CityRush ne voit pas la mission suivante.**
+**Une équipe Rail Adventure ne voit pas la mission suivante.**
 Elle n’est probablement pas arrivée physiquement dans le rayon de
 la cible courante. Vérifie le panneau carte ; leur point devrait
 être dans le cercle de la cible. S’il y est et que la mission ne

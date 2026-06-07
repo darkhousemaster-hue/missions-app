@@ -1,5 +1,5 @@
 ---
-title: "Manual del jugador MiSSiONS / CityRush"
+title: "Manual del jugador MiSSiONS / Rail Adventure"
 subtitle: "Para los equipos que juegan en el teléfono"
 lang: es
 manifest: player-es
@@ -18,7 +18,7 @@ Hay dos tipos de partida y el manual cubre ambos:
   fotos/vídeos en un único lugar. Tu equipo recorre una lista de
   misiones preparada por el GM; subís un archivo por misión, el GM
   acepta o rechaza, sumáis puntos.
-- **Parte 2, partidas CityRush.** Un modo guiado por GPS. El mapa
+- **Parte 2, partidas Rail Adventure.** Un modo guiado por GPS. El mapa
   muestra la próxima parada; tu equipo camina físicamente hasta
   allí, la app desbloquea la tarea al llegar, enviáis en el sitio.
   Además hay misiones «especiales» jugables en cualquier momento y
@@ -144,29 +144,29 @@ el GM — los otros equipos no lo ven.
 Escribid, **Enviar**, listo. Tocad **Atrás** en la barra para
 volver a las misiones.
 
-::part:2:Jugar partidas CityRush
+::part:2:Jugar partidas Rail Adventure
 
-CityRush es el modo guiado por GPS. En lugar de recorrer una lista
+Rail Adventure es el modo guiado por GPS. En lugar de recorrer una lista
 de fotos en un solo sitio, vuestro equipo camina físicamente entre
 paradas en un mapa. Se muestra la próxima parada; llegáis, la tarea
 se desbloquea, enviáis, seguís. Misiones especiales y una mecánica
 PvP de congelación se añaden encima.
 
 Las pantallas se parecen a MiSSiONS pero incluyen un mapa y un par
-de widgets específicos de CityRush.
+de widgets específicos de Rail Adventure.
 
-# El inicio CityRush
+# El inicio Rail Adventure
 
 ::shot:cr-01-home
 
-El inicio del jugador CityRush sustituye la lista de misiones de
+El inicio del jugador Rail Adventure sustituye la lista de misiones de
 MiSSiONS por algo más espacial. De arriba abajo:
 
 - **Barra superior** — puntuación a la izquierda, temporizador en
   el centro, chat / reglas / idioma a la derecha. Misma idea que
   MiSSiONS.
 - **Barra de progreso** — `PARADA n / N` y el nombre del modo
-  CityRush.
+  Rail Adventure.
 - **Mini-mapa** — la posición de vuestro equipo (punto naranja) y
   todas las paradas. Tocad el mapa para abrirlo a pantalla
   completa.
@@ -238,7 +238,7 @@ antes si la situación lo justifica.
 
 Para evitar el congelamiento: no poséis para fotos a la vista de
 equipos rivales y cambiad de ruta si notáis que uno os sigue. (Sí,
-CityRush es también un juego de sigilo.)
+Rail Adventure es también un juego de sigilo.)
 
 ---
 
@@ -270,9 +270,9 @@ parte «activa» del juego ha terminado.
 - **Usad el chat pronto.** Si una misión es imposible porque el
   lugar está cerrado o falta el objeto, escribid al GM enseguida
   en lugar de insistir. Puede sustituirla o quitarla.
-- **Vigilad la batería.** GPS en CityRush más cámara la consumen
+- **Vigilad la batería.** GPS en Rail Adventure más cámara la consumen
   rápido. Llevad una batería externa.
-- **En CityRush, haced las especiales entre paradas, no en una
+- **En Rail Adventure, haced las especiales entre paradas, no en una
   parada.** Las paradas se desbloquean al llegar; hacer una
   especial justo allí alarga innecesariamente el tiempo del
   geofence.
@@ -302,7 +302,7 @@ selfie capturado entonces sobrescribe el existente.
 iOS Safari pide conceder cámara en Ajustes → Safari → Cámara en
 «Preguntar» o «Permitir». Recargad la página.
 
-**Una misión CityRush sigue bloqueada aunque estamos en el sitio.**
+**Una misión Rail Adventure sigue bloqueada aunque estamos en el sitio.**
 La precisión GPS puede ser pobre. Salid al aire libre, lejos de
 edificios, y esperad 5–10 segundos. Si sigue sin desbloquearse, el
 GM puede marcar la llegada manualmente desde su panel.

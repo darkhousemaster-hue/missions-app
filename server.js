@@ -891,6 +891,29 @@ app.post('/api/cr/missions/reorder', (req,res) => {
   res.json({success:true});
 });
 
+// Puzzle image upload for a CR mission. Multer drops the file under
+// UPLOAD_DIR/<gameId|misc>/, so move it into cr_puzzles/ (matching the stored
+// path) like the hint uploader does, then persist puzzle_image on the mission.
+function _movePuzzleFileIntoPlace(req){
+  if(!req.file) return null;
+  const destDir = path.join(UPLOAD_DIR,'cr_puzzles');
+  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
+  const dest = path.join(destDir, req.file.filename);
+  try { fs.renameSync(req.file.path, dest); }
+  catch(e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+  return `cr_puzzles/${req.file.filename}`;
+}
+app.post('/api/cr/missions/:id/puzzle-image', upload.single('image'), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!req.file) return res.status(400).json({error:'No file'});
+  const mission = db.getCrMission(req.params.id);
+  if(!mission) return res.status(404).json({error:'Not found'});
+  const rel = _movePuzzleFileIntoPlace(req);
+  db.updateCrMission(req.params.id, { puzzle_image: rel });
+  io.emit('settings_updated', {type:'cr_missions'});
+  res.json({success:true, puzzle_image: rel});
+});
+
 // ── CR Game info ──────────────────────────────────────────────────────────────
 app.get('/api/games/:id/cr', (req,res) => {
   const crMode = db.getGameCrMode(req.params.id);

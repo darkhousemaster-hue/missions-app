@@ -478,7 +478,7 @@ function acceptSelfie() {
 window.addEventListener('DOMContentLoaded', async () => {
   if (!gameId) { show('error'); return; }
 
-  // Already joined this exact game — go straight to play / CityRush
+  // Already joined this exact game — go straight to play / Rail Adventure
   const storedGame = sessionStorage.getItem('gameId');
   const storedTeam = sessionStorage.getItem('teamId');
   if (storedGame === gameId && storedTeam) {
@@ -507,7 +507,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (isCityRush) {
       const cur = document.getElementById('location-info').textContent;
-      document.getElementById('location-info').textContent = (cur ? cur + '  ' : '') + '🏃 CityRush: ' + game.crMode.name;
+      document.getElementById('location-info').textContent = (cur ? cur + '  ' : '') + '🏃 Rail Adventure: ' + game.crMode.name;
     }
 
     existingTeams = game.teams || [];
@@ -615,7 +615,7 @@ async function joinAsNew() {
     }
 
     // Upload the selfie if we captured one. Failure isn't fatal — team
-    // already exists, the player can re-take a selfie later (CityRush
+    // already exists, the player can re-take a selfie later (Rail Adventure
     // prompts again at game start; MiSSiONS shows the team without one).
     if (selfieBlob) {
       try {

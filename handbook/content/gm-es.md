@@ -20,7 +20,7 @@ partida distintos:
   partida en una ubicación física, los jugadores se unen,
   recorren una lista curada de misiones foto/vídeo y tú apruebas
   sus envíos.
-- **Parte 2, partidas CityRush.** Un modo guiado por GPS donde
+- **Parte 2, partidas Rail Adventure.** Un modo guiado por GPS donde
   los jugadores caminan físicamente hasta marcadores en un mapa,
   llegan a cada objetivo y completan la tarea allí. El panel se
   parece pero añade un mapa, señales de llegada GPS y misiones
@@ -35,7 +35,7 @@ admin, el manual lo dirá; tu papel es operar, no configurar.
 
 > Las capturas muestran una partida de demo con dos equipos
 > («Team Rot» / «Team Grün» para MiSSiONS; «Team Blau» / «Team
-> Gelb» para CityRush). Tus partidas reales se verán igual con
+> Gelb» para Rail Adventure). Tus partidas reales se verán igual con
 > tus propios nombres de equipo y misiones.
 
 ::part:1:Dirigir partidas MiSSiONS
@@ -45,7 +45,7 @@ admin, el manual lo dirá; tu papel es operar, no configurar.
 ::shot:m-01-landing
 
 Aquí empieza cada sesión. Ves una casilla por ubicación más una
-casilla CityRush abajo. Toca la ubicación donde jugará tu grupo;
+casilla Rail Adventure abajo. Toca la ubicación donde jugará tu grupo;
 la app recuerda tu elección para la próxima vez.
 
 Los botones de la cabecera:
@@ -99,7 +99,7 @@ Tu centro de mando para una partida en curso. Cuatro zonas:
   seleccionado, o la lista de equipos si ninguno está
   seleccionado.
 - **Panel derecho**: pestañas Chat y Difusión. (Las partidas
-  CityRush añaden una tercera pestaña de mapa aquí, ver Parte 2.)
+  Rail Adventure añaden una tercera pestaña de mapa aquí, ver Parte 2.)
 
 El temporizador parte de la duración configurada (60 minutos por
 defecto). Toca **▶ Iniciar** para empezar la cuenta atrás. Toca
@@ -220,9 +220,9 @@ Si encuentras una misión con info errónea o una regla que debería
 cambiar, anótalo y pídele a quien gestiona tu instalación que la
 actualice entre sesiones.
 
-::part:2:Dirigir partidas CityRush
+::part:2:Dirigir partidas Rail Adventure
 
-CityRush es el tipo de partida guiado por GPS. En lugar de hacer
+Rail Adventure es el tipo de partida guiado por GPS. En lugar de hacer
 misiones en una sola ubicación, los jugadores caminan
 físicamente entre objetivos en un mapa, llegan a cada objetivo y
 completan la tarea allí. Todo lo que sabes de MiSSiONS sigue
@@ -230,23 +230,23 @@ aplicándose — el panel, las fichas de equipo, el chat, la
 difusión, la herramienta de congelación, la lightbox — pero la
 partida arranca diferente y hay una pestaña **mapa** extra.
 
-# Arrancar una partida CityRush
+# Arrancar una partida Rail Adventure
 
 ::shot:cr-01-landing
 
-Toca la casilla **CityRush** abajo en la pantalla de inicio en
+Toca la casilla **Rail Adventure** abajo en la pantalla de inicio en
 lugar de una ubicación regular. La casilla muestra un icono de
-corredor y un conteo de modos CityRush disponibles debajo.
+corredor y un conteo de modos Rail Adventure disponibles debajo.
 
 ::shot:cr-02-game-select
 
-La pantalla de selección de partida para CityRush funciona como
+La pantalla de selección de partida para Rail Adventure funciona como
 la de MiSSiONS, pero el desplegable es el selector de **modo
-CityRush** (Altstadt-Tour en esta demo) en lugar del selector
+Rail Adventure** (Altstadt-Tour en esta demo) en lugar del selector
 modo-por-ubicación. Elige un modo, toca **+ Nueva partida** y la
 app genera el QR + panel.
 
-# El panel CityRush
+# El panel Rail Adventure
 
 ::shot:cr-03-dashboard
 
@@ -259,15 +259,15 @@ las partidas MiSSiONS.
 Las diferencias están todas en las **tarjetas de misión** y la
 pestaña **🗺️ mapa**.
 
-# Las misiones de un equipo CityRush
+# Las misiones de un equipo Rail Adventure
 
 ::shot:cr-04-team-detail
 
-Cada tarjeta de misión CityRush se parece a una tarjeta MiSSiONS
+Cada tarjeta de misión Rail Adventure se parece a una tarjeta MiSSiONS
 con algunos extras:
 
 - Un **número de secuencia** a la izquierda (`1`, `2`, `3`…):
-  las misiones CityRush están ordenadas y los jugadores las
+  las misiones Rail Adventure están ordenadas y los jugadores las
   desbloquean una a una. Un equipo debe llegar a la misión 1
   antes de que la misión 2 sea siquiera visible.
 - Un prefijo **⭐** en las **misiones especiales**: no siguen la
@@ -302,12 +302,12 @@ ver dónde están todos los equipos a la vez.
 > GPS. Si has configurado una sin coordenadas, vive en el panel
 > ⭐ del jugador, no en este mapa.
 
-# Congelar a un equipo pillado en foto (solo CityRush)
+# Congelar a un equipo pillado en foto (solo Rail Adventure)
 
 ::shot:cr-06-freeze
 
 El botón **❄ Congelar** es una mecánica PvP exclusiva de
-CityRush construida en torno al «pillado en foto». El flujo:
+Rail Adventure construida en torno al «pillado en foto». El flujo:
 
 1. El equipo A pilla al equipo B en algún sitio del recorrido y
    les hace una foto.
@@ -336,9 +336,9 @@ Este es el **único** uso legítimo del botón de congelo. No lo
 uses como pausa neutra, castigo genérico o para darle un
 descanso a un equipo.
 
-¿Por qué solo CityRush? En las partidas MiSSiONS cada equipo
+¿Por qué solo Rail Adventure? En las partidas MiSSiONS cada equipo
 trabaja en su propia lista en un solo sitio, así que no hay nada
-que pillarse mutuamente en foto. Los equipos CityRush comparten
+que pillarse mutuamente en foto. Los equipos Rail Adventure comparten
 un recorrido, por eso existe la mecánica «pillado en foto».
 
 Recordatorio sobre la dirección de la ventana: la abres desde el
@@ -379,7 +379,7 @@ Antes de irte:
 
 Puedes dejar el panel abierto y volver luego; las partidas
 terminadas se quedan en la lista bajo su ubicación (o bajo
-CityRush).
+Rail Adventure).
 
 ---
 
@@ -437,7 +437,7 @@ Cada partida tiene su propia URL/QR de acceso. Si les diste el
 código equivocado, termina esa partida (o ignórala) y haz que se
 unan a la correcta. No hay migración; empiezan de cero.
 
-**Un equipo CityRush no ve la siguiente misión.**
+**Un equipo Rail Adventure no ve la siguiente misión.**
 Probablemente no han llegado físicamente al radio del objetivo
 actual. Mira el panel del mapa; su punto debería estar dentro
 del círculo del objetivo. Si lo está y la misión sigue sin

@@ -245,6 +245,12 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN hide_until_arrival INTEGER DEF
 // ignored for gating purposes.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_special INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN repeat_minutes INTEGER DEFAULT 0"); } catch(e) {}
+// Jigsaw puzzle mission: the GM uploads an image which is sliced into a
+// puzzle_grid × puzzle_grid grid; the player drags pieces to rearrange it.
+// Solving auto-awards the mission (verified client-side, no GM review).
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN use_puzzle INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_image TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_grid INTEGER DEFAULT 3"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -655,7 +661,8 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'is_timed','timer_seconds','penalty_interval','penalty_points','media_required',
   'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es',
   'hide_until_arrival',
-  'is_special','repeat_minutes'];
+  'is_special','repeat_minutes',
+  'use_puzzle','puzzle_image','puzzle_grid'];
 const toNullableNumber = v => {
   if (v === undefined) return undefined;
   if (v === null || v === '') return null;
@@ -672,9 +679,14 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
-  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special'].forEach(f => {
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','use_puzzle'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
   });
+  // Puzzle grid: clamp to the supported sizes (3/4/5) when provided.
+  if (out.puzzle_grid !== undefined && out.puzzle_grid !== null && out.puzzle_grid !== '') {
+    const g = Math.round(Number(out.puzzle_grid));
+    out.puzzle_grid = (g >= 3 && g <= 5) ? g : 3;
+  }
   return out;
 };
 const createCrMission  = (data) => {

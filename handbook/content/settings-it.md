@@ -17,11 +17,11 @@ Questo manuale copre ogni schermata dietro la porta
 - **Parte 2, Configurazione MiSSiONS.** Posizioni, modalità,
   missioni e le regole che i giocatori vedono in partita. È il
   grosso del lavoro quotidiano.
-- **Parte 3, Configurazione CityRush.** Un tipo di partita
+- **Parte 3, Configurazione Rail Adventure.** Un tipo di partita
   separato con proprie modalità, missioni mirate via GPS,
   indizi e missioni speciali.
 
-CityRush è volutamente separato, condivide il guscio delle
+Rail Adventure è volutamente separato, condivide il guscio delle
 impostazioni ma ha la propria logica (target GPS, sequenze di
 indizi, missioni speciali) che non si applica alle partite
 MiSSiONS. Se ne usi solo uno dei due, puoi saltare l’altra
@@ -35,7 +35,7 @@ nella scheda Sicurezza appena possibile.
 
 > Le schermate in questo manuale sono state catturate su un
 > database demo pulito con tre posizioni (Altstadt, Stadtpark,
-> Hauptbahnhof), sei missioni e una modalità CityRush con tre
+> Hauptbahnhof), sei missioni e una modalità Rail Adventure con tre
 > missioni. La tua installazione reale avrà lo stesso aspetto
 > ma con i tuoi dati.
 
@@ -222,29 +222,29 @@ pulsante 🌐 su una regola la auto-traduce; il pulsante ⎘ copia
 una regola in un altro insieme. Premi **Salva** quando finito,
 le modifiche non salvate sono evidenziate.
 
-::part:3:Configurazione CityRush
+::part:3:Configurazione Rail Adventure
 
-CityRush è un tipo di partita separato. I giocatori camminano
+Rail Adventure è un tipo di partita separato. I giocatori camminano
 fisicamente verso marker su una mappa, arrivano a ogni
 bersaglio e completano un compito lì. Il pannello impostazioni
-CityRush rispecchia il layout di MiSSiONS ma con campi extra per
+Rail Adventure rispecchia il layout di MiSSiONS ma con campi extra per
 missione per coordinate, sequenze di indizi e missioni speciali.
 Modalità e missioni configurate qui sono **solo** offerte quando
-il GM avvia una partita CityRush, non compaiono nelle partite
+il GM avvia una partita Rail Adventure, non compaiono nelle partite
 MiSSiONS e viceversa.
 
-# Modalità CityRush
+# Modalità Rail Adventure
 
 ::shot:cr-01-modes-empty
 
-La scheda CityRush funziona come la scheda MiSSiONS: una riga di
+La scheda Rail Adventure funziona come la scheda MiSSiONS: una riga di
 schede modalità in alto, poi le missioni appartenenti alla
 modalità attiva sotto. Clicca **+ Modalità** a destra della
-barra modalità per creare una nuova modalità CityRush.
+barra modalità per creare una nuova modalità Rail Adventure.
 
 ::shot:cr-02-mode-add
 
-Una modalità CityRush porta:
+Una modalità Rail Adventure porta:
 
 - **Nome**: cosa il GM sceglie dal menu a discesa all’avvio di
   una partita.
@@ -255,11 +255,11 @@ Una modalità CityRush porta:
   modalità.
 - **Durata default (minuti)**: il timer di partenza.
 
-# Missioni CityRush
+# Missioni Rail Adventure
 
 ::shot:cr-03-mission-add
 
-Una missione CityRush ha ogni campo che ha una missione MiSSiONS,
+Una missione Rail Adventure ha ogni campo che ha una missione MiSSiONS,
 più gli extra consapevoli della posizione:
 
 - **Coordinate GPS + raggio**: dove si trova il bersaglio e a
@@ -315,7 +315,7 @@ spingile prima del lancio.
 ## Consigli per l’uso quotidiano
 
 - Usa **Traduci automaticamente** liberamente sia su missioni
-  MiSSiONS che CityRush, avere tutte e cinque le lingue
+  MiSSiONS che Rail Adventure, avere tutte e cinque le lingue
   perfette a mano è una rottura che l’IA fa abbastanza bene
   nella maggior parte dei casi.
 - Le **missioni Pool** (solo MiSSiONS) sono **riempitivo**, non
@@ -326,7 +326,7 @@ spingile prima del lancio.
   specifiche per posizione. Usa il flag **Anche interno** sulle
   singole missioni se le vuoi giocabili col maltempo; è una
   proprietà separata da Pool.
-- Per CityRush, **testa sempre il raggio a piedi**, il GPS in
+- Per Rail Adventure, **testa sempre il raggio a piedi**, il GPS in
   un telefono raramente è accurato entro 5 metri in zona
   costruita, e un raggio troppo stretto lascia le squadre
   bloccate.

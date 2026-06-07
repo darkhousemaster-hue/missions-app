@@ -18,7 +18,7 @@ types:
 - **Part 1, MiSSiONS games.** The classic mode: you start a game at
   a physical location, players join, work through a curated list of
   photo/video missions, and you approve their uploads.
-- **Part 2, CityRush games.** A GPS-driven mode where players
+- **Part 2, Rail Adventure games.** A GPS-driven mode where players
   physically walk to map markers, arrive at each target, and complete
   the task there. The dashboard looks similar but adds a map, GPS
   arrival signals, and special missions.
@@ -32,7 +32,7 @@ admin to fix it, the manual will say so, your job is to operate, not
 configure.
 
 > Screenshots show a demo game with two teams ("Team Rot" / "Team
-> Grün" for MiSSiONS; "Team Blau" / "Team Gelb" for CityRush). Your
+> Grün" for MiSSiONS; "Team Blau" / "Team Gelb" for Rail Adventure). Your
 > real games will look the same with your own team names and
 > missions.
 
@@ -43,7 +43,7 @@ configure.
 ::shot:m-01-landing
 
 This is where every session starts. You see one tile per location plus
-a tile for CityRush at the bottom. Tap the location your group will
+a tile for Rail Adventure at the bottom. Tap the location your group will
 play in, the app remembers your choice for next time.
 
 The header buttons:
@@ -90,7 +90,7 @@ Your command center for a running game. Four areas:
   usually a submission to review.
 - **Main area** (left), selected team's mission cards, or the team
   list if no team is selected.
-- **Right panel**: Chat and Broadcast tabs. (CityRush games add a
+- **Right panel**: Chat and Broadcast tabs. (Rail Adventure games add a
   third map tab here, see Part 2.)
 
 The timer starts at the configured duration (60 minutes by default).
@@ -207,31 +207,31 @@ If you find a mission with wrong info or a rule that should change,
 note it down and ask whoever runs your installation to update it
 between sessions.
 
-::part:2:Running CityRush games
+::part:2:Running Rail Adventure games
 
-CityRush is the GPS-driven game type. Instead of doing missions at a
+Rail Adventure is the GPS-driven game type. Instead of doing missions at a
 single location, players physically walk between targets on a map,
 arrive within a set radius, then complete the task there. Everything
 you know from MiSSiONS still applies, the dashboard, the team
 chips, the chat, the broadcast, the freeze tool, the lightbox, but
 the game starts differently and there's an extra **map** tab.
 
-# Starting a CityRush game
+# Starting a Rail Adventure game
 
 ::shot:cr-01-landing
 
-Tap the **CityRush** tile at the bottom of the landing screen
+Tap the **Rail Adventure** tile at the bottom of the landing screen
 instead of one of the regular locations. The tile shows a runner
-icon and a count of available CityRush modes underneath.
+icon and a count of available Rail Adventure modes underneath.
 
 ::shot:cr-02-game-select
 
-The game-select screen for CityRush works like the MiSSiONS one,
-but the dropdown is the **CityRush mode** picker (Altstadt-Tour in
+The game-select screen for Rail Adventure works like the MiSSiONS one,
+but the dropdown is the **Rail Adventure mode** picker (Altstadt-Tour in
 this demo) instead of the mode-per-location picker. Pick a mode,
 tap **+ New game**, and the app generates the QR + dashboard.
 
-# The CityRush dashboard
+# The Rail Adventure dashboard
 
 ::shot:cr-03-dashboard
 
@@ -243,14 +243,14 @@ tabs work exactly the same way they do for MiSSiONS games.
 The differences are all in the **mission cards** and the **🗺️
 map** tab.
 
-# A CityRush team's missions
+# A Rail Adventure team's missions
 
 ::shot:cr-04-team-detail
 
-Each CityRush mission card looks similar to a MiSSiONS card with a
+Each Rail Adventure mission card looks similar to a MiSSiONS card with a
 few extra bits:
 
-- A **sequence number** on the left (`1`, `2`, `3`…), CityRush
+- A **sequence number** on the left (`1`, `2`, `3`…), Rail Adventure
   missions are ordered, and players unlock them one at a time. A
   team must arrive at mission 1 before mission 2 is even visible.
 - A **⭐** prefix on **special missions**, these don't follow the
@@ -282,11 +282,11 @@ to see where every team is at once.
 > configured one without coordinates, it lives in the player's ⭐
 > tray, not on this map.
 
-# Freezing a team that got caught on camera (CityRush only)
+# Freezing a team that got caught on camera (Rail Adventure only)
 
 ::shot:cr-06-freeze
 
-The **❄ Freeze** button is a CityRush-only PvP mechanic built
+The **❄ Freeze** button is a Rail Adventure only PvP mechanic built
 around getting caught on camera. The workflow:
 
 1. Team A spots Team B somewhere on the route and takes a photo
@@ -314,9 +314,9 @@ This is the **only** legitimate use of the freeze button. Do not
 use it as a neutral pause, a generic punishment, or a way to give
 a team a break.
 
-Why CityRush-only? In MiSSiONS games every team works through
+Why Rail Adventure only? In MiSSiONS games every team works through
 their own list at a single location, so there's nothing to catch
-each other doing. CityRush teams share a route, which is why the
+each other doing. Rail Adventure teams share a route, which is why the
 caught-on-camera mechanic exists in the first place.
 
 A reminder on the modal direction: you open it from the freezer's
@@ -352,7 +352,7 @@ Before walking away:
    **Reject** with a reason, the upload is removed from storage.
 
 You can leave the dashboard open and return later, ended games
-stay in the game list under their location (or under CityRush).
+stay in the game list under their location (or under Rail Adventure).
 
 ---
 
@@ -408,7 +408,7 @@ Each game has its own join URL/QR. If you handed them the wrong
 code, end that game (or just ignore it) and have them re-join the
 right one. There's no migration, they have to start over.
 
-**A CityRush team can't see the next mission.**
+**A Rail Adventure team can't see the next mission.**
 They probably haven't physically arrived within the radius of the
 current target. Check the map panel, their dot should be inside the
 target circle. If it is and the mission still hasn't unlocked, their

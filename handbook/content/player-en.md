@@ -1,5 +1,5 @@
 ---
-title: "MiSSiONS / CityRush Player Manual"
+title: "MiSSiONS / Rail Adventure Player Manual"
 subtitle: "For teams playing on their phones"
 lang: en
 manifest: player-en
@@ -18,7 +18,7 @@ There are two game types and the manual covers both:
   at a single location. Your team works through a list of missions
   the GM curated; you upload media for each, the GM accepts or
   rejects, you collect points.
-- **Part 2, CityRush games.** A GPS-driven mode. The map shows the
+- **Part 2, Rail Adventure games.** A GPS-driven mode. The map shows the
   next stop; your team physically walks to it, the app unlocks the
   task on arrival, and you submit on the spot. Plus optional
   "specials" you can do any time and a PvP freeze mechanic.
@@ -139,27 +139,27 @@ Use it for:
 Type, tap **Send**, and you're done. Tap **Back** in the topbar to
 get back to your missions.
 
-::part:2:Playing CityRush games
+::part:2:Playing Rail Adventure games
 
-CityRush is the GPS-driven game type. Instead of running a list of
+Rail Adventure is the GPS-driven game type. Instead of running a list of
 photo missions in one place, your team physically walks between
 stops on a map. The next stop is shown; you arrive, the task
 unlocks, you submit, you move on. Specials and a PvP freeze
 mechanic add a layer on top.
 
 The screens look similar to MiSSiONS but include a map and a couple
-of CityRush-only widgets.
+of Rail Adventure only widgets.
 
-# The CityRush home
+# The Rail Adventure home
 
 ::shot:cr-01-home
 
-The CityRush player home replaces the MiSSiONS mission list with
+The Rail Adventure player home replaces the MiSSiONS mission list with
 something more spatial. Top to bottom:
 
 - **Topbar** — score on the left, game timer in the middle, chat /
   rules / language on the right. Same idea as MiSSiONS.
-- **Progress bar** — `STOP n / N` and the CityRush mode name.
+- **Progress bar** — `STOP n / N` and the Rail Adventure mode name.
 - **Mini-map** — your team's position (the orange dot) plus every
   mission stop. Tap the map to expand it fullscreen.
 - **Mission tiles** in route order. Each tile shows the stop number,
@@ -229,7 +229,7 @@ and the submission buttons unlock automatically. The GM can also
 
 To avoid being frozen: don't pose for photos with rival teams in
 sight, and switch routes if you spot one tailing you. (Yes,
-CityRush is partly a stealth game.)
+Rail Adventure is partly a stealth game.)
 
 ---
 
@@ -260,9 +260,9 @@ You can keep the page open to look at the rankings, but the
 - **Use chat early.** If a mission is impossible because the
   location is closed or the prop is missing, message the GM right
   away instead of grinding on it. They can swap or remove it.
-- **Watch your battery.** GPS in CityRush + camera in both modes
+- **Watch your battery.** GPS in Rail Adventure + camera in both modes
   drain the battery fast. Carry a power bank.
-- **In CityRush, do specials between stops, not at stops.** Stops
+- **In Rail Adventure, do specials between stops, not at stops.** Stops
   unlock when you arrive; doing a special exactly there wastes the
   geofence dwell time.
 
@@ -293,7 +293,7 @@ iOS Safari requires you to grant camera permission in Settings →
 Safari → Camera (set to "Ask" or "Allow"). After granting, refresh
 the page.
 
-**A CityRush mission stays locked even though I'm at the spot.**
+**A Rail Adventure mission stays locked even though I'm at the spot.**
 Your GPS accuracy might be poor. Step out of the building, into the
 open sky, and wait 5–10 seconds. If it still doesn't unlock, ask the
 GM to manually mark the arrival from their dashboard.

@@ -19,7 +19,7 @@ unterschiedliche Spieltypen unterstützt:
   ein Spiel an einem physischen Standort, Spieler treten bei,
   arbeiten eine kuratierte Liste von Foto/Video-Missionen ab, und du
   prüfst ihre Uploads.
-- **Teil 2, CityRush-Spiele.** Ein GPS-basierter Modus, bei dem
+- **Teil 2, Rail Adventure Spiele.** Ein GPS-basierter Modus, bei dem
   Spieler physisch zu Karten-Markern laufen, am Ziel ankommen und
   dort die Aufgabe lösen. Das Dashboard sieht ähnlich aus, hat aber
   eine Karte, GPS-Ankunfts-Signale und Sondermissionen.
@@ -34,7 +34,7 @@ Admin braucht, wird das ausdrücklich erwähnt, dein Job ist
 Betreiben, nicht Konfigurieren.
 
 > Screenshots zeigen ein Demo-Spiel mit zwei Teams ("Team Rot" /
-> "Team Grün" für MiSSiONS; "Team Blau" / "Team Gelb" für CityRush).
+> "Team Grün" für MiSSiONS; "Team Blau" / "Team Gelb" für Rail Adventure).
 > Deine echten Spiele sehen genauso aus, mit deinen eigenen Namen
 > und Missionen.
 
@@ -45,7 +45,7 @@ Betreiben, nicht Konfigurieren.
 ::shot:m-01-landing
 
 Hier beginnt jede Session. Du siehst eine Kachel pro Standort plus
-ganz unten eine CityRush-Kachel. Tipp auf den Standort, an dem dein
+ganz unten eine Rail Adventure Kachel. Tipp auf den Standort, an dem dein
 Team spielt, die App merkt sich deine Wahl beim nächsten Mal.
 
 Die Buttons in der Kopfzeile:
@@ -93,7 +93,7 @@ Deine Kommandozentrale für ein laufendes Spiel. Vier Bereiche:
   etwas Offenes, meistens eine Einreichung zur Prüfung.
 - **Hauptbereich** (links), die Mission-Karten des gewählten Teams
   oder die Team-Liste, wenn keins ausgewählt ist.
-- **Rechte Spalte**: Chat- und Broadcast-Tab. (CityRush-Spiele
+- **Rechte Spalte**: Chat- und Broadcast-Tab. (Rail Adventure Spiele
   ergänzen hier einen dritten Karten-Tab, siehe Teil 2.)
 
 Der Timer startet bei der konfigurierten Dauer (Default 60 Minuten).
@@ -211,31 +211,31 @@ Wenn dir eine Mission mit falschen Infos oder eine zu ändernde Regel
 auffällt, notier sie und gib sie an die Person weiter, die eure
 Installation betreut.
 
-::part:2:CityRush-Spiele leiten
+::part:2:Rail Adventure Spiele leiten
 
-CityRush ist der GPS-Spieltyp. Statt Missionen an einem einzelnen
+Rail Adventure ist der GPS-Spieltyp. Statt Missionen an einem einzelnen
 Standort zu lösen, laufen die Spieler physisch zwischen Zielen auf
 einer Karte, kommen innerhalb eines gesetzten Radius an und lösen
 dann die Aufgabe. Alles, was du von MiSSiONS kennst, gilt weiterhin
 Dashboard, Team-Chips, Chat, Broadcast, Freeze, Lightbox, aber
 das Spiel startet anders und es gibt einen extra **Karten**-Tab.
 
-# Ein CityRush-Spiel starten
+# Ein Rail Adventure Spiel starten
 
 ::shot:cr-01-landing
 
-Tipp ganz unten am Startbildschirm auf die **CityRush**-Kachel
+Tipp ganz unten am Startbildschirm auf die **Rail Adventure**-Kachel
 statt eines normalen Standorts. Die Kachel zeigt ein Runner-Symbol
-und darunter die Anzahl verfügbarer CityRush-Modi.
+und darunter die Anzahl verfügbarer Rail Adventure Modi.
 
 ::shot:cr-02-game-select
 
-Die Spielauswahl für CityRush funktioniert wie die normale, aber
-das Dropdown ist die **CityRush-Modus**-Auswahl (in dieser Demo
+Die Spielauswahl für Rail Adventure funktioniert wie die normale, aber
+das Dropdown ist die **Rail Adventure Modus**-Auswahl (in dieser Demo
 "Altstadt-Tour") statt der Modus-pro-Standort-Auswahl. Modus
 wählen, **+ Neues Spiel** tippen, App erzeugt QR + Dashboard.
 
-# Das CityRush-Dashboard
+# Das Rail Adventure Dashboard
 
 ::shot:cr-03-dashboard
 
@@ -247,15 +247,15 @@ bei MiSSiONS.
 Die Unterschiede stecken alle in den **Mission-Karten** und im
 **🗺️-Karten**-Tab.
 
-# Missionen eines CityRush-Teams
+# Missionen eines Rail Adventure Teams
 
 ::shot:cr-04-team-detail
 
-Jede CityRush-Mission-Karte sieht ähnlich aus wie eine MiSSiON-
+Jede Rail Adventure Mission-Karte sieht ähnlich aus wie eine MiSSiON-
 Karte, mit ein paar Extras:
 
 - Eine **Reihenfolgen-Nummer** links (`1`, `2`, `3`…),
-  CityRush-Missionen sind sortiert, und Spieler schalten sie eine
+  Rail Adventure Missionen sind sortiert, und Spieler schalten sie eine
   nach der anderen frei. Ein Team muss bei Mission 1 ankommen,
   bevor Mission 2 überhaupt sichtbar wird.
 - Ein **⭐** vor **Sondermissionen**, die folgen nicht der
@@ -289,11 +289,11 @@ Vollbild verwenden, wenn du sehen willst, wo alle Teams gerade sind.
 > ohne Koordinaten konfiguriert hast, wohnt sie im ⭐-Bereich des
 > Spielers, nicht auf dieser Karte.
 
-# Auf-Foto-erwischtes Team einfrieren (nur CityRush)
+# Auf-Foto-erwischtes Team einfrieren (nur Rail Adventure)
 
 ::shot:cr-06-freeze
 
-Der **❄ Freeze**-Knopf ist eine CityRush-exklusive PvP-Mechanik
+Der **❄ Freeze**-Knopf ist eine Rail Adventure exklusive PvP-Mechanik
 rund um das Erwischtwerden auf einem Foto. Der Ablauf:
 
 1. Team A entdeckt Team B irgendwo auf der Route und macht ein
@@ -322,9 +322,9 @@ Das ist die **einzige** legitime Verwendung des Freeze-Knopfs.
 Nicht als neutrale Pause, nicht als allgemeine Strafe und nicht,
 um einem Team eine Auszeit zu geben, einsetzen.
 
-Warum nur CityRush? In MiSSiONS-Spielen arbeitet jedes Team seine
+Warum nur Rail Adventure? In MiSSiONS-Spielen arbeitet jedes Team seine
 eigene Liste an einem Standort ab, da gibt es nichts gegenseitig
-zu erwischen. CityRush-Teams teilen sich eine Route, deshalb gibt
+zu erwischen. Rail Adventure Teams teilen sich eine Route, deshalb gibt
 es die Foto-Mechanik überhaupt.
 
 Zur Erinnerung an die Richtung des Modals: Du öffnest es aus dem
@@ -363,7 +363,7 @@ Vor dem Weggehen:
 
 Du kannst das Dashboard offen lassen und später zurückkommen,
 beendete Spiele bleiben in der Liste unter ihrem Standort (oder
-unter CityRush).
+unter Rail Adventure).
 
 ---
 
@@ -422,7 +422,7 @@ Code rausgegeben hast, beende das Spiel (oder ignoriere es) und
 lass sie dem richtigen beitreten. Migrieren geht nicht, sie fangen
 neu an.
 
-**Ein CityRush-Team sieht die nächste Mission nicht.**
+**Ein Rail Adventure Team sieht die nächste Mission nicht.**
 Sie sind wahrscheinlich physisch noch nicht innerhalb des Radius
 des aktuellen Ziels. Schau im Karten-Panel nach, der Team-Punkt
 sollte im Ziel-Kreis liegen. Falls ja und die Mission trotzdem

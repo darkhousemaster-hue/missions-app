@@ -15,10 +15,10 @@ Dieses Handbuch beschreibt jeden Bildschirm hinter der
 - **Teil 2, MiSSiONS-Konfiguration.** Standorte, Modi, Missionen,
   und die Regeln, die Spieler im Spiel sehen. Das ist der
   Hauptbereich für die tägliche Pflege.
-- **Teil 3, CityRush-Konfiguration.** Ein separater Spieltyp mit
+- **Teil 3, Rail Adventure Konfiguration.** Ein separater Spieltyp mit
   eigenen Modi, GPS-Zielen, Hinweis-Sequenzen und Sondermissionen.
 
-CityRush ist bewusst getrennt, es teilt die Einstellungs-Hülle, hat
+Rail Adventure ist bewusst getrennt, es teilt die Einstellungs-Hülle, hat
 aber eigene Logik (GPS-Ziele, Hinweis-Folgen, Sondermissionen), die
 für MiSSiONS-Spiele nicht gilt. Wenn du immer nur einen der beiden
 Typen verwendest, kannst du den anderen Teil überspringen.
@@ -31,7 +31,7 @@ möglich ändern.
 
 > Die Screenshots wurden auf einer frischen Demo-Datenbank erstellt
 > mit drei Standorten (Altstadt, Stadtpark, Hauptbahnhof), sechs
-> MiSSiONS und einem CityRush-Modus mit drei Missionen. Deine echte
+> MiSSiONS und einem Rail Adventure Modus mit drei Missionen. Deine echte
 > Installation sieht genauso aus, zeigt aber deine eigenen Daten.
 
 ::part:1:Verwaltung
@@ -188,27 +188,27 @@ Zieh Regeln hoch/runter zum Sortieren; 🌐 übersetzt automatisch; ⎘
 kopiert eine Regel in ein anderes Regelwerk. **Speichern** nicht
 vergessen, ungespeicherte Änderungen werden hervorgehoben.
 
-::part:3:CityRush-Konfiguration
+::part:3:Rail Adventure Konfiguration
 
-CityRush ist ein separater Spieltyp. Spieler laufen physisch zu
+Rail Adventure ist ein separater Spieltyp. Spieler laufen physisch zu
 Karten-Markern, kommen am Ziel an und lösen dort eine Aufgabe. Das
-CityRush-Settings-Panel ist wie der MiSSiONS-Tab aufgebaut, hat aber
+Rail Adventure Settings-Panel ist wie der MiSSiONS-Tab aufgebaut, hat aber
 pro Mission Extra-Felder für Koordinaten, Hinweis-Sequenzen und
 Sondermissionen. Hier konfigurierte Modi und Missionen erscheinen
-**nur** in CityRush-Spielen, nicht in MiSSiONS-Spielen, und
+**nur** in Rail Adventure Spielen, nicht in MiSSiONS-Spielen, und
 umgekehrt.
 
-# CityRush-Modi
+# Rail Adventure Modi
 
 ::shot:cr-01-modes-empty
 
-Der CityRush-Tab funktioniert wie der MiSSiONS-Tab: Eine Reihe
+Der Rail Adventure Tab funktioniert wie der MiSSiONS-Tab: Eine Reihe
 Modus-Tabs oben, darunter die Missionen des aktiven Modus. Mit
 **+ Modus** ganz rechts in der Modus-Leiste legst du einen neuen an.
 
 ::shot:cr-02-mode-add
 
-Ein CityRush-Modus hat:
+Ein Rail Adventure Modus hat:
 
 - **Name**: was der GM aus dem Dropdown wählt.
 - **Regelwerk**: dieselbe Auswahl wie bei MiSSiONS; gilt für die
@@ -217,11 +217,11 @@ Ein CityRush-Modus hat:
   Medien-Missionen in diesem Modus erlaubt sind.
 - **Standard-Dauer (Minuten)**: der Default-Timer für ein Spiel.
 
-# CityRush-Missionen
+# Rail Adventure Missionen
 
 ::shot:cr-03-mission-add
 
-Eine CityRush-Mission hat alle Felder einer MiSSiON plus die
+Eine Rail Adventure Mission hat alle Felder einer MiSSiON plus die
 ortsabhängigen Extras:
 
 - **GPS-Koordinaten + Radius**: wo das Ziel liegt und wie nah
@@ -275,7 +275,7 @@ vorher ausrollen.
 
 ## Tipps für den Alltag
 
-- **Auto-übersetzen** sowohl bei MiSSiONS als auch CityRush
+- **Auto-übersetzen** sowohl bei MiSSiONS als auch Rail Adventure
   grosszügig nutzen, alle fünf Sprachen von Hand korrekt halten
   ist mühsam, die KI ist meistens gut genug.
 - **Pool-Missionen** (nur MiSSiONS) sind **Füller**, kein
@@ -286,7 +286,7 @@ vorher ausrollen.
   aufzufüllen. Für Schlechtwetter benutzt du den **Auch drinnen
   möglich**-Schalter pro Mission, das ist eine andere Eigenschaft
   als Pool.
-- Bei CityRush **den Radius zu Fuss testen**, GPS in einer Stadt ist
+- Bei Rail Adventure **den Radius zu Fuss testen**, GPS in einer Stadt ist
   selten besser als ±10 m, und ein zu enger Radius lässt Teams
   hängen.
 - **Exportiere** Missionen ab und zu als Backup. Klein,
