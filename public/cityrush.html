@@ -672,7 +672,7 @@ const T = {
         rejected_retry:'Abgelehnt — bitte erneut versuchen.',
         accepted:'Angenommen!', rejected:'Abgelehnt',
         skip_mission:'Mission überspringen', skip_confirm:'Mission überspringen? Es gibt keine Punkte dafür.', skipped:'Übersprungen',
-        special:'Spezial', special_missions:'Spezial-Missionen', available:'Verfügbar', cooldown_wait:'Bitte warten:',
+        special:'Spezial', special_missions:'Spezial-Missionen', special_choose:'Welche Mission möchtest du spielen?', available:'Verfügbar', cooldown_wait:'Bitte warten:',
         gps_hint:'GPS-Hinweis', chat_ph:'Nachricht an Spielleiter…', chat_send:'Senden', chat_back:'Zurück',
         freeze_title:'Rival einfrieren', freeze_no_teams:'Keine anderen Teams.', freeze_pick_team:'Bitte ein Team wählen',
         freeze_already:'bereits eingefroren', freeze_done:'Team eingefroren!', freeze_failed:'Einfrieren fehlgeschlagen',
@@ -721,7 +721,7 @@ const T = {
         rejected_retry:'Rejected — please try again.',
         accepted:'Accepted!', rejected:'Rejected',
         skip_mission:'Skip mission', skip_confirm:'Skip this mission? You will not get any points.', skipped:'Skipped',
-        special:'Special', special_missions:'Special missions', available:'Available', cooldown_wait:'Please wait:',
+        special:'Special', special_missions:'Special missions', special_choose:'Which mission do you want to play?', available:'Available', cooldown_wait:'Please wait:',
         gps_hint:'GPS hint', chat_ph:'Message to Gamemaster…', chat_send:'Send', chat_back:'Back',
         freeze_title:'Freeze a rival', freeze_no_teams:'No other teams.', freeze_pick_team:'Please pick a team',
         freeze_already:'already frozen', freeze_done:'Team frozen!', freeze_failed:'Freeze failed',
@@ -768,7 +768,7 @@ const T = {
         rejected_retry:'Refusé — veuillez réessayer.',
         accepted:'Accepté!', rejected:'Refusé',
         skip_mission:'Passer la mission', skip_confirm:'Passer cette mission ? Vous n\'aurez aucun point.', skipped:'Passée',
-        special:'Spécial', special_missions:'Missions spéciales', available:'Disponible', cooldown_wait:'Veuillez attendre :',
+        special:'Spécial', special_missions:'Missions spéciales', special_choose:'Quelle mission veux-tu jouer ?', available:'Disponible', cooldown_wait:'Veuillez attendre :',
         gps_hint:'Indice GPS', chat_ph:'Message au Gamemaster…', chat_send:'Envoyer', chat_back:'Retour',
         freeze_title:'Geler une équipe', freeze_no_teams:'Aucune autre équipe.', freeze_pick_team:'Choisis une équipe',
         freeze_already:'déjà gelée', freeze_done:'Équipe gelée !', freeze_failed:'Échec du gel',
@@ -815,7 +815,7 @@ const T = {
         rejected_retry:'Rifiutato — riprova.',
         accepted:'Accettato!', rejected:'Rifiutato',
         skip_mission:'Salta missione', skip_confirm:'Saltare la missione? Non riceverai punti.', skipped:'Saltata',
-        special:'Speciale', special_missions:'Missioni speciali', available:'Disponibile', cooldown_wait:'Attendi:',
+        special:'Speciale', special_missions:'Missioni speciali', special_choose:'Quale missione vuoi giocare?', available:'Disponibile', cooldown_wait:'Attendi:',
         gps_hint:'Suggerimento GPS', chat_ph:'Messaggio al Gamemaster…', chat_send:'Invia', chat_back:'Indietro',
         freeze_title:'Congela una rivale', freeze_no_teams:'Nessun\'altra squadra.', freeze_pick_team:'Scegli una squadra',
         freeze_already:'già congelata', freeze_done:'Squadra congelata!', freeze_failed:'Congelamento fallito',
@@ -862,7 +862,7 @@ const T = {
         rejected_retry:'Rechazado — vuelve a intentarlo.',
         accepted:'¡Aceptado!', rejected:'Rechazado',
         skip_mission:'Saltar misión', skip_confirm:'¿Saltar la misión? No recibirás puntos.', skipped:'Saltada',
-        special:'Especial', special_missions:'Misiones especiales', available:'Disponible', cooldown_wait:'Espera:',
+        special:'Especial', special_missions:'Misiones especiales', special_choose:'¿Qué misión quieres jugar?', available:'Disponible', cooldown_wait:'Espera:',
         gps_hint:'Pista GPS', chat_ph:'Mensaje al Gamemaster…', chat_send:'Enviar', chat_back:'Volver',
         freeze_title:'Congelar a un rival', freeze_no_teams:'No hay otros equipos.', freeze_pick_team:'Elige un equipo',
         freeze_already:'ya congelado', freeze_done:'¡Equipo congelado!', freeze_failed:'Fallo al congelar',
@@ -1514,47 +1514,46 @@ function renderMission(){
 //   2+ specials → show section as gold-glow tiles, hide button
 // Disabled tiles (cooldown / one-shot done) still render but aren't tappable.
 function renderSpecialTiles(){
+  // The round star button is now the single entry point for special missions,
+  // regardless of how many exist. The old inline 2+ tile section is no longer
+  // used — keep it hidden for back-compat with the markup.
   const section = document.getElementById('cr-special-section');
   const grid    = document.getElementById('cr-special-tiles');
-  const label   = document.getElementById('cr-lbl-special');
   const btn     = document.getElementById('cr-special-btn');
-  const btnLbl  = document.getElementById('cr-special-btn-label');
-  if(!grid || !section) return;
+  if(section) section.style.display = 'none';
+  if(grid) grid.innerHTML = '';
 
-  // Zero specials: hide everything special-related.
   if(!specialMissions.length){
-    section.style.display = 'none';
-    grid.innerHTML = '';
     _specialBtnWanted = false;
     crUpdateSpecialBtnVisibility();
     return;
   }
-
-  // Exactly one special: hide the tile section, show the small round
-  // star button. The mission's name surfaces via aria-label + title so
-  // assistive tech and hover tooltips still announce it; the visible
-  // affordance is just the star.
-  if(specialMissions.length === 1){
-    section.style.display = 'none';
-    grid.innerHTML = '';
-    _specialBtnWanted = true;
-    if(btn){
-      const only = specialMissions[0];
-      const name = only[`name_${lang}`] || only.name_de || (t('special_mission')||'Spezial-Mission');
-      btn.setAttribute('aria-label', name);
-      btn.setAttribute('title', name);
-    }
-    crUpdateSpecialBtnVisibility();
-    return;
+  _specialBtnWanted = true;
+  if(btn){
+    const label = specialMissions.length === 1
+      ? (specialMissions[0][`name_${lang}`] || specialMissions[0].name_de || (t('special_mission')||'Spezial-Mission'))
+      : (t('special_missions')||'Spezial-Missionen');
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
   }
-
-  // 2+ specials: hide the button, render tiles with the gold-glow variant.
-  _specialBtnWanted = false;
   crUpdateSpecialBtnVisibility();
-  if(label) label.textContent = t('special_missions')||'Spezial-Missionen';
-  section.style.display = 'block';
+}
+
+// Star-button click handler. One special → open it directly. Two or more →
+// show a chooser so the player picks which one to play (instead of the button
+// silently mapping to just one).
+function crOpenSingleSpecial(){
+  if(specialMissions.length === 1){ openSpecialPopup(specialMissions[0].id); return; }
+  if(specialMissions.length > 1){ openSpecialChooser(); return; }
+}
+
+// Picker listing every special mission with its availability, shown in the
+// shared mission popup. Tapping an available one opens its full popup.
+function openSpecialChooser(){
+  popupMissionId = null;   // chooser isn't tied to one mission
+  document.getElementById('cr-mission-popup').style.display = 'flex';
   const now = Date.now();
-  grid.innerHTML = specialMissions.map(m => {
+  const rows = specialMissions.map(m => {
     const prog = specialProgress[m.id] || {};
     const cooldownMs = (m.repeat_minutes||0) * 60 * 1000;
     const elapsed   = prog.last_attempt ? (now - prog.last_attempt) : Infinity;
@@ -1562,30 +1561,29 @@ function renderSpecialTiles(){
     const oneShot    = (m.repeat_minutes||0) === 0 && (prog.completed_count||0) > 0;
     const disabled   = onCooldown || oneShot;
     const waitSec    = onCooldown ? Math.ceil((cooldownMs - elapsed)/1000) : 0;
-    const waitLabel  = onCooldown
-      ? `${Math.floor(waitSec/60)}:${String(waitSec%60).padStart(2,'0')}`
-      : '';
+    const waitLabel  = onCooldown ? `${Math.floor(waitSec/60)}:${String(waitSec%60).padStart(2,'0')}` : '';
     const status     = oneShot ? (t('completed')||'Erledigt')
                      : onCooldown ? `⏳ ${waitLabel}` : `⭐ ${t('available')||'Verfügbar'}`;
-    const name = m[`name_${lang}`] || m.name_de || `Special`;
+    const name = m[`name_${lang}`] || m.name_de || 'Special';
     const icons = [
+      m.use_puzzle?'🧩':'',
       m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
       m.has_answer?'❓':'',
     ].filter(Boolean).join(' ');
-    const tileClasses = ['cr-tile','cr-tile--special', oneShot?'done':'current', disabled?'special-disabled':''].join(' ');
-    return `<div class="${tileClasses}" ${disabled?'':'onclick="openSpecialPopup('+m.id+')"'}
-      ${disabled?'style="opacity:.55;cursor:not-allowed;"':''}>
-      <span class="status-pill">${status}</span>
-      <div class="num">⭐</div>
-      <div class="name">${esc(name)}</div>
-      <div class="badges">${icons} · +${m.points}pt</div>
-    </div>`;
+    return `<button class="cr-special-choice" ${disabled?'disabled':`onclick="openSpecialPopup(${m.id})"`}
+        style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;width:100%;text-align:left;padding:.8rem .9rem;margin-bottom:.5rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:${disabled?'not-allowed':'pointer'};opacity:${disabled?'.55':'1'};">
+        <span style="display:flex;flex-direction:column;gap:.15rem;min-width:0;">
+          <span style="font-weight:700;">${esc(name)}</span>
+          <span style="font-size:.78rem;color:var(--text-muted);">${icons}${icons?' · ':''}+${m.points}pt</span>
+        </span>
+        <span style="font-size:.8rem;white-space:nowrap;color:var(--text-dim);">${status}</span>
+      </button>`;
   }).join('');
-}
-
-// Single-special-button click handler — opens the only special's popup.
-function crOpenSingleSpecial(){
-  if(specialMissions.length === 1) openSpecialPopup(specialMissions[0].id);
+  document.getElementById('cr-popup-content').innerHTML = `
+    <div class="cr-mission-number" style="color:var(--orange);margin-bottom:.5rem;">⭐ ${(t('special_missions')||'Spezial-Missionen')}</div>
+    <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:.85rem;">${t('special_choose')||'Welche Mission möchtest du spielen?'}</div>
+    ${rows}
+  `;
 }
 
 // Tap-the-embedded-map handler. Routes to the existing fullscreen #view-map.
@@ -2022,6 +2020,17 @@ function renderPuzzle(m, actEl, onSolved){
     const cellXY = idx => ({ x: (idx % g) * cw, y: Math.floor(idx / g) * ch });
     const placeAt = (el, cellIdx) => { const {x,y} = cellXY(cellIdx); el.style.left = x + 'px'; el.style.top = y + 'px'; };
 
+    // Drop-target highlight: a translucent outline that snaps to whichever cell
+    // a dragged piece would land in, so the player can see where it will go.
+    const highlight = document.createElement('div');
+    highlight.style.cssText = `position:absolute;width:${cw}px;height:${ch}px;` +
+      `border:3px solid var(--orange,#ff6b00);border-radius:4px;box-sizing:border-box;` +
+      `background:rgba(255,107,0,.18);pointer-events:none;display:none;z-index:9;` +
+      `transition:left .06s,top .06s;`;
+    board.appendChild(highlight);
+    const showHighlightAt = cellIdx => { const {x,y}=cellXY(cellIdx); highlight.style.left=x+'px'; highlight.style.top=y+'px'; highlight.style.display='block'; };
+    const hideHighlight = () => { highlight.style.display='none'; };
+
     for (let cell = 0; cell < N; cell++) {
       const home = order[cell];
       const el = document.createElement('div');
@@ -2063,19 +2072,23 @@ function renderPuzzle(m, actEl, onSolved){
       el.addEventListener('pointerdown', e => {
         if (_puzzleSolved) return;
         dragging=true; el.setPointerCapture(e.pointerId);
-        el.style.cursor='grabbing'; el.style.zIndex='10';
+        el.style.cursor='grabbing'; el.style.zIndex='10'; el.style.opacity='0.75';
         const home = Number(el.dataset.home); fromCell = cellOfHome[home];
         sx=e.clientX; sy=e.clientY; ox=parseFloat(el.style.left); oy=parseFloat(el.style.top);
+        showHighlightAt(fromCell);
         e.preventDefault();
       });
       el.addEventListener('pointermove', e => {
         if (!dragging) return;
         el.style.left = (ox + e.clientX - sx) + 'px';
         el.style.top  = (oy + e.clientY - sy) + 'px';
+        // Live-preview the cell this piece would drop into.
+        showHighlightAt(nearestCell(parseFloat(el.style.left)+cw/2, parseFloat(el.style.top)+ch/2));
       });
       const drop = e => {
         if (!dragging) return;
-        dragging=false; el.style.zIndex=''; el.style.cursor='grab';
+        dragging=false; el.style.zIndex=''; el.style.cursor='grab'; el.style.opacity='1';
+        hideHighlight();
         try { el.releasePointerCapture(e.pointerId); } catch(_){}
         const home = Number(el.dataset.home);
         const cx = parseFloat(el.style.left) + cw/2;
