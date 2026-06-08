@@ -2127,68 +2127,55 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
     const originX = Math.round((VW - boardW) / 2);
     const originY = Math.round((VH - boardH) / 2);
     const SNAP = Math.max(16, Math.round(cw * 0.30));
-    const tab = Math.round(cw * 0.22);                    // tab/blank reach
+    const knob = Math.round(cw * 0.20);                   // tab/blank bulb height
+    const pad  = Math.round(knob * 1.5);                  // canvas margin so bulbs never clip
     const homeCol = i => i % g, homeRow = i => Math.floor(i / g);
 
-    // Edge signs. For each piece, edges are top,right,bottom,left ∈ {-1,0,1}.
-    // 0 = flat (board border). Internal edges are random ±1, made complementary
-    // with the already-decided neighbour so tabs meet blanks.
-    const sgn = Array.from({length:N}, () => ({t:0,r:0,b:0,l:0}));
-    for(let i=0;i<N;i++){
-      const c = homeCol(i), r = homeRow(i);
-      // top: complementary to the piece above's bottom
-      sgn[i].t = (r===0) ? 0 : -sgn[i-g].b;
-      // left: complementary to the piece to the left's right
-      sgn[i].l = (c===0) ? 0 : -sgn[i-1].r;
-      // right: random unless on border
-      sgn[i].r = (c===g-1) ? 0 : (Math.random()<0.5 ? 1 : -1);
-      // bottom: random unless on border
-      sgn[i].b = (r===g-1) ? 0 : (Math.random()<0.5 ? 1 : -1);
-    }
+    // Edge signs. Each INTERNAL boundary gets ONE shared sign (±1); both pieces
+    // that touch it read the same value, so one tab always meets one blank (no
+    // two-male / two-female gaps). Outer board edges are flat (0). hSign keys a
+    // horizontal boundary (between stacked rows), vSign a vertical one.
+    const hSign = {}, vSign = {}, rndSgn = () => (Math.random() < 0.5 ? 1 : -1);
+    for(let r=1;r<g;r++) for(let c=0;c<g;c++) hSign[r+','+c] = rndSgn();
+    for(let c=1;c<g;c++) for(let r=0;r<g;r++) vSign[r+','+c] = rndSgn();
+    const sgnOf = i => { const c = homeCol(i), r = homeRow(i); return {
+      t: r===0   ? 0 : hSign[r+','+c],
+      b: r===g-1 ? 0 : hSign[(r+1)+','+c],
+      l: c===0   ? 0 : vSign[r+','+c],
+      r: c===g-1 ? 0 : vSign[r+','+(c+1)] }; };
+    const sgn = Array.from({length:N}, (_, i) => sgnOf(i));
 
-    // Build the SVG path for one piece's outline. Coordinates are in the piece's
-    // local SVG space, which is (cw + 2*tab) × (ch + 2*tab) so tabs can extend
-    // outside the core cell. The core cell sits at (tab, tab).
+    // Build the SVG outline path for one piece. Local space is (cw+2*pad) square
+    // with the core cell at (pad,pad); knobs reach out by up to ~1.3*knob.
     function piecePath(s){
-      const x0 = tab, y0 = tab, x1 = tab + cw, y1 = tab + ch;
-      // a knob bump along an edge: helper returns the cubic-ish path via quad curves
-      const P = [];
-      P.push(`M ${x0} ${y0}`);
-      // top edge (left→right)
-      edge(P, x0, y0, x1, y0, s.t, 'h');
-      // right edge (top→bottom)
-      edge(P, x1, y0, x1, y1, s.r, 'v');
-      // bottom edge (right→left)
-      edge(P, x1, y1, x0, y1, s.b, 'h');
-      // left edge (bottom→top)
-      edge(P, x0, y1, x0, y0, s.l, 'v');
+      const x0 = pad, y0 = pad, x1 = pad + cw, y1 = pad + ch;
+      const P = [`M ${x0} ${y0}`];
+      edge(P, x0, y0, x1, y0, s.t, 'h');   // top    (left→right)
+      edge(P, x1, y0, x1, y1, s.r, 'v');   // right  (top→bottom)
+      edge(P, x1, y1, x0, y1, s.b, 'h');   // bottom (right→left)
+      edge(P, x0, y1, x0, y0, s.l, 'v');   // left   (bottom→top)
       P.push('Z');
       return P.join(' ');
     }
-    // Append an edge from (ax,ay)→(bx,by) with knob sign `k` (0 flat). `axis`
-    // is 'h' (horizontal edge, knob bulges in ±y) or 'v' (vertical, bulges ±x).
+    // One edge (ax,ay)→(bx,by). The knob bulges in an ABSOLUTE axis and is
+    // symmetric about the edge midpoint, so the two pieces that share it draw the
+    // identical curve regardless of traversal direction — guaranteeing the fit.
     function edge(P, ax, ay, bx, by, k, axis){
       if(k === 0){ P.push(`L ${bx} ${by}`); return; }
-      const len = (axis==='h') ? (bx-ax) : (by-ay);     // signed length
-      const dir = Math.sign(len);
-      const nl = Math.abs(len);
-      const s1 = 0.38, s2 = 0.62;                        // shoulder fractions
-      const neck = nl * s1, neck2 = nl * s2;
-      const bump = tab * k * (axis==='h' ? -1 : 1);      // bulge direction
-      if(axis==='h'){
-        const y = ay;
-        const xa = ax + dir*neck, xb = ax + dir*neck2, xm = ax + dir*nl*0.5;
-        P.push(`L ${xa} ${y}`);
-        P.push(`C ${xa} ${y + bump*0.55}, ${xm - dir*tab*0.6} ${y + bump}, ${xm} ${y + bump}`);
-        P.push(`C ${xm + dir*tab*0.6} ${y + bump}, ${xb} ${y + bump*0.55}, ${xb} ${y}`);
+      if(axis === 'h'){
+        const Y = ay, L = Math.abs(bx-ax), s = Math.sign(bx-ax), b = k*knob, X = a => ax + s*a*L;
+        P.push(`L ${X(0.34)} ${Y}`);
+        P.push(`C ${X(0.42)} ${Y}, ${X(0.37)} ${Y+b}, ${X(0.43)} ${Y+b}`);
+        P.push(`C ${X(0.49)} ${Y+b*1.28}, ${X(0.51)} ${Y+b*1.28}, ${X(0.57)} ${Y+b}`);
+        P.push(`C ${X(0.63)} ${Y+b}, ${X(0.58)} ${Y}, ${X(0.66)} ${Y}`);
         P.push(`L ${bx} ${by}`);
       } else {
-        const x = ax;
-        const ya = ay + dir*neck, yb = ay + dir*neck2, ym = ay + dir*nl*0.5;
-        P.push(`L ${x} ${ya}`);
-        P.push(`C ${x + bump*0.55} ${ya}, ${x + bump} ${ym - dir*tab*0.6}, ${x + bump} ${ym}`);
-        P.push(`C ${x + bump} ${ym + dir*tab*0.6}, ${x + bump*0.55} ${yb}, ${x} ${yb}`);
-        P.push(`L ${bx} ${by}`);
+        const X = ax, L = Math.abs(by-ay), s = Math.sign(by-ay), b = k*knob, Y = a => ay + s*a*L;
+        P.push(`L ${X} ${Y(0.34)}`);
+        P.push(`C ${X} ${Y(0.42)}, ${X+b} ${Y(0.37)}, ${X+b} ${Y(0.43)}`);
+        P.push(`C ${X+b*1.28} ${Y(0.49)}, ${X+b*1.28} ${Y(0.51)}, ${X+b} ${Y(0.57)}`);
+        P.push(`C ${X+b} ${Y(0.63)}, ${X} ${Y(0.58)}, ${X} ${Y(0.66)}`);
+        P.push(`L ${X} ${by}`);
       }
     }
 
@@ -2198,7 +2185,7 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
     for(let i=0;i<N;i++){
       const c = homeCol(i), r = homeRow(i);
       const svg = document.createElementNS(SVGNS,'svg');
-      const W = cw + 2*tab, H = ch + 2*tab;
+      const W = cw + 2*pad, H = ch + 2*pad;
       svg.setAttribute('width', W); svg.setAttribute('height', H);
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.style.cssText = `position:absolute;left:0;top:0;overflow:visible;cursor:grab;` +
@@ -2215,7 +2202,7 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
       img.setAttributeNS('http://www.w3.org/1999/xlink','href', src);
       img.setAttribute('href', src);
       img.setAttribute('width', boardW); img.setAttribute('height', boardH);
-      img.setAttribute('x', tab - c*cw); img.setAttribute('y', tab - r*ch);
+      img.setAttribute('x', pad - c*cw); img.setAttribute('y', pad - r*ch);
       img.setAttribute('preserveAspectRatio','none');
       img.setAttribute('clip-path', `url(#${clipId})`);
       svg.appendChild(img);
@@ -2228,15 +2215,15 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
       svg.appendChild(stroke);
 
       els[i] = svg; group[i] = i;
-      // scatter (account for the tab margin so pieces stay on-screen)
+      // scatter (account for the pad margin so pieces stay on-screen)
       px[i] = Math.round(10 + Math.random() * (VW - W - 20));
       py[i] = Math.round(64 + Math.random() * (VH - H - 100));
       ov.appendChild(svg);
       attachDrag(svg, i);
     }
     // piece i's core cell sits at (px[i]+? ) — we track the SVG's top-left; the
-    // core cell origin is offset by `tab`. Snap math uses core-cell positions:
-    const coreX = i => px[i] + tab, coreY = i => py[i] + tab;
+    // core cell origin is offset by `pad`. Snap math uses core-cell positions:
+    const coreX = i => px[i] + pad, coreY = i => py[i] + pad;
     const paint = i => { els[i].style.transform = `translate(${px[i]}px,${py[i]}px)`; };
     for(let i=0;i<N;i++) paint(i);
 
