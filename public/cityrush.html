@@ -701,7 +701,7 @@ const T = {
         selfie_shoot:'Foto machen', selfie_retake:'Erneut',
         selfie_upload:'Hochladen & weiter',
         answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
-        puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!', puzzle_start:'Puzzle starten', puzzle_title:'Puzzle', puzzle_preview:'Vorschau',
+        puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!', puzzle_start:'Puzzle starten', puzzle_title:'Puzzle', puzzle_peek:'Vorschau',
         broadcast:'Rundruf',
         error_generic:'Fehler',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
@@ -748,7 +748,7 @@ const T = {
         selfie_shoot:'Take photo', selfie_retake:'Retake',
         selfie_upload:'Upload & continue',
         answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
-        puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!', puzzle_start:'Start puzzle', puzzle_title:'Puzzle', puzzle_preview:'Preview',
+        puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!', puzzle_start:'Start puzzle', puzzle_title:'Puzzle', puzzle_peek:'Peek',
         broadcast:'Broadcast',
         error_generic:'Error',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
@@ -795,7 +795,7 @@ const T = {
         selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
         selfie_upload:'Envoyer & continuer',
         answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
-        puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !', puzzle_start:'Démarrer le puzzle', puzzle_title:'Puzzle', puzzle_preview:'Aperçu',
+        puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !', puzzle_start:'Démarrer le puzzle', puzzle_title:'Puzzle', puzzle_peek:'Aperçu',
         broadcast:'Annonce',
         error_generic:'Erreur',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
@@ -842,7 +842,7 @@ const T = {
         selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
         selfie_upload:'Carica & continua',
         answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
-        puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!', puzzle_start:'Avvia puzzle', puzzle_title:'Puzzle', puzzle_preview:'Anteprima',
+        puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!', puzzle_start:'Avvia puzzle', puzzle_title:'Puzzle', puzzle_peek:'Anteprima',
         broadcast:'Annuncio',
         error_generic:'Errore',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
@@ -889,7 +889,7 @@ const T = {
         selfie_shoot:'Hacer foto', selfie_retake:'Repetir',
         selfie_upload:'Subir y continuar',
         answer_required:'Por favor, escribe tu respuesta.', answer_wrong:'Incorrecto — inténtalo de nuevo.',
-        puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!', puzzle_start:'Iniciar puzle', puzzle_title:'Puzle', puzzle_preview:'Vista previa',
+        puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!', puzzle_start:'Iniciar puzle', puzzle_title:'Puzle', puzzle_peek:'Vista previa',
         broadcast:'Anuncio',
         error_generic:'Error',
         teammate_pending:'Un compañero ya ha enviado — esperando al Gamemaster.' },
@@ -1994,13 +1994,13 @@ function refreshPopup(){
 }
 
 // ── Jigsaw puzzle ───────────────────────────────────────────────────────────
-// A real freeform jigsaw played in a FULL-SCREEN overlay. The image is sliced
-// into g×g pieces via CSS background-position (no server slicing). Pieces start
-// scattered and can be dragged anywhere. When a piece (or a connected group) is
-// released, any piece that ends up adjacent-and-aligned with a correct neighbour
-// (within SNAP px of its true relative offset) snaps into place and the two
-// groups MERGE — from then on they move together. When every piece is in one
-// group the puzzle is solved → onSolved().
+// A real freeform jigsaw in a FULL-SCREEN overlay. Pieces are SVG paths with
+// interlocking tab/blank edges (complementary between neighbours), each clipping
+// the full puzzle image so the correct region shows through the piece shape.
+// Pieces scatter, drag anywhere; on release a piece/group that lands aligned
+// with a correct neighbour snaps and the groups MERGE (move together). Solved
+// when all pieces form one group → onSolved(). No always-on preview — instead a
+// GM-configured "peek" briefly shows the finished image.
 let _puzzleSolved = false;
 let _puzzleOverlayEl = null;
 function renderPuzzle(m, actEl, onSolved){
@@ -2008,9 +2008,6 @@ function renderPuzzle(m, actEl, onSolved){
   const g = Math.max(3, Math.min(5, Number(m.puzzle_grid) || 3));
   const src = `/uploads/${m.puzzle_image}`;
   const N = g * g;
-
-  // A button in the popup launches the full-screen puzzle (the popup is small;
-  // the puzzle wants the whole screen).
   const launch = document.createElement('button');
   launch.className = 'btn btn-primary btn-full';
   launch.textContent = '🧩 ' + (t('puzzle_start') || 'Puzzle starten');
@@ -2022,6 +2019,17 @@ function closePuzzleOverlay(){
   if(_puzzleOverlayEl){ _puzzleOverlayEl.remove(); _puzzleOverlayEl = null; }
 }
 
+// Parse the GM peek config off the mission into a normalised list of durations.
+// onetime → a single peek that stays until closed (duration 0 = "until X").
+function _puzzlePeeks(m){
+  if(!(m.puzzle_peek_enabled===1 || m.puzzle_peek_enabled===true || m.puzzle_peek_enabled==='1')) return [];
+  if(m.puzzle_peek_onetime===1 || m.puzzle_peek_onetime===true || m.puzzle_peek_onetime==='1') return [0];
+  let arr = m.puzzle_peeks;
+  if(typeof arr === 'string'){ try{ arr = JSON.parse(arr); }catch{ arr = []; } }
+  if(!Array.isArray(arr)) arr = [];
+  return arr.map(n => { const v = Number(n); return Number.isFinite(v) && v>=0 ? v : 0; });
+}
+
 function openPuzzleOverlay(m, g, src, N, onSolved){
   closePuzzleOverlay();
   _puzzleSolved = false;
@@ -2031,7 +2039,7 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
     'touch-action:none;user-select:none;overflow:hidden;';
   _puzzleOverlayEl = ov;
 
-  // Top bar: title + close + preview thumbnail of the finished image.
+  // Top bar: title + (peek button) + close. No always-on preview thumbnail.
   const bar = document.createElement('div');
   bar.style.cssText = 'position:absolute;top:0;left:0;right:0;display:flex;align-items:center;' +
     'gap:.6rem;padding:calc(env(safe-area-inset-top,0px) + .6rem) .8rem .6rem;z-index:5;' +
@@ -2039,16 +2047,31 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
   const title = document.createElement('div');
   title.style.cssText = 'flex:1;font-weight:700;font-size:.95rem;color:#fff;';
   title.textContent = t('puzzle_title') || 'Puzzle';
-  const preview = document.createElement('img');
-  preview.src = src;
-  preview.title = t('puzzle_preview') || 'Vorschau';
-  preview.style.cssText = 'width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid #fff5;opacity:.85;';
+  bar.appendChild(title);
+
+  // Peek button — only when the GM enabled peeks and the player has some left.
+  const peeks = _puzzlePeeks(m);
+  let peekIdx = 0;
+  const peekBtn = document.createElement('button');
+  peekBtn.className = 'btn btn-secondary btn-sm';
+  const refreshPeekBtn = () => {
+    if(peekIdx >= peeks.length){ peekBtn.style.display = 'none'; return; }
+    peekBtn.style.display = '';
+    const remaining = peeks.length - peekIdx;
+    peekBtn.textContent = peeks.length === 1
+      ? '👁 ' + (t('puzzle_peek')||'Vorschau')
+      : `👁 ${t('puzzle_peek')||'Vorschau'} (${remaining})`;
+  };
+  peekBtn.onclick = () => showPeek();
+  if(peeks.length) bar.appendChild(peekBtn);
+
   const closeBtn = document.createElement('button');
   closeBtn.className = 'btn btn-ghost btn-sm';
   closeBtn.textContent = '✕';
   closeBtn.onclick = closePuzzleOverlay;
-  bar.appendChild(title); bar.appendChild(preview); bar.appendChild(closeBtn);
+  bar.appendChild(closeBtn);
   ov.appendChild(bar);
+  refreshPeekBtn();
 
   const status = document.createElement('div');
   status.style.cssText = 'position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + .8rem);' +
@@ -2057,104 +2080,209 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
 
   document.body.appendChild(ov);
 
+  // Peek overlay: shows the finished image; auto-closes after the peek's
+  // duration (0 = stays until the X). Consumes one peek from the list.
+  let _peekTimer = null;
+  function showPeek(){
+    if(peekIdx >= peeks.length) return;
+    const secs = peeks[peekIdx]; peekIdx++;
+    refreshPeekBtn();
+    const pk = document.createElement('div');
+    pk.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,.92);' +
+      'display:flex;align-items:center;justify-content:center;padding:24px;';
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.cssText = 'max-width:92vw;max-height:80vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);';
+    const x = document.createElement('button');
+    x.className = 'btn btn-ghost btn-sm';
+    x.textContent = '✕';
+    x.style.cssText = 'position:absolute;top:calc(env(safe-area-inset-top,0px) + .8rem);right:.9rem;';
+    const close = () => { if(_peekTimer){ clearTimeout(_peekTimer); _peekTimer=null; } pk.remove(); };
+    x.onclick = close;
+    pk.onclick = e => { if(e.target === pk) close(); };  // tap backdrop to close
+    pk.appendChild(img); pk.appendChild(x);
+    // countdown chip for timed peeks
+    if(secs > 0){
+      const chip = document.createElement('div');
+      chip.style.cssText = 'position:absolute;top:calc(env(safe-area-inset-top,0px) + .9rem);left:.9rem;' +
+        'font:600 .85rem/1 var(--body);color:#fff;background:rgba(0,0,0,.5);padding:.35rem .6rem;border-radius:999px;';
+      let left = secs;
+      const tick = () => { chip.textContent = left.toFixed(1) + 's'; };
+      tick();
+      const iv = setInterval(() => { left -= 0.1; if(left <= 0){ clearInterval(iv); } else tick(); }, 100);
+      pk.appendChild(chip);
+      _peekTimer = setTimeout(() => { clearInterval(iv); close(); }, secs * 1000);
+    }
+    ov.appendChild(pk);
+  }
+
   // Defer until the overlay has real pixel dimensions.
   const build = () => {
     const VW = ov.clientWidth, VH = ov.clientHeight;
     if(!VW || !VH){ setTimeout(build, 60); return; }
 
-    // Fit the solved image into the centre with margins, preserving the image's
-    // own aspect via the grid (we treat the source as square cells; the board
-    // aspect = g:g). Use ~78% of the smaller dimension so scattered pieces have
-    // room around the assembly area.
-    const boardSize = Math.min(VW, VH) * 0.82;
-    const cw = Math.floor(boardSize / g), ch = cw;       // square pieces
+    const boardSize = Math.min(VW, VH) * 0.78;
+    const cw = Math.floor(boardSize / g), ch = cw;        // square cells
     const boardW = cw * g, boardH = ch * g;
-    const originX = Math.round((VW - boardW) / 2);        // where the SOLVED image sits
+    const originX = Math.round((VW - boardW) / 2);
     const originY = Math.round((VH - boardH) / 2);
-    const SNAP = Math.max(16, Math.round(cw * 0.32));     // snap tolerance
-
-    // Per-piece state: current top-left (px), and group id.
-    const px = new Array(N), py = new Array(N), group = new Array(N);
-    const els = new Array(N);
+    const SNAP = Math.max(16, Math.round(cw * 0.30));
+    const tab = Math.round(cw * 0.22);                    // tab/blank reach
     const homeCol = i => i % g, homeRow = i => Math.floor(i / g);
 
-    // Scatter pieces randomly across the viewport (avoiding the very top bar).
+    // Edge signs. For each piece, edges are top,right,bottom,left ∈ {-1,0,1}.
+    // 0 = flat (board border). Internal edges are random ±1, made complementary
+    // with the already-decided neighbour so tabs meet blanks.
+    const sgn = Array.from({length:N}, () => ({t:0,r:0,b:0,l:0}));
     for(let i=0;i<N;i++){
-      const el = document.createElement('div');
-      el.style.cssText = `position:absolute;width:${cw}px;height:${ch}px;` +
-        `background-image:url('${src}');background-size:${boardW}px ${boardH}px;` +
-        `background-position:-${homeCol(i)*cw}px -${homeRow(i)*ch}px;` +
-        `box-shadow:0 1px 4px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.18);` +
-        `border-radius:3px;cursor:grab;will-change:transform;z-index:1;`;
-      el.dataset.idx = i;
-      els[i] = el;
-      group[i] = i;
-      px[i] = Math.round(20 + Math.random() * (VW - cw - 40));
-      py[i] = Math.round(70 + Math.random() * (VH - ch - 110));
-      ov.appendChild(el);
-      attachDrag(el, i);
+      const c = homeCol(i), r = homeRow(i);
+      // top: complementary to the piece above's bottom
+      sgn[i].t = (r===0) ? 0 : -sgn[i-g].b;
+      // left: complementary to the piece to the left's right
+      sgn[i].l = (c===0) ? 0 : -sgn[i-1].r;
+      // right: random unless on border
+      sgn[i].r = (c===g-1) ? 0 : (Math.random()<0.5 ? 1 : -1);
+      // bottom: random unless on border
+      sgn[i].b = (r===g-1) ? 0 : (Math.random()<0.5 ? 1 : -1);
     }
+
+    // Build the SVG path for one piece's outline. Coordinates are in the piece's
+    // local SVG space, which is (cw + 2*tab) × (ch + 2*tab) so tabs can extend
+    // outside the core cell. The core cell sits at (tab, tab).
+    function piecePath(s){
+      const x0 = tab, y0 = tab, x1 = tab + cw, y1 = tab + ch;
+      // a knob bump along an edge: helper returns the cubic-ish path via quad curves
+      const P = [];
+      P.push(`M ${x0} ${y0}`);
+      // top edge (left→right)
+      edge(P, x0, y0, x1, y0, s.t, 'h');
+      // right edge (top→bottom)
+      edge(P, x1, y0, x1, y1, s.r, 'v');
+      // bottom edge (right→left)
+      edge(P, x1, y1, x0, y1, s.b, 'h');
+      // left edge (bottom→top)
+      edge(P, x0, y1, x0, y0, s.l, 'v');
+      P.push('Z');
+      return P.join(' ');
+    }
+    // Append an edge from (ax,ay)→(bx,by) with knob sign `k` (0 flat). `axis`
+    // is 'h' (horizontal edge, knob bulges in ±y) or 'v' (vertical, bulges ±x).
+    function edge(P, ax, ay, bx, by, k, axis){
+      if(k === 0){ P.push(`L ${bx} ${by}`); return; }
+      const len = (axis==='h') ? (bx-ax) : (by-ay);     // signed length
+      const dir = Math.sign(len);
+      const nl = Math.abs(len);
+      const s1 = 0.38, s2 = 0.62;                        // shoulder fractions
+      const neck = nl * s1, neck2 = nl * s2;
+      const bump = tab * k * (axis==='h' ? -1 : 1);      // bulge direction
+      if(axis==='h'){
+        const y = ay;
+        const xa = ax + dir*neck, xb = ax + dir*neck2, xm = ax + dir*nl*0.5;
+        P.push(`L ${xa} ${y}`);
+        P.push(`C ${xa} ${y + bump*0.55}, ${xm - dir*tab*0.6} ${y + bump}, ${xm} ${y + bump}`);
+        P.push(`C ${xm + dir*tab*0.6} ${y + bump}, ${xb} ${y + bump*0.55}, ${xb} ${y}`);
+        P.push(`L ${bx} ${by}`);
+      } else {
+        const x = ax;
+        const ya = ay + dir*neck, yb = ay + dir*neck2, ym = ay + dir*nl*0.5;
+        P.push(`L ${x} ${ya}`);
+        P.push(`C ${x + bump*0.55} ${ya}, ${x + bump} ${ym - dir*tab*0.6}, ${x + bump} ${ym}`);
+        P.push(`C ${x + bump} ${ym + dir*tab*0.6}, ${x + bump*0.55} ${yb}, ${x} ${yb}`);
+        P.push(`L ${bx} ${by}`);
+      }
+    }
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const px = new Array(N), py = new Array(N), group = new Array(N), els = new Array(N);
+
+    for(let i=0;i<N;i++){
+      const c = homeCol(i), r = homeRow(i);
+      const svg = document.createElementNS(SVGNS,'svg');
+      const W = cw + 2*tab, H = ch + 2*tab;
+      svg.setAttribute('width', W); svg.setAttribute('height', H);
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.style.cssText = `position:absolute;left:0;top:0;overflow:visible;cursor:grab;` +
+        `filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));will-change:transform;z-index:1;`;
+      const clipId = `pz${_puzzleClipSeq++}`;
+      const defs = document.createElementNS(SVGNS,'defs');
+      const clip = document.createElementNS(SVGNS,'clipPath');
+      clip.setAttribute('id', clipId); clip.setAttribute('clipPathUnits','userSpaceOnUse');
+      const cpath = document.createElementNS(SVGNS,'path');
+      cpath.setAttribute('d', piecePath(sgn[i]));
+      clip.appendChild(cpath); defs.appendChild(clip); svg.appendChild(defs);
+      // the image, positioned so this piece's cell aligns under the clip core
+      const img = document.createElementNS(SVGNS,'image');
+      img.setAttributeNS('http://www.w3.org/1999/xlink','href', src);
+      img.setAttribute('href', src);
+      img.setAttribute('width', boardW); img.setAttribute('height', boardH);
+      img.setAttribute('x', tab - c*cw); img.setAttribute('y', tab - r*ch);
+      img.setAttribute('preserveAspectRatio','none');
+      img.setAttribute('clip-path', `url(#${clipId})`);
+      svg.appendChild(img);
+      // a thin outline stroke so edges read against the dark bg
+      const stroke = document.createElementNS(SVGNS,'path');
+      stroke.setAttribute('d', piecePath(sgn[i]));
+      stroke.setAttribute('fill','none');
+      stroke.setAttribute('stroke','rgba(255,255,255,.30)');
+      stroke.setAttribute('stroke-width','1.2');
+      svg.appendChild(stroke);
+
+      els[i] = svg; group[i] = i;
+      // scatter (account for the tab margin so pieces stay on-screen)
+      px[i] = Math.round(10 + Math.random() * (VW - W - 20));
+      py[i] = Math.round(64 + Math.random() * (VH - H - 100));
+      ov.appendChild(svg);
+      attachDrag(svg, i);
+    }
+    // piece i's core cell sits at (px[i]+? ) — we track the SVG's top-left; the
+    // core cell origin is offset by `tab`. Snap math uses core-cell positions:
+    const coreX = i => px[i] + tab, coreY = i => py[i] + tab;
     const paint = i => { els[i].style.transform = `translate(${px[i]}px,${py[i]}px)`; };
     for(let i=0;i<N;i++) paint(i);
 
     const membersOf = gid => { const r=[]; for(let i=0;i<N;i++) if(group[i]===gid) r.push(i); return r; };
 
-    // After a group is dropped, try to snap any of its pieces to a correct
-    // neighbour in a DIFFERENT group. If found, translate the whole moving group
-    // so that piece aligns exactly, then merge groups. Repeat until no more snaps.
     function trySnap(movedGid){
       let snapped = false;
       for(let pass=0; pass<N; pass++){
         let did = false;
-        const moving = membersOf(movedGid);
-        for(const a of moving){
-          // The 4 grid neighbours of piece a, each with the px/py offset that
-          // neighbour must sit at relative to a, and whether that neighbour
-          // exists (edge check so we don't wrap across rows/columns).
+        for(const a of membersOf(movedGid)){
           const neigh = [
-            [a-1, -cw,   0, homeCol(a) > 0  ],  // left
-            [a+1,  cw,   0, homeCol(a) < g-1],  // right
-            [a-g,   0, -ch, homeRow(a) > 0  ],  // up
-            [a+g,   0,  ch, homeRow(a) < g-1],  // down
+            [a-1, -cw,   0, homeCol(a) > 0  ],
+            [a+1,  cw,   0, homeCol(a) < g-1],
+            [a-g,   0, -ch, homeRow(a) > 0  ],
+            [a+g,   0,  ch, homeRow(a) < g-1],
           ];
           for(const [b, dx, dy, ok] of neigh){
-            if(!ok || b<0 || b>=N) continue;
-            if(group[b]===movedGid) continue;            // already same group
-            // where a would need to be for it to sit next to b
-            const wantAx = px[b] - dx, wantAy = py[b] - dy;
-            if(Math.abs(wantAx - px[a]) <= SNAP && Math.abs(wantAy - py[a]) <= SNAP){
-              const shiftX = wantAx - px[a], shiftY = wantAy - py[a];
-              // move the whole moving group by the shift, then merge into b's group
+            if(!ok || b<0 || b>=N || group[b]===movedGid) continue;
+            const wantAx = coreX(b) - dx, wantAy = coreY(b) - dy;   // core target
+            if(Math.abs(wantAx - coreX(a)) <= SNAP && Math.abs(wantAy - coreY(a)) <= SNAP){
+              const shiftX = wantAx - coreX(a), shiftY = wantAy - coreY(a);
               const tgt = group[b];
               for(const mem of membersOf(movedGid)){ px[mem]+=shiftX; py[mem]+=shiftY; }
               for(const mem of membersOf(movedGid)){ group[mem]=tgt; }
               membersOf(tgt).forEach(paint);
-              snapped = true; did = true; movedGid = tgt;
-              break;
+              snapped = true; did = true; movedGid = tgt; break;
             }
           }
           if(did) break;
         }
         if(!did) break;
       }
-      if(snapped){
-        // settle feedback
-        try{ navigator.vibrate && navigator.vibrate(15); }catch(_){}
-        checkSolved();
-      }
+      if(snapped){ try{ navigator.vibrate && navigator.vibrate(15); }catch(_){} checkSolved(); }
     }
 
     function checkSolved(){
       if(_puzzleSolved) return;
       const g0 = group[0];
-      if(!group.every(x => x === g0)) return;            // all one group?
+      if(!group.every(x => x === g0)) return;
       _puzzleSolved = true;
-      // Snap the finished assembly to the centred origin for a clean reveal by
-      // aligning piece 0 to its true home position (the rest follow rigidly).
-      const dx = (originX + homeCol(0)*cw) - px[0];
-      const dy = (originY + homeRow(0)*ch) - py[0];
-      for(let i=0;i<N;i++){ px[i]+=dx; py[i]+=dy; els[i].style.transition='transform .25s'; paint(i); els[i].style.cursor='default'; els[i].style.boxShadow='none'; }
+      const dx = originX + homeCol(0)*cw - coreX(0);
+      const dy = originY + homeRow(0)*ch - coreY(0);
+      for(let i=0;i<N;i++){ px[i]+=dx; py[i]+=dy; els[i].style.transition='transform .25s'; paint(i); els[i].style.cursor='default'; }
       status.textContent = t('puzzle_solved') || '✓ Gelöst!';
+      // hide peek button once solved
+      peekBtn.style.display = 'none';
       setTimeout(() => { try{ onSolved(); }catch(e){} closePuzzleOverlay(); }, 1100);
     }
 
@@ -2165,10 +2293,8 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
         dragging=true; el.setPointerCapture(e.pointerId);
         el.style.cursor='grabbing';
         sx=e.clientX; sy=e.clientY;
-        const gid = group[idx];
-        base = membersOf(gid).map(i => ({ i, x:px[i], y:py[i] }));
-        // raise the whole group above the rest
-        membersOf(gid).forEach(i => els[i].style.zIndex = '50');
+        base = membersOf(group[idx]).map(i => ({ i, x:px[i], y:py[i] }));
+        membersOf(group[idx]).forEach(i => els[i].style.zIndex = '50');
         e.preventDefault();
       });
       el.addEventListener('pointermove', e => {
@@ -2180,9 +2306,8 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
         if(!dragging) return;
         dragging=false; el.style.cursor='grab';
         try{ el.releasePointerCapture(e.pointerId); }catch(_){}
-        const gid = group[idx];
-        membersOf(gid).forEach(i => els[i].style.zIndex = '1');
-        trySnap(gid);
+        membersOf(group[idx]).forEach(i => els[i].style.zIndex = '1');
+        trySnap(group[idx]);
       };
       el.addEventListener('pointerup', drop);
       el.addEventListener('pointercancel', drop);
@@ -2190,6 +2315,7 @@ function openPuzzleOverlay(m, g, src, N, onSolved){
   };
   setTimeout(build, 50);
 }
+let _puzzleClipSeq = 0;
 
 function renderActions(m){
   const actEl = document.getElementById('cr-actions');

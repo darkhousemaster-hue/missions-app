@@ -255,6 +255,15 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_repeatable INTEGER DEFAULT 
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN use_puzzle INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_image TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_grid INTEGER DEFAULT 3"); } catch(e) {}
+// Puzzle "peek": let the player briefly see the finished image.
+//  puzzle_peek_enabled  0/1  — feature on for this puzzle
+//  puzzle_peek_onetime  0/1  — single peek that stays until the player closes it
+//  puzzle_peeks         JSON array of durations in seconds, in order of use
+//                       (e.g. [0.5,1.5,0]); 0 = stays until the X is pressed.
+//                       Length = how many times the player may peek.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_peek_enabled INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_peek_onetime INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_peeks TEXT DEFAULT '[]'"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -666,7 +675,8 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es',
   'hide_until_arrival',
   'is_special','repeat_minutes','is_repeatable',
-  'use_puzzle','puzzle_image','puzzle_grid'];
+  'use_puzzle','puzzle_image','puzzle_grid',
+  'puzzle_peek_enabled','puzzle_peek_onetime','puzzle_peeks'];
 const toNullableNumber = v => {
   if (v === undefined) return undefined;
   if (v === null || v === '') return null;
@@ -683,9 +693,18 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
-  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','use_puzzle','is_repeatable'].forEach(f => {
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
   });
+  // puzzle_peeks: accept an array or a JSON string; store a clean JSON string
+  // of non-negative numbers.
+  if (out.puzzle_peeks !== undefined && out.puzzle_peeks !== null) {
+    let arr = out.puzzle_peeks;
+    if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch { arr = []; } }
+    if (!Array.isArray(arr)) arr = [];
+    arr = arr.map(n => { const v = Number(n); return Number.isFinite(v) && v >= 0 ? v : 0; }).slice(0, 10);
+    out.puzzle_peeks = JSON.stringify(arr);
+  }
   // Puzzle grid: clamp to the supported sizes (3/4/5) when provided.
   if (out.puzzle_grid !== undefined && out.puzzle_grid !== null && out.puzzle_grid !== '') {
     const g = Math.round(Number(out.puzzle_grid));
