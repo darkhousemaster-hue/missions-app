@@ -701,7 +701,7 @@ const T = {
         selfie_shoot:'Foto machen', selfie_retake:'Erneut',
         selfie_upload:'Hochladen & weiter',
         answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
-        puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!',
+        puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!', puzzle_start:'Puzzle starten', puzzle_title:'Puzzle', puzzle_preview:'Vorschau',
         broadcast:'Rundruf',
         error_generic:'Fehler',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
@@ -748,7 +748,7 @@ const T = {
         selfie_shoot:'Take photo', selfie_retake:'Retake',
         selfie_upload:'Upload & continue',
         answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
-        puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!',
+        puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!', puzzle_start:'Start puzzle', puzzle_title:'Puzzle', puzzle_preview:'Preview',
         broadcast:'Broadcast',
         error_generic:'Error',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
@@ -795,7 +795,7 @@ const T = {
         selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
         selfie_upload:'Envoyer & continuer',
         answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
-        puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !',
+        puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !', puzzle_start:'Démarrer le puzzle', puzzle_title:'Puzzle', puzzle_preview:'Aperçu',
         broadcast:'Annonce',
         error_generic:'Erreur',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
@@ -842,7 +842,7 @@ const T = {
         selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
         selfie_upload:'Carica & continua',
         answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
-        puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!',
+        puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!', puzzle_start:'Avvia puzzle', puzzle_title:'Puzzle', puzzle_preview:'Anteprima',
         broadcast:'Annuncio',
         error_generic:'Errore',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
@@ -889,7 +889,7 @@ const T = {
         selfie_shoot:'Hacer foto', selfie_retake:'Repetir',
         selfie_upload:'Subir y continuar',
         answer_required:'Por favor, escribe tu respuesta.', answer_wrong:'Incorrecto — inténtalo de nuevo.',
-        puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!',
+        puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!', puzzle_start:'Iniciar puzle', puzzle_title:'Puzle', puzzle_preview:'Vista previa',
         broadcast:'Anuncio',
         error_generic:'Error',
         teammate_pending:'Un compañero ya ha enviado — esperando al Gamemaster.' },
@@ -933,6 +933,8 @@ function normalizeCrMission(m){
     is_timed: toBool(m.is_timed),
     has_answer: toBool(m.has_answer),
     is_special: toBool(m.is_special),
+    is_repeatable: toBool(m.is_repeatable),
+    repeat_minutes: Number(m.repeat_minutes) || 0,
     use_puzzle: toBool(m.use_puzzle),
     puzzle_grid: Number(m.puzzle_grid) || 3,
   };
@@ -1542,9 +1544,28 @@ function renderSpecialTiles(){
 // Star-button click handler. One special → open it directly. Two or more →
 // show a chooser so the player picks which one to play (instead of the button
 // silently mapping to just one).
+// A non-repeatable special is "done" once the team has completed it once.
+function specialIsDone(m){
+  return !m.is_repeatable && ((specialProgress[m.id]?.completed_count||0) > 0);
+}
+// Seconds remaining on a repeatable special's cooldown (0 = ready).
+function specialCooldownLeft(m){
+  if(!m.is_repeatable || !(m.repeat_minutes>0)) return 0;
+  const last = specialProgress[m.id]?.last_attempt;
+  if(!last) return 0;
+  const left = m.repeat_minutes*60*1000 - (Date.now() - last);
+  return left > 0 ? Math.ceil(left/1000) : 0;
+}
+
 function crOpenSingleSpecial(){
-  if(specialMissions.length === 1){ openSpecialPopup(specialMissions[0].id); return; }
   if(specialMissions.length > 1){ openSpecialChooser(); return; }
+  if(specialMissions.length === 1){
+    const only = specialMissions[0];
+    if(specialIsDone(only)){ toast('✓ ' + (t('completed')||'Erledigt'), 'info'); return; }
+    const cd = specialCooldownLeft(only);
+    if(cd > 0){ toast(`⏳ ${t('cooldown_wait')||'Bitte warten:'} ${Math.ceil(cd/60)} min`, 'warning'); return; }
+    openSpecialPopup(only.id);
+  }
 }
 
 // Picker listing every special mission with its availability, shown in the
@@ -1554,15 +1575,12 @@ function openSpecialChooser(){
   document.getElementById('cr-mission-popup').style.display = 'flex';
   const now = Date.now();
   const rows = specialMissions.map(m => {
-    const prog = specialProgress[m.id] || {};
-    const cooldownMs = (m.repeat_minutes||0) * 60 * 1000;
-    const elapsed   = prog.last_attempt ? (now - prog.last_attempt) : Infinity;
-    const onCooldown = cooldownMs > 0 && prog.last_attempt && elapsed < cooldownMs;
-    const oneShot    = (m.repeat_minutes||0) === 0 && (prog.completed_count||0) > 0;
-    const disabled   = onCooldown || oneShot;
-    const waitSec    = onCooldown ? Math.ceil((cooldownMs - elapsed)/1000) : 0;
+    const done       = specialIsDone(m);
+    const waitSec    = specialCooldownLeft(m);
+    const onCooldown = waitSec > 0;
+    const disabled   = done || onCooldown;
     const waitLabel  = onCooldown ? `${Math.floor(waitSec/60)}:${String(waitSec%60).padStart(2,'0')}` : '';
-    const status     = oneShot ? (t('completed')||'Erledigt')
+    const status     = done ? ('✓ ' + (t('completed')||'Erledigt'))
                      : onCooldown ? `⏳ ${waitLabel}` : `⭐ ${t('available')||'Verfügbar'}`;
     const name = m[`name_${lang}`] || m.name_de || 'Special';
     const icons = [
@@ -1684,6 +1702,8 @@ function renderCurrentHintsCard(){
 // Open the special-mission popup. Same UI as a regular mission popup but
 // rendered from the special list, without GPS gating.
 function openSpecialPopup(missionId){
+  const m = specialMissions.find(x => x.id === missionId);
+  if(m && specialIsDone(m)){ toast('✓ ' + (t('completed')||'Erledigt'), 'info'); return; }
   popupMissionId = missionId;
   document.getElementById('cr-mission-popup').style.display = 'flex';
   refreshSpecialPopup();
@@ -1799,6 +1819,12 @@ async function completeSpecialMission(m, mediaPath){
   }).then(r=>r.json()).catch(()=>({error:'network'}));
   if(res.code === 'submission_conflict'){
     toast(t('teammate_pending') || 'Teammate already submitted.', 'warning');
+    return;
+  }
+  if(res.code === 'already_completed'){
+    toast('✓ ' + (t('completed')||'Erledigt'), 'info');
+    specialProgress[m.id] = {...(specialProgress[m.id]||{}), completed_count: Math.max(1, specialProgress[m.id]?.completed_count||0)};
+    closeMissionPopup();
     return;
   }
   if(res.error === 'Cooldown'){
@@ -1968,146 +1994,201 @@ function refreshPopup(){
 }
 
 // ── Jigsaw puzzle ───────────────────────────────────────────────────────────
-// Free-drag jigsaw on a fixed g×g grid. The image is sliced via CSS
-// background-position so we never need server-side slicing. Pieces are
-// absolutely positioned and can be dragged anywhere; on release a piece snaps
-// to the nearest cell, swapping with whatever already sits there (keeps cells
-// 1:1, so the puzzle is always solvable). When every piece is in its home cell
-// the puzzle is solved → onSolved() (which auto-completes the mission).
+// A real freeform jigsaw played in a FULL-SCREEN overlay. The image is sliced
+// into g×g pieces via CSS background-position (no server slicing). Pieces start
+// scattered and can be dragged anywhere. When a piece (or a connected group) is
+// released, any piece that ends up adjacent-and-aligned with a correct neighbour
+// (within SNAP px of its true relative offset) snaps into place and the two
+// groups MERGE — from then on they move together. When every piece is in one
+// group the puzzle is solved → onSolved().
 let _puzzleSolved = false;
+let _puzzleOverlayEl = null;
 function renderPuzzle(m, actEl, onSolved){
   _puzzleSolved = false;
   const g = Math.max(3, Math.min(5, Number(m.puzzle_grid) || 3));
   const src = `/uploads/${m.puzzle_image}`;
   const N = g * g;
 
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex;flex-direction:column;gap:.6rem;';
-  const hint = document.createElement('div');
-  hint.style.cssText = 'font-size:.85rem;color:var(--text-muted);';
-  hint.textContent = t('puzzle_hint') || 'Ziehe die Teile an die richtige Stelle.';
-  wrap.appendChild(hint);
+  // A button in the popup launches the full-screen puzzle (the popup is small;
+  // the puzzle wants the whole screen).
+  const launch = document.createElement('button');
+  launch.className = 'btn btn-primary btn-full';
+  launch.textContent = '🧩 ' + (t('puzzle_start') || 'Puzzle starten');
+  launch.onclick = () => openPuzzleOverlay(m, g, src, N, onSolved);
+  actEl.appendChild(launch);
+}
 
-  // Board is a 3:4 portrait area sized to the popup width.
-  const board = document.createElement('div');
-  board.style.cssText = 'position:relative;width:100%;aspect-ratio:3/4;background:var(--bg2,#111);border-radius:var(--radius);overflow:hidden;touch-action:none;user-select:none;';
-  wrap.appendChild(board);
+function closePuzzleOverlay(){
+  if(_puzzleOverlayEl){ _puzzleOverlayEl.remove(); _puzzleOverlayEl = null; }
+}
+
+function openPuzzleOverlay(m, g, src, N, onSolved){
+  closePuzzleOverlay();
+  _puzzleSolved = false;
+
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:1200;background:#0c0c0e;' +
+    'touch-action:none;user-select:none;overflow:hidden;';
+  _puzzleOverlayEl = ov;
+
+  // Top bar: title + close + preview thumbnail of the finished image.
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:absolute;top:0;left:0;right:0;display:flex;align-items:center;' +
+    'gap:.6rem;padding:calc(env(safe-area-inset-top,0px) + .6rem) .8rem .6rem;z-index:5;' +
+    'background:linear-gradient(#0c0c0eee,#0c0c0e00);';
+  const title = document.createElement('div');
+  title.style.cssText = 'flex:1;font-weight:700;font-size:.95rem;color:#fff;';
+  title.textContent = t('puzzle_title') || 'Puzzle';
+  const preview = document.createElement('img');
+  preview.src = src;
+  preview.title = t('puzzle_preview') || 'Vorschau';
+  preview.style.cssText = 'width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid #fff5;opacity:.85;';
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn btn-ghost btn-sm';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = closePuzzleOverlay;
+  bar.appendChild(title); bar.appendChild(preview); bar.appendChild(closeBtn);
+  ov.appendChild(bar);
 
   const status = document.createElement('div');
-  status.id = 'cr-puzzle-status';
-  status.style.cssText = 'font-size:.9rem;font-weight:600;min-height:1.2em;text-align:center;';
-  wrap.appendChild(status);
-  actEl.appendChild(wrap);
+  status.style.cssText = 'position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + .8rem);' +
+    'text-align:center;font-weight:700;font-size:1rem;color:#39d353;z-index:5;min-height:1.2em;pointer-events:none;';
+  ov.appendChild(status);
 
-  // Defer layout until the board has a real pixel size (it's inside a popup
-  // that may still be animating in).
+  document.body.appendChild(ov);
+
+  // Defer until the overlay has real pixel dimensions.
   const build = () => {
-    const W = board.clientWidth;
-    const H = board.clientHeight || Math.round(W * 4 / 3);
-    if (!W) { setTimeout(build, 60); return; }
-    const cw = W / g, ch = H / g;
+    const VW = ov.clientWidth, VH = ov.clientHeight;
+    if(!VW || !VH){ setTimeout(build, 60); return; }
 
-    // home index 0..N-1 (row-major). Start with a scrambled placement that is
-    // guaranteed NOT already solved.
-    let order = [...Array(N).keys()];
-    do { for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; } }
-    while (N > 1 && order.every((v, i) => v === i));
+    // Fit the solved image into the centre with margins, preserving the image's
+    // own aspect via the grid (we treat the source as square cells; the board
+    // aspect = g:g). Use ~78% of the smaller dimension so scattered pieces have
+    // room around the assembly area.
+    const boardSize = Math.min(VW, VH) * 0.82;
+    const cw = Math.floor(boardSize / g), ch = cw;       // square pieces
+    const boardW = cw * g, boardH = ch * g;
+    const originX = Math.round((VW - boardW) / 2);        // where the SOLVED image sits
+    const originY = Math.round((VH - boardH) / 2);
+    const SNAP = Math.max(16, Math.round(cw * 0.32));     // snap tolerance
 
-    // pieces[cellIndex] = home index of the piece currently in that cell.
-    const cellOfHome = new Array(N);   // home → current cell
-    const pieceEls = new Array(N);     // home → element
+    // Per-piece state: current top-left (px), and group id.
+    const px = new Array(N), py = new Array(N), group = new Array(N);
+    const els = new Array(N);
+    const homeCol = i => i % g, homeRow = i => Math.floor(i / g);
 
-    const cellXY = idx => ({ x: (idx % g) * cw, y: Math.floor(idx / g) * ch });
-    const placeAt = (el, cellIdx) => { const {x,y} = cellXY(cellIdx); el.style.left = x + 'px'; el.style.top = y + 'px'; };
-
-    // Drop-target highlight: a translucent outline that snaps to whichever cell
-    // a dragged piece would land in, so the player can see where it will go.
-    const highlight = document.createElement('div');
-    highlight.style.cssText = `position:absolute;width:${cw}px;height:${ch}px;` +
-      `border:3px solid var(--orange,#ff6b00);border-radius:4px;box-sizing:border-box;` +
-      `background:rgba(255,107,0,.18);pointer-events:none;display:none;z-index:9;` +
-      `transition:left .06s,top .06s;`;
-    board.appendChild(highlight);
-    const showHighlightAt = cellIdx => { const {x,y}=cellXY(cellIdx); highlight.style.left=x+'px'; highlight.style.top=y+'px'; highlight.style.display='block'; };
-    const hideHighlight = () => { highlight.style.display='none'; };
-
-    for (let cell = 0; cell < N; cell++) {
-      const home = order[cell];
+    // Scatter pieces randomly across the viewport (avoiding the very top bar).
+    for(let i=0;i<N;i++){
       const el = document.createElement('div');
-      const hx = (home % g), hy = Math.floor(home / g);
       el.style.cssText = `position:absolute;width:${cw}px;height:${ch}px;` +
-        `background-image:url('${src}');background-size:${W}px ${H}px;` +
-        `background-position:-${hx*cw}px -${hy*ch}px;` +
-        `box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:grab;will-change:left,top;`;
-      el.dataset.home = home;
-      placeAt(el, cell);
-      cellOfHome[home] = cell;
-      pieceEls[home] = el;
-      board.appendChild(el);
-      attachDrag(el);
+        `background-image:url('${src}');background-size:${boardW}px ${boardH}px;` +
+        `background-position:-${homeCol(i)*cw}px -${homeRow(i)*ch}px;` +
+        `box-shadow:0 1px 4px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.18);` +
+        `border-radius:3px;cursor:grab;will-change:transform;z-index:1;`;
+      el.dataset.idx = i;
+      els[i] = el;
+      group[i] = i;
+      px[i] = Math.round(20 + Math.random() * (VW - cw - 40));
+      py[i] = Math.round(70 + Math.random() * (VH - ch - 110));
+      ov.appendChild(el);
+      attachDrag(el, i);
+    }
+    const paint = i => { els[i].style.transform = `translate(${px[i]}px,${py[i]}px)`; };
+    for(let i=0;i<N;i++) paint(i);
+
+    const membersOf = gid => { const r=[]; for(let i=0;i<N;i++) if(group[i]===gid) r.push(i); return r; };
+
+    // After a group is dropped, try to snap any of its pieces to a correct
+    // neighbour in a DIFFERENT group. If found, translate the whole moving group
+    // so that piece aligns exactly, then merge groups. Repeat until no more snaps.
+    function trySnap(movedGid){
+      let snapped = false;
+      for(let pass=0; pass<N; pass++){
+        let did = false;
+        const moving = membersOf(movedGid);
+        for(const a of moving){
+          // The 4 grid neighbours of piece a, each with the px/py offset that
+          // neighbour must sit at relative to a, and whether that neighbour
+          // exists (edge check so we don't wrap across rows/columns).
+          const neigh = [
+            [a-1, -cw,   0, homeCol(a) > 0  ],  // left
+            [a+1,  cw,   0, homeCol(a) < g-1],  // right
+            [a-g,   0, -ch, homeRow(a) > 0  ],  // up
+            [a+g,   0,  ch, homeRow(a) < g-1],  // down
+          ];
+          for(const [b, dx, dy, ok] of neigh){
+            if(!ok || b<0 || b>=N) continue;
+            if(group[b]===movedGid) continue;            // already same group
+            // where a would need to be for it to sit next to b
+            const wantAx = px[b] - dx, wantAy = py[b] - dy;
+            if(Math.abs(wantAx - px[a]) <= SNAP && Math.abs(wantAy - py[a]) <= SNAP){
+              const shiftX = wantAx - px[a], shiftY = wantAy - py[a];
+              // move the whole moving group by the shift, then merge into b's group
+              const tgt = group[b];
+              for(const mem of membersOf(movedGid)){ px[mem]+=shiftX; py[mem]+=shiftY; }
+              for(const mem of membersOf(movedGid)){ group[mem]=tgt; }
+              membersOf(tgt).forEach(paint);
+              snapped = true; did = true; movedGid = tgt;
+              break;
+            }
+          }
+          if(did) break;
+        }
+        if(!did) break;
+      }
+      if(snapped){
+        // settle feedback
+        try{ navigator.vibrate && navigator.vibrate(15); }catch(_){}
+        checkSolved();
+      }
     }
 
-    function nearestCell(px, py){
-      const col = Math.max(0, Math.min(g-1, Math.round(px / cw)));
-      const row = Math.max(0, Math.min(g-1, Math.round(py / ch)));
-      return row * g + col;
-    }
-    function homeInCell(cellIdx){
-      for (let h = 0; h < N; h++) if (cellOfHome[h] === cellIdx) return h;
-      return -1;
-    }
     function checkSolved(){
-      if (_puzzleSolved) return;
-      const done = cellOfHome.every((cell, home) => cell === home);
-      if (!done) return;
+      if(_puzzleSolved) return;
+      const g0 = group[0];
+      if(!group.every(x => x === g0)) return;            // all one group?
       _puzzleSolved = true;
-      board.querySelectorAll('div').forEach(el => { el.style.cursor='default'; el.style.boxShadow='none'; });
-      status.style.color = 'var(--green,#39d353)';
+      // Snap the finished assembly to the centred origin for a clean reveal by
+      // aligning piece 0 to its true home position (the rest follow rigidly).
+      const dx = (originX + homeCol(0)*cw) - px[0];
+      const dy = (originY + homeRow(0)*ch) - py[0];
+      for(let i=0;i<N;i++){ px[i]+=dx; py[i]+=dy; els[i].style.transition='transform .25s'; paint(i); els[i].style.cursor='default'; els[i].style.boxShadow='none'; }
       status.textContent = t('puzzle_solved') || '✓ Gelöst!';
-      setTimeout(() => { try { onSolved(); } catch(e){} }, 700);
+      setTimeout(() => { try{ onSolved(); }catch(e){} closePuzzleOverlay(); }, 1100);
     }
 
-    function attachDrag(el){
-      let dragging=false, sx=0, sy=0, ox=0, oy=0, fromCell=0;
+    function attachDrag(el, idx){
+      let dragging=false, sx=0, sy=0, base=null;
       el.addEventListener('pointerdown', e => {
-        if (_puzzleSolved) return;
+        if(_puzzleSolved) return;
         dragging=true; el.setPointerCapture(e.pointerId);
-        el.style.cursor='grabbing'; el.style.zIndex='10'; el.style.opacity='0.75';
-        const home = Number(el.dataset.home); fromCell = cellOfHome[home];
-        sx=e.clientX; sy=e.clientY; ox=parseFloat(el.style.left); oy=parseFloat(el.style.top);
-        showHighlightAt(fromCell);
+        el.style.cursor='grabbing';
+        sx=e.clientX; sy=e.clientY;
+        const gid = group[idx];
+        base = membersOf(gid).map(i => ({ i, x:px[i], y:py[i] }));
+        // raise the whole group above the rest
+        membersOf(gid).forEach(i => els[i].style.zIndex = '50');
         e.preventDefault();
       });
       el.addEventListener('pointermove', e => {
-        if (!dragging) return;
-        el.style.left = (ox + e.clientX - sx) + 'px';
-        el.style.top  = (oy + e.clientY - sy) + 'px';
-        // Live-preview the cell this piece would drop into.
-        showHighlightAt(nearestCell(parseFloat(el.style.left)+cw/2, parseFloat(el.style.top)+ch/2));
+        if(!dragging) return;
+        const ddx = e.clientX - sx, ddy = e.clientY - sy;
+        for(const b of base){ px[b.i]=b.x+ddx; py[b.i]=b.y+ddy; paint(b.i); }
       });
       const drop = e => {
-        if (!dragging) return;
-        dragging=false; el.style.zIndex=''; el.style.cursor='grab'; el.style.opacity='1';
-        hideHighlight();
-        try { el.releasePointerCapture(e.pointerId); } catch(_){}
-        const home = Number(el.dataset.home);
-        const cx = parseFloat(el.style.left) + cw/2;
-        const cy = parseFloat(el.style.top)  + ch/2;
-        const target = nearestCell(cx, cy);
-        if (target === fromCell) { placeAt(el, fromCell); return; }
-        // Swap with whatever occupies the target cell.
-        const otherHome = homeInCell(target);
-        cellOfHome[home] = target; placeAt(el, target);
-        if (otherHome >= 0 && otherHome !== home) {
-          cellOfHome[otherHome] = fromCell; placeAt(pieceEls[otherHome], fromCell);
-        }
-        checkSolved();
+        if(!dragging) return;
+        dragging=false; el.style.cursor='grab';
+        try{ el.releasePointerCapture(e.pointerId); }catch(_){}
+        const gid = group[idx];
+        membersOf(gid).forEach(i => els[i].style.zIndex = '1');
+        trySnap(gid);
       };
       el.addEventListener('pointerup', drop);
       el.addEventListener('pointercancel', drop);
     }
   };
-  setTimeout(build, 60);
+  setTimeout(build, 50);
 }
 
 function renderActions(m){

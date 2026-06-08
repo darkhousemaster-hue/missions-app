@@ -966,7 +966,8 @@ const GMT={
   'cr-m-name':'Name',
   // ── Special Rail Adventure mission settings ─────────────────────────────────────
   'cr-m-special':'⭐ Spezial-Mission (jederzeit verfügbar, GPS-unabhängig)',
-  'cr-m-special-cooldown':'Begrenzt auf X (Minuten zwischen Versuchen, 0 = aus)',
+  'cr-m-special-cooldown':'Wartezeit in Minuten (0 = sofort wieder spielbar)',
+  'cr-m-repeatable':'Wiederholbar','cr-m-repeatable-sub':'Aus = einmalig. Ein = beliebig oft (optional mit Wartezeit).',
   'tip-cr-special':'Spezial-Missionen können jederzeit gespielt werden, brauchen kein GPS und stören die normale Reihenfolge nicht.',
   'tip-cr-special-cooldown':'Wartezeit zwischen Versuchen einer Spezial-Mission. 0 = nur einmal spielbar. Bei Ablehnung durch den Spielleiter ist die Wartezeit aufgehoben.',
   // ── GPS / answer hint sections (collapsible <details>) ────────────────────
@@ -1084,7 +1085,8 @@ const GMT={
   'desc-hint':'Story / background','task-hint':'What players have to do',
   'copy-to':'Copy to…','hint':'Hint','cr-mission-suffix':'Rail Adventure missions',
   'cr-m-special':'⭐ Special mission (always available, no GPS required)',
-  'cr-m-special-cooldown':'Cooldown X (minutes between attempts, 0 = off)',
+  'cr-m-special-cooldown':'Wait time in minutes (0 = playable again immediately)',
+  'cr-m-repeatable':'Repeatable','cr-m-repeatable-sub':'Off = one-time only. On = any number of times (optionally with a wait).',
   'tip-cr-special':'Special missions can be played at any time, need no GPS, and don\'t disturb the linear roster.',
   'tip-cr-special-cooldown':'Wait time between special-mission attempts. 0 = playable only once. A GM rejection clears the cooldown so the player can retry immediately.',
   'cr-m-gps-hints-label':'GPS hints (before arrival)',
@@ -1196,7 +1198,8 @@ const GMT={
   'desc-hint':'Histoire / contexte','task-hint':'Ce que les joueurs doivent faire',
   'copy-to':'Copier vers…','hint':'Indice','cr-mission-suffix':'missions Rail Adventure',
   'cr-m-special':'⭐ Mission spéciale (toujours disponible, sans GPS)',
-  'cr-m-special-cooldown':'Pause X (minutes entre les tentatives, 0 = désactivé)',
+  'cr-m-special-cooldown':'Temps d’attente en minutes (0 = rejouable aussitôt)',
+  'cr-m-repeatable':'Répétable','cr-m-repeatable-sub':'Désactivé = une seule fois. Activé = autant de fois que voulu (avec délai optionnel).',
   'tip-cr-special':'Les missions spéciales sont jouables à tout moment, sans GPS, et n\'affectent pas l\'ordre des missions principales.',
   'tip-cr-special-cooldown':'Délai entre deux tentatives d\'une mission spéciale. 0 = jouable une seule fois. Un refus du Gamemaster annule le délai.',
   'cr-m-gps-hints-label':'Indices GPS (avant l\'arrivée)',
@@ -1308,7 +1311,8 @@ const GMT={
   'desc-hint':'Storia / contesto','task-hint':'Cosa devono fare i giocatori',
   'copy-to':'Copia in…','hint':'Suggerimento','cr-mission-suffix':'missioni Rail Adventure',
   'cr-m-special':'⭐ Missione speciale (sempre disponibile, senza GPS)',
-  'cr-m-special-cooldown':'Cooldown X (minuti tra i tentativi, 0 = disattivato)',
+  'cr-m-special-cooldown':'Tempo di attesa in minuti (0 = subito rigiocabile)',
+  'cr-m-repeatable':'Ripetibile','cr-m-repeatable-sub':'Off = una sola volta. On = quante volte vuoi (con attesa opzionale).',
   'tip-cr-special':'Le missioni speciali sono giocabili in qualsiasi momento, senza GPS, e non interferiscono con l\'ordine principale.',
   'tip-cr-special-cooldown':'Tempo di attesa tra due tentativi di una missione speciale. 0 = giocabile solo una volta. Un rifiuto del Gamemaster azzera l\'attesa.',
   'cr-m-gps-hints-label':'Suggerimenti GPS (prima dell\'arrivo)',
@@ -1420,7 +1424,8 @@ const GMT={
   'desc-hint':'Historia / contexto','task-hint':'Qué deben hacer los jugadores',
   'copy-to':'Copiar a…','hint':'Pista','cr-mission-suffix':'misiones Rail Adventure',
   'cr-m-special':'⭐ Misión especial (siempre disponible, sin GPS)',
-  'cr-m-special-cooldown':'Pausa X (minutos entre intentos, 0 = desactivado)',
+  'cr-m-special-cooldown':'Tiempo de espera en minutos (0 = jugable de nuevo al instante)',
+  'cr-m-repeatable':'Repetible','cr-m-repeatable-sub':'Desactivado = una sola vez. Activado = las veces que quieras (con espera opcional).',
   'tip-cr-special':'Las misiones especiales se pueden jugar en cualquier momento, no requieren GPS y no alteran el orden lineal.',
   'tip-cr-special-cooldown':'Tiempo de espera entre dos intentos de una misión especial. 0 = solo se puede jugar una vez. Un rechazo del Gamemaster anula la espera.',
   'cr-m-gps-hints-label':'Pistas GPS (antes de llegar)',
@@ -4425,9 +4430,23 @@ function crMissionModal(m){
         <div class="toggle ${m&&m.is_special?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-special')"></div>
       </div>
       <input type="checkbox" id="cr-is-special" ${chk('is_special')} style="display:none;" onchange="crToggleSpecial()">
-      <div id="cr-special-cooldown-row" style="margin-top:.75rem;${m&&m.is_special?'':'display:none;'}">
-        <label class="label" data-tip="cr-special-cooldown">${gmt('cr-m-special-cooldown')||'Begrenzt auf X (Minuten zwischen Versuchen, 0 = aus)'}</label>
-        <input id="cr-repeat-minutes" type="number" class="input" min="0" value="${num('repeat_minutes',0)}">
+      <!-- Repeatable toggle (only meaningful for specials). OFF = one-shot:
+           a team can complete it exactly once. ON = reveal the minutes field
+           (0 = repeat immediately, >0 = wait that many minutes between tries). -->
+      <div id="cr-special-repeat-block" style="margin-top:.75rem;${m&&m.is_special?'':'display:none;'}">
+        <div class="toggle-row" style="background:transparent;border:0;padding:0;"
+             onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-repeatable')">
+          <div>
+            <div class="toggle-row-text"><strong>🔁 ${gmt('cr-m-repeatable')||'Wiederholbar'}</strong></div>
+            <div class="toggle-row-sub">${gmt('cr-m-repeatable-sub')||'Aus = einmalig. Ein = beliebig oft (optional mit Wartezeit).'}</div>
+          </div>
+          <div class="toggle ${m&&m.is_repeatable?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-repeatable')"></div>
+        </div>
+        <input type="checkbox" id="cr-is-repeatable" ${chk('is_repeatable')} style="display:none;" onchange="crToggleRepeatable()">
+        <div id="cr-special-cooldown-row" style="margin-top:.6rem;${m&&m.is_special&&m.is_repeatable?'':'display:none;'}">
+          <label class="label" data-tip="cr-special-cooldown">${gmt('cr-m-special-cooldown')||'Wartezeit in Minuten (0 = sofort wieder spielbar)'}</label>
+          <input id="cr-repeat-minutes" type="number" class="input" min="0" value="${num('repeat_minutes',0)}">
+        </div>
       </div>
     </div>
     <!-- Names -->
@@ -4693,8 +4712,15 @@ async function uploadCrPuzzleImage(missionId){
 // Show/hide the cooldown row when the special-mission flag flips.
 function crToggleSpecial(){
   const chk = document.getElementById('cr-is-special');
+  const block = document.getElementById('cr-special-repeat-block');
+  if(block) block.style.display = chk && chk.checked ? 'block' : 'none';
+  // Keep the cooldown row in sync with the repeatable toggle's current state.
+  crToggleRepeatable();
+}
+function crToggleRepeatable(){
+  const rep = document.getElementById('cr-is-repeatable');
   const row = document.getElementById('cr-special-cooldown-row');
-  if(row) row.style.display = chk && chk.checked ? 'block' : 'none';
+  if(row) row.style.display = rep && rep.checked ? 'block' : 'none';
 }
 function crToggleOptions(){
   const gpsChk=document.getElementById('cr-use-gps');
@@ -4744,6 +4770,7 @@ function getCrMissionData(){
     penalty_points: parseInt(document.getElementById('cr-penalty-pts')?.value)||2,
     media_required: mediaReq,
     is_special: document.getElementById('cr-is-special')?.checked?1:0,
+    is_repeatable: document.getElementById('cr-is-repeatable')?.checked?1:0,
     repeat_minutes: Math.max(0, parseInt(document.getElementById('cr-repeat-minutes')?.value)||0),
     has_answer: hasAnswer,
     answer_de: document.getElementById('cr-answer-de')?.value||'',
@@ -5088,7 +5115,7 @@ async function exportCrMissions(){
       is_timed: !!m.is_timed, timer_seconds: m.timer_seconds||300,
       penalty_interval: m.penalty_interval||60, penalty_points: m.penalty_points||2,
       media_required: m.media_required||'none',
-      is_special: !!m.is_special, repeat_minutes: m.repeat_minutes||0,
+      is_special: !!m.is_special, is_repeatable: !!m.is_repeatable, repeat_minutes: m.repeat_minutes||0,
       // Q/A
       has_answer: !!m.has_answer,
       answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
@@ -5150,6 +5177,7 @@ async function importCrMissions(file){
       penalty_points: Number(m.penalty_points)||2,
       media_required: m.media_required || 'none',
       is_special: m.is_special?1:0,
+      is_repeatable: m.is_repeatable?1:0,
       repeat_minutes: Math.max(0, Number(m.repeat_minutes)||0),
       has_answer: m.has_answer?1:0,
       answer_de:m.answer_de||'', answer_en:m.answer_en||'',
@@ -5363,7 +5391,7 @@ async function downloadSelectedCrMissions(){
       is_timed: !!m.is_timed, timer_seconds: m.timer_seconds||300,
       penalty_interval: m.penalty_interval||60, penalty_points: m.penalty_points||2,
       media_required: m.media_required||'none',
-      is_special: !!m.is_special, repeat_minutes: m.repeat_minutes||0,
+      is_special: !!m.is_special, is_repeatable: !!m.is_repeatable, repeat_minutes: m.repeat_minutes||0,
       has_answer: !!m.has_answer,
       answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
       description_de:m.description_de||'', description_en:m.description_en||'',

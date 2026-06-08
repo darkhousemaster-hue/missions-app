@@ -1327,8 +1327,12 @@ app.post('/api/games/:gameId/cr/special/complete', (req,res) => {
   if(!mission || !mission.is_special) return res.status(400).json({error:'Not a special mission'});
   const prog = db.getCrSpecialProgress(gameId, teamId, missionId);
   const now = Date.now();
-  // Enforce cooldown server-side too.
-  if(prog && prog.last_attempt && mission.repeat_minutes > 0){
+  // One-shot enforcement: a non-repeatable special can be completed once.
+  if(!mission.is_repeatable && (prog?.completed_count||0) > 0){
+    return res.status(409).json({error:'Already completed', code:'already_completed'});
+  }
+  // Repeatable specials may still be throttled by a per-attempt cooldown.
+  if(mission.is_repeatable && prog && prog.last_attempt && mission.repeat_minutes > 0){
     const elapsedMs = now - prog.last_attempt;
     const cooldownMs = mission.repeat_minutes * 60 * 1000;
     if(elapsedMs < cooldownMs){

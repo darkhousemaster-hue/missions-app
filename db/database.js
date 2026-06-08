@@ -245,6 +245,10 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN hide_until_arrival INTEGER DEF
 // ignored for gating purposes.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_special INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN repeat_minutes INTEGER DEFAULT 0"); } catch(e) {}
+// Explicit repeatable flag for specials. 0 = one-shot (a team can complete it
+// exactly once), 1 = repeatable (optionally throttled by repeat_minutes). This
+// makes one-shot unambiguous instead of overloading repeat_minutes=0.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_repeatable INTEGER DEFAULT 0"); } catch(e) {}
 // Jigsaw puzzle mission: the GM uploads an image which is sliced into a
 // puzzle_grid × puzzle_grid grid; the player drags pieces to rearrange it.
 // Solving auto-awards the mission (verified client-side, no GM review).
@@ -661,7 +665,7 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'is_timed','timer_seconds','penalty_interval','penalty_points','media_required',
   'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es',
   'hide_until_arrival',
-  'is_special','repeat_minutes',
+  'is_special','repeat_minutes','is_repeatable',
   'use_puzzle','puzzle_image','puzzle_grid'];
 const toNullableNumber = v => {
   if (v === undefined) return undefined;
@@ -679,7 +683,7 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
-  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','use_puzzle'].forEach(f => {
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','use_puzzle','is_repeatable'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
   });
   // Puzzle grid: clamp to the supported sizes (3/4/5) when provided.
