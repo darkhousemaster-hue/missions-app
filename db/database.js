@@ -491,6 +491,9 @@ const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id
 // ── Games ─────────────────────────────────────────────────────────────────────
 const getGame         = id => db.prepare('SELECT * FROM games WHERE id=?').get(id);
 const getRunningGames = () => db.prepare('SELECT * FROM games WHERE timer_running=1').all();
+// Games that are not finished yet — i.e. waiting to start OR currently running.
+// Used to gate self-updates: the app may only update when every game is ended.
+const getActiveGames  = () => db.prepare("SELECT * FROM games WHERE status <> 'ended'").all();
 const getOldGames     = cutoff => db.prepare('SELECT * FROM games WHERE created_at < ?').all(cutoff);
 const getGames        = locationId => locationId
   ? db.prepare('SELECT g.*,l.name as location_name,m.name as mode_name FROM games g LEFT JOIN locations l ON l.id=g.location_id LEFT JOIN modes m ON m.id=g.mode_id WHERE g.location_id=? ORDER BY g.created_at DESC').all(locationId)
@@ -1004,7 +1007,7 @@ module.exports = {
   getModes,getMode,createMode,updateMode,deleteMode,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,
   getMissions,getMission,createMission,updateMission,deleteMission,
-  getGame,getGames,getGameFull,getRunningGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
+  getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
   submitMission,acceptSubmission,rejectSubmission,

@@ -880,6 +880,24 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   <button onclick="closeGmSelfieLightbox(event)" style="position:fixed;top:.75rem;right:.75rem;z-index:2001;padding:.5rem .75rem;font-size:1rem;font-weight:700;background:var(--surface);border:1px solid var(--red);color:var(--text);border-radius:var(--radius);cursor:pointer;">✕</button>
   <img id="gm-selfie-lightbox-img" src="" alt="" style="max-width:96vw;max-height:92vh;object-fit:contain;border-radius:4px;">
 </div>
+<div id="update-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeUpdateModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h3 class="modal-title" id="upd-title">⬆ Update</h3>
+    <p id="upd-desc" style="color:var(--text-muted);font-size:.9rem;margin:.4rem 0 1rem;white-space:pre-line;"></p>
+    <div id="upd-blocked" style="display:none;background:rgba(212,43,43,.12);border-left:3px solid var(--red);padding:.7rem .9rem;border-radius:0 var(--radius) var(--radius) 0;font-size:.88rem;margin-bottom:1rem;"></div>
+    <div id="upd-pwwrap" style="margin-bottom:1rem;">
+      <label class="label" id="upd-pw-label" style="display:block;margin-bottom:.35rem;font-size:.85rem;">GM-Passwort</label>
+      <input id="upd-pw" type="password" class="input" autocomplete="current-password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')confirmUpdate()">
+      <div id="upd-err" style="color:var(--red-light);font-size:.82rem;min-height:1.1em;margin-top:.35rem;"></div>
+    </div>
+    <div id="upd-log" style="display:none;white-space:pre-wrap;font-family:monospace;font-size:.72rem;background:#0a0d12;color:#cbd5e1;padding:.6rem;border-radius:6px;max-height:160px;overflow:auto;margin-bottom:1rem;"></div>
+    <div class="modal-footer" style="justify-content:flex-end;gap:.6rem;">
+      <button class="btn btn-ghost" onclick="closeUpdateModal()" id="upd-cancel">Abbrechen</button>
+      <button class="btn btn-primary" onclick="confirmUpdate()" id="upd-go">Jetzt aktualisieren</button>
+    </div>
+  </div>
+</div>
 <div class="toast-container" id="toast-container"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -1621,6 +1639,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
     const vEl = document.getElementById('landing-version');
     if(vEl) vEl.textContent = v.full || v.version || '';
   } catch(e) {}
+  // Quietly check GitHub for a newer version and surface it to the GM.
+  checkForUpdate();
 });
 
 async function loadLanding(){
@@ -5745,6 +5765,120 @@ function switchGameSubTab(sub, el){
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast-container').appendChild(el);setTimeout(()=>el.remove(),3500);}
+
+// ── Auto update-check (runs when the GM opens the page) ───────────────────────
+const UPD_I18N = {
+  de:{ none:'Keine Updates gefunden', title:'⬆ Update verfügbar',
+       desc:(c,n)=>`Eine neue Version ist verfügbar.\nAktuell: ${c}  →  Neu: ${n}`,
+       pwLabel:'GM-Passwort', cancel:'Abbrechen', go:'Jetzt aktualisieren',
+       blocked:n=>`Aktualisierung nicht möglich: ${n} Spiel(e) laufen noch oder warten. Bitte zuerst alle Spiele beenden.`,
+       needpw:'Bitte GM-Passwort eingeben.', wrongpw:'Falsches Passwort.',
+       updating:'Aktualisiere… Die App startet neu.', failed:'Aktualisierung fehlgeschlagen.', uptodate:'Bereits aktuell.' },
+  en:{ none:'No updates found', title:'⬆ Update available',
+       desc:(c,n)=>`A new version is available.\nCurrent: ${c}  →  New: ${n}`,
+       pwLabel:'GM password', cancel:'Cancel', go:'Update now',
+       blocked:n=>`Update not possible: ${n} game(s) still running or waiting. Please finish all games first.`,
+       needpw:'Please enter the GM password.', wrongpw:'Wrong password.',
+       updating:'Updating… the app will restart.', failed:'Update failed.', uptodate:'Already up to date.' },
+  fr:{ none:'Aucune mise à jour', title:'⬆ Mise à jour disponible',
+       desc:(c,n)=>`Une nouvelle version est disponible.\nActuelle : ${c}  →  Nouvelle : ${n}`,
+       pwLabel:'Mot de passe MJ', cancel:'Annuler', go:'Mettre à jour',
+       blocked:n=>`Mise à jour impossible : ${n} partie(s) en cours ou en attente. Terminez d'abord toutes les parties.`,
+       needpw:'Veuillez saisir le mot de passe MJ.', wrongpw:'Mot de passe incorrect.',
+       updating:"Mise à jour… l'application redémarre.", failed:'Échec de la mise à jour.', uptodate:'Déjà à jour.' },
+  it:{ none:'Nessun aggiornamento', title:'⬆ Aggiornamento disponibile',
+       desc:(c,n)=>`È disponibile una nuova versione.\nAttuale: ${c}  →  Nuova: ${n}`,
+       pwLabel:'Password GM', cancel:'Annulla', go:'Aggiorna ora',
+       blocked:n=>`Aggiornamento non possibile: ${n} partita/e ancora in corso o in attesa. Termina prima tutte le partite.`,
+       needpw:'Inserisci la password GM.', wrongpw:'Password errata.',
+       updating:"Aggiornamento… l'app si riavvia.", failed:'Aggiornamento non riuscito.', uptodate:'Già aggiornato.' },
+  es:{ none:'No hay actualizaciones', title:'⬆ Actualización disponible',
+       desc:(c,n)=>`Hay una nueva versión disponible.\nActual: ${c}  →  Nueva: ${n}`,
+       pwLabel:'Contraseña GM', cancel:'Cancelar', go:'Actualizar ahora',
+       blocked:n=>`No se puede actualizar: ${n} partida(s) en curso o en espera. Termina primero todas las partidas.`,
+       needpw:'Introduce la contraseña GM.', wrongpw:'Contraseña incorrecta.',
+       updating:'Actualizando… la app se reiniciará.', failed:'Error al actualizar.', uptodate:'Ya está actualizado.' },
+};
+function updL(){ return UPD_I18N[gmLang] || UPD_I18N.en; }
+
+async function checkForUpdate(force){
+  // Throttle the automatic check to once per 24h (per browser) so the popup /
+  // toast doesn't reappear every time the GM returns to the dashboard. A manual
+  // call (force=true), e.g. from Settings, bypasses the throttle.
+  const KEY='upd_last_check';
+  if(!force){
+    try{ if(Date.now() - (+(localStorage.getItem(KEY)||0)) < 86400000) return; }catch(e){}
+  }
+  try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){}
+  let r; try{ r = await API('/api/update/check'); }catch(e){ return; }
+  if(!r || r.error) return;                 // couldn't check → stay quiet
+  if(r.updateAvailable) openUpdateModal(r);
+  else toast(updL().none, 'info');          // "No updates found" (bottom-right)
+}
+
+let _updInfo = null;
+function openUpdateModal(r){
+  _updInfo = r; const L = updL();
+  document.getElementById('upd-title').textContent = L.title;
+  document.getElementById('upd-desc').textContent  = L.desc(r.currentVersion || r.currentCommit || '?', r.remoteCommit || '?');
+  document.getElementById('upd-pw-label').textContent = L.pwLabel;
+  document.getElementById('upd-cancel').textContent = L.cancel;
+  document.getElementById('upd-go').textContent = L.go;
+  document.getElementById('upd-err').textContent = '';
+  document.getElementById('upd-pw').value = '';
+  const logEl = document.getElementById('upd-log'); logEl.style.display='none'; logEl.textContent='';
+  const blocked = document.getElementById('upd-blocked');
+  const pwwrap  = document.getElementById('upd-pwwrap');
+  const go      = document.getElementById('upd-go');
+  if(r.activeGames > 0){
+    blocked.style.display='block'; blocked.textContent = L.blocked(r.activeGames);
+    pwwrap.style.display='none'; go.style.display='none';
+  } else {
+    blocked.style.display='none'; pwwrap.style.display='block';
+    go.style.display=''; go.disabled=false;
+  }
+  document.getElementById('update-modal').style.display='flex';
+  if(r.activeGames <= 0) setTimeout(()=>document.getElementById('upd-pw').focus(), 60);
+}
+function closeUpdateModal(){ document.getElementById('update-modal').style.display='none'; }
+
+async function confirmUpdate(){
+  const L = updL();
+  const pw = document.getElementById('upd-pw').value.trim();
+  const err = document.getElementById('upd-err');
+  if(!pw){ err.textContent = L.needpw; return; }
+  const go = document.getElementById('upd-go'); go.disabled = true;
+  err.textContent = ''; toast(L.updating);
+  let res; try{ res = await API('/api/update',{method:'POST',body:{password:pw}}); }
+  catch(e){ err.textContent = L.failed; go.disabled = false; return; }
+  const logEl = document.getElementById('upd-log');
+  if(res.log){ logEl.style.display='block'; logEl.textContent = res.log; }
+  if(res.blocked === 'games_active'){
+    const blocked = document.getElementById('upd-blocked');
+    blocked.style.display='block'; blocked.textContent = L.blocked(res.activeCount || '');
+    document.getElementById('upd-pwwrap').style.display='none'; go.style.display='none';
+    return;
+  }
+  if(res.error === 'Unauthorized'){ err.textContent = L.wrongpw; go.disabled = false; return; }
+  if(res.success && res.upToDate){ toast(L.uptodate,'success'); closeUpdateModal(); return; }
+  if(res.success){ toast(L.updating,'success'); waitForRestart(); return; }
+  err.textContent = L.failed; go.disabled = false;
+}
+
+// After a successful update the server restarts (process.exit → systemd). Wait
+// for it to go down and come back, then reload into the new version.
+async function waitForRestart(){
+  let wentDown = false;
+  for(let i=0;i<40;i++){
+    await new Promise(r=>setTimeout(r,1500));
+    try{
+      const res = await fetch('/api/version',{cache:'no-store'});
+      if(res.ok){ if(wentDown){ window.location.reload(); return; } }
+      else wentDown = true;
+    }catch(e){ wentDown = true; }
+  }
+  window.location.reload();
+}
 </script>
 </body>
 </html>

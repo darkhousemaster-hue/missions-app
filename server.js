@@ -233,6 +233,15 @@ app.post('/api/update', async (req,res) => {
     }
   }
 
+  // Refuse to update while any game is still live (waiting or running). The app
+  // may only update once every game is ended — pulling new code + restarting
+  // mid-game would disrupt players.
+  const activeGames = db.getActiveGames();
+  if (activeGames.length) {
+    log.push(`Update blocked: ${activeGames.length} game(s) still running or waiting. Finish all games first.`);
+    return res.json({ success:false, blocked:'games_active', activeCount: activeGames.length, log: log.join('\n') });
+  }
+
   const dirty = await run('git', ['status', '--porcelain', '--untracked-files=no']);
   if (!dirty.ok) return fail('Update failed: could not inspect the local Git status.');
   if (dirty.stdout.trim()) {
@@ -289,6 +298,44 @@ app.get('/api/version', (req,res) => {
     version = 'v' + (pkg.version || '1.0.0');
   } catch(e) {}
   res.json({ version, commit, full: commit ? `${version} (${commit})` : version });
+});
+
+// Lightweight, non-mutating "is there an update?" probe used by the GM page on
+// load. Compares the deployed commit to origin/main via ls-remote (no fetch, no
+// working-tree changes). Cached 60s so repeated page loads don't hammer GitHub.
+// Public on purpose — it only reveals version/commit info — while the actual
+// /api/update stays password- and game-gated.
+let _updCheckCache = { t: 0, data: null };
+app.get('/api/update/check', async (req, res) => {
+  const activeGames = db.getActiveGames().length;
+  if (_updCheckCache.data && (Date.now() - _updCheckCache.t) < 60000) {
+    return res.json({ ..._updCheckCache.data, activeGames });
+  }
+  const { execFile } = require('child_process');
+  const run = (cmd, args) => new Promise(r => execFile(cmd, args,
+    { cwd: __dirname, timeout: 15000, maxBuffer: 1024 * 1024 },
+    (e, out) => r({ ok: !e, out: (out || '').trim() })));
+
+  const inRepo = await run('git', ['rev-parse', '--is-inside-work-tree']);
+  if (!inRepo.ok || inRepo.out !== 'true') {
+    return res.json({ updateAvailable: false, error: 'not_a_git_checkout', activeGames });
+  }
+  const head = (await run('git', ['rev-parse', 'HEAD'])).out;
+  const remote = await run('git', ['ls-remote', 'origin', 'refs/heads/main']);
+  if (!remote.ok || !remote.out) {
+    return res.json({ updateAvailable: false, error: 'check_failed', currentCommit: head.slice(0,7), activeGames });
+  }
+  const remoteSha = remote.out.split(/\s+/)[0] || '';
+  let version = '';
+  try { version = 'v' + (JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || ''); } catch(e) {}
+  const data = {
+    updateAvailable: !!(remoteSha && head && remoteSha !== head),
+    currentVersion: version,
+    currentCommit: head.slice(0,7),
+    remoteCommit: remoteSha.slice(0,7),
+  };
+  _updCheckCache = { t: Date.now(), data };
+  res.json({ ...data, activeGames });
 });
 
 // ── Modes ─────────────────────────────────────────────────────────────────────
