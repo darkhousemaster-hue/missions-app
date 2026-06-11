@@ -3266,27 +3266,35 @@ function renderLogoPreview(path){
 }
 async function uploadLogoImage(e){
   const f = e.target.files && e.target.files[0]; if(!f) return; e.target.value='';
-  const fd = new FormData();
-  // Send the password in the body too — multer parses it into req.body so auth
-  // works even when the session token is missing or stale.
-  if(settingsPassword) fd.append('password', settingsPassword);
-  fd.append('image', f, f.name);
-  const headers = {}; if(gmToken) headers['Authorization'] = 'Bearer ' + gmToken;
+  // multer parses text fields into req.body, so sending the password there
+  // authenticates even when the session token is missing/stale.
+  const send = (pw) => {
+    const fd = new FormData();
+    if(pw) fd.append('password', pw);
+    fd.append('image', f, f.name);
+    const headers = {}; if(gmToken) headers['Authorization'] = 'Bearer ' + gmToken;
+    return fetch('/api/settings/logo-image', { method:'POST', headers, body: fd });
+  };
   try{
-    const r = await fetch('/api/settings/logo-image', { method:'POST', headers, body: fd });
+    let r = await send(settingsPassword);
+    if(r.status === 401){                       // session expired → ask once and retry
+      const pw = prompt(gmt('gate-prompt')||'GM-Passwort:');
+      if(pw){ settingsPassword = pw; r = await send(pw); }
+    }
     const res = await r.json().catch(()=>({}));
     if(r.ok && res && res.logo_image){
       renderLogoPreview(res.logo_image);
-      // uploading a logo implies you want to use it → switch to image mode
       const seg = document.querySelector('.segmented[data-input="s-logo-mode"]');
       if(seg) seg.querySelectorAll('span').forEach(s=>s.classList.toggle('is-active', s.dataset.value==='image'));
       const hid = document.getElementById('s-logo-mode'); if(hid) hid.value = 'image';
       applyLogoModeUI();
       toast(gmt('s-logo-uploaded')||'Logo hochgeladen — zum Übernehmen speichern.','success');
     } else {
-      toast((res && res.error) || (gmt('upload-failed')||'Upload fehlgeschlagen'), 'error');
+      toast((res && res.error) || ((gmt('upload-failed')||'Upload fehlgeschlagen') + ' (' + r.status + ')'), 'error');
     }
-  }catch(_){ toast(gmt('upload-failed')||'Upload fehlgeschlagen','error'); }
+  }catch(err){
+    toast((gmt('upload-failed')||'Upload fehlgeschlagen') + ': ' + ((err && err.message) || 'network'), 'error');
+  }
 }
 // Show either the uploaded banner image OR the font logo on the landing screen.
 function setLogoDisplay(imagePath){
@@ -6030,18 +6038,23 @@ const UPD_I18N = {
 function updL(){ return UPD_I18N[gmLang] || UPD_I18N.en; }
 
 async function checkForUpdate(force){
-  // Throttle the automatic check to once per 24h (per browser) so the popup /
-  // toast doesn't reappear every time the GM returns to the dashboard. A manual
-  // call (force=true), e.g. from Settings, bypasses the throttle.
-  const KEY='upd_last_check';
-  if(!force){
-    try{ if(Date.now() - (+(localStorage.getItem(KEY)||0)) < 86400000) return; }catch(e){}
-  }
-  try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){}
+  // Always check on every load. Only the "update available" POPUP is
+  // rate-limited: it shows immediately for a NEW version, then at most once per
+  // 24h for that same version (so it doesn't reappear on every reload). A new
+  // commit landing within the 24h window pops up right away.
   let r; try{ r = await API('/api/update/check'); }catch(e){ return; }
   if(!r || r.error) return;                 // couldn't check → stay quiet
-  if(r.updateAvailable) openUpdateModal(r);
-  else toast(updL().none, 'info');          // "No updates found" (bottom-right)
+  if(!r.updateAvailable){ if(force) toast(updL().none, 'info'); return; }
+  if(force){ openUpdateModal(r); return; }
+  const KC='upd_popup_commit', KT='upd_popup_time';
+  let lastC='', lastT=0;
+  try{ lastC = localStorage.getItem(KC) || ''; lastT = +(localStorage.getItem(KT) || 0); }catch(e){}
+  const isNewVersion = (r.remoteCommit || '') !== lastC;
+  const dueAgain     = (Date.now() - lastT) > 86400000;
+  if(isNewVersion || dueAgain){
+    openUpdateModal(r);
+    try{ localStorage.setItem(KC, r.remoteCommit || ''); localStorage.setItem(KT, String(Date.now())); }catch(e){}
+  }
 }
 
 let _updInfo = null;
