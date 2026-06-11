@@ -971,6 +971,22 @@ app.post('/api/cr/puzzle-order-image', upload.single('image'), (req,res) => {
   res.json({success:true, file: rel});
 });
 
+// Brand logo image upload (Settings → Logo). Stores the file under
+// uploads/branding/ and records its path in the logo_image setting.
+app.post('/api/settings/logo-image', upload.single('image'), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!req.file) return res.status(400).json({error:'No file'});
+  const destDir = path.join(UPLOAD_DIR,'branding');
+  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
+  const dest = path.join(destDir, req.file.filename);
+  try { fs.renameSync(req.file.path, dest); }
+  catch(e){ fs.copyFileSync(req.file.path,dest); fs.unlinkSync(req.file.path); }
+  const rel = `branding/${req.file.filename}`;
+  db.setSetting('logo_image', rel);
+  io.emit('settings_updated', {type:'logo'});
+  res.json({success:true, logo_image: rel});
+});
+
 // ── CR Game info ──────────────────────────────────────────────────────────────
 app.get('/api/games/:id/cr', (req,res) => {
   const crMode = db.getGameCrMode(req.params.id);
