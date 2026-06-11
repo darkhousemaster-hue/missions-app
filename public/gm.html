@@ -169,6 +169,36 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #tpl-canvas-wrap{position:relative;display:inline-block;cursor:crosshair;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-width:100%;}
 #tpl-canvas{display:block;max-width:100%;}
 #qr-placeholder{position:absolute;border:3px dashed var(--red);background:rgba(212,43,43,.1);cursor:move;user-select:none;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--red);font-weight:700;text-transform:uppercase;}
+/* ── Rail Adventure mission editor — type-first redesign ── */
+.cme-sec{margin-bottom:1.4rem;}
+.cme-shead{display:flex;align-items:center;gap:.55rem;margin-bottom:.7rem;}
+.cme-step{width:22px;height:22px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cme-stitle{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);display:inline-flex;align-items:center;}
+.cme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;}
+.cme-card{position:relative;text-align:left;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:.85rem .8rem .8rem;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;}
+.cme-card:hover{border-color:var(--orange-dim);}
+.cme-card .cme-cico{width:38px;height:38px;border-radius:9px;background:#2c2825;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.25rem;margin-bottom:.55rem;}
+.cme-card .cme-ct{font-weight:700;font-size:.9rem;color:var(--text);}
+.cme-card .cme-cd{color:var(--text-muted);font-size:.73rem;line-height:1.3;margin-top:.15rem;}
+.cme-card.selected{border-color:var(--orange);background:rgba(232,95,30,0.12);box-shadow:0 0 14px rgba(232,95,30,.4);}
+.cme-card.selected .cme-cico{background:var(--orange);border-color:var(--orange);}
+.cme-card.empty{display:flex;align-items:center;justify-content:center;min-height:104px;border-style:dashed;background:transparent;cursor:default;}
+.cme-card.empty:hover{border-color:var(--border);}
+.cme-soon{font-size:.58rem;font-weight:700;letter-spacing:.14em;color:var(--text-muted);border:1px solid var(--border);border-radius:99px;padding:.2rem .6rem;text-transform:uppercase;}
+.cme-panel{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem .95rem;}
+.cme-seg{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:3px;width:100%;margin-bottom:.85rem;}
+.cme-seg .cme-seg-opt{flex:1;text-align:center;padding:.55rem .5rem;border-radius:4px;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--text-dim);transition:background .12s,color .12s;}
+.cme-seg .cme-seg-opt.is-active{background:var(--orange);color:#fff;}
+.cme-arrive{display:flex;gap:.5rem;align-items:flex-start;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.3);border-radius:var(--radius);padding:.6rem .75rem;margin-bottom:.8rem;font-size:.8rem;color:var(--text-dim);}
+.cme-arrive b{color:var(--green);}
+.cme-info{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--text-muted);color:var(--text-muted);font-size:10px;font-style:normal;font-weight:700;cursor:help;vertical-align:middle;margin-left:.35rem;flex-shrink:0;transition:border-color .12s,color .12s;}
+.cme-info:hover,.cme-info.show{border-color:var(--orange);color:var(--orange);}
+.cme-card .cme-info{position:absolute;top:.6rem;right:.6rem;margin:0;}
+.cme-tip{position:fixed;width:248px;max-width:80vw;background:#0b0a09;border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;font:400 .75rem/1.5 var(--body);color:var(--text-dim);letter-spacing:0;text-transform:none;box-shadow:0 14px 34px rgba(0,0,0,.7);opacity:0;visibility:hidden;transition:opacity .12s;z-index:4000;text-align:left;pointer-events:none;}
+.cme-tip strong{color:var(--text);font-weight:600;}
+.cme-info.show .cme-tip{opacity:1;visibility:visible;}
+.cme-tip::after{content:'';position:absolute;top:100%;left:var(--ax,50%);transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--border);}
+.cme-tip.below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--border);}
 </style>
 </head>
 <body>
@@ -4435,177 +4465,78 @@ function crMissionModal(m){
   const photoOpt = showPhoto ? `<option value="photo" ${m&&m.media_required==='photo'?'selected':''}>📷 Foto</option>` : '';
   const videoOpt = showVideo ? `<option value="video" ${m&&m.media_required==='video'?'selected':''}>🎬 Video</option>` : '';
   return `
-    <!-- SPECIAL MISSION TOGGLE — sits before everything else. When ticked
-         this is a parallel mission (no GPS dependency, always available),
-         and the cooldown row below appears. Kept inside an orange-tinted
-         container because flipping it changes the mission's behaviour
-         significantly; the toggle inside replaces the old checkbox. -->
-    <div style="background:rgba(232,95,30,0.06);border:1px solid var(--orange-dim);border-radius:var(--radius);padding:.8rem 1rem;margin-bottom:.75rem;" data-tip="cr-special">
-      <div class="toggle-row" style="background:transparent;border:0;padding:0;"
-           onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-special')">
-        <div>
-          <div class="toggle-row-text"><strong>⭐ ${gmt('cr-m-special')||'Spezial-Mission (jederzeit verfügbar, GPS-unabhängig)'}</strong></div>
-          <div class="toggle-row-sub">${gmt('cr-m-special-sub')||'Erscheint im ⭐-Bereich, ohne lineare Reihenfolge.'}</div>
-        </div>
-        <div class="toggle ${m&&m.is_special?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-special')"></div>
-      </div>
-      <input type="checkbox" id="cr-is-special" ${chk('is_special')} style="display:none;" onchange="crToggleSpecial()">
-      <!-- Repeatable toggle (only meaningful for specials). OFF = one-shot:
-           a team can complete it exactly once. ON = reveal the minutes field
-           (0 = repeat immediately, >0 = wait that many minutes between tries). -->
-      <div id="cr-special-repeat-block" style="margin-top:.75rem;${m&&m.is_special?'':'display:none;'}">
-        <div class="toggle-row" style="background:transparent;border:0;padding:0;"
-             onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-repeatable')">
-          <div>
-            <div class="toggle-row-text"><strong>🔁 ${gmt('cr-m-repeatable')||'Wiederholbar'}</strong></div>
-            <div class="toggle-row-sub">${gmt('cr-m-repeatable-sub')||'Aus = einmalig. Ein = beliebig oft (optional mit Wartezeit).'}</div>
-          </div>
-          <div class="toggle ${m&&m.is_repeatable?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-repeatable')"></div>
-        </div>
-        <input type="checkbox" id="cr-is-repeatable" ${chk('is_repeatable')} style="display:none;" onchange="crToggleRepeatable()">
-        <div id="cr-special-cooldown-row" style="margin-top:.6rem;${m&&m.is_special&&m.is_repeatable?'':'display:none;'}">
-          <label class="label" data-tip="cr-special-cooldown">${gmt('cr-m-special-cooldown')||'Wartezeit in Minuten (0 = sofort wieder spielbar)'}</label>
-          <input id="cr-repeat-minutes" type="number" class="input" min="0" value="${num('repeat_minutes',0)}">
-        </div>
-      </div>
-    </div>
-    <!-- Names -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
-      <label class="label" style="margin:0;">${gmt('cr-m-name')||'Name'}</label>
-      <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('name')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
-    </div>
-    ${langTabFields('cr-name', 'input', {
-      de: v('name_de'), en: v('name_en'),
-      fr: v('name_fr'), it: v('name_it'), es: v('name_es')
-    })}
-    <!-- Coords & Radius -->
-    <div class="grid-2" style="gap:.4rem;margin-bottom:.75rem;">
-      <div data-tip="cr-lat"><label class="label" data-tip="cr-lat">${gmt('cr-m-lat')||'Latitude'}</label><input id="cr-lat" type="number" step="0.00001" class="input" value="${v('lat')}" placeholder="47.47620" data-tip="cr-lat"></div>
-      <div data-tip="cr-lng"><label class="label" data-tip="cr-lng">${gmt('cr-m-lng')||'Longitude'}</label><input id="cr-lng" type="number" step="0.00001" class="input" value="${v('lng')}" placeholder="8.30700" data-tip="cr-lng"></div>
-      <div data-tip="cr-radius"><label class="label" data-tip="cr-radius">${gmt('cr-m-radius')||'Radius (Meter)'}</label><input id="cr-radius" type="number" class="input" value="${num('radius_meters',30)}" data-tip="cr-radius"></div>
-      <div data-tip="cr-points"><label class="label" data-tip="cr-points">${gmt('cr-m-points')||'Punkte'}</label><input id="cr-points" type="number" class="input" value="${num('points',10)}" data-tip="cr-points"></div>
-    </div>
-    <!-- Map picker. Click anywhere on the map to drop / move the marker;
-         drag the marker to refine; the orange circle shows the radius.
-         The three text inputs above stay the source of truth, the map
-         just updates them. initCrMissionMapPicker() is called after the
-         modal renders (showAddCrMission / showEditCrMission). -->
-    <div class="field" data-tip="cr-map-picker" style="margin-bottom:.75rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.4rem;">
-        <label class="label" data-tip="cr-map-picker" style="margin-bottom:0;">${gmt('cr-m-map-picker')||'Karte (Klick zum Setzen, Marker ziehbar)'}</label>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-cr-use-loc" onclick="useCurrentLocationForCrPicker(this)" title="${gmt('cr-m-use-loc')||'Aktuellen Standort verwenden'}">
-          <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-          <span>${gmt('cr-m-use-loc')||'Aktuellen Standort verwenden'}</span>
+    <!-- 1 · TYPE — what players do (drives the answer/media/puzzle flags) -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">1</span><span class="cme-stitle">${gmt('cr-m-type-q')||'Was sollen Spieler tun?'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Die Aufgabe der Mission.</strong> Wähle eine — sie bestimmt, welche Einstellungen unten erscheinen. (Das Erreichen des Orts wird separat unter „Platzierung" geregelt.)</span></i></span></div>
+      <div class="cme-grid" id="cr-type-grid">
+        <button type="button" class="cme-card" data-type="quiz" onclick="crPickMissionType('quiz')">
+          <i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Spieler tippen eine Antwort.</strong> Korrekt, wenn sie der hinterlegten Antwort entspricht (in ihrer Sprache). Ideal für Rätsel am Ort.</span></i>
+          <div class="cme-cico">❓</div><div class="cme-ct">${gmt('cr-m-type-quiz')||'Quiz'}</div><div class="cme-cd">${gmt('cr-m-type-quiz-d')||'Antwort eintippen'}</div>
         </button>
+        <button type="button" class="cme-card" data-type="media" onclick="crPickMissionType('media')">
+          <i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Spieler reichen eine Aufnahme ein</strong> — ein Foto oder kurzes Video. Du gibst sie frei, bevor Punkte vergeben werden.</span></i>
+          <div class="cme-cico">📷</div><div class="cme-ct">${gmt('cr-m-type-media')||'Foto / Video'}</div><div class="cme-cd">${gmt('cr-m-type-media-d')||'Aufnahme einreichen'}</div>
+        </button>
+        <button type="button" class="cme-card" data-type="puzzle" onclick="crPickMissionType('puzzle')">
+          <i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Spieler lösen ein Puzzle</strong> — Bild zusammensetzen oder in die richtige Reihenfolge bringen. Lösen schließt die Mission automatisch ab.</span></i>
+          <div class="cme-cico">🧩</div><div class="cme-ct">${gmt('cr-m-type-puzzle')||'Puzzle'}</div><div class="cme-cd">${gmt('cr-m-type-puzzle-d')||'Lösen zum Abschluss'}</div>
+        </button>
+        <button type="button" class="cme-card empty"><span class="cme-soon">${gmt('cr-m-soon')||'bald'}</span></button>
+        <button type="button" class="cme-card empty"><span class="cme-soon">${gmt('cr-m-soon')||'bald'}</span></button>
       </div>
-      <div id="cr-mission-map" style="height:220px;border-radius:var(--radius);border:1px solid var(--border);background:#0a0a0a;overflow:hidden;"></div>
     </div>
-    <!-- Mission options as iOS-style toggle rows. Each row's hidden
-         checkbox keeps existing save / onchange logic working (the
-         visible toggle dispatches a change event on the hidden input). -->
-    <div class="field" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem;">
-      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-use-gps')" data-tip="cr-gps">
-        <div>
-          <div class="toggle-row-text">${gmt('cr-m-gps')||'📍 GPS-Trigger'}</div>
-          <div class="toggle-row-sub">${gmt('cr-m-gps-sub')||'Mission entsperrt erst nach physischer Ankunft.'}</div>
-        </div>
-        <div class="toggle ${m&&m.use_gps?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-use-gps')"></div>
-      </div>
-      <input type="checkbox" id="cr-use-gps" ${chk('use_gps')} style="display:none;" onchange="crToggleOptions()">
 
-      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-use-map')" data-tip="cr-map">
-        <div>
-          <div class="toggle-row-text">${gmt('cr-m-map')||'🗺️ Karte anzeigen'}</div>
-          <div class="toggle-row-sub">${gmt('cr-m-map-sub')||'Ziel-Marker für Spieler auf der Karte sichtbar.'}</div>
-        </div>
-        <div class="toggle ${m&&m.use_map?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-use-map')"></div>
-      </div>
-      <input type="checkbox" id="cr-use-map" ${chk('use_map')} style="display:none;">
+    <!-- Hidden flags, driven by the type grid (1) + placement (4). Kept so the
+         existing save / toggle logic (getCrMissionData, crToggle*) is unchanged. -->
+    <input type="checkbox" id="cr-has-answer" ${chk('has_answer')} style="display:none;" onchange="crToggleAnswer()">
+    <input type="checkbox" id="cr-use-puzzle" ${chk('use_puzzle')} style="display:none;" onchange="crTogglePuzzle()">
+    <input type="hidden" id="cr-media" value="${(m&&m.media_required)||'none'}" onchange="crToggleAnswer()">
+    <input type="checkbox" id="cr-is-special" ${chk('is_special')} style="display:none;" onchange="crToggleSpecial()">
+    <input type="checkbox" id="cr-use-gps" ${chk('use_gps')} style="display:none;" onchange="crToggleOptions()">
 
-      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-timed')" data-tip="cr-timed">
-        <div>
-          <div class="toggle-row-text">${gmt('cr-m-timed')||'⏱ Zeitlimit'}</div>
-          <div class="toggle-row-sub">${gmt('cr-m-timed-sub')||'Penalty greift, wenn das Limit überschritten wird.'}</div>
-        </div>
-        <div class="toggle ${m&&m.is_timed?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-timed')"></div>
+    <!-- 2 · BASICS -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">2</span><span class="cme-stitle">${gmt('cr-m-basics')||'Grunddaten'}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+        <label class="label" style="margin:0;">${gmt('cr-m-name')||'Name'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Der Titel, den Spieler sehen.</strong> Mindestens eine Sprache ausfüllen; 🌐 Auto füllt den Rest.</span></i></label>
+        <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('name')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
       </div>
-      <input type="checkbox" id="cr-is-timed" ${chk('is_timed')} style="display:none;" onchange="crToggleOptions()">
-    </div>
-    <!-- GPS hints (multi-hint editor; only meaningful when use_gps is on).
-         Collapsible <details> so the modal stays compact. -->
-    <details id="cr-gps-section" style="${m&&m.use_gps?'':'display:none;'}border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;margin-bottom:.75rem;">
-      <summary style="cursor:pointer;font-weight:700;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--text-dim);" data-tip="cr-hint">
-        📍 ${gmt('cr-m-gps-hints-label')||'GPS-Hinweise (vor Ankunft)'}
-      </summary>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;margin-bottom:.5rem;">
-        <small style="color:var(--text-muted);">${gmt('cr-m-gps-hints-help')||'Werden vor der Ankunft einzeln aufgedeckt. Helfen, das Ziel zu finden.'}</small>
-        <button class="btn btn-ghost btn-sm" onclick="addCrHintInline('gps')">${gmt('cr-m-add-hint')||'＋ Hinweis'}</button>
-      </div>
-      <div id="cr-gps-hints-list"><span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span></div>
-    </details>
-    <!-- Media required as a segmented control. The hidden input keeps
-         document.getElementById('cr-media').value working unchanged
-         and its onchange continues to fire crToggleAnswer() (selectSegment
-         dispatches a change event on the hidden input). showPhoto /
-         showVideo are pre-computed above to respect the CR mode's
-         allow_photo / allow_video settings, so unsupported media types
-         stay greyed out. NOTE: this whole block sits inside a JS
-         template literal, so backticks inside the comment would
-         terminate the string early. -->
-    <div class="field" data-tip="cr-media">
-      <label class="label" data-tip="cr-media">${gmt('cr-m-media')||'Medientyp'}</label>
-      <div class="segmented" data-input="cr-media" data-tip="cr-media">
-        <span class="${(!m||m.media_required==='none')?'is-active':''}" data-value="none" onclick="selectSegment(this)">${gmt('cr-m-media-none')||'— Keine —'}</span>
-        ${showPhoto?`<span class="${(m&&m.media_required==='photo')?'is-active':''}" data-value="photo" onclick="selectSegment(this)">📷 Foto</span>`:''}
-        ${showVideo?`<span class="${(m&&m.media_required==='video')?'is-active':''}" data-value="video" onclick="selectSegment(this)">🎬 Video</span>`:''}
-      </div>
-      <input type="hidden" id="cr-media" value="${(m&&m.media_required)||'none'}" onchange="crToggleAnswer()">
-    </div>
-    <!-- Timed options -->
-    <div id="cr-timed-section" style="${m&&m.is_timed?'':'display:none;'}">
-      <div class="divider"></div>
-      <div class="grid-2" style="gap:.4rem;margin-bottom:.75rem;">
-        <div data-tip="cr-time-secs"><label class="label" data-tip="cr-time-secs">${gmt('cr-m-time-secs')||'Zeit (Sekunden)'}</label><input id="cr-timer-secs" type="number" class="input" value="${num('timer_seconds',300)}" data-tip="cr-time-secs"></div>
-        <div data-tip="cr-pen-int"><label class="label" data-tip="cr-pen-int">${gmt('cr-m-pen-int')||'Penalty alle X Sek.'}</label><input id="cr-penalty-interval" type="number" class="input" value="${num('penalty_interval',60)}" data-tip="cr-pen-int"></div>
-        <div data-tip="cr-pen-pts"><label class="label" data-tip="cr-pen-pts">${gmt('cr-m-pen-pts')||'Penalty (Punkte)'}</label><input id="cr-penalty-pts" type="number" class="input" value="${num('penalty_points',2)}" data-tip="cr-pen-pts"></div>
+      ${langTabFields('cr-name', 'input', {
+        de: v('name_de'), en: v('name_en'),
+        fr: v('name_fr'), it: v('name_it'), es: v('name_es')
+      })}
+      <div style="margin-top:.7rem;max-width:180px;">
+        <label class="label">${gmt('cr-m-points')||'Punkte'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Belohnung fürs Abschließen</strong>, wird zur Teampunktzahl addiert.</span></i></label>
+        <input id="cr-points" type="number" class="input" value="${num('points',10)}">
       </div>
     </div>
-    <!-- Answer/Question toggle. Mutually exclusive with the media segment
-         above (crToggleAnswer disables the segmented choices when on). -->
-    <div style="border-top:1px solid var(--border);padding-top:.75rem;margin-bottom:.75rem;">
-      <div class="toggle-row" style="margin-bottom:.6rem;"
-           onclick="toggleSwitch(this.querySelector('.toggle'),'cr-has-answer')" data-tip="cr-has-answer">
-        <div>
-          <div class="toggle-row-text">${gmt('cr-m-has-answer')||'❓ Frage mit Antwort'}</div>
-          <div class="toggle-row-sub">${gmt('cr-m-has-answer-sub')||'Spieler tippen die richtige Antwort. Schließt Foto/Video aus.'}</div>
-        </div>
-        <div class="toggle ${m&&m.has_answer?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-has-answer')"></div>
-      </div>
-      <input type="checkbox" id="cr-has-answer" ${chk('has_answer')} style="display:none;" onchange="crToggleAnswer()">
-      <div id="cr-answer-section" style="${m&&m.has_answer?'':'display:none;'}">
+
+    <!-- 3 · TYPE SETTINGS — only the panel for the chosen type is shown -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">3</span><span class="cme-stitle" id="cr-setup-title">${gmt('cr-m-setup')||'Einstellungen'}</span></div>
+
+      <div class="cme-panel" id="cr-panel-quiz" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
-          <label class="label" style="margin:0;" data-tip="cr-answer">${gmt('cr-m-answer-label')||'Korrekte Antwort (mind. eine Sprache)'}</label>
+          <label class="label" style="margin:0;">${gmt('cr-m-answer-label')||'Korrekte Antwort (mind. eine Sprache)'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Was Spieler tippen müssen.</strong> Eine Sprache genügt; 🌐 Auto übersetzt sie.</span></i></label>
           <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('answer')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
         </div>
+        <div id="cr-answer-section">
         ${langTabFields('cr-answer', 'input', {
           de: v('answer_de'), en: v('answer_en'),
           fr: v('answer_fr'), it: v('answer_it'), es: v('answer_es')
         })}
-      </div>
-    </div>
-    <!-- Jigsaw puzzle toggle. Players drag image pieces to reassemble it;
-         solving auto-completes the mission. Mutually exclusive with media
-         (handled in getCrMissionData). -->
-    <div style="border-top:1px solid var(--border);padding-top:.75rem;margin-bottom:.75rem;">
-      <div class="toggle-row" style="margin-bottom:.6rem;"
-           onclick="toggleSwitch(this.querySelector('.toggle'),'cr-use-puzzle')">
-        <div>
-          <div class="toggle-row-text">${gmt('cr-m-puzzle')||'🧩 Bilderpuzzle'}</div>
-          <div class="toggle-row-sub">${gmt('cr-m-puzzle-sub')||'Spieler setzen ein Bild zusammen. Lösen schließt die Mission ab.'}</div>
         </div>
-        <div class="toggle ${m&&m.use_puzzle?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-use-puzzle')"></div>
       </div>
-      <input type="checkbox" id="cr-use-puzzle" ${chk('use_puzzle')} style="display:none;" onchange="crTogglePuzzle()">
+
+      <div class="cme-panel" id="cr-panel-media" style="display:none;">
+        <label class="label">${gmt('cr-m-media-q')||'Was sollen Spieler einreichen?'}<i class="cme-info" tabindex="0">i<span class="cme-tip">Foto oder kurzes Video — die Spieler-App öffnet den passenden Kameramodus.</span></i></label>
+        <div class="segmented" data-input="cr-media">
+          ${showPhoto?`<span class="${(m&&m.media_required==='photo')?'is-active':''}" data-value="photo" onclick="selectSegment(this)">📷 Foto</span>`:''}
+          ${showVideo?`<span class="${(m&&m.media_required==='video')?'is-active':''}" data-value="video" onclick="selectSegment(this)">🎬 Video</span>`:''}
+        </div>
+      </div>
+
+      <div class="cme-panel" id="cr-panel-puzzle" style="display:none;">
       <div id="cr-puzzle-section" style="${m&&m.use_puzzle?'':'display:none;'}">
         <label class="label">${gmt('cr-m-puzzle-kind')||'Puzzle-Art'}</label>
         <select id="cr-puzzle-type" class="select" style="margin-bottom:.7rem;" onchange="crTogglePuzzleKind()">
@@ -4668,6 +4599,72 @@ function crMissionModal(m){
           <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">${gmt('cr-m-order-help')||'Bilder in der KORREKTEN Reihenfolge hochladen — Spieler müssen sie wieder so anordnen. Zum Umsortieren ziehen, ✕ zum Löschen.'}</p>
           <div id="cr-order-tiles" style="display:flex;flex-wrap:wrap;gap:.5rem;"></div>
           <input type="file" id="cr-order-file" accept="image/*" style="display:none;" onchange="crAddOrderImage(event)">
+        </div>
+      </div>
+        </div><!-- /cr-panel-puzzle -->
+    </div><!-- /3 · type settings -->
+
+    <!-- 4 · PLACEMENT -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">4</span><span class="cme-stitle">${gmt('cr-m-placement')||'Platzierung — wo & wie'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Wo die Mission lebt.</strong> <strong>In der Route</strong> = GPS-Stopp in Reihenfolge; Spieler müssen die Koordinaten erreichen. <strong>Spezial</strong> = jederzeit im ⭐-Bereich, ohne GPS, ohne Reihenfolge.</span></i></span></div>
+      <div class="cme-seg" id="cr-place-seg">
+        <span class="cme-seg-opt" data-place="route" onclick="crPickPlacement('route')">🧭 ${gmt('cr-m-place-route')||'In der Route'}</span>
+        <span class="cme-seg-opt" data-place="special" onclick="crPickPlacement('special')">⭐ ${gmt('cr-m-place-special')||'Spezial'}</span>
+      </div>
+
+      <div id="cr-place-route">
+        <div class="cme-arrive">🧭 <div><b>${gmt('cr-m-arrive')||'Spieler müssen die Koordinaten erreichen'}</b>, um die Mission zu starten. Jede Routen-Mission ist GPS-gesteuert.</div></div>
+        <div class="grid-2" style="gap:.4rem;margin-bottom:.5rem;">
+          <div><label class="label">${gmt('cr-m-lat')||'Latitude'}<i class="cme-info" tabindex="0">i<span class="cme-tip">Der genaue Ort. Am besten über die Karte oder „Standort" setzen statt zu tippen — beide Koordinaten werden dann gefüllt.</span></i></label><input id="cr-lat" type="number" step="0.00001" class="input" value="${v('lat')}" placeholder="47.47620"></div>
+          <div><label class="label">${gmt('cr-m-lng')||'Longitude'}</label><input id="cr-lng" type="number" step="0.00001" class="input" value="${v('lng')}" placeholder="8.30700"></div>
+          <div><label class="label">${gmt('cr-m-radius')||'Radius (Meter)'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Wie nah als „angekommen" zählt.</strong> 20–40 m sind gut. Kleiner = strenger; größer = löst früher aus.</span></i></label><input id="cr-radius" type="number" class="input" value="${num('radius_meters',30)}"></div>
+          <div style="display:flex;align-items:flex-end;"><button type="button" class="btn btn-ghost" id="btn-cr-use-loc" style="width:100%;border:1px solid var(--border);" onclick="useCurrentLocationForCrPicker(this)">◎ ${gmt('cr-m-use-loc')||'Standort'}</button></div>
+        </div>
+        <div id="cr-mission-map" style="height:200px;border-radius:var(--radius);border:1px solid var(--border);background:#0a0a0a;overflow:hidden;margin-bottom:.6rem;"></div>
+        <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-use-map')">
+          <div><div class="toggle-row-text">🗺️ ${gmt('cr-m-map')||'Auf der Karte zeigen'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>An:</strong> der Marker erscheint auf der Spielerkarte. <strong>Aus:</strong> versteckter Checkpoint — dieselbe GPS-Mission, aber nicht auf der Karte; Spieler finden ihn über Hinweise.</span></i></div><div class="toggle-row-sub">${gmt('cr-m-map-sub2')||'Aus = versteckter Checkpoint.'}</div></div>
+          <div class="toggle ${m&&m.use_map?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-use-map')"></div>
+        </div>
+        <input type="checkbox" id="cr-use-map" ${chk('use_map')} style="display:none;">
+        <details id="cr-gps-section" style="margin-top:.6rem;border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;">
+          <summary style="cursor:pointer;font-weight:700;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--text-dim);">📍 ${gmt('cr-m-gps-hints-label')||'GPS-Hinweise (vor Ankunft)'}</summary>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;margin-bottom:.5rem;">
+            <small style="color:var(--text-muted);">${gmt('cr-m-gps-hints-help')||'Werden vor der Ankunft einzeln aufgedeckt. Helfen, das Ziel zu finden.'}</small>
+            <button class="btn btn-ghost btn-sm" onclick="addCrHintInline('gps')">${gmt('cr-m-add-hint')||'＋ Hinweis'}</button>
+          </div>
+          <div id="cr-gps-hints-list"><span style="color:var(--text-muted);font-size:.85rem;">${gmt('cr-m-no-hints')||'Noch keine Hinweise.'}</span></div>
+        </details>
+      </div>
+
+      <div id="cr-place-special" style="display:none;">
+        <div id="cr-special-repeat-block">
+          <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-repeatable')">
+            <div><div class="toggle-row-text">🔁 ${gmt('cr-m-repeatable')||'Wiederholbar'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Aus:</strong> einmal abschließbar. <strong>An:</strong> wiederholbar, optional mit Wartezeit (0 Min = sofort wieder).</span></i></div><div class="toggle-row-sub">${gmt('cr-m-repeatable-sub')||'Aus = einmalig. Ein = beliebig oft (optional mit Wartezeit).'}</div></div>
+            <div class="toggle ${m&&m.is_repeatable?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-repeatable')"></div>
+          </div>
+          <input type="checkbox" id="cr-is-repeatable" ${chk('is_repeatable')} style="display:none;" onchange="crToggleRepeatable()">
+          <div id="cr-special-cooldown-row" style="margin-top:.6rem;${m&&m.is_special&&m.is_repeatable?'':'display:none;'}">
+            <label class="label">${gmt('cr-m-special-cooldown')||'Wartezeit in Minuten (0 = sofort wieder spielbar)'}</label>
+            <input id="cr-repeat-minutes" type="number" class="input" min="0" value="${num('repeat_minutes',0)}">
+          </div>
+        </div>
+        <p style="color:var(--text-muted);font-size:.8rem;margin-top:.55rem;">${gmt('cr-m-special-note')||'Spezial-Missionen erscheinen im ⭐-Bereich, ohne GPS und ohne lineare Reihenfolge.'}</p>
+      </div>
+    </div>
+
+    <!-- 5 · EXTRAS -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">5</span><span class="cme-stitle">${gmt('cr-m-extras')||'Extras'} <span style="color:var(--text-muted);font-weight:500;text-transform:none;letter-spacing:0;">— optional</span></span></div>
+      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-is-timed')">
+        <div><div class="toggle-row-text">⏱ ${gmt('cr-m-timed')||'Zeitlimit'}<i class="cme-info" tabindex="0">i<span class="cme-tip">Countdown für die Mission. Bei Überschreitung werden im gewählten Intervall Punkte abgezogen.</span></i></div><div class="toggle-row-sub">${gmt('cr-m-timed-sub')||'Penalty bei Überschreitung.'}</div></div>
+        <div class="toggle ${m&&m.is_timed?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-is-timed')"></div>
+      </div>
+      <input type="checkbox" id="cr-is-timed" ${chk('is_timed')} style="display:none;" onchange="crToggleOptions()">
+      <div id="cr-timed-section" style="${m&&m.is_timed?'':'display:none;'}margin-top:.6rem;">
+        <div class="grid-2" style="gap:.4rem;">
+          <div><label class="label">${gmt('cr-m-time-secs')||'Zeit (Sekunden)'}</label><input id="cr-timer-secs" type="number" class="input" value="${num('timer_seconds',300)}"></div>
+          <div><label class="label">${gmt('cr-m-pen-int')||'Penalty alle X Sek.'}</label><input id="cr-penalty-interval" type="number" class="input" value="${num('penalty_interval',60)}"></div>
+          <div><label class="label">${gmt('cr-m-pen-pts')||'Penalty (Punkte)'}</label><input id="cr-penalty-pts" type="number" class="input" value="${num('penalty_points',2)}"></div>
         </div>
       </div>
     </div>
@@ -4895,6 +4892,63 @@ function crReadNumber(id){
   const n = Number(String(raw).replace(',', '.'));
   return Number.isFinite(n) ? n : null;
 }
+// ── Type-first editor drivers ─────────────────────────────────────────────────
+// The type grid and placement segment set the underlying hidden flags so the
+// existing save (getCrMissionData) and toggle functions keep working unchanged.
+function crPickMissionType(type){
+  const setC=(id,val)=>{const e=document.getElementById(id); if(e) e.checked=val;};
+  setC('cr-has-answer', type==='quiz');
+  setC('cr-use-puzzle', type==='puzzle');
+  const media=document.getElementById('cr-media');
+  if(media) media.value = (type==='media') ? (media.value && media.value!=='none' ? media.value : 'photo') : 'none';
+  document.querySelectorAll('#cr-type-grid .cme-card').forEach(c=>c.classList.toggle('selected', c.dataset.type===type));
+  ['quiz','media','puzzle'].forEach(t=>{const p=document.getElementById('cr-panel-'+t); if(p) p.style.display=(t===type)?'block':'none';});
+  if(type==='media' && media){ document.querySelectorAll('#cr-panel-media .segmented span').forEach(s=>s.classList.toggle('is-active', s.dataset.value===media.value)); }
+  const titleEl=document.getElementById('cr-setup-title');
+  if(titleEl) titleEl.textContent = type==='quiz'?(gmt('cr-m-setup-quiz')||'Quiz')
+    : type==='media'?(gmt('cr-m-setup-media')||'Foto / Video') : (gmt('cr-m-setup-puzzle')||'Puzzle');
+  if(typeof crToggleAnswer==='function') crToggleAnswer();
+  if(typeof crTogglePuzzle==='function') crTogglePuzzle();
+  if(typeof crSyncMediaAnswerExclusion==='function') crSyncMediaAnswerExclusion();
+}
+function crPickPlacement(place){
+  const sp=document.getElementById('cr-is-special'); if(sp) sp.checked=(place==='special');
+  const gps=document.getElementById('cr-use-gps'); if(gps) gps.checked=(place==='route');
+  document.querySelectorAll('#cr-place-seg .cme-seg-opt').forEach(o=>o.classList.toggle('is-active', o.dataset.place===place));
+  const rt=document.getElementById('cr-place-route'); if(rt) rt.style.display=(place==='route')?'block':'none';
+  const spc=document.getElementById('cr-place-special'); if(spc) spc.style.display=(place==='special')?'block':'none';
+  if(typeof crToggleSpecial==='function') crToggleSpecial();
+  if(typeof crToggleOptions==='function') crToggleOptions();
+  if(place==='route') setTimeout(()=>{ try{ initCrMissionMapPicker(); }catch(e){} }, 70);
+}
+function crInitMissionType(m){
+  let type='media';
+  if(m){ if(m.use_puzzle) type='puzzle'; else if(m.has_answer) type='quiz';
+         else if(m.media_required && m.media_required!=='none') type='media'; }
+  crPickMissionType(type);
+  crPickPlacement(m && m.is_special ? 'special' : 'route');
+}
+// Delegated tooltip controller for the editor's ⓘ (.cme-info). Fixed-positioned
+// so it never clips, flips above/below, and works for dynamically-built modals.
+(function(){
+  let act=null;
+  function hide(){ if(act){ act.classList.remove('show'); act=null; } }
+  function show(info){
+    const tip=info.querySelector('.cme-tip'); if(!tip) return;
+    if(act&&act!==info) hide();
+    info.classList.add('show');
+    tip.style.left='0px'; tip.style.top='0px'; tip.classList.remove('below');
+    const r=info.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight, mg=8;
+    const left=Math.max(mg, Math.min(r.left+r.width/2-tw/2, innerWidth-tw-mg));
+    let top=r.top-th-mg; if(top<mg){ top=r.bottom+mg; tip.classList.add('below'); }
+    tip.style.left=left+'px'; tip.style.top=top+'px'; tip.style.setProperty('--ax',(r.left+r.width/2-left)+'px');
+    act=info;
+  }
+  document.addEventListener('mouseover', e=>{ const i=e.target.closest&&e.target.closest('.cme-info'); if(i) show(i); });
+  document.addEventListener('mouseout', e=>{ const i=e.target.closest&&e.target.closest('.cme-info'); if(i && !(e.relatedTarget&&i.contains(e.relatedTarget))) hide(); });
+  document.addEventListener('click', e=>{ const i=e.target.closest&&e.target.closest('.cme-info'); if(i){ e.preventDefault(); e.stopPropagation(); (act===i)?hide():show(i); } else hide(); }, true);
+  window.addEventListener('scroll', hide, true);
+})();
 function getCrMissionData(){
   const ansOn   = document.getElementById('cr-has-answer')?.checked;
   const puzzleOn = document.getElementById('cr-use-puzzle')?.checked;
@@ -4985,7 +5039,7 @@ async function showAddCrMission(){
   renderCrHintsInline();   // paint both empty hint lists
   populatePeekList(null);  // default one quick peek
   _crOrderImages = []; crTogglePuzzleKind();   // fresh ordering-puzzle state
-  setTimeout(initCrMissionMapPicker, 100);  // map needs the modal to be visible first
+  crInitMissionType(null);                     // type-first layout: default media · route
 }
 async function saveNewCrMission(){
   const data=getCrMissionData();
@@ -5018,8 +5072,8 @@ async function editCrMission(id){
   try{ _crOrderImages = JSON.parse(m.puzzle_order_images||'[]'); }catch(_){ _crOrderImages = []; }
   if(!Array.isArray(_crOrderImages)) _crOrderImages = [];
   crTogglePuzzleKind();   // show jigsaw/order config + render tiles
+  crInitMissionType(m);   // type-first layout: select type + placement
   if(m.id) setTimeout(()=>_loadExistingHints(m.id), 100);
-  setTimeout(initCrMissionMapPicker, 100);
 }
 async function saveEditCrMission(id){
   const data=getCrMissionData();
