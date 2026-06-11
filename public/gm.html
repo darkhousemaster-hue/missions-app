@@ -399,6 +399,10 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
       <button class="icon-btn" id="btn-game-export" onclick="showGameExportModal()" disabled title="" aria-label="Export">
         <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
       </button>
+      <button class="icon-btn" id="btn-sound-toggle" onclick="toggleSubmissionSound()" title="Ton bei Einreichung" aria-label="Sound">
+        <svg class="icon snd-on" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <svg class="icon snd-off" viewBox="0 0 24 24" style="display:none;"><path d="M11 5 6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+      </button>
       <button class="icon-btn" onclick="showSettingsGate()" title="Settings" aria-label="Settings">
         <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -2173,6 +2177,7 @@ async function openDashboard(gameId){
     bumpPending(teamId, +1);
     if(teamId === selectedTeamId) selectTeam(teamId);   // re-render team detail
     toast('📥 Rail Adventure: Neue Einreichung!', 'warning');
+    playSubmissionSound();
   });
   socket.on('cr_submission_reviewed', ({teamId}) => {
     // Use the authoritative count from the server rather than guessing.
@@ -2487,7 +2492,10 @@ async function renderCrTeamMissions(teamId){
     pending: 'pill pill--orange', accepted: 'pill pill--green',
     rejected: 'pill pill--red',   skipped: 'pill', open: 'open-tag pill',
   };
-  list.innerHTML=cr.missions.map((m,i)=>{
+  // Rush Mode (mode-level): show the team's missions as TWO rows — Rush and
+  // Normal — and drop the "STOP N" kicker (rush missions aren't GPS stops).
+  const isRush = !!(cr.crMode && (cr.crMode.rush_mode===1 || cr.crMode.rush_mode===true));
+  const buildCard = (m,i)=>{
     const sub = pendingByMission[m.id];
     let status;
     if(sub) status='pending';
@@ -2500,7 +2508,9 @@ async function renderCrTeamMissions(teamId){
     const task=m['task_'+gmLang]||m.task_de||'';
     const stopLabel = m.is_special
       ? (gmt('stop-special') || 'SPECIAL')
-      : ((gmt('stop-prefix') || 'STOP') + ' ' + (i+1));
+      : isRush
+        ? ''                                              // grouped under a row header; no "STOP" kicker
+        : ((gmt('stop-prefix') || 'STOP') + ' ' + (i+1));
 
     // Thumb: pending with media → image/video overlaying the gradient.
     // Otherwise plain surface with the type icon.
@@ -2534,7 +2544,7 @@ async function renderCrTeamMissions(teamId){
     return `<article class="gcard ${CARD_STATE[status]}">
       ${thumbHtml}
       <div class="gcard__body">
-        <div class="gcard__stop">${esc(stopLabel)}</div>
+        ${stopLabel?`<div class="gcard__stop">${esc(stopLabel)}</div>`:''}
         <div class="gcard__title-row">
           <div class="gcard__title">${esc(name)}</div>
           <span class="${PILL_CLS[status]}">${esc(PILL_TXT[status])}</span>
@@ -2544,7 +2554,25 @@ async function renderCrTeamMissions(teamId){
       </div>
       <span class="score-pill">${m.points} PT</span>
     </article>`;
-  }).join('');
+  };
+  if(isRush){
+    const rushMs = cr.missions.filter(m => m.is_rush && !m.is_special);
+    const normMs = cr.missions.filter(m => !(m.is_rush && !m.is_special));
+    const display = [...rushMs, ...normMs];
+    // Two side-by-side columns (Rush | Normal). flex-wrap lets them stack only
+    // if the panel is ever too narrow for both.
+    const col = (label,color,arr)=> arr.length ? `
+      <div style="flex:1 1 260px;min-width:0;">
+        <div style="font:700 .72rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:${color};margin:.2rem 0 .55rem .15rem;">${label}</div>
+        <div style="display:flex;flex-direction:column;gap:.6rem;">${arr.map(m => buildCard(m, display.indexOf(m))).join('')}</div>
+      </div>` : '';
+    list.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;">
+      ${col('⚡ ' + (gmt('cr-rush-missions')||'Rush-Missionen'), '#ff8a3d', rushMs)}
+      ${col(gmt('cr-normal-missions')||'Normale Missionen', 'var(--text-muted)', normMs)}
+    </div>`;
+  } else {
+    list.innerHTML = cr.missions.map((m,i)=>buildCard(m,i)).join('');
+  }
 }
 
 // Review actions for CR media submissions. Mirror the regular reject modal
@@ -2676,10 +2704,30 @@ function openLightbox(url,isVid,opts){
   bar.appendChild(rotBtn);bar.appendChild(closeBtn);
   d.appendChild(bar);
   const el=isVid?document.createElement('video'):document.createElement('img');
-  el.src=url;
   el.style.cssText='max-width:90vw;max-height:85vh;border-radius:4px;transition:transform .25s;';
   if(rotation) el.style.transform=`rotate(${rotation}deg)`;
-  if(isVid){el.controls=true;el.onclick=e=>e.stopPropagation();}
+  if(isVid){
+    el.controls=true; el.playsInline=true; el.preload='auto';
+    el.onclick=e=>e.stopPropagation();
+    // Fully download the clip into a Blob BEFORE the GM can scrub/play it, so
+    // review playback never stutters on a half-filled stream buffer. A spinner
+    // shows meanwhile; the object URL is freed when the lightbox closes.
+    const spin=document.createElement('div');
+    spin.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font:600 13px/1.2 var(--body);letter-spacing:.05em;z-index:9001;text-align:center;';
+    spin.textContent='⏳ '+(gmt('loading-video')||'Video wird geladen…');
+    d.appendChild(spin);
+    el.style.visibility='hidden';
+    let objUrl=null;
+    fetch(url).then(r=>r.blob()).then(b=>{
+      objUrl=URL.createObjectURL(b);
+      el.src=objUrl; el.style.visibility=''; spin.remove();
+    }).catch(()=>{ el.src=url; el.style.visibility=''; spin.remove(); });
+    // Free the blob when any close path fires (backdrop click, ✕, Esc).
+    const _rm=d.remove.bind(d);
+    d.remove=()=>{ if(objUrl){ try{ URL.revokeObjectURL(objUrl); }catch(e){} } _rm(); };
+  } else {
+    el.src=url;
+  }
   d.appendChild(el);
   document.body.appendChild(d);
 }
@@ -2730,6 +2778,11 @@ async function confirmReject(){
   toast(gmt('rejected-notified')||'Abgelehnt & Team benachrichtigt.','warning');
 }
 
+// Format the leftover game time (ms) a finished team had on the clock, mm:ss.
+function fmtLeftover(ms){
+  const s=Math.max(0,Math.round(ms/1000));
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
 function renderRankings(rankings){
   const list=document.getElementById('rankings-list');
   if(!rankings.length){list.innerHTML='<p style="font-size:.8rem;color:var(--text-muted);">'+(gmt('no-teams-yet')||'Noch keine Teams.')+'</p>';return;}
@@ -2740,7 +2793,9 @@ function renderRankings(rankings){
       <span class="ranking-pos">${i+1}</span>
       <span class="ranking-stripe" style="background:${teamColor(r)};"></span>
       <span class="ranking-name">${esc(r.name)}</span>
-      <span class="ranking-score">${r.score} PT</span>
+      <span class="ranking-score">${r.score} PT${r.time_left_ms!=null
+        ? `<span style="display:block;font-size:.62rem;line-height:1.2;color:var(--green);font-weight:700;letter-spacing:.02em;" title="${gmt('rank-time-left')||'Restzeit bei Abschluss'}">🏁 ${fmtLeftover(r.time_left_ms)}</span>`
+        : ''}</span>
     </div>`).join('');
   rankings.forEach(r=>{const el=document.getElementById(`tscore-${r.id}`);if(el)el.textContent=`${r.score} PT`;});
 }
@@ -2749,7 +2804,60 @@ function onSubmissionNew({teamId,missionId}){
   bumpPending(teamId, +1);
   if(teamId===selectedTeamId)selectTeam(teamId);
   toast('📥 Neue Einreichung!','warning');
+  playSubmissionSound();
 }
+
+// ── GM submission sound ─────────────────────────────────────────────────────
+// A short two-tone chime plays whenever a team submits something for review
+// (Rail Adventure photo/video OR MiSSiONS mission). The GM can mute it with the
+// 🔔 button in the dashboard top bar; the choice persists in localStorage.
+let _gmSoundOn = (localStorage.getItem('gm_sound_enabled') !== '0');  // default ON
+let _gmAudioCtx = null;
+function _ensureGmAudio(){
+  try {
+    if(!_gmAudioCtx) _gmAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(_gmAudioCtx.state === 'suspended') _gmAudioCtx.resume().catch(()=>{});
+  } catch(e){}
+  return _gmAudioCtx;
+}
+function playSubmissionSound(){
+  if(!_gmSoundOn) return;
+  const ctx = _ensureGmAudio();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  // Two ascending sine blips → a friendly "ding-dong".
+  [[880,0],[1320,0.13]].forEach(([freq,delay]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    o.connect(g); g.connect(ctx.destination);
+    const t = now + delay;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+    o.start(t); o.stop(t + 0.3);
+  });
+}
+function applySoundToggleUi(){
+  const b = document.getElementById('btn-sound-toggle');
+  if(!b) return;
+  const on = _gmSoundOn;
+  const onIcon = b.querySelector('.snd-on'), offIcon = b.querySelector('.snd-off');
+  if(onIcon)  onIcon.style.display  = on ? '' : 'none';
+  if(offIcon) offIcon.style.display = on ? 'none' : '';
+  b.style.opacity = on ? '' : '.55';
+}
+function toggleSubmissionSound(){
+  _gmSoundOn = !_gmSoundOn;
+  localStorage.setItem('gm_sound_enabled', _gmSoundOn ? '1' : '0');
+  applySoundToggleUi();
+  if(_gmSoundOn) playSubmissionSound();   // confirmation chime + unlocks audio
+  toast(_gmSoundOn ? (gmt('sound-on')||'🔔 Ton an') : (gmt('sound-off')||'🔕 Ton aus'));
+}
+// Browsers require a user gesture before audio can start — prime the context on
+// the GM's first interaction and reflect the saved toggle state once loaded.
+window.addEventListener('pointerdown', () => { _ensureGmAudio(); }, { once:true });
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applySoundToggleUi);
+else applySoundToggleUi();
 function onSubmissionReviewed({teamId}){
   // Re-pull the authoritative count rather than decrementing locally —
   // covers the case where the GM accepted from a different tab or a
@@ -2826,7 +2934,19 @@ function gmBubble(m){
 function onChatMessage(msg){
   if(!msg)return;
   const fromGm=msg.fromGm===1||msg.fromGm===true;
-  // Skip GM's own messages - already added optimistically in sendGmChat
+  // Broadcasts are game-wide GM messages (no teamId). They aren't added
+  // optimistically like direct GM replies are, and they belong to EVERY
+  // team's transcript — so render them live in the open chat instead of
+  // only surfacing them after a team switch reloads from the DB.
+  if(fromGm && (msg.teamId==null)){
+    const box=document.getElementById('gm-chat-messages');
+    if(box){
+      box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-gm">${esc(msg.content)}</div>`);
+      box.scrollTop=box.scrollHeight;
+    }
+    return;
+  }
+  // Skip GM's own direct messages - already added optimistically in sendGmChat
   if(fromGm) return;
   // Only show player messages for the selected team
   if(msg.teamId===selectedTeamId){
@@ -4345,6 +4465,7 @@ async function confirmCopyOneRule(ruleIndex){
 // ════════════════════════════════════════════════════════════
 let currentCrModeId = null;
 let currentCrModeName = '';
+let currentCrModeRush = false;  // true when the selected mode has Rush Mode on
 
 async function loadCrModes() {
   const modes = await API('/api/cr/modes');
@@ -4379,6 +4500,7 @@ async function selectCrMode(id) {
   if(!m) return;
   currentCrModeId = id;
   currentCrModeName = m.name;
+  currentCrModeRush = (m.rush_mode === 1);
   document.querySelectorAll('#cr-mode-tabs .tab').forEach(t=>{
     t.classList.toggle('active', Number(t.dataset.crModeId) === id);
   });
@@ -4407,8 +4529,13 @@ async function loadCrMissions() {
     </label>
     <button class="btn btn-ghost btn-sm" onclick="downloadSelectedCrMissions()" id="btn-crms-download" style="display:none;">${gmt('export-btn')||'⬇ Export'}</button>
   </div>`;
-  list.innerHTML = toolbar + missions.map((m,i) => {
+  // One mission card. `i` is the GLOBAL drag index (position in the displayed
+  // order so drag-reorder stays correct); `num` is the number shown to the GM
+  // (per-group when grouped).
+  const card = (m, i, num) => {
     const flags = [
+      m.is_rush  ? '⚡ Rush' : '',
+      m.is_special ? '⭐ Spezial' : '',
       m.use_gps  ? '📍 GPS' : '',
       m.use_map  ? '🗺️ Karte' : '',
       m.is_timed ? `⏱ ${Math.round(m.timer_seconds/60)}min` : '',
@@ -4418,7 +4545,7 @@ async function loadCrMissions() {
       ondragstart="crDragStart(event,${i})" ondragover="crDragOver(event,${i})" ondrop="crDrop(event,${i})" ondragend="crDragEnd()">
       <div class="mission-header" style="align-items:flex-start;">
         <input type="checkbox" class="crms-checkbox" data-id="${m.id}" onchange="onCrMsChange()" style="accent-color:var(--orange);margin-top:.2rem;margin-right:.25rem;width:16px;height:16px;flex-shrink:0;">
-        <span style="font-family:var(--mono);color:var(--text-muted);font-size:.8rem;margin-right:.5rem;">${i+1}.</span>
+        <span style="font-family:var(--mono);color:var(--text-muted);font-size:.8rem;margin-right:.5rem;">${num}.</span>
         <div style="flex:1;">
           <div style="font-weight:700;">${esc(m.name_de||'(kein Name)')}</div>
           ${m.description_de?`<div style="font-size:.8rem;color:var(--text-dim);">${esc(m.description_de)}</div>`:''}
@@ -4431,7 +4558,29 @@ async function loadCrMissions() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  };
+  let body;
+  if(currentCrModeRush){
+    // Rush Mode: show two rows — Rush missions and Normal missions. Grouping is
+    // derived from is_rush, so it survives reordering. The drag index stays
+    // global (rush cards first, then normal) to keep reorder consistent.
+    const rushMs = missions.filter(m => m.is_rush && !m.is_special);
+    const normMs = missions.filter(m => !(m.is_rush && !m.is_special));
+    const display = [...rushMs, ...normMs];
+    // Two side-by-side columns (Rush | Normal); wraps to stacked only if narrow.
+    const col = (label, color, arr) => arr.length ? `
+      <div class="cr-ms-group" style="flex:1 1 260px;min-width:0;">
+        <div style="font:700 .72rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:${color};margin:.2rem 0 .5rem;">${label}</div>
+        ${arr.map((m,k) => card(m, display.indexOf(m), k+1)).join('')}
+      </div>` : '';
+    body = `<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;">
+      ${col('⚡ ' + (gmt('cr-rush-missions')||'Rush-Missionen'), '#ff8a3d', rushMs)}
+      ${col(gmt('cr-normal-missions')||'Normale Missionen', 'var(--text-muted)', normMs)}
+    </div>`;
+  } else {
+    body = missions.map((m,i) => card(m, i, i+1)).join('');
+  }
+  list.innerHTML = toolbar + body;
   initCrDrag();
 }
 
@@ -4475,6 +4624,15 @@ async function showAddCrMode(){
         ])}
       </div>
     </div>
+    <div class="field" data-tip="cr-mode-rush">
+      <label class="label" data-tip="cr-mode-rush">${gmt('cr-mode-rush-label')||'Rush Mode'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-mode-rush-hint')||'Spieler sehen zuerst nur Rush-Missionen (ohne GPS). GPS-Missionen werden erst freigeschaltet, nachdem eine Rush-Mission abgeschlossen wurde.'}</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        ${checkPillRow([
+          {id:'cr-mode-rush', label:'⚡ Rush Mode', isOn:false},
+        ])}
+      </div>
+    </div>
     <div class="field" data-tip="cr-mode-timer">
       <label class="label" data-tip="cr-mode-timer">${gmt('cr-mode-timer-label')||'Standard-Dauer (Minuten)'}</label>
       <input id="cr-mode-timer" type="number" class="input" value="60" min="1" data-tip="cr-mode-timer">
@@ -4497,12 +4655,13 @@ async function saveNewCrMode(){
     password:settingsPassword, name,
     allow_photo: document.getElementById('cr-mode-allow-photo')?.checked?1:0,
     allow_video: document.getElementById('cr-mode-allow-video')?.checked?1:0,
+    rush_mode:   document.getElementById('cr-mode-rush')?.checked?1:0,
     ruleset_id:  Number(document.getElementById('cr-mode-ruleset')?.value)||null,
     timer_default: Number(document.getElementById('cr-mode-timer')?.value)||60,
     allowed_langs: readLangsByPrefix('cr-mode-lang-'),
   };
   const res=await API('/api/cr/modes',{method:'POST',body});
-  if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;await loadCrModes();toast(gmt('cr-mode-created')||'Rail Adventure Modus erstellt!','success');}
+  if(res.id){closeModal();currentCrModeId=res.id;currentCrModeName=name;currentCrModeRush=(body.rush_mode===1);await loadCrModes();toast(gmt('cr-mode-created')||'Rail Adventure Modus erstellt!','success');}
 }
 async function editCurrentCrMode(){
   const [modes, rulesets] = await Promise.all([API('/api/cr/modes'), API('/api/rulesets')]);
@@ -4519,6 +4678,15 @@ async function editCurrentCrMode(){
         ${checkPillRow([
           {id:'cr-mode-allow-photo-edit', label:'📷 Foto',  isOn:m.allow_photo!==0},
           {id:'cr-mode-allow-video-edit', label:'🎬 Video', isOn:m.allow_video!==0},
+        ])}
+      </div>
+    </div>
+    <div class="field" data-tip="cr-mode-rush">
+      <label class="label" data-tip="cr-mode-rush">${gmt('cr-mode-rush-label')||'Rush Mode'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-mode-rush-hint')||'Spieler sehen zuerst nur Rush-Missionen (ohne GPS). GPS-Missionen werden erst freigeschaltet, nachdem eine Rush-Mission abgeschlossen wurde.'}</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        ${checkPillRow([
+          {id:'cr-mode-rush-edit', label:'⚡ Rush Mode', isOn:m.rush_mode===1},
         ])}
       </div>
     </div>
@@ -4544,12 +4712,13 @@ async function saveEditCrMode(){
     password:settingsPassword, name,
     allow_photo: document.getElementById('cr-mode-allow-photo-edit')?.checked?1:0,
     allow_video: document.getElementById('cr-mode-allow-video-edit')?.checked?1:0,
+    rush_mode:   document.getElementById('cr-mode-rush-edit')?.checked?1:0,
     ruleset_id:  Number(document.getElementById('cr-mode-ruleset-edit')?.value)||null,
     timer_default: Number(document.getElementById('cr-mode-timer-edit')?.value)||60,
     allowed_langs: readLangsByPrefix('cr-mode-lang-edit-'),
   };
   await API(`/api/cr/modes/${currentCrModeId}`,{method:'PUT',body});
-  currentCrModeName=name; closeModal(); loadCrModes();
+  currentCrModeName=name; currentCrModeRush=(body.rush_mode===1); closeModal(); loadCrModes();
 }
 async function deleteCurrentCrMode(){
   if(!confirm((gmt('cr-mode-delete-confirm')||'Rail Adventure Modus "{name}" und alle Missionen löschen?').replace('{name}', currentCrModeName)))return;
@@ -4598,6 +4767,7 @@ function crMissionModal(m){
     <input type="checkbox" id="cr-use-puzzle" ${chk('use_puzzle')} style="display:none;" onchange="crTogglePuzzle()">
     <input type="hidden" id="cr-media" value="${(m&&m.media_required)||'none'}" onchange="crToggleAnswer()">
     <input type="checkbox" id="cr-is-special" ${chk('is_special')} style="display:none;" onchange="crToggleSpecial()">
+    <input type="checkbox" id="cr-is-rush" ${chk('is_rush')} style="display:none;">
     <input type="checkbox" id="cr-use-gps" ${chk('use_gps')} style="display:none;" onchange="crToggleOptions()">
 
     <!-- 2 · BASICS -->
@@ -4717,8 +4887,13 @@ function crMissionModal(m){
     <div class="cme-sec">
       <div class="cme-shead"><span class="cme-step">4</span><span class="cme-stitle">${gmt('cr-m-placement')||'Platzierung — wo & wie'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Wo die Mission lebt.</strong> <strong>In der Route</strong> = GPS-Stopp in Reihenfolge; Spieler müssen die Koordinaten erreichen. <strong>Spezial</strong> = jederzeit im ⭐-Bereich, ohne GPS, ohne Reihenfolge.</span></i></span></div>
       <div class="cme-seg" id="cr-place-seg">
+        ${currentCrModeRush ? `<span class="cme-seg-opt" data-place="rush" onclick="crPickPlacement('rush')">⚡ ${gmt('cr-m-place-rush')||'Rush'}</span>` : ''}
         <span class="cme-seg-opt" data-place="route" onclick="crPickPlacement('route')">🧭 ${gmt('cr-m-place-route')||'In der Route'}</span>
         <span class="cme-seg-opt" data-place="special" onclick="crPickPlacement('special')">⭐ ${gmt('cr-m-place-special')||'Spezial'}</span>
+      </div>
+
+      <div id="cr-place-rush" style="display:none;">
+        <div class="cme-arrive">⚡ <div><b>${gmt('cr-m-rush-note-t')||'Rush-Mission — ohne GPS.'}</b> ${gmt('cr-m-rush-note')||'Rush-Missionen sehen die Spieler von Anfang an. GPS-Missionen werden erst freigeschaltet, sobald eine Rush-Mission abgeschlossen ist.'}</div></div>
       </div>
 
       <div id="cr-place-route">
@@ -5023,10 +5198,12 @@ function crPickMissionType(type){
 }
 function crPickPlacement(place){
   const sp=document.getElementById('cr-is-special'); if(sp) sp.checked=(place==='special');
+  const rush=document.getElementById('cr-is-rush'); if(rush) rush.checked=(place==='rush');
   const gps=document.getElementById('cr-use-gps'); if(gps) gps.checked=(place==='route');
   document.querySelectorAll('#cr-place-seg .cme-seg-opt').forEach(o=>o.classList.toggle('is-active', o.dataset.place===place));
   const rt=document.getElementById('cr-place-route'); if(rt) rt.style.display=(place==='route')?'block':'none';
   const spc=document.getElementById('cr-place-special'); if(spc) spc.style.display=(place==='special')?'block':'none';
+  const rsh=document.getElementById('cr-place-rush'); if(rsh) rsh.style.display=(place==='rush')?'block':'none';
   if(typeof crToggleSpecial==='function') crToggleSpecial();
   if(typeof crToggleOptions==='function') crToggleOptions();
   if(place==='route') setTimeout(()=>{ try{ initCrMissionMapPicker(); }catch(e){} }, 70);
@@ -5036,7 +5213,10 @@ function crInitMissionType(m){
   if(m){ if(m.use_puzzle) type='puzzle'; else if(m.has_answer) type='quiz';
          else if(m.media_required && m.media_required!=='none') type='media'; }
   crPickMissionType(type);
-  crPickPlacement(m && m.is_special ? 'special' : 'route');
+  let place='route';
+  if(m && m.is_special) place='special';
+  else if(m && m.is_rush && currentCrModeRush) place='rush';
+  crPickPlacement(place);
 }
 // Delegated tooltip controller for the editor's ⓘ (.cme-info). Fixed-positioned
 // so it never clips, flips above/below, and works for dynamically-built modals.
@@ -5094,6 +5274,7 @@ function getCrMissionData(){
     penalty_points: parseInt(document.getElementById('cr-penalty-pts')?.value)||2,
     media_required: mediaReq,
     is_special: document.getElementById('cr-is-special')?.checked?1:0,
+    is_rush: document.getElementById('cr-is-rush')?.checked?1:0,
     is_repeatable: document.getElementById('cr-is-repeatable')?.checked?1:0,
     repeat_minutes: Math.max(0, parseInt(document.getElementById('cr-repeat-minutes')?.value)||0),
     has_answer: hasAnswer,

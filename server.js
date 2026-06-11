@@ -885,14 +885,14 @@ function crMediaMatchesMission(mission, mediaPath) {
 app.get('/api/cr/modes', (req,res) => res.json(db.getCrModes()));
 app.post('/api/cr/modes', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs} = req.body;
-  const id = db.createCrMode({name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs});
+  const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode} = req.body;
+  const id = db.createCrMode({name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode});
   res.json({id, success:true});
 });
 app.put('/api/cr/modes/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs} = req.body;
-  db.updateCrMode(req.params.id, {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs});
+  const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode} = req.body;
+  db.updateCrMode(req.params.id, {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode});
   res.json({success:true});
 });
 app.delete('/api/cr/modes/:id', (req,res) => {

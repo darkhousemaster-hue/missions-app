@@ -237,6 +237,10 @@ try { db.exec("ALTER TABLE cr_modes ADD COLUMN timer_default INTEGER DEFAULT 60"
 // player cycler reads cr_mode.allowed_langs the same way MiSSiONS reads
 // location.allowed_langs. Default 'de,en,fr,it,es' = unchanged behaviour.
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN allowed_langs TEXT DEFAULT 'de,en,fr,it,es'"); } catch(e) {}
+// Rush Mode: when on, the mode splits into "rush" missions (non-GPS, shown
+// first) and GPS missions (locked behind a gateway tile that unlocks after the
+// team finishes at least one rush mission). Default 0 = classic behaviour.
+try { db.exec("ALTER TABLE cr_modes ADD COLUMN rush_mode INTEGER DEFAULT 0"); } catch(e) {}
 // Hide a CR mission's description/task until the player physically arrives.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN hide_until_arrival INTEGER DEFAULT 0"); } catch(e) {}
 // "Special" missions: available at any time, no GPS dependency, repeatable
@@ -270,6 +274,9 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_peeks TEXT DEFAULT '[]'
 //                       player rearranges them back into this order to solve.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_type TEXT DEFAULT 'jigsaw'"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_order_images TEXT DEFAULT '[]'"); } catch(e) {}
+// Rush mission flag (only meaningful when the mode has rush_mode=1). A rush
+// mission ignores GPS and is shown to players before any GPS missions unlock.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_rush INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -570,16 +577,39 @@ const createTeam = ({game_id, name, gps_anchor_key=null}) => {
   runTx(()=>gms.forEach(gm=>ins.run(teamId,gm.mission_id,gm.id)));
   return teamId;
 };
-const getRankings = gameId => db.prepare(`
-  SELECT t.id, t.name, t.score, t.last_score_at,
-    (SELECT COUNT(*) FROM team_missions tm WHERE tm.team_id=t.id AND tm.status='accepted') as completed
-  FROM teams t WHERE t.game_id=?
-  ORDER BY t.score DESC,
-    -- Tie-break: among equal scores, the team that REACHED the total first
-    -- ranks higher. last_score_at=0 means "never scored / pre-migration" —
-    -- push those last by treating 0 as the largest possible value.
-    CASE WHEN t.last_score_at > 0 THEN t.last_score_at ELSE 9223372036854775807 END ASC,
-    t.joined_at ASC, completed DESC`).all(gameId);
+const getRankings = gameId => {
+  const rows = db.prepare(`
+    SELECT t.id, t.name, t.score, t.last_score_at, t.joined_at,
+      (SELECT COUNT(*) FROM team_missions tm WHERE tm.team_id=t.id AND tm.status='accepted') as completed,
+      (SELECT COUNT(*) FROM team_missions tm WHERE tm.team_id=t.id) as assigned
+    FROM teams t WHERE t.game_id=?
+    ORDER BY t.score DESC,
+      -- Tie-break: among equal scores, the team that REACHED the total first
+      -- ranks higher. last_score_at=0 means "never scored / pre-migration" —
+      -- push those last by treating 0 as the largest possible value.
+      CASE WHEN t.last_score_at > 0 THEN t.last_score_at ELSE 9223372036854775807 END ASC,
+      t.joined_at ASC, completed DESC`).all(gameId);
+  // Enrich each row with how much time was left on the game clock when the team
+  // finished ALL its available missions. Null until a team is actually finished
+  // (or if the game timer never started). Works for both game types:
+  //   • MiSSiONS: finished when every assigned team_mission is accepted.
+  //   • Rail Adventure: finished when its cr_team_progress row is 'finished'.
+  const game = db.prepare('SELECT timer_duration, timer_started_at FROM games WHERE id=?').get(gameId) || {};
+  const endMs = game.timer_started_at ? (game.timer_started_at + (game.timer_duration||0)*1000) : null;
+  const crStatus = {};
+  try {
+    db.prepare('SELECT team_id, status FROM cr_team_progress WHERE game_id=?').all(gameId)
+      .forEach(r => { crStatus[r.team_id] = r.status; });
+  } catch(e) {}
+  rows.forEach(r => {
+    const regularDone = r.assigned > 0 && r.completed >= r.assigned;
+    const crDone = crStatus[r.id] === 'finished';
+    r.finished = (regularDone || crDone) ? 1 : 0;
+    r.time_left_ms = (r.finished && endMs && r.last_score_at > 0)
+      ? Math.max(0, endMs - r.last_score_at) : null;
+  });
+  return rows;
+};
 
 // ── Team Missions ─────────────────────────────────────────────────────────────
 const getTeamMissions = teamId => db.prepare(`
@@ -647,9 +677,9 @@ const getCrMode     = id => db.prepare('SELECT * FROM cr_modes WHERE id=?').get(
 const createCrMode  = (data) => {
   // Backward-compat: callers used to pass just a name string.
   if (typeof data === 'string') data = {name: data};
-  const {name, allow_photo=1, allow_video=1, ruleset_id=null, timer_default=60, allowed_langs} = data;
-  return num(db.prepare('INSERT INTO cr_modes(name,allow_photo,allow_video,ruleset_id,timer_default,allowed_langs) VALUES(?,?,?,?,?,?)')
-    .run(name, allow_photo?1:0, allow_video?1:0, ruleset_id||null, Number(timer_default)||60, normLangs(allowed_langs)).lastInsertRowid);
+  const {name, allow_photo=1, allow_video=1, ruleset_id=null, timer_default=60, allowed_langs, rush_mode=0} = data;
+  return num(db.prepare('INSERT INTO cr_modes(name,allow_photo,allow_video,ruleset_id,timer_default,allowed_langs,rush_mode) VALUES(?,?,?,?,?,?,?)')
+    .run(name, allow_photo?1:0, allow_video?1:0, ruleset_id||null, Number(timer_default)||60, normLangs(allowed_langs), rush_mode?1:0).lastInsertRowid);
 };
 const updateCrMode  = (id, data) => {
   if (typeof data === 'string') data = {name: data};
@@ -660,8 +690,9 @@ const updateCrMode  = (id, data) => {
   const ruleset_id    = data.ruleset_id    !== undefined ? (data.ruleset_id||null) : existing.ruleset_id;
   const timer_default = data.timer_default !== undefined ? (Number(data.timer_default)||60) : (existing.timer_default||60);
   const allowed_langs = data.allowed_langs !== undefined ? normLangs(data.allowed_langs) : (existing.allowed_langs || 'de,en,fr,it,es');
-  db.prepare('UPDATE cr_modes SET name=?, allow_photo=?, allow_video=?, ruleset_id=?, timer_default=?, allowed_langs=? WHERE id=?')
-    .run(name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, id);
+  const rush_mode     = data.rush_mode     !== undefined ? (data.rush_mode?1:0) : (existing.rush_mode?1:0);
+  db.prepare('UPDATE cr_modes SET name=?, allow_photo=?, allow_video=?, ruleset_id=?, timer_default=?, allowed_langs=?, rush_mode=? WHERE id=?')
+    .run(name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode, id);
 };
 const deleteCrMode  = id => {
   runTx(() => {
@@ -689,7 +720,7 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'is_timed','timer_seconds','penalty_interval','penalty_points','media_required',
   'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es',
   'hide_until_arrival',
-  'is_special','repeat_minutes','is_repeatable',
+  'is_special','repeat_minutes','is_repeatable','is_rush',
   'use_puzzle','puzzle_image','puzzle_grid',
   'puzzle_peek_enabled','puzzle_peek_onetime','puzzle_peeks',
   'puzzle_type','puzzle_order_images'];
@@ -709,7 +740,7 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
-  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime'].forEach(f => {
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
   });
   // puzzle_peeks: accept an array or a JSON string; store a clean JSON string

@@ -1077,11 +1077,37 @@ function bubble(m) {
   </div>`;
 }
 
+// Soft two-note "ping" played whenever a GM message (direct or broadcast)
+// reaches the player. Synthesised via WebAudio (no audio asset); the context is
+// primed on the player's first interaction to satisfy the autoplay rule.
+let _msgAudioCtx = null;
+function _ensureMsgAudio(){
+  try {
+    if(!_msgAudioCtx) _msgAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(_msgAudioCtx.state === 'suspended') _msgAudioCtx.resume().catch(()=>{});
+  } catch(e){}
+  return _msgAudioCtx;
+}
+function playGmMessageTone(){
+  const ctx = _ensureMsgAudio(); if(!ctx) return;
+  const now = ctx.currentTime;
+  [[784,0],[1047,0.12]].forEach(([f,d]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(ctx.destination);
+    const tt = now+d;
+    g.gain.setValueAtTime(0.0001, tt);
+    g.gain.exponentialRampToValueAtTime(0.22, tt+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, tt+0.3);
+    o.start(tt); o.stop(tt+0.32);
+  });
+}
+window.addEventListener('pointerdown', () => { _ensureMsgAudio(); }, { once:true });
 function onChatMessage(msg) {
   const fromGm = msg.fromGm===1 || msg.fromGm===true;
 
   // Skip player's own messages - already added optimistically in sendChat()
   if (!fromGm) return;
+  playGmMessageTone();
 
   const box  = document.getElementById('chat-messages');
   const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});

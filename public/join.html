@@ -87,7 +87,8 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 .error-msg { color:var(--red-light); font-size:.85rem; text-align:center; min-height:1.2em; }
 
 /* ── Bottom CTA — full-width orange "Join game →". */
-.join-cta { padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 14px); display:flex; gap:10px; }
+.join-cta { padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 14px); display:flex; flex-direction:column; gap:10px; }
+.join-cta .join-existing-link { margin-top:0; }
 .join-cta .btn {
   flex:1; padding:13px 20px; font:700 13px/1 var(--body);
   letter-spacing:.06em; text-transform:uppercase;
@@ -217,13 +218,6 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
       </div>
     </div>
 
-    <!-- Or join an existing team — always shown. The join screen says so when
-         no teams exist yet. -->
-    <button type="button" class="join-existing-link" id="join-existing-link" onclick="showJoinExisting()">
-      <span id="join-existing-link-label">Oder einem bestehenden Team beitreten</span>
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
-    </button>
-
     <p class="error-msg" id="error-msg"></p>
   </div>
 
@@ -240,11 +234,18 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
     </p>
   </div>
 
-  <!-- Bottom CTA — only visible on create-new -->
+  <!-- Bottom CTA — only visible on create-new. The "join existing team" button
+       sits directly BELOW the primary join button. -->
   <div class="join-cta" id="cta-create" style="display:none;">
     <button class="btn btn-primary" id="btn-join" onclick="joinAsNew()">
       <span id="btn-join-label">Spiel beitreten</span>
       <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+    </button>
+    <!-- Or join an existing team — always shown. The join screen says so when
+         no teams exist yet. -->
+    <button type="button" class="join-existing-link" id="join-existing-link" onclick="showJoinExisting()">
+      <span id="join-existing-link-label">Oder einem bestehenden Team beitreten</span>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
     </button>
   </div>
 </div>
