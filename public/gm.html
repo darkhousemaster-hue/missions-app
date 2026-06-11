@@ -568,6 +568,24 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
           </div>
 
           <div class="label">
+            <span id="s-logo-label">Logo</span>
+            <span class="help" id="s-logo-help">Schrift-Logo (aktuell) oder ein eigenes Bild-Logo für den Startbildschirm.</span>
+          </div>
+          <div class="control">
+            <div class="segmented" data-input="s-logo-mode" style="margin-bottom:.6rem;max-width:340px;">
+              <span data-value="font" class="is-active" onclick="selectSegment(this);applyLogoModeUI()" id="s-logo-font">Schrift-Logo</span>
+              <span data-value="image" onclick="selectSegment(this);applyLogoModeUI()" id="s-logo-image-opt">Bild-Logo</span>
+            </div>
+            <input type="hidden" id="s-logo-mode" value="font">
+            <div id="s-logo-image-row" style="display:none;">
+              <div id="s-logo-preview" style="margin-bottom:.55rem;"></div>
+              <label class="btn" style="cursor:pointer;display:inline-flex;align-items:center;">🖼️ <span id="s-logo-pick" style="margin-left:.35rem;">Bild wählen / ersetzen</span>
+                <input type="file" id="s-logo-file" accept="image/*" style="display:none;" onchange="uploadLogoImage(event)">
+              </label>
+            </div>
+          </div>
+
+          <div class="label">
             <span id="s-timeout-label">Timeout-Nachricht</span>
             <span class="help" id="s-timeout-help">Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.</span>
           </div>
@@ -1670,6 +1688,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   applyTooltips();
   await loadLanding();
   showScreen('screen-landing');
+  applyBrandLogo();   // swap in the image logo if the GM chose one
   // Show version on landing
   try {
     const v = await API('/api/version');
@@ -3233,6 +3252,53 @@ async function verifyGate(){
 // Convenience wrapper: apply tooltips after the dynamic settings UI renders.
 function _afterSettingsRender(){ try { applyTooltips(); } catch(e) {} }
 
+// ── Brand logo (font vs uploaded image) ───────────────────────────────────────
+function applyLogoModeUI(){
+  const mode = document.getElementById('s-logo-mode')?.value || 'font';
+  const row = document.getElementById('s-logo-image-row');
+  if(row) row.style.display = mode === 'image' ? 'block' : 'none';
+}
+function renderLogoPreview(path){
+  const el = document.getElementById('s-logo-preview'); if(!el) return;
+  el.innerHTML = path
+    ? `<img src="/uploads/${path}" alt="Logo" style="max-width:300px;max-height:130px;width:auto;border:1px solid var(--border);border-radius:var(--radius);background:#111;padding:8px;">`
+    : `<span style="color:var(--text-muted);font-size:.85rem;">${gmt('s-logo-none')||'Noch kein Bild hochgeladen.'}</span>`;
+}
+async function uploadLogoImage(e){
+  const f = e.target.files && e.target.files[0]; if(!f) return; e.target.value='';
+  const fd = new FormData(); fd.append('image', f, f.name);
+  const headers = {}; if(gmToken) headers['Authorization'] = 'Bearer ' + gmToken;
+  try{
+    const res = await fetch('/api/settings/logo-image', { method:'POST', headers, body: fd }).then(r=>r.json());
+    if(res && res.logo_image){
+      renderLogoPreview(res.logo_image);
+      // uploading a logo implies you want to use it → switch to image mode
+      const seg = document.querySelector('.segmented[data-input="s-logo-mode"]');
+      if(seg) seg.querySelectorAll('span').forEach(s=>s.classList.toggle('is-active', s.dataset.value==='image'));
+      const hid = document.getElementById('s-logo-mode'); if(hid) hid.value = 'image';
+      applyLogoModeUI();
+      toast(gmt('s-logo-uploaded')||'Logo hochgeladen — zum Übernehmen speichern.','success');
+    } else toast(gmt('upload-failed')||'Upload fehlgeschlagen','error');
+  }catch(_){ toast(gmt('upload-failed')||'Upload fehlgeschlagen','error'); }
+}
+// Show either the uploaded banner image OR the font logo on the landing screen.
+function setLogoDisplay(imagePath){
+  const wrap = document.querySelector('.landing-logo'); if(!wrap) return;
+  const img = wrap.querySelector('img.logo'), h1 = wrap.querySelector('h1'), tag = document.getElementById('ll-tagline');
+  let banner = document.getElementById('ll-image-logo');
+  if(imagePath){
+    if(!banner){ banner = document.createElement('img'); banner.id='ll-image-logo'; banner.alt='Logo';
+      banner.style.cssText='max-width:100%;max-height:170px;width:auto;'; wrap.insertBefore(banner, wrap.firstChild); }
+    banner.src = '/uploads/' + imagePath; banner.style.display='';
+    [img,h1,tag].forEach(el=>{ if(el) el.style.display='none'; });
+  } else {
+    if(banner) banner.style.display='none';
+    [img,h1,tag].forEach(el=>{ if(el) el.style.display=''; });
+  }
+}
+async function applyBrandLogo(){
+  try{ const s = await API('/api/settings'); setLogoDisplay(s.logo_mode==='image' && s.logo_image ? s.logo_image : null); }catch(e){}
+}
 async function loadSettings(){
   const s=await API('/api/settings');
   document.getElementById('s-public-url').value=s.public_url||'';
@@ -3249,6 +3315,13 @@ async function loadSettings(){
   // Load github URL
   const gh = document.getElementById('s-github-url');
   if(gh && s.github_url) gh.value = s.github_url;
+  // Logo: mode (font/image) + uploaded image preview
+  const lm = s.logo_mode==='image' ? 'image' : 'font';
+  const lmHid = document.getElementById('s-logo-mode'); if(lmHid) lmHid.value = lm;
+  const lmSeg = document.querySelector('.segmented[data-input="s-logo-mode"]');
+  if(lmSeg) lmSeg.querySelectorAll('span').forEach(x=>x.classList.toggle('is-active', x.dataset.value===lm));
+  applyLogoModeUI();
+  renderLogoPreview(s.logo_image||null);
   // Collage timings (fall back to the same defaults the renderer uses).
   const setNum = (id, val, def) => { const el=document.getElementById(id); if(el) el.value = (val!==undefined && val!=='' && val!==null) ? val : def; };
   setNum('s-collage-photo', s.collage_photo_secs, '2.5');
@@ -3312,7 +3385,9 @@ async function saveGeneralSettings(){
   // GitHub URL moved into the General panel (was its own field on the
   // Updates panel before mockup-08 settings); include it in the payload.
   const github_url=document.getElementById('s-github-url')?.value||'';
-  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es,github_url}});
+  const logo_mode=document.getElementById('s-logo-mode')?.value||'font';
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es,github_url,logo_mode}});
+  if(res.success) applyBrandLogo();
   toast(res.success?(gmt('saved')||'Gespeichert!'):res.error,res.success?'success':'error');
 }
 
