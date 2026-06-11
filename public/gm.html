@@ -3266,11 +3266,16 @@ function renderLogoPreview(path){
 }
 async function uploadLogoImage(e){
   const f = e.target.files && e.target.files[0]; if(!f) return; e.target.value='';
-  const fd = new FormData(); fd.append('image', f, f.name);
+  const fd = new FormData();
+  // Send the password in the body too — multer parses it into req.body so auth
+  // works even when the session token is missing or stale.
+  if(settingsPassword) fd.append('password', settingsPassword);
+  fd.append('image', f, f.name);
   const headers = {}; if(gmToken) headers['Authorization'] = 'Bearer ' + gmToken;
   try{
-    const res = await fetch('/api/settings/logo-image', { method:'POST', headers, body: fd }).then(r=>r.json());
-    if(res && res.logo_image){
+    const r = await fetch('/api/settings/logo-image', { method:'POST', headers, body: fd });
+    const res = await r.json().catch(()=>({}));
+    if(r.ok && res && res.logo_image){
       renderLogoPreview(res.logo_image);
       // uploading a logo implies you want to use it → switch to image mode
       const seg = document.querySelector('.segmented[data-input="s-logo-mode"]');
@@ -3278,7 +3283,9 @@ async function uploadLogoImage(e){
       const hid = document.getElementById('s-logo-mode'); if(hid) hid.value = 'image';
       applyLogoModeUI();
       toast(gmt('s-logo-uploaded')||'Logo hochgeladen — zum Übernehmen speichern.','success');
-    } else toast(gmt('upload-failed')||'Upload fehlgeschlagen','error');
+    } else {
+      toast((res && res.error) || (gmt('upload-failed')||'Upload fehlgeschlagen'), 'error');
+    }
   }catch(_){ toast(gmt('upload-failed')||'Upload fehlgeschlagen','error'); }
 }
 // Show either the uploaded banner image OR the font logo on the landing screen.
