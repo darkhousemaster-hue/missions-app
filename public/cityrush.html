@@ -70,7 +70,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 /* Extra bottom padding to clear the bottom-pinned single-special star
    button (56px + 18px gap + safe-area). The star button can be hidden
    (0 or 2+ specials) but the padding stays so content never collides. */
-#view-mission { flex:1; min-height:0; overflow-y:auto; padding:.75rem; -webkit-overflow-scrolling:touch;
+#view-mission { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:.75rem; -webkit-overflow-scrolling:touch;
   padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6rem);
   padding-left:max(.5rem, env(safe-area-inset-left,0px));
   padding-right:max(.5rem, env(safe-area-inset-right,0px));
@@ -3245,7 +3245,10 @@ function initMap(){
 }
 function crShowView(v){
   crActiveView = v;
-  document.getElementById('view-mission').style.display = v==='mission'?'flex':'none';
+  // block (not flex): the mission view is a vertically-stacked, scrollable
+  // document. A row-direction flex container breaks vertical touch-scrolling on
+  // mobile when the tiles overflow the screen.
+  document.getElementById('view-mission').style.display = v==='mission'?'block':'none';
   document.getElementById('view-map').style.display     = v==='map'?'block':'none';
   const vc = document.getElementById('view-chat');
   if(vc) vc.style.display = v==='chat' ? 'flex' : 'none';
