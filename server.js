@@ -736,9 +736,17 @@ app.post('/api/games/:gameId/chat', (req,res) => {
   const {teamId,content,fromGm}=req.body;
   const msgId=db.saveMessage({gameId:req.params.gameId,teamId:teamId||null,content,fromGm});
   const msg={id:msgId,content,fromGm,teamId:teamId||null,gameId:req.params.gameId,timestamp:Date.now()};
-  if(teamId) io.to(`team_${teamId}`).emit('chat_message',msg);
-  else io.to(`game_${req.params.gameId}`).emit('chat_message',msg);
-  io.to(`gm_${req.params.gameId}`).emit('chat_message',msg);
+  if(teamId){
+    // Direct message to one team. The GM isn't in that team room, so send a
+    // separate copy to the GM dashboard.
+    io.to(`team_${teamId}`).emit('chat_message',msg);
+    io.to(`gm_${req.params.gameId}`).emit('chat_message',msg);
+  } else {
+    // Broadcast to everyone. The GM also joins game_<id> (see join_gm), so a
+    // single emit to game_ reaches players AND the GM — emitting to gm_ as well
+    // would double the message on the GM dashboard.
+    io.to(`game_${req.params.gameId}`).emit('chat_message',msg);
+  }
   res.json({success:true,msg});
 });
 app.get('/api/games/:gameId/chat', (req,res) =>
