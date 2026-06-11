@@ -701,7 +701,7 @@ const T = {
         selfie_shoot:'Foto machen', selfie_retake:'Erneut',
         selfie_upload:'Hochladen & weiter',
         answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
-        puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!', puzzle_start:'Puzzle starten', puzzle_title:'Puzzle', puzzle_peek:'Vorschau', puzzle_view:'Bild ansehen', puzzle_close_hint:'Tippe ✕ zum Schließen',
+        puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!', puzzle_start:'Puzzle starten', puzzle_title:'Puzzle', puzzle_peek:'Vorschau', puzzle_view:'Bild ansehen', puzzle_close_hint:'Tippe ✕ zum Schließen', puzzle_order_hint:'Bring die Bilder in die richtige Reihenfolge.',
         broadcast:'Rundruf',
         error_generic:'Fehler',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
@@ -748,7 +748,7 @@ const T = {
         selfie_shoot:'Take photo', selfie_retake:'Retake',
         selfie_upload:'Upload & continue',
         answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
-        puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!', puzzle_start:'Start puzzle', puzzle_title:'Puzzle', puzzle_peek:'Peek', puzzle_view:'View image', puzzle_close_hint:'Tap ✕ to close',
+        puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!', puzzle_start:'Start puzzle', puzzle_title:'Puzzle', puzzle_peek:'Peek', puzzle_view:'View image', puzzle_close_hint:'Tap ✕ to close', puzzle_order_hint:'Put the images in the right order.',
         broadcast:'Broadcast',
         error_generic:'Error',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
@@ -795,7 +795,7 @@ const T = {
         selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
         selfie_upload:'Envoyer & continuer',
         answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
-        puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !', puzzle_start:'Démarrer le puzzle', puzzle_title:'Puzzle', puzzle_peek:'Aperçu', puzzle_view:"Voir l'image", puzzle_close_hint:'Touche ✕ pour fermer',
+        puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !', puzzle_start:'Démarrer le puzzle', puzzle_title:'Puzzle', puzzle_peek:'Aperçu', puzzle_view:"Voir l'image", puzzle_close_hint:'Touche ✕ pour fermer', puzzle_order_hint:'Mets les images dans le bon ordre.',
         broadcast:'Annonce',
         error_generic:'Erreur',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
@@ -842,7 +842,7 @@ const T = {
         selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
         selfie_upload:'Carica & continua',
         answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
-        puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!', puzzle_start:'Avvia puzzle', puzzle_title:'Puzzle', puzzle_peek:'Anteprima', puzzle_view:'Vedi immagine', puzzle_close_hint:'Tocca ✕ per chiudere',
+        puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!', puzzle_start:'Avvia puzzle', puzzle_title:'Puzzle', puzzle_peek:'Anteprima', puzzle_view:'Vedi immagine', puzzle_close_hint:'Tocca ✕ per chiudere', puzzle_order_hint:'Metti le immagini nel giusto ordine.',
         broadcast:'Annuncio',
         error_generic:'Errore',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
@@ -889,7 +889,7 @@ const T = {
         selfie_shoot:'Hacer foto', selfie_retake:'Repetir',
         selfie_upload:'Subir y continuar',
         answer_required:'Por favor, escribe tu respuesta.', answer_wrong:'Incorrecto — inténtalo de nuevo.',
-        puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!', puzzle_start:'Iniciar puzle', puzzle_title:'Puzle', puzzle_peek:'Vista previa', puzzle_view:'Ver imagen', puzzle_close_hint:'Toca ✕ para cerrar',
+        puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!', puzzle_start:'Iniciar puzle', puzzle_title:'Puzle', puzzle_peek:'Vista previa', puzzle_view:'Ver imagen', puzzle_close_hint:'Toca ✕ para cerrar', puzzle_order_hint:'Ordena las imágenes correctamente.',
         broadcast:'Anuncio',
         error_generic:'Error',
         teammate_pending:'Un compañero ya ha enviado — esperando al Gamemaster.' },
@@ -937,7 +937,22 @@ function normalizeCrMission(m){
     repeat_minutes: Number(m.repeat_minutes) || 0,
     use_puzzle: toBool(m.use_puzzle),
     puzzle_grid: Number(m.puzzle_grid) || 3,
+    puzzle_type: m.puzzle_type === 'order' ? 'order' : 'jigsaw',
+    puzzle_order_images: _parseOrderImages(m.puzzle_order_images),
   };
+}
+// Parse stored puzzle_order_images (JSON string or array) into a clean array.
+function _parseOrderImages(v){
+  let a = v;
+  if(typeof a === 'string'){ try{ a = JSON.parse(a); }catch{ a = []; } }
+  return Array.isArray(a) ? a.filter(Boolean) : [];
+}
+// A puzzle is "ready" (playable) once it has its content: a single image for
+// jigsaw, or at least two ordered images for the ordering puzzle.
+function _puzzleReady(m){
+  return (m.puzzle_type === 'order')
+    ? (_parseOrderImages(m.puzzle_order_images).length >= 2)
+    : !!m.puzzle_image;
 }
 function _idSet(values){
   return new Set((values||[]).map(Number).filter(Number.isFinite));
@@ -1563,7 +1578,7 @@ function crOpenSingleSpecial(){
     const only = specialMissions[0];
     if(specialIsDone(only)){
       // Finished puzzle missions stay revisitable so players can see the image.
-      if(only.use_puzzle && only.puzzle_image){ openSpecialPopup(only.id); return; }
+      if(only.use_puzzle && _puzzleReady(only)){ openSpecialPopup(only.id); return; }
       toast('✓ ' + (t('completed')||'Erledigt'), 'info'); return;
     }
     const cd = specialCooldownLeft(only);
@@ -1580,7 +1595,7 @@ function openSpecialChooser(){
   const now = Date.now();
   const rows = specialMissions.map(m => {
     const done       = specialIsDone(m);
-    const isPuzzle   = !!(m.use_puzzle && m.puzzle_image);
+    const isPuzzle   = !!(m.use_puzzle && _puzzleReady(m));
     const reviewable = done && isPuzzle;   // finished puzzle → still tappable to revisit
     const waitSec    = specialCooldownLeft(m);
     const onCooldown = waitSec > 0;
@@ -1711,7 +1726,7 @@ function openSpecialPopup(missionId){
   const m = specialMissions.find(x => x.id === missionId);
   // A finished puzzle mission may still be reopened — it shows the finished
   // image (read-only). Other finished specials just toast "done".
-  if(m && specialIsDone(m) && !(m.use_puzzle && m.puzzle_image)){ toast('✓ ' + (t('completed')||'Erledigt'), 'info'); return; }
+  if(m && specialIsDone(m) && !(m.use_puzzle && _puzzleReady(m))){ toast('✓ ' + (t('completed')||'Erledigt'), 'info'); return; }
   popupMissionId = missionId;
   document.getElementById('cr-mission-popup').style.display = 'flex';
   refreshSpecialPopup();
@@ -1752,7 +1767,7 @@ function renderActionsForSpecial(m){
     actEl.appendChild(note);
     return;
   }
-  if(m.use_puzzle && m.puzzle_image){
+  if(m.use_puzzle && _puzzleReady(m)){
     const done = specialIsDone(m);
     renderPuzzle(m, actEl, () => completeSpecialMission(m, null), done);
     if(!done) addHintButton(actEl, m, 'answer');
@@ -1997,7 +2012,7 @@ function refreshPopup(){
     const actEl = document.getElementById('cr-actions');
     if(actEl) actEl.innerHTML = `<div style="padding:.6rem .75rem;background:rgba(255,107,0,.08);border-left:3px solid var(--orange);border-radius:0 var(--radius) var(--radius) 0;font-size:.9rem;">⏳ ${t('pending_review')||'Wird vom Spielleiter geprüft…'}</div>`;
   }
-  else if(isDone && m.use_puzzle && m.puzzle_image){
+  else if(isDone && m.use_puzzle && _puzzleReady(m)){
     // Finished jigsaw mission — offer a read-only look at the completed image.
     const actEl = document.getElementById('cr-actions');
     if(actEl){ actEl.innerHTML = ''; renderPuzzle(m, actEl, () => {}, true); }
@@ -2019,15 +2034,20 @@ let _puzzleSolved = false;
 let _puzzleOverlayEl = null;
 function renderPuzzle(m, actEl, onSolved, review){
   _puzzleSolved = false;
-  const g = Math.max(3, Math.min(5, Number(m.puzzle_grid) || 3));
-  const src = `/uploads/${m.puzzle_image}`;
-  const N = g * g;
+  const isOrder = m.puzzle_type === 'order';
   const launch = document.createElement('button');
   launch.className = review ? 'btn btn-secondary btn-full' : 'btn btn-primary btn-full';
-  launch.textContent = review
-    ? '🧩 ' + (t('puzzle_view') || 'Bild ansehen')
-    : '🧩 ' + (t('puzzle_start') || 'Puzzle starten');
-  launch.onclick = () => openPuzzleOverlay(m, g, src, N, onSolved, review);
+  launch.textContent = (review ? '🧩 ' + (t('puzzle_view') || 'Bild ansehen')
+                               : '🧩 ' + (t('puzzle_start') || 'Puzzle starten'));
+  if(isOrder){
+    const imgs = _parseOrderImages(m.puzzle_order_images).map(f => `/uploads/${f}`);
+    launch.onclick = () => openOrderPuzzle(m, imgs, onSolved, review);
+  } else {
+    const g = Math.max(3, Math.min(5, Number(m.puzzle_grid) || 3));
+    const src = `/uploads/${m.puzzle_image}`;
+    const N = g * g;
+    launch.onclick = () => openPuzzleOverlay(m, g, src, N, onSolved, review);
+  }
   actEl.appendChild(launch);
 }
 
@@ -2336,6 +2356,156 @@ function openPuzzleOverlay(m, g, src, N, onSolved, review){
 }
 let _puzzleClipSeq = 0;
 
+// ── Ordering puzzle ───────────────────────────────────────────────────────────
+// The GM supplies N images in the correct order. The player sees N numbered
+// target slots (a vertical column for ≤4, a horizontal row for >4 so they fit)
+// plus the N images scattered loose. Drag an image onto a slot to snap it in;
+// dropping onto an occupied slot ejects the old image just below the slot;
+// picking up a placed image frees its slot. Solved when slot i holds the image
+// whose correct position is i. Finish behaviour matches the jigsaw: award once,
+// keep it on screen, ✕ to close, revisit later (review).
+function openOrderPuzzle(m, imgs, onSolved, review){
+  closePuzzleOverlay();
+  _puzzleSolved = false;
+  const N = imgs.length;
+
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:1200;background:#0c0c0e;touch-action:none;user-select:none;overflow:hidden;';
+  _puzzleOverlayEl = ov;
+
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:.6rem;'+
+    'padding:calc(env(safe-area-inset-top,0px) + .6rem) .8rem .6rem;z-index:5;background:linear-gradient(#0c0c0eee,#0c0c0e00);';
+  const title = document.createElement('div');
+  title.style.cssText = 'flex:1;font-weight:700;font-size:.95rem;color:#fff;';
+  title.textContent = t('puzzle_title') || 'Puzzle';
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn btn-ghost btn-sm';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = closePuzzleOverlay;
+  bar.appendChild(title); bar.appendChild(closeBtn);
+  ov.appendChild(bar);
+
+  const status = document.createElement('div');
+  status.style.cssText = 'position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + .8rem);'+
+    'text-align:center;font-weight:700;font-size:1rem;color:#39d353;z-index:5;min-height:1.2em;pointer-events:none;padding:0 1rem;';
+  ov.appendChild(status);
+
+  document.body.appendChild(ov);
+
+  const build = () => {
+    const VW = ov.clientWidth, VH = ov.clientHeight;
+    if(!VW || !VH){ setTimeout(build, 60); return; }
+
+    const horizontal = N > 4;                       // >4 images → slots in a row
+    const gap = 12;
+    const axisLen = horizontal ? VW : VH;
+    const pad = horizontal ? Math.round(VW*0.04) : Math.round(VH*0.12);
+    let cell = Math.floor(((axisLen - 2*pad) - gap*(N-1)) / N);
+    cell = Math.max(52, Math.min(cell, horizontal ? 132 : 150));
+    const lineLen = N*cell + (N-1)*gap;
+
+    const slots = [];
+    if(horizontal){
+      const startX = Math.round((VW - lineLen)/2);
+      const y = Math.round(VH*0.26);
+      for(let i=0;i<N;i++) slots.push({ x: startX + i*(cell+gap), y });
+    } else {
+      const startY = Math.round((VH - lineLen)/2);
+      const x = Math.round(VW*0.30 - cell/2);
+      for(let i=0;i<N;i++) slots.push({ x, y: startY + i*(cell+gap) });
+    }
+
+    // numbered slot placeholders
+    for(let i=0;i<N;i++){
+      const s = document.createElement('div');
+      s.style.cssText = `position:absolute;width:${cell}px;height:${cell}px;left:${slots[i].x}px;top:${slots[i].y}px;`+
+        `border:2px dashed rgba(255,255,255,.22);border-radius:10px;display:flex;align-items:center;justify-content:center;`+
+        `color:rgba(255,255,255,.30);font-weight:800;font-size:${Math.round(cell*0.4)}px;z-index:1;`;
+      s.textContent = (i+1);
+      ov.appendChild(s);
+    }
+
+    const slotOf = new Array(N).fill(-1);           // slotOf[slotIndex] = pieceIndex
+    const pieces = [];                              // {el, correct, slot, px, py}
+    const SNAP = Math.max(cell*0.55, 36);
+    const area = horizontal
+      ? { x0:10, y0:Math.round(VH*0.50), x1:VW-cell-10, y1:VH-cell-90 }
+      : { x0:Math.round(VW*0.52), y0:80, x1:VW-cell-10, y1:VH-cell-90 };
+
+    function paint(i){ pieces[i].el.style.transform = `translate(${pieces[i].px}px,${pieces[i].py}px)`; }
+    function placeInSlot(pi, si){ pieces[pi].slot=si; slotOf[si]=pi; pieces[pi].px=slots[si].x; pieces[pi].py=slots[si].y;
+      pieces[pi].el.style.transition='transform .14s'; paint(pi); setTimeout(()=>pieces[pi].el.style.transition='',150); }
+    function freeSlot(si){ if(si!=null && slotOf[si]>=0){ pieces[slotOf[si]].slot=null; slotOf[si]=-1; } }
+    function nearestSlot(cx, cy){ let best=-1, bd=SNAP;
+      for(let i=0;i<N;i++){ const d=Math.hypot(cx-(slots[i].x+cell/2), cy-(slots[i].y+cell/2)); if(d<bd){bd=d;best=i;} } return best; }
+    function checkSolved(){
+      if(_puzzleSolved) return;
+      for(let i=0;i<N;i++){ if(slotOf[i]<0 || pieces[slotOf[i]].correct!==i) return; }
+      _puzzleSolved = true;
+      pieces.forEach(p=>p.el.style.cursor='default');
+      status.innerHTML = (t('puzzle_solved') || '✓ Gelöst!') +
+        `<div style="font-weight:500;font-size:.8rem;color:#9aa6b5;margin-top:.25rem;">${t('puzzle_close_hint')||'Tippe ✕ zum Schließen'}</div>`;
+      setTimeout(() => { try{ onSolved(); }catch(e){} }, 600);
+    }
+    function attachDrag(el, idx){
+      let on=false, sx=0, sy=0, ox=0, oy=0;
+      el.addEventListener('pointerdown', e=>{
+        if(_puzzleSolved) return;
+        on=true; try{ el.setPointerCapture(e.pointerId); }catch(_){}
+        el.style.cursor='grabbing'; el.style.zIndex='50';
+        sx=e.clientX; sy=e.clientY; ox=pieces[idx].px; oy=pieces[idx].py;
+        if(pieces[idx].slot!=null) freeSlot(pieces[idx].slot);
+        e.preventDefault();
+      });
+      el.addEventListener('pointermove', e=>{ if(!on) return;
+        pieces[idx].px = ox + (e.clientX - sx); pieces[idx].py = oy + (e.clientY - sy); paint(idx); });
+      const drop = e=>{
+        if(!on) return; on=false; el.style.cursor='grab'; el.style.zIndex='2';
+        try{ el.releasePointerCapture(e.pointerId); }catch(_){}
+        const cx = pieces[idx].px + cell/2, cy = pieces[idx].py + cell/2;
+        const si = nearestSlot(cx, cy);
+        if(si>=0){
+          if(slotOf[si]>=0 && slotOf[si]!==idx){      // eject occupant below the slot
+            const occ = slotOf[si]; slotOf[si]=-1; pieces[occ].slot=null;
+            pieces[occ].px = slots[si].x;
+            pieces[occ].py = Math.min(slots[si].y + cell + gap, VH - cell - 70);
+            pieces[occ].el.style.transition='transform .14s'; paint(occ); setTimeout(()=>pieces[occ].el.style.transition='',150);
+          }
+          placeInSlot(idx, si);
+        } else { paint(idx); }
+        try{ navigator.vibrate && navigator.vibrate(10); }catch(_){}
+        checkSolved();
+      };
+      el.addEventListener('pointerup', drop);
+      el.addEventListener('pointercancel', drop);
+    }
+
+    for(let i=0;i<N;i++){
+      const el = document.createElement('div');
+      el.dataset.idx = i;
+      el.style.cssText = `position:absolute;width:${cell}px;height:${cell}px;border-radius:10px;cursor:grab;`+
+        `background:#000 center/cover no-repeat url("${imgs[i]}");box-shadow:0 3px 8px rgba(0,0,0,.6);`+
+        `border:1px solid rgba(255,255,255,.25);will-change:transform;z-index:2;touch-action:none;`;
+      pieces.push({ el, correct:i, slot:null,
+        px: Math.round(area.x0 + Math.random()*Math.max(1,(area.x1-area.x0))),
+        py: Math.round(area.y0 + Math.random()*Math.max(1,(area.y1-area.y0))) });
+      ov.appendChild(el);
+      attachDrag(el, i);
+    }
+
+    if(review){
+      for(let i=0;i<N;i++) placeInSlot(i, i);
+      _puzzleSolved = true;
+      status.textContent = t('puzzle_solved') || '✓ Gelöst!';
+    } else {
+      for(let i=0;i<N;i++) paint(i);
+      status.textContent = t('puzzle_order_hint') || 'Bring die Bilder in die richtige Reihenfolge.';
+    }
+  };
+  setTimeout(build, 50);
+}
+
 function renderActions(m){
   const actEl = document.getElementById('cr-actions');
   if(!actEl) return;
@@ -2367,7 +2537,7 @@ function renderActions(m){
     // Fall through to render upload buttons again so the player can retry.
   }
   // Jigsaw puzzle flow — solving auto-completes the mission (no GM review).
-  if(m.use_puzzle && m.puzzle_image){
+  if(m.use_puzzle && _puzzleReady(m)){
     renderPuzzle(m, actEl, () => completeMission());
     addHintButton(actEl, m);
     return;

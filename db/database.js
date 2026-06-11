@@ -264,6 +264,12 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_grid INTEGER DEFAULT 3"
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_peek_enabled INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_peek_onetime INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_peeks TEXT DEFAULT '[]'"); } catch(e) {}
+// Puzzle kind + ordering-puzzle data.
+//  puzzle_type          'jigsaw' (default) | 'order'
+//  puzzle_order_images  JSON array of image paths in the CORRECT order; the
+//                       player rearranges them back into this order to solve.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_type TEXT DEFAULT 'jigsaw'"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_order_images TEXT DEFAULT '[]'"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -679,7 +685,8 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'hide_until_arrival',
   'is_special','repeat_minutes','is_repeatable',
   'use_puzzle','puzzle_image','puzzle_grid',
-  'puzzle_peek_enabled','puzzle_peek_onetime','puzzle_peeks'];
+  'puzzle_peek_enabled','puzzle_peek_onetime','puzzle_peeks',
+  'puzzle_type','puzzle_order_images'];
 const toNullableNumber = v => {
   if (v === undefined) return undefined;
   if (v === null || v === '') return null;
@@ -712,6 +719,19 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.puzzle_grid !== undefined && out.puzzle_grid !== null && out.puzzle_grid !== '') {
     const g = Math.round(Number(out.puzzle_grid));
     out.puzzle_grid = (g >= 3 && g <= 5) ? g : 3;
+  }
+  // Puzzle kind.
+  if (out.puzzle_type !== undefined && out.puzzle_type !== null) {
+    out.puzzle_type = (String(out.puzzle_type) === 'order') ? 'order' : 'jigsaw';
+  }
+  // Ordering-puzzle images: accept an array or JSON string; store a clean JSON
+  // array of non-empty path strings (max 12).
+  if (out.puzzle_order_images !== undefined && out.puzzle_order_images !== null) {
+    let arr = out.puzzle_order_images;
+    if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch { arr = []; } }
+    if (!Array.isArray(arr)) arr = [];
+    arr = arr.map(s => String(s || '').trim()).filter(Boolean).slice(0, 12);
+    out.puzzle_order_images = JSON.stringify(arr);
   }
   return out;
 };

@@ -4607,6 +4607,12 @@ function crMissionModal(m){
       </div>
       <input type="checkbox" id="cr-use-puzzle" ${chk('use_puzzle')} style="display:none;" onchange="crTogglePuzzle()">
       <div id="cr-puzzle-section" style="${m&&m.use_puzzle?'':'display:none;'}">
+        <label class="label">${gmt('cr-m-puzzle-kind')||'Puzzle-Art'}</label>
+        <select id="cr-puzzle-type" class="select" style="margin-bottom:.7rem;" onchange="crTogglePuzzleKind()">
+          <option value="jigsaw" ${m&&m.puzzle_type==='order'?'':'selected'}>${gmt('cr-m-puzzle-jigsaw')||'🧩 Bild zusammensetzen'}</option>
+          <option value="order" ${m&&m.puzzle_type==='order'?'selected':''}>${gmt('cr-m-puzzle-order')||'🔢 Bilder in Reihenfolge bringen'}</option>
+        </select>
+        <div id="cr-puzzle-jigsaw">
         <div class="grid-2" style="gap:.6rem;align-items:start;">
           <div>
             <label class="label">${gmt('cr-m-puzzle-grid')||'Schwierigkeit'}</label>
@@ -4655,6 +4661,13 @@ function crMissionModal(m){
               <button type="button" class="btn btn-ghost btn-sm" onclick="addPeekRow()">＋ ${gmt('cr-m-peek-add')||'Vorschau hinzufügen'}</button>
             </div>
           </div>
+        </div>
+        </div><!-- /cr-puzzle-jigsaw -->
+        <div id="cr-puzzle-order" style="display:none;">
+          <label class="label">${gmt('cr-m-order-imgs')||'Bilder in der richtigen Reihenfolge'}</label>
+          <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">${gmt('cr-m-order-help')||'Bilder in der KORREKTEN Reihenfolge hochladen — Spieler müssen sie wieder so anordnen. Zum Umsortieren ziehen, ✕ zum Löschen.'}</p>
+          <div id="cr-order-tiles" style="display:flex;flex-wrap:wrap;gap:.5rem;"></div>
+          <input type="file" id="cr-order-file" accept="image/*" style="display:none;" onchange="crAddOrderImage(event)">
         </div>
       </div>
     </div>
@@ -4798,6 +4811,59 @@ async function uploadCrPuzzleImage(missionId){
   if(gmToken) headers['Authorization'] = 'Bearer ' + gmToken;
   await fetch(`/api/cr/missions/${missionId}/puzzle-image`, { method:'POST', headers, body: fd }).catch(()=>{});
 }
+
+// ── Ordering-puzzle tile manager ──────────────────────────────────────────────
+// Switch between the jigsaw config and the ordering tile manager.
+function crTogglePuzzleKind(){
+  const t = document.getElementById('cr-puzzle-type')?.value || 'jigsaw';
+  const jig = document.getElementById('cr-puzzle-jigsaw');
+  const ord = document.getElementById('cr-puzzle-order');
+  if(jig) jig.style.display = t === 'order' ? 'none' : 'block';
+  if(ord) ord.style.display = t === 'order' ? 'block' : 'none';
+  if(t === 'order') renderOrderTiles();
+}
+let _crOrderImages = [];   // relative paths (cr_puzzles/x.png), in the correct order
+function renderOrderTiles(){
+  const wrap = document.getElementById('cr-order-tiles');
+  if(!wrap) return;
+  const tile = (src, idx) => `
+    <div class="cr-order-tile" draggable="true" data-idx="${idx}"
+      ondragstart="crOrderDragStart(event,${idx})" ondragover="event.preventDefault()" ondrop="crOrderDrop(event,${idx})"
+      style="position:relative;width:76px;height:76px;border-radius:var(--radius);border:1px solid var(--border);
+             background:#0a0a0a center/cover no-repeat url('/uploads/${src}');cursor:grab;">
+      <button type="button" onclick="crDeleteOrderTile(${idx})" title="Löschen"
+        style="position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:var(--red);
+               color:#fff;border:none;cursor:pointer;font-size:.7rem;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>
+      <span style="position:absolute;bottom:2px;left:5px;font-size:.7rem;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;">${idx+1}</span>
+    </div>`;
+  wrap.innerHTML = _crOrderImages.map((s,i)=>tile(s,i)).join('') +
+    `<div onclick="document.getElementById('cr-order-file').click()" title="Bild hinzufügen"
+       style="width:76px;height:76px;border-radius:var(--radius);border:1.5px dashed var(--border);display:flex;
+              align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:1.6rem;">＋</div>`;
+}
+async function crAddOrderImage(e){
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  e.target.value = '';
+  const fd = new FormData(); fd.append('image', f, f.name);
+  const headers = {}; if(gmToken) headers['Authorization'] = 'Bearer ' + gmToken;
+  try{
+    const res = await fetch('/api/cr/puzzle-order-image', { method:'POST', headers, body: fd }).then(r=>r.json());
+    if(res && res.file){ _crOrderImages.push(res.file); renderOrderTiles(); }
+    else toast(gmt('cr-m-order-upload-fail')||'Upload fehlgeschlagen','error');
+  }catch(_){ toast(gmt('cr-m-order-upload-fail')||'Upload fehlgeschlagen','error'); }
+}
+function crDeleteOrderTile(i){ _crOrderImages.splice(i,1); renderOrderTiles(); }
+let _crOrderDrag = null;
+function crOrderDragStart(e,i){ _crOrderDrag = i; e.dataTransfer.effectAllowed = 'move'; }
+function crOrderDrop(e,i){
+  e.preventDefault();
+  if(_crOrderDrag === null || _crOrderDrag === i){ _crOrderDrag = null; return; }
+  const moved = _crOrderImages.splice(_crOrderDrag,1)[0];
+  _crOrderImages.splice(i,0,moved);
+  _crOrderDrag = null;
+  renderOrderTiles();
+}
 // Show/hide the cooldown row when the special-mission flag flips.
 function crToggleSpecial(){
   const chk = document.getElementById('cr-is-special');
@@ -4840,6 +4906,8 @@ function getCrMissionData(){
   const mediaReq  = (usePuzzle || hasAnswer) ? 'none' : (mediaSel?.value || 'none');
   return {
     use_puzzle: usePuzzle,
+    puzzle_type: document.getElementById('cr-puzzle-type')?.value === 'order' ? 'order' : 'jigsaw',
+    puzzle_order_images: JSON.stringify(_crOrderImages),
     puzzle_grid: parseInt(document.getElementById('cr-puzzle-grid')?.value)||3,
     puzzle_peek_enabled: document.getElementById('cr-peek-enabled')?.checked?1:0,
     puzzle_peek_onetime: document.getElementById('cr-peek-onetime')?.checked?1:0,
@@ -4916,6 +4984,7 @@ async function showAddCrMission(){
   crSyncMediaAnswerExclusion();
   renderCrHintsInline();   // paint both empty hint lists
   populatePeekList(null);  // default one quick peek
+  _crOrderImages = []; crTogglePuzzleKind();   // fresh ordering-puzzle state
   setTimeout(initCrMissionMapPicker, 100);  // map needs the modal to be visible first
 }
 async function saveNewCrMission(){
@@ -4946,6 +5015,9 @@ async function editCrMission(id){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
   crSyncMediaAnswerExclusion();
   populatePeekList(m.puzzle_peeks);   // hydrate the peek list from the saved mission
+  try{ _crOrderImages = JSON.parse(m.puzzle_order_images||'[]'); }catch(_){ _crOrderImages = []; }
+  if(!Array.isArray(_crOrderImages)) _crOrderImages = [];
+  crTogglePuzzleKind();   // show jigsaw/order config + render tiles
   if(m.id) setTimeout(()=>_loadExistingHints(m.id), 100);
   setTimeout(initCrMissionMapPicker, 100);
 }

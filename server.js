@@ -961,6 +961,16 @@ app.post('/api/cr/missions/:id/puzzle-image', upload.single('image'), (req,res) 
   res.json({success:true, puzzle_image: rel});
 });
 
+// Ordering-puzzle image upload. Not tied to a mission id (the GM builds the
+// ordered list before the mission even exists), so it just stores one file and
+// returns its path; the ordered list is persisted via puzzle_order_images.
+app.post('/api/cr/puzzle-order-image', upload.single('image'), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!req.file) return res.status(400).json({error:'No file'});
+  const rel = _movePuzzleFileIntoPlace(req);
+  res.json({success:true, file: rel});
+});
+
 // ── CR Game info ──────────────────────────────────────────────────────────────
 app.get('/api/games/:id/cr', (req,res) => {
   const crMode = db.getGameCrMode(req.params.id);
