@@ -70,15 +70,19 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 .lang-tab:hover { color:var(--text); }
 .lang-tab.is-active { color:var(--text); background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.25); }
 
-/* "Or join an existing team" — only surfaces when teams already exist.
-   Small text link to keep the create-new flow as the dominant CTA. */
+/* "Or join an existing team" — a permanent secondary button. The join screen
+   itself shows a message when no teams exist yet. */
 .join-existing-link {
-  background:transparent; border:0; cursor:pointer; padding:8px 4px;
-  font:500 12px/1.4 var(--body); color:var(--text-dim);
-  text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; margin-top:12px; cursor:pointer; padding:12px 18px;
+  font:700 13px/1 var(--body); letter-spacing:.06em; text-transform:uppercase;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  background:transparent; color:var(--orange);
+  border:1.5px solid var(--orange); border-radius:10px;
+  transition:background .15s;
 }
-.join-existing-link:hover { color:var(--text); }
-.join-existing-link span { color:var(--orange); font-weight:700; }
+.join-existing-link:hover { background:rgba(232,95,30,.14); }
+.join-existing-link span { color:inherit; font-weight:700; }
+.join-existing-link svg { stroke:currentColor; }
 
 .error-msg { color:var(--red-light); font-size:.85rem; text-align:center; min-height:1.2em; }
 
@@ -213,8 +217,9 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
       </div>
     </div>
 
-    <!-- Or join an existing team — only renders when teams exist. -->
-    <button type="button" class="join-existing-link" id="join-existing-link" style="display:none;" onclick="showJoinExisting()">
+    <!-- Or join an existing team — always shown. The join screen says so when
+         no teams exist yet. -->
+    <button type="button" class="join-existing-link" id="join-existing-link" onclick="showJoinExisting()">
       <span id="join-existing-link-label">Oder einem bestehenden Team beitreten</span>
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
     </button>
@@ -282,7 +287,7 @@ const JOIN_T = {
        lead:'Mach ein Selfie und wähle einen Teamnamen. Andere Teams sehen euer Selfie in der Rangliste.',
        selfie_cta:'Tippen zum Aufnehmen', teamname:'Teamname', teamname_ph:'Teamname eingeben…',
        lang_label:'Sprache', join_existing:'Oder einem bestehenden Team beitreten', back:'Zurück',
-       je_title:'Team beitreten', je_hint:'Du siehst dieselben Missionen und kannst unabhängig Medien einreichen.',
+       je_title:'Team beitreten', je_hint:'Du siehst dieselben Missionen und kannst unabhängig Medien einreichen.', no_teams:'Noch keine Teams in diesem Spiel.',
        join_btn:'Beitreten', start:'Spiel beitreten', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.',
        waiting:'Warte…', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.',
        name_blocked:'Dieser Teamname ist nicht erlaubt. Bitte wähle einen anderen.', name_taken:'Teamname bereits vergeben. Bitte wähle einen anderen.',
@@ -292,7 +297,7 @@ const JOIN_T = {
        lead:'Take a selfie and pick a team name. Other teams will see your selfie on the rankings.',
        selfie_cta:'Tap to capture', teamname:'Team name', teamname_ph:'Type a team name…',
        lang_label:'Language', join_existing:'Or join an existing team', back:'Back',
-       je_title:'Join an existing team', je_hint:'You see the same missions and can submit media independently.',
+       je_title:'Join an existing team', je_hint:'You see the same missions and can submit media independently.', no_teams:'No teams in this game yet.',
        join_btn:'Join', start:'Join game', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.',
        waiting:'Waiting…', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.',
        name_blocked:'That team name isn’t allowed. Please choose another.', name_taken:'Team name already taken. Please choose another.',
@@ -302,7 +307,7 @@ const JOIN_T = {
        lead:'Fais un selfie et choisis un nom d’équipe. Les autres équipes verront votre selfie dans le classement.',
        selfie_cta:'Toucher pour capturer', teamname:'Nom d’équipe', teamname_ph:'Saisir le nom de l’équipe…',
        lang_label:'Langue', join_existing:'Ou rejoindre une équipe existante', back:'Retour',
-       je_title:'Rejoindre une équipe', je_hint:'Tu vois les mêmes missions et peux envoyer des médias indépendamment.',
+       je_title:'Rejoindre une équipe', je_hint:'Tu vois les mêmes missions et peux envoyer des médias indépendamment.', no_teams:'Aucune équipe dans cette partie pour le moment.',
        join_btn:'Rejoindre', start:'Rejoindre la partie', enter_name:'Saisis un nom d’équipe.', min_chars:'Le nom doit faire au moins 2 caractères.',
        waiting:'Attente…', conn_err:'Erreur de connexion. Réessaie.', err_default:'Erreur. Réessaie.',
        name_blocked:'Ce nom d’équipe n’est pas autorisé. Choisis-en un autre.', name_taken:'Nom d’équipe déjà pris. Choisis-en un autre.',
@@ -312,7 +317,7 @@ const JOIN_T = {
        lead:'Fate un selfie e scegliete un nome squadra. Le altre squadre vedranno il selfie nella classifica.',
        selfie_cta:'Tocca per scattare', teamname:'Nome squadra', teamname_ph:'Inserisci il nome…',
        lang_label:'Lingua', join_existing:'Oppure unisciti a una squadra esistente', back:'Indietro',
-       je_title:'Unisciti a una squadra', je_hint:'Vedi le stesse missioni e puoi inviare media in modo indipendente.',
+       je_title:'Unisciti a una squadra', je_hint:'Vedi le stesse missioni e puoi inviare media in modo indipendente.', no_teams:'Ancora nessuna squadra in questa partita.',
        join_btn:'Unisciti', start:'Entra nella partita', enter_name:'Inserisci il nome della squadra.', min_chars:'Il nome deve avere almeno 2 caratteri.',
        waiting:'Attendi…', conn_err:'Errore di connessione. Riprova.', err_default:'Errore. Riprova.',
        name_blocked:'Questo nome squadra non è consentito. Scegline un altro.', name_taken:'Nome squadra già in uso. Scegline un altro.',
@@ -322,7 +327,7 @@ const JOIN_T = {
        lead:'Hazte un selfie y elige un nombre de equipo. Otros equipos verán vuestro selfie en la clasificación.',
        selfie_cta:'Toca para capturar', teamname:'Nombre del equipo', teamname_ph:'Escribe el nombre…',
        lang_label:'Idioma', join_existing:'O únete a un equipo existente', back:'Volver',
-       je_title:'Unirse a un equipo', je_hint:'Verás las mismas misiones y podrás enviar contenido de forma independiente.',
+       je_title:'Unirse a un equipo', je_hint:'Verás las mismas misiones y podrás enviar contenido de forma independiente.', no_teams:'Aún no hay equipos en esta partida.',
        join_btn:'Unirse', start:'Unirse a la partida', enter_name:'Introduce el nombre del equipo.', min_chars:'El nombre debe tener al menos 2 caracteres.',
        waiting:'Esperando…', conn_err:'Error de conexión. Inténtalo de nuevo.', err_default:'Error. Inténtalo de nuevo.',
        name_blocked:'Ese nombre de equipo no está permitido. Elige otro.', name_taken:'Nombre de equipo ya en uso. Elige otro.',
@@ -524,11 +529,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 function refreshJoinExistingVisibility() {
   const link = document.getElementById('join-existing-link');
   if (!link) return;
-  link.style.display = existingTeams.length > 0 ? 'flex' : 'none';
-  if (existingTeams.length > 0) {
-    document.getElementById('join-existing-link-label').textContent =
-      jt('join_existing') + ' (' + existingTeams.length + ')';
-  }
+  link.style.display = 'flex';   // permanent — always offer the option
+  const n = existingTeams.length;
+  document.getElementById('join-existing-link-label').textContent =
+    jt('join_existing') + (n > 0 ? ' (' + n + ')' : '');
 }
 
 // Built with DOM APIs (not innerHTML) so team.selfie_path, team.name and
@@ -537,6 +541,17 @@ function refreshJoinExistingVisibility() {
 function renderTeamsList() {
   const list = document.getElementById('teams-list');
   list.innerHTML = '';
+  const hint = document.getElementById('je-hint');
+  // No teams yet → just say so (the button is always available).
+  if (existingTeams.length === 0) {
+    const msg = document.createElement('p');
+    msg.style.cssText = 'font:500 14px/1.5 var(--body); color:var(--text-muted); text-align:center; padding:26px 10px;';
+    msg.textContent = jt('no_teams');
+    list.appendChild(msg);
+    if (hint) hint.style.display = 'none';
+    return;
+  }
+  if (hint) hint.style.display = '';
   existingTeams.forEach(team => {
     const row = document.createElement('div');
     row.className = 'team-row';
