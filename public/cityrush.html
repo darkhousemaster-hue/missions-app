@@ -155,6 +155,12 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 .cr-tiles-section { padding:0 18px; margin-top:6px; margin-bottom:14px; }
 .cr-tiles-section-label { font:700 10px/1 var(--body); letter-spacing:.22em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; padding-left:2px; }
 .cr-tiles-section--special .cr-tiles-section-label { color:#f4b400; }
+/* Rush Mode: #cr-tiles holds two stacked, labelled rows (Rush + Normal/GPS). */
+#cr-tiles.cr-tiles--sections { display:block; padding:0; gap:0; }
+.cr-tiles-section--rush .cr-tiles-wrap, .cr-tiles-section--gps .cr-tiles-wrap { padding-left:0; padding-right:0; }
+.cr-tiles-section--rush .cr-tiles-section-label { color:#ff8a3d; }
+.cr-tiles-section--rush.locked, .cr-tiles-section--gps.locked { opacity:.45; }
+.cr-lock-note { font:600 9px/1 var(--body); letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); }
 /* Special-mission tiles get a golden glow per user direction. Only
    visible when 2+ specials exist (the section renders, otherwise the
    special collapses to the single-special button below). */
@@ -637,7 +643,6 @@ let allTeams = [];
 let allMissions = [];                    // GPS/route missions in this mode (non-special, non-rush when Rush Mode is on)
 let rushMissions = [];                   // rush missions (Rush Mode only): non-GPS, shown first
 let rushMode = false;                    // mode-level Rush Mode flag (from cr.crMode.rush_mode)
-let gpsTileRevealed = false;             // player tapped the GPS gateway tile to reveal GPS missions
 let completedMissionIds = new Set();      // regular Rail Adventure missions cleared by this team
 let pendingMissionIds = new Set();        // regular missions waiting for GM review
 let skippedMissionIds = new Set();        // regular missions skipped for 0 points
@@ -676,7 +681,7 @@ const T = {
         accepted:'Angenommen!', rejected:'Abgelehnt',
         skip_mission:'Mission überspringen', skip_confirm:'Mission überspringen? Es gibt keine Punkte dafür.', skipped:'Übersprungen',
         special:'Spezial', special_missions:'Spezial-Missionen', special_choose:'Welche Mission möchtest du spielen?', available:'Verfügbar', cooldown_wait:'Bitte warten:',
-        rush_row:'Rush', rush_gps_tile:'GPS-Missionen', rush_gps_locked:'Erst eine Rush-Mission abschließen', rush_gps_open:'Antippen zum Öffnen', rush_locked_msg:'Schließe zuerst eine Rush-Mission ab, um die GPS-Missionen freizuschalten.',
+        rush_row:'Rush', rush_gps_tile:'GPS-Missionen', rush_gps_locked:'Erst eine Rush-Mission abschließen', rush_block_rush:'Erst eine normale Mission abschließen', rush_gps_open:'Antippen zum Öffnen', rush_locked_msg:'Schließe zuerst eine Rush-Mission ab, bevor du eine GPS-Mission machst.', rush_block_rush_msg:'Schließe zuerst eine normale Mission ab, bevor du die nächste Rush-Mission machst.',
         gps_hint:'GPS-Hinweis', chat_ph:'Nachricht an Spielleiter…', chat_send:'Senden', chat_back:'Zurück',
         freeze_title:'Rival einfrieren', freeze_no_teams:'Keine anderen Teams.', freeze_pick_team:'Bitte ein Team wählen',
         freeze_already:'bereits eingefroren', freeze_done:'Team eingefroren!', freeze_failed:'Einfrieren fehlgeschlagen',
@@ -726,7 +731,7 @@ const T = {
         accepted:'Accepted!', rejected:'Rejected',
         skip_mission:'Skip mission', skip_confirm:'Skip this mission? You will not get any points.', skipped:'Skipped',
         special:'Special', special_missions:'Special missions', special_choose:'Which mission do you want to play?', available:'Available', cooldown_wait:'Please wait:',
-        rush_row:'Rush', rush_gps_tile:'GPS missions', rush_gps_locked:'Finish a rush mission first', rush_gps_open:'Tap to open', rush_locked_msg:'Finish a rush mission first to unlock the GPS missions.',
+        rush_row:'Rush', rush_gps_tile:'GPS missions', rush_gps_locked:'Finish a rush mission first', rush_block_rush:'Finish a normal mission first', rush_gps_open:'Tap to open', rush_locked_msg:'Finish a rush mission first before a GPS mission.', rush_block_rush_msg:'Finish a normal mission before the next rush mission.',
         gps_hint:'GPS hint', chat_ph:'Message to Gamemaster…', chat_send:'Send', chat_back:'Back',
         freeze_title:'Freeze a rival', freeze_no_teams:'No other teams.', freeze_pick_team:'Please pick a team',
         freeze_already:'already frozen', freeze_done:'Team frozen!', freeze_failed:'Freeze failed',
@@ -774,7 +779,7 @@ const T = {
         accepted:'Accepté!', rejected:'Refusé',
         skip_mission:'Passer la mission', skip_confirm:'Passer cette mission ? Vous n\'aurez aucun point.', skipped:'Passée',
         special:'Spécial', special_missions:'Missions spéciales', special_choose:'Quelle mission veux-tu jouer ?', available:'Disponible', cooldown_wait:'Veuillez attendre :',
-        rush_row:'Rush', rush_gps_tile:'Missions GPS', rush_gps_locked:'Termine d\'abord une mission rush', rush_gps_open:'Touchez pour ouvrir', rush_locked_msg:'Termine d\'abord une mission rush pour débloquer les missions GPS.',
+        rush_row:'Rush', rush_gps_tile:'Missions GPS', rush_gps_locked:'Termine d\'abord une mission rush', rush_block_rush:'Termine d\'abord une mission normale', rush_gps_open:'Touchez pour ouvrir', rush_locked_msg:'Termine d\'abord une mission rush avant une mission GPS.', rush_block_rush_msg:'Termine une mission normale avant la prochaine mission rush.',
         gps_hint:'Indice GPS', chat_ph:'Message au Gamemaster…', chat_send:'Envoyer', chat_back:'Retour',
         freeze_title:'Geler une équipe', freeze_no_teams:'Aucune autre équipe.', freeze_pick_team:'Choisis une équipe',
         freeze_already:'déjà gelée', freeze_done:'Équipe gelée !', freeze_failed:'Échec du gel',
@@ -822,7 +827,7 @@ const T = {
         accepted:'Accettato!', rejected:'Rifiutato',
         skip_mission:'Salta missione', skip_confirm:'Saltare la missione? Non riceverai punti.', skipped:'Saltata',
         special:'Speciale', special_missions:'Missioni speciali', special_choose:'Quale missione vuoi giocare?', available:'Disponibile', cooldown_wait:'Attendi:',
-        rush_row:'Rush', rush_gps_tile:'Missioni GPS', rush_gps_locked:'Completa prima una missione rush', rush_gps_open:'Tocca per aprire', rush_locked_msg:'Completa prima una missione rush per sbloccare le missioni GPS.',
+        rush_row:'Rush', rush_gps_tile:'Missioni GPS', rush_gps_locked:'Completa prima una missione rush', rush_block_rush:'Completa prima una missione normale', rush_gps_open:'Tocca per aprire', rush_locked_msg:'Completa prima una missione rush prima di una missione GPS.', rush_block_rush_msg:'Completa una missione normale prima della prossima missione rush.',
         gps_hint:'Suggerimento GPS', chat_ph:'Messaggio al Gamemaster…', chat_send:'Invia', chat_back:'Indietro',
         freeze_title:'Congela una rivale', freeze_no_teams:'Nessun\'altra squadra.', freeze_pick_team:'Scegli una squadra',
         freeze_already:'già congelata', freeze_done:'Squadra congelata!', freeze_failed:'Congelamento fallito',
@@ -870,7 +875,7 @@ const T = {
         accepted:'¡Aceptado!', rejected:'Rechazado',
         skip_mission:'Saltar misión', skip_confirm:'¿Saltar la misión? No recibirás puntos.', skipped:'Saltada',
         special:'Especial', special_missions:'Misiones especiales', special_choose:'¿Qué misión quieres jugar?', available:'Disponible', cooldown_wait:'Espera:',
-        rush_row:'Rush', rush_gps_tile:'Misiones GPS', rush_gps_locked:'Completa primero una misión rush', rush_gps_open:'Toca para abrir', rush_locked_msg:'Completa primero una misión rush para desbloquear las misiones GPS.',
+        rush_row:'Rush', rush_gps_tile:'Misiones GPS', rush_gps_locked:'Completa primero una misión rush', rush_block_rush:'Completa primero una misión normal', rush_gps_open:'Toca para abrir', rush_locked_msg:'Completa primero una misión rush antes de una misión GPS.', rush_block_rush_msg:'Completa una misión normal antes de la siguiente misión rush.',
         gps_hint:'Pista GPS', chat_ph:'Mensaje al Gamemaster…', chat_send:'Enviar', chat_back:'Volver',
         freeze_title:'Congelar a un rival', freeze_no_teams:'No hay otros equipos.', freeze_pick_team:'Elige un equipo',
         freeze_already:'ya congelado', freeze_done:'¡Equipo congelado!', freeze_failed:'Fallo al congelar',
@@ -979,11 +984,27 @@ function updateLinearMissionState(data={}){
 function isMissionCleared(m){ return !!m && completedMissionIds.has(Number(m.id)); }
 function isMissionPending(m){ return !!m && pendingMissionIds.has(Number(m.id)); }
 function hasArrivedFor(m){ return !!m && arrivedMissionIds.has(Number(m.id)); }
-// Rush Mode: GPS/route missions stay locked until the team finishes at least
-// one rush mission. Off → always unlocked (classic behaviour). If Rush Mode is
-// on but the GM never created any rush missions, don't lock GPS forever —
-// treat it as unlocked so the game isn't soft-locked.
-function gpsUnlocked(){ return !rushMode || rushMissions.length === 0 || rushMissions.some(m => isMissionCleared(m)); }
+// ── Rush Mode alternation ────────────────────────────────────────────────────
+// Players must alternate: rush → normal → rush → normal … A mission counts as
+// "taken" once it's completed/skipped OR pending GM review, so the player can
+// move on without waiting for the GM. With R = rush taken and N = normal taken:
+//   • a rush is the required next move when R <= N
+//   • a normal is the required next move when R >  N
+// The off-turn category is blocked — UNLESS the required category has no
+// missions left to play, in which case the other opens up (no soft-lock).
+const _taken      = m => isMissionCleared(m) || isMissionPending(m);
+const _rushTaken  = () => rushMissions.filter(_taken).length;
+const _normTaken  = () => allMissions.filter(_taken).length;
+const _rushAvail  = () => rushMissions.some(m => !_taken(m));
+const _normAvail  = () => allMissions.some(m => !_taken(m));
+function _needRush(){ return _rushTaken() <= _normTaken(); }     // R <= N → rush's turn
+function rushPlayable(){   return !rushMode ||  _needRush() || !_normAvail(); }
+function normalPlayable(){ return !rushMode || !_needRush() || !_rushAvail(); }
+// Is THIS mission playable right now? Specials are never gated.
+function missionPlayable(m){
+  if(!rushMode || !m || m.is_special) return true;
+  return m.is_rush ? rushPlayable() : normalPlayable();
+}
 // Lookup across the playable (non-special) sets so the popup can open either a
 // rush mission or a GPS mission.
 function findLinearMission(id){
@@ -993,20 +1014,18 @@ function findLinearMission(id){
 function firstAvailableMission(){
   const avail = m => !isMissionCleared(m) && !isMissionPending(m);
   if(rushMode){
-    const r = rushMissions.find(avail);
-    if(!gpsUnlocked()) return r || null;        // before unlock: rush only
-    return allMissions.find(avail) || r || null; // after unlock: prefer GPS, else remaining rush
+    // Focus a mission from whichever category is the required next move.
+    if(rushPlayable()){   const r = rushMissions.find(avail); if(r) return r; }
+    if(normalPlayable()){ const n = allMissions.find(avail);  if(n) return n; }
+    return rushMissions.find(avail) || allMissions.find(avail) || null;
   }
   return allMissions.find(avail) || null;
 }
-// Choose the focused mission honouring the rush gate: never focus a GPS
-// mission while GPS is still locked, even if the server's currentMission is one.
+// In Rush Mode the client owns the sequence (the server doesn't know about
+// alternation), so always derive focus from the alternation rule.
 function pickServerFocus(serverCurrent){
+  if(rushMode) return firstAvailableMission();
   const sc = serverCurrent ? normalizeCrMission(serverCurrent) : null;
-  if(rushMode){
-    if(sc && (sc.is_rush || gpsUnlocked())) return sc;
-    return firstAvailableMission();
-  }
   return sc || firstAvailableMission();
 }
 function setFocusedMission(m){
@@ -1023,7 +1042,7 @@ function applyProgressPayload(data={}){
   totalMissions = data.totalMissions || allMissions.length || totalMissions;
   if(data.currentMission) setFocusedMission(pickServerFocus(data.currentMission));
   else if(!currentMission || isMissionCleared(currentMission) || isMissionPending(currentMission)
-          || (rushMode && currentMission && !currentMission.is_rush && !gpsUnlocked()))
+          || (rushMode && currentMission && !missionPlayable(currentMission)))
     setFocusedMission(firstAvailableMission());
   renderMission();
   renderAllMissionMarkers();
@@ -1981,42 +2000,35 @@ function crTileHtml(m, i, total){
     <div class="badges">${icons} · +${m.points}pt</div>
   </div>`;
 }
-// The locked/unlocked gateway tile that reveals the GPS missions in Rush Mode.
-function crGpsGateHtml(){
-  const unlocked = gpsUnlocked();
-  const sub = unlocked ? (t('rush_gps_open')||'Tap to open') : (t('rush_gps_locked')||'Finish a rush mission first');
-  const onclick = unlocked ? 'onclick="revealGpsMissions()"' : '';
-  const style = unlocked ? 'cursor:pointer;' : 'opacity:.5;cursor:not-allowed;';
-  return `<div class="cr-tile cr-gps-gate ${unlocked?'available':'done'}" ${onclick} style="${style}">
-    <span class="status-pill">${unlocked?'🔓':'🔒'} ${t('rush_gps_tile')||'GPS missions'}</span>
-    <div class="num">${allMissions.length} 📍</div>
-    <div class="name">${t('rush_gps_tile')||'GPS missions'}</div>
-    <div class="badges">${sub}</div>
+// One labelled tile row (Rush or Normal). When it's not this category's turn the
+// row is dimmed and carries a "do the other kind first" note; tiles stay
+// tappable so a tap can explain why (openMissionPopup gates + messages).
+function crRowHtml(kind, label, missions, blocked){
+  const note = blocked
+    ? `<span class="cr-lock-note">🔒 ${kind==='rush' ? (t('rush_block_rush')||'Finish a normal mission first') : (t('rush_gps_locked')||'Finish a rush mission first')}</span>`
+    : '';
+  return `<div class="cr-tiles-section cr-tiles-section--${kind} ${blocked?'locked':''}">
+    <div class="cr-tiles-section-label">${label} ${note}</div>
+    <div class="cr-tiles-wrap">${missions.map((m,i)=>crTileHtml(m,i,missions.length)).join('')}</div>
   </div>`;
 }
-// Player tapped the unlocked gateway → reveal the GPS mission tiles in place.
-function revealGpsMissions(){
-  if(!gpsUnlocked()) return;
-  gpsTileRevealed = true;
-  renderTiles();
-}
-// Tile grid: every mission appears, click opens the popup. In Rush Mode the
-// rush missions are shown first, followed by either the locked gateway tile or
-// (once unlocked and opened) the GPS mission tiles.
+// Tile grid. In Rush Mode it's TWO labelled rows — Rush and Normal/GPS — with
+// the off-turn row dimmed so players always see which kind is theirs to play.
 function renderTiles(){
   const grid = document.getElementById('cr-tiles');
   if(!grid) return;
-  if(rushMode && rushMissions.length){
-    let html = rushMissions.map((m,i) => crTileHtml(m, i, rushMissions.length)).join('');
-    if(allMissions.length){
-      html += (gpsUnlocked() && gpsTileRevealed)
-        ? allMissions.map((m,i) => crTileHtml(m, i, allMissions.length)).join('')
-        : crGpsGateHtml();
-    }
+  if(rushMode && (rushMissions.length || allMissions.length)){
+    grid.classList.add('cr-tiles--sections');
+    let html = '';
+    if(rushMissions.length)
+      html += crRowHtml('rush', `⚡ ${t('rush_row')||'Rush'}`, rushMissions, !rushPlayable());
+    if(allMissions.length)
+      html += crRowHtml('gps', `📍 ${t('rush_gps_tile')||'GPS missions'}`, allMissions, !normalPlayable());
     grid.innerHTML = html;
     return;
   }
-  // Classic mode OR Rush Mode misconfigured with no rush missions → flat grid.
+  // Classic mode → flat grid.
+  grid.classList.remove('cr-tiles--sections');
   if(!allMissions.length){ grid.innerHTML=''; return; }
   grid.innerHTML = allMissions.map((m,i) => crTileHtml(m, i, allMissions.length)).join('');
 }
@@ -2025,16 +2037,18 @@ function renderTiles(){
 // the current mission gets the full action UI.
 function openMissionPopup(missionId){
   const mission = findLinearMission(missionId);
-  // Rush Mode: GPS/route missions stay locked until a rush mission is done.
-  if(rushMode && mission && !mission.is_rush && !gpsUnlocked()){
-    showCrRejection(t('rush_locked_msg') || 'Finish a rush mission first to unlock the GPS missions.');
+  // Rush Mode alternation: a mission can only be opened when it's its turn.
+  if(rushMode && mission && !mission.is_special && !missionPlayable(mission)){
+    showCrRejection(mission.is_rush
+      ? (t('rush_block_rush_msg') || 'Finish a normal mission before the next rush mission.')
+      : (t('rush_locked_msg')     || 'Finish a rush mission first.'));
     return;
   }
-  // Rush missions are non-GPS, so it's safe to focus the tapped one — this
-  // keeps completeMission()/puzzle completion (which act on currentMission)
-  // pointed at the mission the player is actually playing. (For GPS missions
-  // we deliberately do NOT reroute, to preserve server-driven arrival state.)
-  if(rushMode && mission && mission.is_rush && !isMissionCleared(mission) && !isMissionPending(mission)){
+  // In Rush Mode the client owns the sequence, so focus the tapped (playable,
+  // not-yet-done) mission — this lets players pick which one to do and keeps
+  // completeMission()/GPS tracking pointed at it. Classic mode keeps the old
+  // server-driven focus (no reroute on browse).
+  if(rushMode && mission && !mission.is_special && !isMissionCleared(mission) && !isMissionPending(mission)){
     setFocusedMission(mission);
     renderMission();
   }
