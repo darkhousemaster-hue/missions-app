@@ -199,6 +199,13 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .cme-info.show .cme-tip{opacity:1;visibility:visible;}
 .cme-tip::after{content:'';position:absolute;top:100%;left:var(--ax,50%);transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--border);}
 .cme-tip.below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--border);}
+.cme-subrow{display:flex;flex-wrap:wrap;gap:.45rem;}
+.cme-chip{display:inline-flex;align-items:center;gap:.35rem;background:var(--surface2);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .8rem;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--text);transition:border-color .15s,background .15s;}
+.cme-chip:hover{border-color:var(--orange-dim);}
+.cme-chip.active{border-color:var(--orange);background:rgba(232,95,30,0.14);color:#fff;}
+.cme-chip.soon{opacity:.5;cursor:not-allowed;}
+.cme-chip.soon:hover{border-color:var(--border);}
+.cme-chip .mini{font-size:.56rem;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -3591,82 +3598,91 @@ async function autoTranslateMissionName(){
 function missionModal(m,locs){
   const locOpts=locs.map(l=>`<option value="${l.id}" ${sel(m&&m.location_id==l.id)}>${esc(l.name)}</option>`).join('');
   const v=(f)=>m?esc(m[f]||''):'';
+  const mt=(m&&m.media_type)||'photo';
   return `
-    <div class="field">
-      <label class="label" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>${gmt('mission-name-label')||'Name'}</span>
+    <!-- 1 · TYPE -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">1</span><span class="cme-stitle">${gmt('mm-type-q')||'Was sollen Spieler einreichen?'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Wie Spieler die Aufgabe belegen.</strong> Eine MiSSiON ist ein Foto oder ein Video, das das Team aufnimmt und du prüfst.</span></i></span></div>
+      <div class="cme-grid" id="m-type-grid" style="grid-template-columns:repeat(2,1fr);">
+        <button type="button" class="cme-card ${mt==='photo'?'selected':''}" data-type="photo" onclick="mSelectType('photo')">
+          <i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Spieler machen ein Foto</strong> — z. B. eine Pose nachstellen, ein Objekt finden, als Team posieren.</span></i>
+          <div class="cme-cico">📷</div><div class="cme-ct">${gmt('mm-photo')||'Foto'}</div><div class="cme-cd">${gmt('mm-photo-d')||'Ein Foto aufnehmen'}</div>
+        </button>
+        <button type="button" class="cme-card ${mt==='video'?'selected':''}" data-type="video" onclick="mSelectType('video')">
+          <i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Spieler nehmen ein kurzes Video auf</strong> — gut für Auftritte, Mutproben oder alles mit Bewegung/Ton.</span></i>
+          <div class="cme-cico">🎬</div><div class="cme-ct">${gmt('mm-video')||'Video'}</div><div class="cme-cd">${gmt('mm-video-d')||'Clip aufnehmen'}</div>
+        </button>
+      </div>
+      <input type="hidden" id="m-type" value="${mt}">
+    </div>
+
+    <!-- 2 · BASICS -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">2</span><span class="cme-stitle">${gmt('mm-basics')||'Grunddaten'}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+        <label class="label" style="margin:0;">${gmt('mission-name-label')||'Name'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Der Titel, den Spieler sehen.</strong> Mindestens eine Sprache ausfüllen; 🌐 Auto füllt den Rest.</span></i></label>
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.15rem .4rem;" onclick="autoTranslateMissionName()">${gmt('auto-translate')||'🌐 Auto'}</button>
-      </label>
+      </div>
       ${langTabFields('m-name', 'input', {
         de: m?(m.name_de||m.name||''):'', en: v('name_en'),
         fr: v('name_fr'), it: v('name_it'), es: v('name_es')
       })}
-    </div>
-    <div class="grid-2">
-      <div class="field" data-tip="mission-loc"><label class="label" data-tip="mission-loc">${gmt('loc-label')||'Standort / Location'}</label>
-        <select id="m-loc" class="select" data-tip="mission-loc"><option value="" ${sel(!m||!m.location_id)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
-      <div class="field" data-tip="mission-mode"><label class="label" data-tip="mission-mode">${gmt('mode-label-modal')||'Modus'}</label>
-        <select id="m-mode" class="select" data-tip="mission-mode"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
-    </div>
-    <div class="grid-2">
-      <div class="field" data-tip="mission-media">
-        <label class="label" data-tip="mission-media">${gmt('media-label')||'Media'}</label>
-        <!-- Segmented control replaces the old <select>. A hidden input
-             named m-type still carries the value so existing save code
-             (which reads .value) keeps working unchanged. -->
-        <div class="segmented" data-input="m-type" data-tip="mission-media">
-          <span class="${(!m||m.media_type==='photo')?'is-active':''}" data-value="photo" onclick="selectSegment(this)">📷 Foto</span>
-          <span class="${(m&&m.media_type==='video')?'is-active':''}" data-value="video" onclick="selectSegment(this)">🎬 Video</span>
+      <div class="grid-2" style="margin-top:.7rem;">
+        <div class="field" style="margin:0;">
+          <label class="label">${gmt('mm-points')||'Punkte'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Belohnung fürs Abschließen</strong>, sobald du die Einreichung freigibst.</span></i></label>
+          <div class="stepper"><button type="button" onclick="stepInput('m-pts',-1)">−</button><input id="m-pts" type="number" value="${m?m.points:1}" min="1"><button type="button" onclick="stepInput('m-pts',1)">+</button></div>
         </div>
-        <input type="hidden" id="m-type" value="${(m&&m.media_type)||'photo'}">
-      </div>
-      <div class="field" data-tip="mission-points">
-        <label class="label" data-tip="mission-points">Punkte</label>
-        <!-- Stepper wraps a real <input type=number>; existing save code
-             keeps reading +document.getElementById('m-pts').value. -->
-        <div class="stepper" data-tip="mission-points">
-          <button type="button" onclick="stepInput('m-pts',-1)">−</button>
-          <input id="m-pts" type="number" value="${m?m.points:1}" min="1">
-          <button type="button" onclick="stepInput('m-pts',1)">+</button>
+        <div class="field" style="margin:0;">
+          <label class="label">${gmt('mm-indoor')||'Drinnen'}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('mm-indoor-tip')||'Markiert nur, dass die Mission auch drinnen gemacht werden kann, wenn du willst — mehr nicht.'}</span></i></label>
+          <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'m-indoor')" style="padding:.5rem .85rem;"><div class="toggle-row-text">🏠 ${gmt('mm-indoor-row')||'Auch drinnen'}</div><div class="toggle ${m&&m.is_indoor?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'m-indoor')"></div></div>
+          <input type="checkbox" id="m-indoor" ${m&&m.is_indoor?'checked':''} style="display:none;">
         </div>
       </div>
     </div>
-    <div class="field" data-tip="mission-indoor">
-      <!-- iOS-style toggle. The visible pill flips a hidden checkbox so
-           existing save code can keep reading document.getElementById('m-indoor').checked. -->
-      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'m-indoor')" data-tip="mission-indoor">
-        <div>
-          <div class="toggle-row-text">🏠 ${gmt('indoor-label')||'Auch drinnen möglich'}</div>
-          <div class="toggle-row-sub">${gmt('indoor-hint')||'Mission lässt sich auch drinnen durchführen.'}</div>
+
+    <!-- 3 · STORY & TASK -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">3</span><span class="cme-stitle">${gmt('mm-content')||'Story & Aufgabe'}</span></div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchMissionTab('desc',this)">📖 ${gmt('desc-label')||'Beschreibung'}</button>
+        <button class="tab" onclick="switchMissionTab('task',this)">🎯 ${gmt('task-label')||'Aufgabe'}</button>
+      </div>
+      <div id="mtab-desc" class="mission-tab-content active">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:.2rem 0 .4rem;">
+          <small style="color:var(--text-muted);">${gmt('desc-hint')||'Story / Hintergrund'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Setzt die Szene.</strong> Der Text zum Einstimmen — nicht die Anweisung selbst (die kommt im Tab „Aufgabe").</span></i></small>
+          <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslate('desc')">🌐 Auto</button>
         </div>
-        <div class="toggle ${m&&m.is_indoor?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'m-indoor')"></div>
+        ${langTabFields('m-desc', 'textarea', {
+          de: v('description_de'), en: v('description_en'),
+          fr: v('description_fr'), it: v('description_it'), es: v('description_es')
+        }, 'de', 3)}
       </div>
-      <input type="checkbox" id="m-indoor" ${m&&m.is_indoor?'checked':''} style="display:none;">
-    </div>
-    <div class="tabs" style="margin-top:.75rem;">
-      <button class="tab active" onclick="switchMissionTab('desc',this)">📖 ${gmt('desc-label')||'Beschreibung / Description'}</button>
-      <button class="tab" onclick="switchMissionTab('task',this)">🎯 ${gmt('task-label')||'Aufgabe / Task'}</button>
-    </div>
-    <div id="mtab-desc" class="mission-tab-content active">
-      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">${gmt('desc-hint')||'Story / Hintergrund'}</p>
-      <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:.4rem;">
-        <button class="btn btn-ghost btn-sm" onclick="autoTranslate('desc')" title="${gmt('auto-translate')||'🌐 Auto'}">🌐 Auto</button>
+      <div id="mtab-task" class="mission-tab-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:.2rem 0 .4rem;">
+          <small style="color:var(--text-muted);">${gmt('task-hint')||'Aufgabe für Spieler'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Die konkrete Anweisung</strong> — was Spieler genau tun müssen, um die Mission abzuschließen.</span></i></small>
+          <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslate('task')">🌐 Auto</button>
+        </div>
+        ${langTabFields('m-task', 'textarea', {
+          de: v('task_de'), en: v('task_en'),
+          fr: v('task_fr'), it: v('task_it'), es: v('task_es')
+        }, 'de', 3)}
       </div>
-      ${langTabFields('m-desc', 'textarea', {
-        de: v('description_de'), en: v('description_en'),
-        fr: v('description_fr'), it: v('description_it'), es: v('description_es')
-      }, 'de', 3)}
     </div>
-    <div id="mtab-task" class="mission-tab-content">
-      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">${gmt('task-hint')||'Aufgabe für Spieler'}</p>
-      <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:.4rem;">
-        <button class="btn btn-ghost btn-sm" onclick="autoTranslate('task')" title="${gmt('auto-translate')||'🌐 Auto'}">🌐 Auto</button>
+
+    <!-- 4 · ASSIGNMENT -->
+    <div class="cme-sec">
+      <div class="cme-shead"><span class="cme-step">4</span><span class="cme-stitle">${gmt('mm-assign')||'Zuordnung'}</span></div>
+      <div class="grid-2">
+        <div class="field" style="margin:0;"><label class="label">${gmt('loc-label')||'Standort'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Zu welchem Ort die Mission gehört.</strong> „Pool" = ohne Zuordnung, für jedes Spiel wählbar.</span></i></label>
+          <select id="m-loc" class="select"><option value="" ${sel(!m||!m.location_id)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
+        <div class="field" style="margin:0;"><label class="label">${gmt('mode-label-modal')||'Modus'}<i class="cme-info" tabindex="0">i<span class="cme-tip">In welchem Spielmodus / Regelwerk die Mission erscheint.</span></i></label>
+          <select id="m-mode" class="select"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
       </div>
-      ${langTabFields('m-task', 'textarea', {
-        de: v('task_de'), en: v('task_en'),
-        fr: v('task_fr'), it: v('task_it'), es: v('task_es')
-      }, 'de', 3)}
     </div>`;
+}
+function mSelectType(t){
+  const inp=document.getElementById('m-type'); if(inp) inp.value=t;
+  document.querySelectorAll('#m-type-grid .cme-card').forEach(c=>c.classList.toggle('selected', c.dataset.type===t));
 }
 
 function switchMissionTab(tab,el){
@@ -4539,10 +4555,13 @@ function crMissionModal(m){
       <div class="cme-panel" id="cr-panel-puzzle" style="display:none;">
       <div id="cr-puzzle-section" style="${m&&m.use_puzzle?'':'display:none;'}">
         <label class="label">${gmt('cr-m-puzzle-kind')||'Puzzle-Art'}</label>
-        <select id="cr-puzzle-type" class="select" style="margin-bottom:.7rem;" onchange="crTogglePuzzleKind()">
-          <option value="jigsaw" ${m&&m.puzzle_type==='order'?'':'selected'}>${gmt('cr-m-puzzle-jigsaw')||'🧩 Bild zusammensetzen'}</option>
-          <option value="order" ${m&&m.puzzle_type==='order'?'selected':''}>${gmt('cr-m-puzzle-order')||'🔢 Bilder in Reihenfolge bringen'}</option>
-        </select>
+        <div class="cme-subrow" id="cr-puzzle-kind-chips" style="margin-bottom:.8rem;">
+          <span class="cme-chip" data-kind="jigsaw" onclick="crSetPuzzleKind('jigsaw')">🧩 ${gmt('cr-m-puzzle-jigsaw')||'Bild zusammensetzen'}</span>
+          <span class="cme-chip" data-kind="order" onclick="crSetPuzzleKind('order')">🔢 ${gmt('cr-m-puzzle-order')||'Reihenfolge'}</span>
+          <span class="cme-chip soon">🔲 ${gmt('cr-m-puzzle-slide')||'Schiebepuzzle'} <span class="mini">${gmt('cr-m-soon')||'bald'}</span></span>
+          <span class="cme-chip soon">🔍 ${gmt('cr-m-puzzle-spot')||'Fehlersuche'} <span class="mini">${gmt('cr-m-soon')||'bald'}</span></span>
+        </div>
+        <input type="hidden" id="cr-puzzle-type" value="${m&&m.puzzle_type==='order'?'order':'jigsaw'}">
         <div id="cr-puzzle-jigsaw">
         <div class="grid-2" style="gap:.6rem;align-items:start;">
           <div>
@@ -4708,16 +4727,11 @@ function crMissionModal(m){
 // Media and question/answer are mutually exclusive — a player can't both upload
 // a media file and type an answer for the same mission.
 function crSyncMediaAnswerExclusion(){
-  const ansChk = document.getElementById('cr-has-answer');
-  const mediaSel = document.getElementById('cr-media');
-  if(!ansChk || !mediaSel) return;
-  const ansOn   = ansChk.checked;
-  const mediaOn = mediaSel.value && mediaSel.value !== 'none';
-  ansChk.disabled   = mediaOn;
-  mediaSel.disabled = ansOn;
-  // Style hint so the disabled control reads as intentionally locked.
-  ansChk.parentElement && (ansChk.parentElement.style.opacity = mediaOn ? .5 : '');
-  mediaSel.style.opacity = ansOn ? .5 : '';
+  // Mutual exclusivity is now enforced structurally by the type grid (a mission
+  // is exactly one of quiz / media / puzzle). This legacy helper used to disable
+  // + dim the "other" control, but in the type-first layout the hidden flag's
+  // parent is the whole modal — so dimming it greyed out the entire editor.
+  // Kept as a no-op so existing callers don't need changing.
 }
 function crToggleAnswer(){
   const chk=document.getElementById('cr-has-answer');
@@ -4817,7 +4831,13 @@ function crTogglePuzzleKind(){
   const ord = document.getElementById('cr-puzzle-order');
   if(jig) jig.style.display = t === 'order' ? 'none' : 'block';
   if(ord) ord.style.display = t === 'order' ? 'block' : 'none';
+  document.querySelectorAll('#cr-puzzle-kind-chips .cme-chip[data-kind]').forEach(c=>c.classList.toggle('active', c.dataset.kind===t));
   if(t === 'order') renderOrderTiles();
+}
+// Pick a puzzle kind from the chip row (replaces the old dropdown).
+function crSetPuzzleKind(kind){
+  const inp = document.getElementById('cr-puzzle-type'); if(inp) inp.value = kind;
+  crTogglePuzzleKind();
 }
 let _crOrderImages = [];   // relative paths (cr_puzzles/x.png), in the correct order
 function renderOrderTiles(){
