@@ -685,7 +685,7 @@ const T = {
         timer_up:'Zeit abgelaufen!', next:'Nächste Mission', finished:'Fertig!',
         all_missions:'Alle Missionen', completed:'Erledigt', current:'Aktuell', upcoming:'Kommend',
         gallery_upload:'Aus Galerie hochladen', show_hint:'💡 Hinweis anzeigen',
-        rules:'REGELN', rules_back:'← Zurück', back:'← Zurück', close:'Schließen',
+        rules:'REGELN', rules_back:'← Zurück', back:'← Zurück', close:'Schließen', fullscreen:'Vollbild',
         jump_to_me:'📍 Zu mir', answer_ph:'Antwort eingeben…', answer_btn:'✓ Antworten',
         points:'Punkte', mission_locked:'Erst zum Ziel laufen…',
         time_left:'Zeit übrig', no_rules:'Keine Regeln vorhanden.',
@@ -735,7 +735,7 @@ const T = {
         timer_up:'Time is up!', next:'Next mission', finished:'Finished!',
         all_missions:'All missions', completed:'Done', current:'Current', upcoming:'Upcoming',
         gallery_upload:'Upload from gallery', show_hint:'💡 Show hint',
-        rules:'RULES', rules_back:'← Back', back:'← Back', close:'Close',
+        rules:'RULES', rules_back:'← Back', back:'← Back', close:'Close', fullscreen:'Fullscreen',
         jump_to_me:'📍 Jump to me', answer_ph:'Type your answer…', answer_btn:'✓ Answer',
         points:'points', mission_locked:'Walk to the destination first…',
         time_left:'Time left', no_rules:'No rules set.',
@@ -783,7 +783,7 @@ const T = {
         timer_up:'Temps écoulé!', next:'Mission suivante', finished:'Terminé!',
         all_missions:'Toutes les missions', completed:'Fait', current:'En cours', upcoming:'À venir',
         gallery_upload:'Charger depuis la galerie', show_hint:'💡 Afficher un indice',
-        rules:'RÈGLES', rules_back:'← Retour', back:'← Retour', close:'Fermer',
+        rules:'RÈGLES', rules_back:'← Retour', back:'← Retour', close:'Fermer', fullscreen:'Plein écran',
         jump_to_me:'📍 Vers moi', answer_ph:'Saisir la réponse…', answer_btn:'✓ Répondre',
         points:'points', mission_locked:'Allez d\'abord à destination…',
         time_left:'Temps restant', no_rules:'Aucune règle.',
@@ -831,7 +831,7 @@ const T = {
         timer_up:'Tempo scaduto!', next:'Prossima missione', finished:'Finito!',
         all_missions:'Tutte le missioni', completed:'Fatto', current:'Attuale', upcoming:'Prossime',
         gallery_upload:'Carica dalla galleria', show_hint:'💡 Mostra suggerimento',
-        rules:'REGOLE', rules_back:'← Indietro', back:'← Indietro', close:'Chiudi',
+        rules:'REGOLE', rules_back:'← Indietro', back:'← Indietro', close:'Chiudi', fullscreen:'Schermo intero',
         jump_to_me:'📍 Vai a me', answer_ph:'Scrivi la risposta…', answer_btn:'✓ Rispondi',
         points:'punti', mission_locked:'Vai prima alla destinazione…',
         time_left:'Tempo rimanente', no_rules:'Nessuna regola.',
@@ -879,7 +879,7 @@ const T = {
         timer_up:'¡Se acabó el tiempo!', next:'Próxima misión', finished:'¡Terminado!',
         all_missions:'Todas las misiones', completed:'Hecho', current:'Actual', upcoming:'Próximas',
         gallery_upload:'Subir desde galería', show_hint:'💡 Mostrar pista',
-        rules:'REGLAS', rules_back:'← Volver', back:'← Volver', close:'Cerrar',
+        rules:'REGLAS', rules_back:'← Volver', back:'← Volver', close:'Cerrar', fullscreen:'Pantalla completa',
         jump_to_me:'📍 Ir a mí', answer_ph:'Escribe la respuesta…', answer_btn:'✓ Responder',
         points:'puntos', mission_locked:'Camina primero hasta el destino…',
         time_left:'Tiempo restante', no_rules:'No hay reglas.',
@@ -1118,6 +1118,8 @@ function crCycleLang(){
 function applyCrTranslations(){
   const set = (id, txt) => { const el=document.getElementById(id); if(el) el.textContent = txt; };
   set('cr-jump-me-label', t('jump_to_me').replace(/^📍\s*/,''));
+  set('cr-map-back-label', t('back').replace(/^←\s*/,''));   // fullscreen-map back
+  set('cr-fs-hint-label', t('fullscreen')||'Vollbild');       // map card "fullscreen" hint
   set('cr-rules-back', t('back').replace(/^←\s*/,''));
   set('cr-rules-title', t('rules'));
   set('cr-popup-close', t('back'));
