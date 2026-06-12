@@ -2201,8 +2201,10 @@ async function openDashboard(gameId){
     paintGameExportButton();
   });
   socket.on('gps_update',({teamId:tid,lat,lng})=>{
-    ensureGmCrMap();
-    upsertGmTeamMarker(tid, lat, lng);
+    // Buffer the latest fix; only touch the map if it already exists (i.e. the
+    // GM has opened the map panel). Creating it here while hidden breaks it.
+    _gmGpsBuffer[tid] = {lat, lng};
+    if(gmCrMap) upsertGmTeamMarker(tid, lat, lng);
   });
   socket.on('settings_updated',({type})=>{
     if(type==='missions'&&selectedTeamId)selectTeam(selectedTeamId);
@@ -2428,32 +2430,32 @@ async function selectTeam(teamId){
 // map isn't ready yet (panel hasn't been opened) we lazily switch it on and
 // invalidate the size first so Leaflet doesn't render at 0×0.
 function centerGmMapOnTeam(teamId){
-  ensureGmCrMap();
-  if(!gmCrMap){
-    // Switch to the map panel so the user actually sees the new centre.
+  // Make sure the map panel is open (so the map can be created at full size).
+  const panel = document.getElementById('panel-crmap');
+  if(panel && !panel.classList.contains('active')){
     const tab = document.getElementById('tab-crmap');
     if(tab) switchPanel('crmap', tab);
   }
-  if(!gmCrMap) return;
-  const mk = gmCrMarkers[teamId];
-  if(mk){
-    setTimeout(() => {
-      gmCrMap.invalidateSize();
+  // Wait for the panel to lay out, then create/recover the map and centre it.
+  setTimeout(() => {
+    ensureGmCrMap();
+    if(!gmCrMap) return;
+    gmCrMap.invalidateSize();
+    _flushGmGpsBuffer();
+    const mk = gmCrMarkers[teamId];
+    if(mk){
       gmCrMap.setView(mk.getLatLng(), 17, {animate:true});
       mk.openPopup();
-    }, 100);
-    return;
-  }
-  // No live marker yet — fall back to the cached GPS fix from the game payload.
-  API(`/api/games/${currentGameId}/cr`).then(cr => {
-    const g = (cr && cr.gps || []).find(x => x.team_id === teamId);
-    if(!g) return;
-    upsertGmTeamMarker(teamId, g.lat, g.lng);
-    setTimeout(() => {
-      gmCrMap.invalidateSize();
+      return;
+    }
+    // No live marker yet — fall back to the cached GPS fix from the game payload.
+    API(`/api/games/${currentGameId}/cr`).then(cr => {
+      const g = (cr && cr.gps || []).find(x => x.team_id === teamId);
+      if(!g || !gmCrMap) return;
+      upsertGmTeamMarker(teamId, g.lat, g.lng);
       gmCrMap.setView([g.lat, g.lng], 17, {animate:true});
-    }, 100);
-  }).catch(()=>{});
+    }).catch(()=>{});
+  }, 180);
 }
 
 async function renderCrTeamMissions(teamId){
@@ -2993,6 +2995,17 @@ async function sendBroadcast(){
   toast(gmt('broadcast-sent')||'Broadcast gesendet!','success');
 }
 let gmCrMap=null, gmCrMarkers={};
+// Latest GPS per team, buffered so positions that arrive before the map panel
+// is ever opened can be applied once the map actually exists. (Creating the
+// Leaflet map in a hidden/zero-size container leaves its pixel origin broken,
+// which is what made team/mission circles "float" and not track panning.)
+let _gmGpsBuffer = {};
+function _flushGmGpsBuffer(){
+  if(!gmCrMap) return;
+  Object.entries(_gmGpsBuffer).forEach(([tid, g]) => {
+    if(g && Number.isFinite(g.lat) && Number.isFinite(g.lng)) upsertGmTeamMarker(Number(tid), g.lat, g.lng);
+  });
+}
 // Cached freeze rows for the active game. The chips show a ❄️ tag with
 // remaining time while `until_ms` is in the future.
 let gmFreezes = [];
@@ -3185,13 +3198,17 @@ function closeGmSelfieLightbox(e){
 let gmCrMissionLayer = null;     // L.layerGroup holding all CR mission markers
 let gmCrMissionsCache = [];      // last-known cr.missions payload (for re-rendering)
 
-/** Initialise GM Rail Adventure Leaflet map once (hidden panel ok). */
+/** Initialise the GM Rail Adventure Leaflet map. Only creates it once the
+ *  container is actually laid out — a map built in a hidden/zero-size element
+ *  has a broken pixel origin, so its markers float and don't track panning. */
 function ensureGmCrMap(){
   if(gmCrMap) return gmCrMap;
   const el = document.getElementById('gm-cr-map');
   if(!el) return null;
+  if(!el.offsetWidth || !el.offsetHeight) return null;   // container not visible yet
   gmCrMap = L.map('gm-cr-map').setView([47.3769,8.5417],13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(gmCrMap);
+  _flushGmGpsBuffer();   // drop in any team positions buffered before the map existed
   return gmCrMap;
 }
 // available, falls back to a fixed-position CSS class so the feature still
@@ -3384,8 +3401,11 @@ function switchPanel(panel,el){
     if(d) d.style.display='none';
   }
   if(panel==='crmap'){
-    ensureGmCrMap();
-    setTimeout(()=>{ gmCrMap.invalidateSize(); renderGmCrMissionMarkers(); },150);
+    // Defer until the panel is laid out so the map is created at full size.
+    setTimeout(()=>{
+      ensureGmCrMap();
+      if(gmCrMap){ gmCrMap.invalidateSize(); _flushGmGpsBuffer(); renderGmCrMissionMarkers(); }
+    },150);
   }
 }
 
