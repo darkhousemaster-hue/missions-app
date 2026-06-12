@@ -1081,7 +1081,10 @@ let crAllowedLangs = ['de','en','fr','it','es'];
 function setCrAllowedLangs(csv){
   const all = ['de','en','fr','it','es'];
   let arr = String(csv || '').split(',').map(s => s.trim()).filter(l => all.includes(l));
-  if (arr.length === 0) arr = all.slice();
+  // A 0- or 1-language allow-list would strand players in one language with no
+  // switcher (and override their join-screen choice). That's almost never
+  // intended, so treat anything under 2 languages as "no restriction" → all 5.
+  if (arr.length < 2) arr = all.slice();
   crAllowedLangs = arr;
   const btn = document.getElementById('btn-v-lang');
   if (btn) btn.style.display = crAllowedLangs.length > 1 ? '' : 'none';
