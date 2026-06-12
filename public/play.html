@@ -414,7 +414,14 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 // ── State ────────────────────────────────────────────────────────────────────
 let gameId, teamId, teamName;
 let socket;
-let lang = localStorage.getItem('m_lang') || 'de';
+// Language priority: ?lang= from the join screen → saved m_lang → German.
+let lang = (() => {
+  const all = ['de','en','fr','it','es'];
+  const q = new URLSearchParams(window.location.search).get('lang');
+  const pick = (q && all.includes(q)) ? q : (localStorage.getItem('m_lang') || 'de');
+  try { localStorage.setItem('m_lang', pick); } catch(e) {}
+  return all.includes(pick) ? pick : 'de';
+})();
 
 // Inline SVG icons matching the GM-side redesign family. Returned as
 // HTML strings so they sit cleanly inside template literals (mission

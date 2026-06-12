@@ -630,7 +630,16 @@ const gameId   = params.get('game');
 const teamId   = parseInt(params.get('team') || sessionStorage.getItem('teamId'));
 const teamName = sessionStorage.getItem('teamName') || 'Team';
 
-let lang       = localStorage.getItem('cr_lang') || 'de';
+// Language priority: ?lang= from the join screen → saved cr_lang → German.
+// The join page passes the chosen language in the URL so it survives even if
+// localStorage isn't shared; persist it so reloads keep it.
+let lang = (() => {
+  const all = ['de','en','fr','it','es'];
+  const q = params.get('lang');
+  const pick = (q && all.includes(q)) ? q : (localStorage.getItem('cr_lang') || 'de');
+  try { localStorage.setItem('cr_lang', pick); } catch(e) {}
+  return all.includes(pick) ? pick : 'de';
+})();
 let socket;
 let crMap = null, myMarker = null, teamMarkers = {};
 let crActiveView = 'mission';

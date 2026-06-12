@@ -283,6 +283,11 @@ function _detectJoinLang() {
   return JOIN_LANGS.includes(nav) ? nav : 'de';
 }
 let joinLang = _detectJoinLang();
+// Persist the displayed language immediately so the player page uses it even if
+// the player never taps a different flag (the old code only saved on change,
+// so a non-German default silently fell back to German on the player side).
+function _persistJoinLang(){ try { localStorage.setItem('m_lang', joinLang); localStorage.setItem('cr_lang', joinLang); } catch(e) {} }
+_persistJoinLang();
 const JOIN_T = {
   de: {loading:'Laden…', error:'Fehler', invalid:'Ungültiger Code oder Spiel beendet.', ask_gm:'Bitte den Spielleiter um einen neuen Code.', game_ended:'Dieses Spiel ist bereits beendet.',
        lead:'Mach ein Selfie und wähle einen Teamnamen. Andere Teams sehen euer Selfie in der Rangliste.',
@@ -371,10 +376,9 @@ function _applyJoinTranslations() {
 }
 
 function setJoinLang(lang) {
-  if (!JOIN_LANGS.includes(lang) || lang === joinLang) return;
+  if (!JOIN_LANGS.includes(lang)) return;
   joinLang = lang;
-  localStorage.setItem('m_lang', joinLang);
-  localStorage.setItem('cr_lang', joinLang);
+  _persistJoinLang();
   _applyJoinTranslations();
   // _applyJoinTranslations writes the base "Or join existing team" label;
   // the (n) count suffix is owned by refreshJoinExistingVisibility, so
@@ -491,7 +495,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     ensureCrPlayerKey();
     const g = await fetch('/api/games/' + gameId).then(r => r.json()).catch(() => null);
     const pg = (g && g.crMode) ? '/cityrush.html' : '/play.html';
-    window.location.href = pg + '?game=' + gameId + '&team=' + storedTeam;
+    window.location.href = pg + '?game=' + gameId + '&team=' + storedTeam + '&lang=' + joinLang;
     return;
   }
 
@@ -645,7 +649,7 @@ async function joinAsNew() {
     sessionStorage.setItem('teamName', res.name);
     sessionStorage.setItem('gameId',   gameId);
     const targetPage = isCityRush ? '/cityrush.html' : '/play.html';
-    window.location.href = targetPage + '?game=' + gameId + '&team=' + res.id;
+    window.location.href = targetPage + '?game=' + gameId + '&team=' + res.id + '&lang=' + joinLang;
   } catch (e) {
     err.textContent = jt('conn_err');
     btn.disabled = false; lbl.textContent = jt('start');
@@ -674,7 +678,7 @@ async function joinExisting(teamId, teamName) {
     sessionStorage.setItem('teamName', teamName);
     sessionStorage.setItem('gameId',   gameId);
     const pg = isCityRush ? '/cityrush.html' : '/play.html';
-    window.location.href = pg + '?game=' + gameId + '&team=' + teamId;
+    window.location.href = pg + '?game=' + gameId + '&team=' + teamId + '&lang=' + joinLang;
   } catch (e) {
     _joinInFlight = false;
     if (err) err.textContent = jt('conn_err');

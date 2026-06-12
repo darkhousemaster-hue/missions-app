@@ -3808,6 +3808,8 @@ async function autoTranslateMissionName(){
 function missionModal(m,locs){
   const locOpts=locs.map(l=>`<option value="${l.id}" ${sel(m&&m.location_id==l.id)}>${esc(l.name)}</option>`).join('');
   const v=(f)=>m?esc(m[f]||''):'';
+  // RAW value for langTabFields (it escapes internally — v() would double-escape).
+  const vr=(f)=>m?String(m[f]??''):'';
   const mt=(m&&m.media_type)||'photo';
   return `
     <!-- 1 · TYPE -->
@@ -3834,8 +3836,8 @@ function missionModal(m,locs){
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.15rem .4rem;" onclick="autoTranslateMissionName()">${gmt('auto-translate')||'🌐 Auto'}</button>
       </div>
       ${langTabFields('m-name', 'input', {
-        de: m?(m.name_de||m.name||''):'', en: v('name_en'),
-        fr: v('name_fr'), it: v('name_it'), es: v('name_es')
+        de: m?(m.name_de||m.name||''):'', en: vr('name_en'),
+        fr: vr('name_fr'), it: vr('name_it'), es: vr('name_es')
       })}
       <div class="grid-2" style="margin-top:.7rem;">
         <div class="field" style="margin:0;">
@@ -3863,8 +3865,8 @@ function missionModal(m,locs){
           <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslate('desc')">🌐 Auto</button>
         </div>
         ${langTabFields('m-desc', 'textarea', {
-          de: v('description_de'), en: v('description_en'),
-          fr: v('description_fr'), it: v('description_it'), es: v('description_es')
+          de: vr('description_de'), en: vr('description_en'),
+          fr: vr('description_fr'), it: vr('description_it'), es: vr('description_es')
         }, 'de', 3)}
       </div>
       <div id="mtab-task" class="mission-tab-content">
@@ -3873,8 +3875,8 @@ function missionModal(m,locs){
           <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslate('task')">🌐 Auto</button>
         </div>
         ${langTabFields('m-task', 'textarea', {
-          de: v('task_de'), en: v('task_en'),
-          fr: v('task_fr'), it: v('task_it'), es: v('task_es')
+          de: vr('task_de'), en: vr('task_en'),
+          fr: vr('task_fr'), it: vr('task_it'), es: vr('task_es')
         }, 'de', 3)}
       </div>
     </div>
@@ -4550,7 +4552,7 @@ async function loadCrMissions() {
           <div style="font-weight:700;">${esc(m.name_de||'(kein Name)')}</div>
           ${m.description_de?`<div style="font-size:.8rem;color:var(--text-dim);">${esc(m.description_de)}</div>`:''}
           ${flags?`<div style="font-size:.75rem;color:var(--text-dim);margin-top:.2rem;">${flags}</div>`:''}
-          <small style="color:var(--text-muted);">${m.points} Punkte · ${m.lat?`${m.lat.toFixed(5)},${m.lng.toFixed(5)}`:'Keine Koordinaten'}</small>
+          <small style="color:var(--text-muted);">${m.points} ${Number(m.points)===1?'Punkt':'Punkte'} · ${m.lat?`${m.lat.toFixed(5)},${m.lng.toFixed(5)}`:'Keine Koordinaten'}</small>
         </div>
         <div style="display:flex;gap:.4rem;">
           <button class="btn btn-ghost btn-sm" onclick="editCrMission(${m.id})">✎</button>
@@ -4728,6 +4730,9 @@ async function deleteCurrentCrMode(){
 
 function crMissionModal(m){
   const v=f=>m?esc(m[f]||''):'';
+  // RAW (unescaped) value — for langTabFields, which escapes internally. Passing
+  // v() here would double-escape (e.g. a " would be stored as &quot;).
+  const vr=f=>m?String(m[f]??''):'';
   const chk=(f,def=0)=>m?(m[f]?'checked':''):(def?'checked':'');
   const num=(f,def=0)=>m?m[f]||def:def;
   // Constrain media options to what the current CR mode allows — but always
@@ -4778,8 +4783,8 @@ function crMissionModal(m){
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('name')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
       </div>
       ${langTabFields('cr-name', 'input', {
-        de: v('name_de'), en: v('name_en'),
-        fr: v('name_fr'), it: v('name_it'), es: v('name_es')
+        de: vr('name_de'), en: vr('name_en'),
+        fr: vr('name_fr'), it: vr('name_it'), es: vr('name_es')
       })}
       <div style="margin-top:.7rem;max-width:180px;">
         <label class="label">${gmt('cr-m-points')||'Punkte'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Belohnung fürs Abschließen</strong>, wird zur Teampunktzahl addiert.</span></i></label>
@@ -4798,8 +4803,8 @@ function crMissionModal(m){
         </div>
         <div id="cr-answer-section">
         ${langTabFields('cr-answer', 'input', {
-          de: v('answer_de'), en: v('answer_en'),
-          fr: v('answer_fr'), it: v('answer_it'), es: v('answer_es')
+          de: vr('answer_de'), en: vr('answer_en'),
+          fr: vr('answer_fr'), it: vr('answer_it'), es: vr('answer_es')
         })}
         </div>
       </div>
@@ -4974,8 +4979,8 @@ function crMissionModal(m){
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslateCrField('description')">🌐 Auto</button>
       </div>
       ${langTabFields('cr-desc', 'textarea', {
-        de: v('description_de'), en: v('description_en'),
-        fr: v('description_fr'), it: v('description_it'), es: v('description_es')
+        de: vr('description_de'), en: vr('description_en'),
+        fr: vr('description_fr'), it: vr('description_it'), es: vr('description_es')
       }, 'de', 3)}
     </div>
     <div id="mtab-task" class="mission-tab-content">
@@ -4983,8 +4988,8 @@ function crMissionModal(m){
         <button class="btn btn-ghost btn-sm" style="font-size:.7rem;" onclick="autoTranslateCrField('task')">🌐 Auto</button>
       </div>
       ${langTabFields('cr-task', 'textarea', {
-        de: v('task_de'), en: v('task_en'),
-        fr: v('task_fr'), it: v('task_it'), es: v('task_es')
+        de: vr('task_de'), en: vr('task_en'),
+        fr: vr('task_fr'), it: vr('task_it'), es: vr('task_es')
       }, 'de', 3)}
     </div>`;
 }
