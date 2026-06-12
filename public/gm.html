@@ -2579,8 +2579,8 @@ async function renderCrTeamMissions(teamId){
         <div style="display:flex;flex-direction:column;gap:.6rem;">${arr.map(m => buildCard(m, display.indexOf(m))).join('')}</div>
       </div>` : '';
     list.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;">
-      ${col('⚡ ' + (gmt('cr-rush-missions')||'Rush-Missionen'), '#ff8a3d', rushMs)}
-      ${col(gmt('cr-normal-missions')||'Normale Missionen', 'var(--text-muted)', normMs)}
+      ${col('⚡ ' + (gmt('cr-rush-missions')||'Missionen'), '#ff8a3d', rushMs)}
+      ${col('📍 ' + (gmt('cr-normal-missions')||'Checkpoints'), 'var(--text-muted)', normMs)}
     </div>`;
   } else {
     list.innerHTML = cr.missions.map((m,i)=>buildCard(m,i)).join('');
@@ -4596,9 +4596,9 @@ async function loadCrMissions() {
   // (per-group when grouped).
   const card = (m, i, num) => {
     const flags = [
-      m.is_rush  ? '⚡ Rush' : '',
+      m.is_rush  ? '⚡ Mission' : '',
       m.is_special ? '⭐ Spezial' : '',
-      m.use_gps  ? '📍 GPS' : '',
+      m.use_gps  ? '📍 Checkpoint' : '',
       m.use_map  ? '🗺️ Karte' : '',
       m.is_timed ? `⏱ ${Math.round(m.timer_seconds/60)}min` : '',
       m.media_required!=='none' ? (m.media_required==='photo'?'📷':'🎬') : '',
@@ -4636,8 +4636,8 @@ async function loadCrMissions() {
         ${arr.map((m,k) => card(m, display.indexOf(m), k+1)).join('')}
       </div>` : '';
     body = `<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;">
-      ${col('⚡ ' + (gmt('cr-rush-missions')||'Rush-Missionen'), '#ff8a3d', rushMs)}
-      ${col(gmt('cr-normal-missions')||'Normale Missionen', 'var(--text-muted)', normMs)}
+      ${col('⚡ ' + (gmt('cr-rush-missions')||'Missionen'), '#ff8a3d', rushMs)}
+      ${col('📍 ' + (gmt('cr-normal-missions')||'Checkpoints'), 'var(--text-muted)', normMs)}
     </div>`;
   } else {
     body = missions.map((m,i) => card(m, i, i+1)).join('');
@@ -4687,11 +4687,11 @@ async function showAddCrMode(){
       </div>
     </div>
     <div class="field" data-tip="cr-mode-rush">
-      <label class="label" data-tip="cr-mode-rush">${gmt('cr-mode-rush-label')||'Rush Mode'}</label>
-      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-mode-rush-hint')||'Spieler sehen zuerst nur Rush-Missionen (ohne GPS). GPS-Missionen werden erst freigeschaltet, nachdem eine Rush-Mission abgeschlossen wurde.'}</p>
+      <label class="label" data-tip="cr-mode-rush">${gmt('cr-mode-rush-label')||'Rail Adventure'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-mode-rush-hint')||'Spieler sehen zuerst nur Missionen (ohne GPS). Checkpoints werden erst freigeschaltet, nachdem eine Mission abgeschlossen wurde.'}</p>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
         ${checkPillRow([
-          {id:'cr-mode-rush', label:'⚡ Rush Mode', isOn:false},
+          {id:'cr-mode-rush', label:'⚡ Rail Adventure', isOn:true},
         ])}
       </div>
     </div>
@@ -4744,11 +4744,11 @@ async function editCurrentCrMode(){
       </div>
     </div>
     <div class="field" data-tip="cr-mode-rush">
-      <label class="label" data-tip="cr-mode-rush">${gmt('cr-mode-rush-label')||'Rush Mode'}</label>
-      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-mode-rush-hint')||'Spieler sehen zuerst nur Rush-Missionen (ohne GPS). GPS-Missionen werden erst freigeschaltet, nachdem eine Rush-Mission abgeschlossen wurde.'}</p>
+      <label class="label" data-tip="cr-mode-rush">${gmt('cr-mode-rush-label')||'Rail Adventure'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-mode-rush-hint')||'Spieler sehen zuerst nur Missionen (ohne GPS). Checkpoints werden erst freigeschaltet, nachdem eine Mission abgeschlossen wurde.'}</p>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
         ${checkPillRow([
-          {id:'cr-mode-rush-edit', label:'⚡ Rush Mode', isOn:m.rush_mode===1},
+          {id:'cr-mode-rush-edit', label:'⚡ Rail Adventure', isOn:m.rush_mode===1},
         ])}
       </div>
     </div>
@@ -4952,13 +4952,13 @@ function crMissionModal(m){
     <div class="cme-sec">
       <div class="cme-shead"><span class="cme-step">4</span><span class="cme-stitle">${gmt('cr-m-placement')||'Platzierung — wo & wie'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Wo die Mission lebt.</strong> <strong>In der Route</strong> = GPS-Stopp in Reihenfolge; Spieler müssen die Koordinaten erreichen. <strong>Spezial</strong> = jederzeit im ⭐-Bereich, ohne GPS, ohne Reihenfolge.</span></i></span></div>
       <div class="cme-seg" id="cr-place-seg">
-        ${currentCrModeRush ? `<span class="cme-seg-opt" data-place="rush" onclick="crPickPlacement('rush')">⚡ ${gmt('cr-m-place-rush')||'Rush'}</span>` : ''}
-        <span class="cme-seg-opt" data-place="route" onclick="crPickPlacement('route')">🧭 ${gmt('cr-m-place-route')||'In der Route'}</span>
+        ${currentCrModeRush ? `<span class="cme-seg-opt" data-place="rush" onclick="crPickPlacement('rush')">⚡ ${gmt('cr-m-place-rush')||'Mission'}</span>` : ''}
+        <span class="cme-seg-opt" data-place="route" onclick="crPickPlacement('route')">🧭 ${gmt('cr-m-place-route')||'Checkpoint'}</span>
         <span class="cme-seg-opt" data-place="special" onclick="crPickPlacement('special')">⭐ ${gmt('cr-m-place-special')||'Spezial'}</span>
       </div>
 
       <div id="cr-place-rush" style="display:none;">
-        <div class="cme-arrive">⚡ <div><b>${gmt('cr-m-rush-note-t')||'Rush-Mission — ohne GPS.'}</b> ${gmt('cr-m-rush-note')||'Rush-Missionen sehen die Spieler von Anfang an. GPS-Missionen werden erst freigeschaltet, sobald eine Rush-Mission abgeschlossen ist.'}</div></div>
+        <div class="cme-arrive">⚡ <div><b>${gmt('cr-m-rush-note-t')||'Mission — ohne GPS.'}</b> ${gmt('cr-m-rush-note')||'Missionen sehen die Spieler von Anfang an. Checkpoints werden erst freigeschaltet, sobald eine Mission abgeschlossen ist.'}</div></div>
       </div>
 
       <div id="cr-place-route">
@@ -5016,6 +5016,11 @@ function crMissionModal(m){
           <div><label class="label">${gmt('cr-m-pen-pts')||'Penalty (Punkte)'}</label><input id="cr-penalty-pts" type="number" class="input" value="${num('penalty_points',2)}"></div>
         </div>
       </div>
+      <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-skippable')" style="margin-top:.6rem;">
+        <div><div class="toggle-row-text">⏭ ${gmt('cr-m-skippable')||'Überspringbar'}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('cr-m-skippable-tip')||'An: Spieler sehen einen „Überspringen"-Button (0 Punkte). Aus (Standard): die Mission muss gemacht werden.'}</span></i></div><div class="toggle-row-sub">${gmt('cr-m-skippable-sub')||'Aus = kann nicht übersprungen werden.'}</div></div>
+        <div class="toggle ${m&&m.skippable?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-skippable')"></div>
+      </div>
+      <input type="checkbox" id="cr-skippable" ${chk('skippable')} style="display:none;">
     </div>
     <!-- Answer/question hints (multi-hint editor; revealed after arrival, or
          immediately for non-GPS answer missions). Collapsible <details>. -->
@@ -5340,6 +5345,7 @@ function getCrMissionData(){
     media_required: mediaReq,
     is_special: document.getElementById('cr-is-special')?.checked?1:0,
     is_rush: document.getElementById('cr-is-rush')?.checked?1:0,
+    skippable: document.getElementById('cr-skippable')?.checked?1:0,
     is_repeatable: document.getElementById('cr-is-repeatable')?.checked?1:0,
     repeat_minutes: Math.max(0, parseInt(document.getElementById('cr-repeat-minutes')?.value)||0),
     has_answer: hasAnswer,

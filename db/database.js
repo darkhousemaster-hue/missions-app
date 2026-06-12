@@ -277,6 +277,8 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN puzzle_order_images TEXT DEFAU
 // Rush mission flag (only meaningful when the mode has rush_mode=1). A rush
 // mission ignores GPS and is shown to players before any GPS missions unlock.
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN is_rush INTEGER DEFAULT 0"); } catch(e) {}
+// Whether players may skip this mission (0 = no skip button). Default 0.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN skippable INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -697,7 +699,7 @@ const getCrMode     = id => db.prepare('SELECT * FROM cr_modes WHERE id=?').get(
 const createCrMode  = (data) => {
   // Backward-compat: callers used to pass just a name string.
   if (typeof data === 'string') data = {name: data};
-  const {name, allow_photo=1, allow_video=1, ruleset_id=null, timer_default=60, allowed_langs, rush_mode=0} = data;
+  const {name, allow_photo=1, allow_video=1, ruleset_id=null, timer_default=60, allowed_langs, rush_mode=1} = data;
   return num(db.prepare('INSERT INTO cr_modes(name,allow_photo,allow_video,ruleset_id,timer_default,allowed_langs,rush_mode) VALUES(?,?,?,?,?,?,?)')
     .run(name, allow_photo?1:0, allow_video?1:0, ruleset_id||null, Number(timer_default)||60, normLangs(allowed_langs), rush_mode?1:0).lastInsertRowid);
 };
@@ -740,7 +742,7 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'is_timed','timer_seconds','penalty_interval','penalty_points','media_required',
   'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es',
   'hide_until_arrival',
-  'is_special','repeat_minutes','is_repeatable','is_rush',
+  'is_special','repeat_minutes','is_repeatable','is_rush','skippable',
   'use_puzzle','puzzle_image','puzzle_grid',
   'puzzle_peek_enabled','puzzle_peek_onetime','puzzle_peeks',
   'puzzle_type','puzzle_order_images'];
@@ -760,7 +762,7 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
-  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime'].forEach(f => {
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','skippable','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
   });
   // puzzle_peeks: accept an array or a JSON string; store a clean JSON string

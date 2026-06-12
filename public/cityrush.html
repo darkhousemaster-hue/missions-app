@@ -694,7 +694,7 @@ const T = {
         accepted:'Angenommen!', rejected:'Abgelehnt',
         skip_mission:'Mission überspringen', skip_confirm:'Mission überspringen? Es gibt keine Punkte dafür.', skipped:'Übersprungen',
         special:'Spezial', special_missions:'Spezial-Missionen', special_choose:'Welche Mission möchtest du spielen?', available:'Verfügbar', cooldown_wait:'Bitte warten:',
-        rush_row:'Rush', rush_gps_tile:'GPS-Missionen', rush_gps_locked:'Erst eine Rush-Mission abschließen', rush_block_rush:'Erst eine normale Mission abschließen', rush_gps_open:'Antippen zum Öffnen', rush_locked_msg:'Schließe zuerst eine Rush-Mission ab, bevor du eine GPS-Mission machst.', rush_block_rush_msg:'Schließe zuerst eine normale Mission ab, bevor du die nächste Rush-Mission machst.', rush_wait_accept:'Warte, bis der Spielleiter die vorige Mission freigibt.',
+        rush_row:'Missionen', rush_gps_tile:'Checkpoints', rush_gps_locked:'Erst eine Mission abschließen', rush_block_rush:'Erst einen Checkpoint abschließen', rush_gps_open:'Antippen zum Öffnen', rush_locked_msg:'Schließe zuerst eine Mission ab, bevor du einen Checkpoint machst.', rush_block_rush_msg:'Schließe zuerst einen Checkpoint ab, bevor du die nächste Mission machst.', rush_wait_accept:'Warte, bis der Spielleiter die vorige Mission freigibt.',
         gps_hint:'GPS-Hinweis', chat_ph:'Nachricht an Spielleiter…', chat_send:'Senden', chat_back:'Zurück',
         freeze_title:'Rival einfrieren', freeze_no_teams:'Keine anderen Teams.', freeze_pick_team:'Bitte ein Team wählen',
         freeze_already:'bereits eingefroren', freeze_done:'Team eingefroren!', freeze_failed:'Einfrieren fehlgeschlagen',
@@ -744,7 +744,7 @@ const T = {
         accepted:'Accepted!', rejected:'Rejected',
         skip_mission:'Skip mission', skip_confirm:'Skip this mission? You will not get any points.', skipped:'Skipped',
         special:'Special', special_missions:'Special missions', special_choose:'Which mission do you want to play?', available:'Available', cooldown_wait:'Please wait:',
-        rush_row:'Rush', rush_gps_tile:'GPS missions', rush_gps_locked:'Finish a rush mission first', rush_block_rush:'Finish a normal mission first', rush_gps_open:'Tap to open', rush_locked_msg:'Finish a rush mission first before a GPS mission.', rush_block_rush_msg:'Finish a normal mission before the next rush mission.', rush_wait_accept:'Wait for the Gamemaster to accept your previous mission.',
+        rush_row:'Missions', rush_gps_tile:'Checkpoints', rush_gps_locked:'Finish a mission first', rush_block_rush:'Finish a checkpoint first', rush_gps_open:'Tap to open', rush_locked_msg:'Finish a mission first before a checkpoint.', rush_block_rush_msg:'Finish a checkpoint before the next mission.', rush_wait_accept:'Wait for the Gamemaster to accept your previous mission.',
         gps_hint:'GPS hint', chat_ph:'Message to Gamemaster…', chat_send:'Send', chat_back:'Back',
         freeze_title:'Freeze a rival', freeze_no_teams:'No other teams.', freeze_pick_team:'Please pick a team',
         freeze_already:'already frozen', freeze_done:'Team frozen!', freeze_failed:'Freeze failed',
@@ -792,7 +792,7 @@ const T = {
         accepted:'Accepté!', rejected:'Refusé',
         skip_mission:'Passer la mission', skip_confirm:'Passer cette mission ? Vous n\'aurez aucun point.', skipped:'Passée',
         special:'Spécial', special_missions:'Missions spéciales', special_choose:'Quelle mission veux-tu jouer ?', available:'Disponible', cooldown_wait:'Veuillez attendre :',
-        rush_row:'Rush', rush_gps_tile:'Missions GPS', rush_gps_locked:'Termine d\'abord une mission rush', rush_block_rush:'Termine d\'abord une mission normale', rush_gps_open:'Touchez pour ouvrir', rush_locked_msg:'Termine d\'abord une mission rush avant une mission GPS.', rush_block_rush_msg:'Termine une mission normale avant la prochaine mission rush.', rush_wait_accept:'Attends que le Gamemaster valide ta mission précédente.',
+        rush_row:'Missions', rush_gps_tile:'Checkpoints', rush_gps_locked:'Termine d\'abord une mission', rush_block_rush:'Termine d\'abord un checkpoint', rush_gps_open:'Touchez pour ouvrir', rush_locked_msg:'Termine d\'abord une mission avant un checkpoint.', rush_block_rush_msg:'Termine un checkpoint avant la prochaine mission.', rush_wait_accept:'Attends que le Gamemaster valide ta mission précédente.',
         gps_hint:'Indice GPS', chat_ph:'Message au Gamemaster…', chat_send:'Envoyer', chat_back:'Retour',
         freeze_title:'Geler une équipe', freeze_no_teams:'Aucune autre équipe.', freeze_pick_team:'Choisis une équipe',
         freeze_already:'déjà gelée', freeze_done:'Équipe gelée !', freeze_failed:'Échec du gel',
@@ -840,7 +840,7 @@ const T = {
         accepted:'Accettato!', rejected:'Rifiutato',
         skip_mission:'Salta missione', skip_confirm:'Saltare la missione? Non riceverai punti.', skipped:'Saltata',
         special:'Speciale', special_missions:'Missioni speciali', special_choose:'Quale missione vuoi giocare?', available:'Disponibile', cooldown_wait:'Attendi:',
-        rush_row:'Rush', rush_gps_tile:'Missioni GPS', rush_gps_locked:'Completa prima una missione rush', rush_block_rush:'Completa prima una missione normale', rush_gps_open:'Tocca per aprire', rush_locked_msg:'Completa prima una missione rush prima di una missione GPS.', rush_block_rush_msg:'Completa una missione normale prima della prossima missione rush.', rush_wait_accept:'Attendi che il Gamemaster approvi la missione precedente.',
+        rush_row:'Missioni', rush_gps_tile:'Checkpoint', rush_gps_locked:'Completa prima una missione', rush_block_rush:'Completa prima un checkpoint', rush_gps_open:'Tocca per aprire', rush_locked_msg:'Completa prima una missione prima di un checkpoint.', rush_block_rush_msg:'Completa un checkpoint prima della prossima missione.', rush_wait_accept:'Attendi che il Gamemaster approvi la missione precedente.',
         gps_hint:'Suggerimento GPS', chat_ph:'Messaggio al Gamemaster…', chat_send:'Invia', chat_back:'Indietro',
         freeze_title:'Congela una rivale', freeze_no_teams:'Nessun\'altra squadra.', freeze_pick_team:'Scegli una squadra',
         freeze_already:'già congelata', freeze_done:'Squadra congelata!', freeze_failed:'Congelamento fallito',
@@ -888,7 +888,7 @@ const T = {
         accepted:'¡Aceptado!', rejected:'Rechazado',
         skip_mission:'Saltar misión', skip_confirm:'¿Saltar la misión? No recibirás puntos.', skipped:'Saltada',
         special:'Especial', special_missions:'Misiones especiales', special_choose:'¿Qué misión quieres jugar?', available:'Disponible', cooldown_wait:'Espera:',
-        rush_row:'Rush', rush_gps_tile:'Misiones GPS', rush_gps_locked:'Completa primero una misión rush', rush_block_rush:'Completa primero una misión normal', rush_gps_open:'Toca para abrir', rush_locked_msg:'Completa primero una misión rush antes de una misión GPS.', rush_block_rush_msg:'Completa una misión normal antes de la siguiente misión rush.', rush_wait_accept:'Espera a que el Gamemaster acepte tu misión anterior.',
+        rush_row:'Misiones', rush_gps_tile:'Checkpoints', rush_gps_locked:'Completa primero una misión', rush_block_rush:'Completa primero un checkpoint', rush_gps_open:'Toca para abrir', rush_locked_msg:'Completa primero una misión antes de un checkpoint.', rush_block_rush_msg:'Completa un checkpoint antes de la siguiente misión.', rush_wait_accept:'Espera a que el Gamemaster acepte tu misión anterior.',
         gps_hint:'Pista GPS', chat_ph:'Mensaje al Gamemaster…', chat_send:'Enviar', chat_back:'Volver',
         freeze_title:'Congelar a un rival', freeze_no_teams:'No hay otros equipos.', freeze_pick_team:'Elige un equipo',
         freeze_already:'ya congelado', freeze_done:'¡Equipo congelado!', freeze_failed:'Fallo al congelar',
@@ -960,6 +960,7 @@ function normalizeCrMission(m){
     has_answer: toBool(m.has_answer),
     is_special: toBool(m.is_special),
     is_rush: toBool(m.is_rush),
+    skippable: toBool(m.skippable),
     is_repeatable: toBool(m.is_repeatable),
     repeat_minutes: Number(m.repeat_minutes) || 0,
     use_puzzle: toBool(m.use_puzzle),
@@ -2036,7 +2037,7 @@ function crTileHtml(m, i, total){
 // tappable so a tap can explain why (openMissionPopup gates + messages).
 function crRowHtml(kind, label, missions, blocked){
   const note = blocked
-    ? `<span class="cr-lock-note">🔒 ${kind==='rush' ? (t('rush_block_rush')||'Finish a normal mission first') : (t('rush_gps_locked')||'Finish a rush mission first')}</span>`
+    ? `<span class="cr-lock-note">🔒 ${kind==='rush' ? (t('rush_block_rush')||'Finish a checkpoint first') : (t('rush_gps_locked')||'Finish a mission first')}</span>`
     : '';
   return `<div class="cr-tiles-section cr-tiles-section--${kind} ${blocked?'locked':''}">
     <div class="cr-tiles-section-label">${label} ${note}</div>
@@ -2052,9 +2053,9 @@ function renderTiles(){
     grid.classList.add('cr-tiles--sections');
     let html = '';
     if(rushMissions.length)
-      html += crRowHtml('rush', `⚡ ${t('rush_row')||'Rush'}`, rushMissions, !rushPlayable());
+      html += crRowHtml('rush', `⚡ ${t('rush_row')||'Missions'}`, rushMissions, !rushPlayable());
     if(allMissions.length)
-      html += crRowHtml('gps', `📍 ${t('rush_gps_tile')||'GPS missions'}`, allMissions, !normalPlayable());
+      html += crRowHtml('gps', `📍 ${t('rush_gps_tile')||'Checkpoints'}`, allMissions, !normalPlayable());
     grid.innerHTML = html;
     return;
   }
@@ -2158,7 +2159,7 @@ function refreshPopup(){
     <!-- Inline revealed hints -->
     <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
     <div id="cr-actions" style="margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
-    ${isCurrent ? `
+    ${(isCurrent && m.skippable) ? `
       <button id="cr-skip-btn" onclick="confirmSkipMission()"
         style="margin-top:.6rem;padding:.45rem .75rem;font-size:.8rem;font-family:var(--body);
                font-weight:700;letter-spacing:.05em;text-transform:uppercase;
@@ -2706,8 +2707,8 @@ function renderActions(m){
       return;
     }
     if(!missionPlayable(m)){
-      blockNote('🔒 ' + (m.is_rush ? (t('rush_block_rush')||'Finish a normal mission first')
-                                   : (t('rush_gps_locked')||'Finish a rush mission first')));
+      blockNote('🔒 ' + (m.is_rush ? (t('rush_block_rush')||'Finish a checkpoint first')
+                                   : (t('rush_gps_locked')||'Finish a mission first')));
       return;
     }
   }
