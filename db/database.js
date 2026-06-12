@@ -577,6 +577,26 @@ const createTeam = ({game_id, name, gps_anchor_key=null}) => {
   runTx(()=>gms.forEach(gm=>ins.run(teamId,gm.mission_id,gm.id)));
   return teamId;
 };
+// Remove a team and everything scoped to it (progress, submissions, chat, GPS,
+// freezes …). Each statement is guarded so a missing table never aborts the rest.
+const deleteTeam = teamId => {
+  const id = Number(teamId);
+  runTx(() => {
+    const del = sql => { try { db.prepare(sql).run(id); } catch(e) {} };
+    del('DELETE FROM team_missions WHERE team_id=?');
+    del('DELETE FROM cr_team_progress WHERE team_id=?');
+    del('DELETE FROM cr_mission_progress WHERE team_id=?');
+    del('DELETE FROM cr_team_hints WHERE team_id=?');
+    del('DELETE FROM cr_team_captures WHERE team_id=?');
+    del('DELETE FROM cr_submissions WHERE team_id=?');
+    del('DELETE FROM cr_special_progress WHERE team_id=?');
+    del('DELETE FROM cr_arrivals WHERE team_id=?');
+    del('DELETE FROM team_gps WHERE team_id=?');
+    del('DELETE FROM messages WHERE team_id=?');
+    try { db.prepare('DELETE FROM team_freezes WHERE frozen_team_id=? OR freezer_team_id=?').run(id, id); } catch(e) {}
+    db.prepare('DELETE FROM teams WHERE id=?').run(id);
+  });
+};
 const getRankings = gameId => {
   const rows = db.prepare(`
     SELECT t.id, t.name, t.score, t.last_score_at, t.joined_at,
@@ -1065,7 +1085,7 @@ module.exports = {
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,
   getMissions,getMission,createMission,updateMission,deleteMission,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
-  getTeam,getTeams,createTeam,getRankings,
+  getTeam,getTeams,createTeam,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
   submitMission,acceptSubmission,rejectSubmission,
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,

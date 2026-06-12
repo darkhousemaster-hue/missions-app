@@ -425,6 +425,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
           <span class="score-pill" id="detail-team-score"></span>
           <button class="btn btn-ghost btn-sm" onclick="openFreezeModal()" id="btn-freeze-team" title="Team einfrieren">❄ <span id="btn-freeze-team-lbl">Freeze</span></button>
           <button class="btn btn-ghost btn-sm" onclick="thawTeam()" id="btn-thaw-team" style="display:none;" title="Team auftauen">🔥 <span id="btn-thaw-team-lbl">Auftauen</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteSelectedTeam()" id="btn-delete-team" title="Team löschen" style="color:var(--red-light);">🗑 <span id="btn-delete-team-lbl">Löschen</span></button>
         </div>
       </div>
       <div id="team-missions-list"></div>
@@ -2184,6 +2185,7 @@ async function openDashboard(gameId){
     refreshPendingCounts();
     if(teamId === selectedTeamId) selectTeam(teamId);
   });
+  socket.on('team_deleted', ({teamId}) => { if(typeof _removeTeamFromUi==='function') _removeTeamFromUi(teamId); });
   // Rail Adventure: a team auto-completed (no media) — refresh the dashboard so
   // the team detail and rankings update without a manual reload.
   socket.on('cr_mission_completed', ({teamId}) => {
@@ -2474,6 +2476,13 @@ async function renderCrTeamMissions(teamId){
   (cr.submissions||[])
     .filter(s => s.team_id === teamId && s.status === 'pending')
     .forEach(s => { pendingByMission[s.mission_id] = s; });
+  // Latest ACCEPTED submission (with media) per mission, so the GM can still
+  // open the photo/video AFTER accepting it. submissions are ORDER BY id, so a
+  // later accepted submission overwrites an earlier one.
+  const acceptedByMission = {};
+  (cr.submissions||[])
+    .filter(s => s.team_id === teamId && s.status === 'accepted' && s.media_path)
+    .forEach(s => { acceptedByMission[s.mission_id] = s; });
 
   // Mockup 07 markup parity with MiSSiONS. CR-specific bit: a "STOP N"
   // (or "SPEZIAL") orange kicker above the title.
@@ -2512,16 +2521,17 @@ async function renderCrTeamMissions(teamId){
         ? ''                                              // grouped under a row header; no "STOP" kicker
         : ((gmt('stop-prefix') || 'STOP') + ' ' + (i+1));
 
-    // Thumb: pending with media → image/video overlaying the gradient.
-    // Otherwise plain surface with the type icon.
+    // Thumb: a pending OR already-accepted submission with media shows the
+    // photo/video (tap → lightbox). Otherwise plain surface with the type icon.
+    const mediaSub = sub || acceptedByMission[m.id];
     const typeIcon = m.media_required === 'video' ? inlineIcon('video') : inlineIcon('camera');
     let thumbHtml;
-    if(sub && sub.media_path){
-      const src = `/uploads/${sub.media_path}`;
-      const isVideo = m.media_required === 'video' || /\.(mp4|webm|mov)$/i.test(sub.media_path);
-      const rot = Number(sub.media_rotation)||0;
+    if(mediaSub && mediaSub.media_path){
+      const src = `/uploads/${mediaSub.media_path}`;
+      const isVideo = m.media_required === 'video' || /\.(mp4|webm|mov)$/i.test(mediaSub.media_path);
+      const rot = Number(mediaSub.media_rotation)||0;
       const rotStyle = rot ? ` style="transform:rotate(${rot}deg)"` : '';
-      const lb = `openLightbox('${src}',${isVideo},{rotateUrl:'/api/cr/submissions/${sub.id}/rotate',rotation:${rot}})`;
+      const lb = `openLightbox('${src}',${isVideo},{rotateUrl:'/api/cr/submissions/${mediaSub.id}/rotate',rotation:${rot}})`;
       const media = isVideo
         ? `<video src="${src}" muted preload="metadata"${rotStyle} onclick="event.stopPropagation();${lb}"></video>`
         : `<img src="${src}" alt=""${rotStyle} onclick="event.stopPropagation();${lb}">`;
@@ -3123,6 +3133,36 @@ async function thawTeam(){
   });
   if(r && r.success) toast('🔥 Aufgetaut','success');
   else toast(r && r.error || 'Fehler', 'error');
+}
+
+// Permanently delete a team (and all its progress/submissions/chat). Handy for
+// the empty teams left behind when a join half-fails.
+async function deleteSelectedTeam(){
+  if(!selectedTeamId) return;
+  const name = (currentGame && currentGame.teams && currentGame.teams.find(t=>t.id===selectedTeamId)?.name) || '';
+  if(!confirm((gmt('team-delete-confirm')||'Team "{name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.').replace('{name}', name))) return;
+  const tid = selectedTeamId;
+  const r = await API(`/api/games/${currentGameId}/teams/${tid}`, { method:'DELETE' });
+  if(r && r.success){
+    toast(gmt('team-deleted')||'Team gelöscht','success');
+    _removeTeamFromUi(tid);   // the team_deleted socket event also fires this for other GMs
+  } else {
+    toast((r && r.error) || 'Fehler', 'error');
+  }
+}
+// Drop a team from the dashboard UI (chip, cached list, map marker, open detail).
+function _removeTeamFromUi(teamId){
+  teamId = Number(teamId);
+  if(currentGame && currentGame.teams) currentGame.teams = currentGame.teams.filter(t => t.id !== teamId);
+  const chip = document.getElementById('tc-'+teamId); if(chip) chip.remove();
+  const bar = document.getElementById('teams-chips');
+  if(bar && !bar.querySelector('.team-chip-gm')) renderTeamsBar(currentGame ? (currentGame.teams||[]) : []);
+  try { if(gmCrMarkers && gmCrMarkers[teamId]){ gmCrMap && gmCrMap.removeLayer(gmCrMarkers[teamId]); delete gmCrMarkers[teamId]; } } catch(e){}
+  if(selectedTeamId === teamId){
+    selectedTeamId = null;
+    const td = document.getElementById('team-detail'); if(td) td.style.display='none';
+    const ns = document.getElementById('no-team-selected'); if(ns) ns.style.display='';
+  }
 }
 
 // ── Selfie lightbox ─────────────────────────────────────────────────────────

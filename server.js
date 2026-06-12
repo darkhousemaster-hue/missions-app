@@ -599,6 +599,16 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   }
   res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs});
 });
+app.delete('/api/games/:gameId/teams/:teamId', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  const team = db.getTeam(req.params.teamId);
+  if(!team) return res.status(404).json({error:'Not found'});
+  db.deleteTeam(req.params.teamId);
+  const teamId = Number(req.params.teamId);
+  io.to(`gm_${req.params.gameId}`).emit('team_deleted', { teamId });
+  io.to(`gm_${req.params.gameId}`).emit('rankings_update', db.getRankings(req.params.gameId));
+  res.json({success:true});
+});
 app.get('/api/games/:gameId/rankings', (req,res) => res.json(db.getRankings(req.params.gameId)));
 
 // ── Upload ────────────────────────────────────────────────────────────────────
