@@ -3208,6 +3208,14 @@ function ensureGmCrMap(){
   if(!el.offsetWidth || !el.offsetHeight) return null;   // container not visible yet
   gmCrMap = L.map('gm-cr-map').setView([47.3769,8.5417],13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(gmCrMap);
+  // Defensive: in some environments a custom divIcon marker doesn't re-project
+  // on zoom — it sticks at its old screen point until the next setLatLng. Force
+  // every team marker (and the mission markers) back to their geo position when
+  // the zoom settles, so they don't drift until the next GPS update.
+  gmCrMap.on('zoomend', () => {
+    Object.values(gmCrMarkers).forEach(mk => { try { mk.update(); } catch(e){} });
+    try { renderGmCrMissionMarkers(); } catch(e){}
+  });
   _flushGmGpsBuffer();   // drop in any team positions buffered before the map existed
   return gmCrMap;
 }
