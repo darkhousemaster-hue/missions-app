@@ -21,9 +21,8 @@
   .hbtn:active{ transform:translateY(1px); }
   .hbtn.primary{ background:var(--orange,#e85f1e); border-color:var(--orange,#e85f1e); color:#fff; }
   /* Stage + canvas */
-  #stage{ flex:1; position:relative; display:flex; align-items:center; justify-content:center;
-    background:#0f0e0d; min-height:0; padding:8px; }
-  #cv{ background:#fff; border-radius:6px; box-shadow:0 12px 40px -12px rgba(0,0,0,.7); touch-action:none; }
+  #stage{ flex:1; position:relative; min-height:0; background:#fff; overflow:hidden; }
+  #cv{ display:block; width:100%; height:100%; background:#fff; touch-action:none; }
   /* Overlays */
   .ov{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:50;
     background:rgba(10,9,8,.78); padding:1rem; }
@@ -179,7 +178,6 @@ const t = k => (DICT[lang] && DICT[lang][k]) || DICT.en[k] || k;
 document.documentElement.lang = lang;
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const LOGW=1600, LOGH=1200, ASPECT=LOGW/LOGH;
 const clientId = Math.random().toString(36).slice(2,10);
 let gameId=null, teamId=null, missionId=null, collaborative=false, prompt5=null;
 let socket=null, joined=false, closed=false;
@@ -206,7 +204,8 @@ showStatus(t('loading'), '', []);
   fitCanvas();
   // Invite overlay first for a collaborative master.
   if(role==='master' && collaborative){ showInvite(data.qrCode, token); }
-  connect();
+  // Solo draws are purely local — no socket, no session churn that could stall it.
+  if(collaborative) connect();
 })();
 
 function connect(){
@@ -232,92 +231,96 @@ function buildHeader(){
   if(canSubmit) h.appendChild(mk('✓ <span>'+t('submit')+'</span>','primary',submitDrawing));
 }
 
-// ── Canvas sizing (handles landscape via resize/orientationchange) ─────────────
+// ── Canvas sizing — fills the whole stage; re-fits on rotate/resize ────────────
+let pendingFit=false;
 function fitCanvas(){
-  const stage=document.getElementById('stage');
-  const availW=stage.clientWidth-16, availH=stage.clientHeight-16;
-  let w=availW, hgt=w/ASPECT;
-  if(hgt>availH){ hgt=availH; w=hgt*ASPECT; }
+  const r=document.getElementById('stage').getBoundingClientRect();
   const dpr=Math.min(window.devicePixelRatio||1, 2);
-  cv.style.width=Math.round(w)+'px'; cv.style.height=Math.round(hgt)+'px';
-  cv.width=Math.round(w*dpr); cv.height=Math.round(hgt*dpr);
+  const w=Math.max(1,Math.round(r.width)), h=Math.max(1,Math.round(r.height));
+  cv.style.width=w+'px'; cv.style.height=h+'px';
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
   redraw();
 }
+// Never resize (which clears the canvas) mid-stroke — defer until the pen lifts.
+function reflow(){ if(drawing){ pendingFit=true; return; } fitCanvas(); }
 let _rt=null;
-window.addEventListener('resize', ()=>{ clearTimeout(_rt); _rt=setTimeout(fitCanvas,120); });
-window.addEventListener('orientationchange', ()=>{ setTimeout(fitCanvas,250); });
+window.addEventListener('resize', ()=>{ clearTimeout(_rt); _rt=setTimeout(reflow,150); });
+window.addEventListener('orientationchange', ()=>{ setTimeout(reflow,300); });
 
-// ── Rendering ──────────────────────────────────────────────────────────────────
-function factor(){ return cv.width/LOGW; }
-function styleFor(ctx,s,f){
+// ── Rendering — points are normalised 0..1; size is a fraction of canvas width ──
+function styleFor(ctx,s,W){
   ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.globalAlpha = s.tool==='brush'?0.82:1;
   ctx.strokeStyle = s.tool==='eraser' ? '#ffffff' : (s.color||'#111');
-  ctx.lineWidth = Math.max(0.5,(s.size||8)) * f * (s.tool==='brush'?1.7:1);
+  ctx.lineWidth = Math.max(1,(s.size||0.01)*W*(s.tool==='brush'?1.7:1));
 }
-function drawStrokeOn(ctx,s,f){
+function drawStrokeOn(ctx,s,W,H){
   if(!s||!s.pts||!s.pts.length) return;
-  styleFor(ctx,s,f); ctx.beginPath();
-  ctx.moveTo(s.pts[0].x*f, s.pts[0].y*f);
-  if(s.pts.length===1){ ctx.lineTo(s.pts[0].x*f+0.1, s.pts[0].y*f+0.1); }
-  else for(let i=1;i<s.pts.length;i++) ctx.lineTo(s.pts[i].x*f, s.pts[i].y*f);
+  styleFor(ctx,s,W); ctx.beginPath();
+  ctx.moveTo(s.pts[0].x*W, s.pts[0].y*H);
+  if(s.pts.length===1){ ctx.lineTo(s.pts[0].x*W+0.1, s.pts[0].y*H+0.1); }
+  else for(let i=1;i<s.pts.length;i++) ctx.lineTo(s.pts[i].x*W, s.pts[i].y*H);
   ctx.stroke(); ctx.globalAlpha=1;
 }
-function drawStrokeIncremental(s){ drawStrokeOn(cv.getContext('2d'), s, factor()); }
+function drawStrokeIncremental(s){ drawStrokeOn(cv.getContext('2d'), s, cv.width, cv.height); }
 function drawSeg(seg){
-  const ctx=cv.getContext('2d'), f=factor(); styleFor(ctx,seg,f);
-  ctx.beginPath(); ctx.moveTo(seg.a.x*f, seg.a.y*f); ctx.lineTo(seg.b.x*f, seg.b.y*f); ctx.stroke(); ctx.globalAlpha=1;
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height; styleFor(ctx,seg,W);
+  ctx.beginPath(); ctx.moveTo(seg.a.x*W, seg.a.y*H); ctx.lineTo(seg.b.x*W, seg.b.y*H); ctx.stroke(); ctx.globalAlpha=1;
 }
 function redraw(){
   const ctx=cv.getContext('2d');
   ctx.setTransform(1,0,0,1,0,0);
   ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height);
-  const f=factor();
-  for(const s of strokes) drawStrokeOn(ctx,s,f);
-  if(cur) drawStrokeOn(ctx,cur,f);
+  for(const s of strokes) drawStrokeOn(ctx,s,cv.width,cv.height);
+  if(cur) drawStrokeOn(ctx,cur,cv.width,cv.height);
 }
 
-// ── Drawing input ──────────────────────────────────────────────────────────────
-function logFromEvent(e){
+// ── Drawing input — normalised coords + pointer capture (strokes never drop) ───
+function norm(e){
   const r=cv.getBoundingClientRect();
   const cx=(e.clientX!=null)?e.clientX:(e.touches&&e.touches[0]?e.touches[0].clientX:0);
   const cy=(e.clientY!=null)?e.clientY:(e.touches&&e.touches[0]?e.touches[0].clientY:0);
-  let x=(cx-r.left)/r.width*LOGW, y=(cy-r.top)/r.height*LOGH;
-  return { x:Math.max(0,Math.min(LOGW,x)), y:Math.max(0,Math.min(LOGH,y)) };
+  return { x:Math.max(0,Math.min(1,(cx-r.left)/r.width)), y:Math.max(0,Math.min(1,(cy-r.top)/r.height)) };
 }
-let drawing=false, lastEmit=0;
+let drawing=false, lastEmit=0, curSize=0.02;
 function down(e){
   if(closed) return;
-  e.preventDefault(); drawing=true;
-  const p=logFromEvent(e);
-  cur={ id:clientId+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), clientId, tool, color, size, pts:[p] };
-  // dot
-  drawSeg({tool,color,size,a:p,b:{x:p.x+0.1,y:p.y+0.1}});
+  e.preventDefault();
+  try{ if(e.pointerId!=null) cv.setPointerCapture(e.pointerId); }catch(_){}
+  drawing=true;
+  const w=cv.getBoundingClientRect().width||1;
+  curSize=Math.max(0.003, size/w);   // slider px → fraction of canvas width
+  const p=norm(e);
+  cur={ id:clientId+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), clientId, tool, color, size:curSize, pts:[p] };
+  drawSeg({tool,color,size:curSize,a:p,b:{x:p.x+0.0005,y:p.y+0.0005}});
 }
 function move(e){
   if(!drawing||!cur) return;
   e.preventDefault();
-  const p=logFromEvent(e); const prev=cur.pts[cur.pts.length-1];
+  const p=norm(e); const prev=cur.pts[cur.pts.length-1];
   cur.pts.push(p);
-  drawSeg({tool,color,size,a:prev,b:p});
+  drawSeg({tool,color,size:curSize,a:prev,b:p});
   const now=Date.now();
-  if(socket && now-lastEmit>=40){ lastEmit=now; socket.emit('draw_live',{token, seg:{tool,color,size,a:prev,b:p}}); }
+  if(socket && now-lastEmit>=40){ lastEmit=now; socket.emit('draw_live',{token, seg:{tool,color,size:curSize,a:prev,b:p}}); }
 }
-function up(){
+function up(e){
   if(!drawing||!cur) return;
   drawing=false;
+  try{ if(e&&e.pointerId!=null) cv.releasePointerCapture(e.pointerId); }catch(_){}
   strokes.push(cur);
   if(socket) socket.emit('draw_stroke',{token, stroke:cur});
   cur=null;
+  if(pendingFit){ pendingFit=false; fitCanvas(); }   // apply any resize that arrived mid-stroke
 }
 cv.addEventListener('pointerdown', down);
 cv.addEventListener('pointermove', move);
+cv.addEventListener('pointerup', up);
 window.addEventListener('pointerup', up);
 cv.addEventListener('pointercancel', up);
-// Touch fallback (older browsers)
+// Touch fallback (browsers without Pointer Events)
 cv.addEventListener('touchstart', e=>{ if(!window.PointerEvent) down(e); }, {passive:false});
 cv.addEventListener('touchmove',  e=>{ if(!window.PointerEvent) move(e); }, {passive:false});
-window.addEventListener('touchend', ()=>{ if(!window.PointerEvent) up(); });
+window.addEventListener('touchend', e=>{ if(!window.PointerEvent) up(e); });
 
 // ── Tools / options ─────────────────────────────────────────────────────────────
 const PALETTE=['#111111','#ffffff','#e23b2e','#f5a623','#f8e71c','#2ecc71','#1f8ef1','#9b59b6','#8b572a','#ff6fb5'];
@@ -347,9 +350,9 @@ async function submitDrawing(){
   closed=true;
   showStatus(t('loading'),'',[]);
   try{
-    const off=document.createElement('canvas'); off.width=LOGW; off.height=LOGH;
-    const octx=off.getContext('2d'); octx.fillStyle='#ffffff'; octx.fillRect(0,0,LOGW,LOGH);
-    for(const s of strokes) drawStrokeOn(octx,s,1);
+    const off=document.createElement('canvas'); off.width=cv.width||1280; off.height=cv.height||960;
+    const octx=off.getContext('2d'); octx.fillStyle='#ffffff'; octx.fillRect(0,0,off.width,off.height);
+    for(const s of strokes) drawStrokeOn(octx,s,off.width,off.height);
     const blob=await new Promise(res=>off.toBlob(res,'image/png'));
     const fd=new FormData(); fd.append('media', blob, 'drawing.png');
     const up=await fetch(`/api/games/${gameId}/media/upload`,{method:'POST',body:fd}).then(r=>r.json());

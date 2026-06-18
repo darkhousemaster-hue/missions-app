@@ -1561,7 +1561,7 @@ io.on('connection', socket => {
     if(!s){ socket.emit('draw_closed', {reason:'gone'}); return; }
     socket.join(`draw_${token}`);
     socket.data.drawToken = token;
-    if(role === 'master' || role === 'solo') s.masterId = socket.id;
+    if(role === 'master' || role === 'solo'){ s.masterId = socket.id; s.masterGone = null; }
     socket.emit('draw_init', { strokes: s.strokes });
     socket.to(`draw_${token}`).emit('draw_peer', { count: io.sockets.adapter.rooms.get(`draw_${token}`)?.size || 1 });
   });
@@ -1594,8 +1594,16 @@ io.on('connection', socket => {
     if(!token) return;
     const s = drawSessions.get(token);
     if(s && s.masterId === socket.id){
-      io.to(`draw_${token}`).emit('draw_closed', {reason:'master_left'});
-      drawSessions.delete(token);
+      // Grace period: a mobile master often reconnects within seconds (transport
+      // hiccup, screen lock). Only end the session if they don't come back.
+      s.masterGone = Date.now();
+      setTimeout(() => {
+        const cur = drawSessions.get(token);
+        if(cur && cur.masterId === socket.id && cur.masterGone){
+          io.to(`draw_${token}`).emit('draw_closed', {reason:'master_left'});
+          drawSessions.delete(token);
+        }
+      }, 25000);
     }
   });
 });
