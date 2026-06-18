@@ -18,9 +18,10 @@ There are two game types and the manual covers both:
   at a single location. Your team works through a list of missions
   the GM curated; you upload media for each, the GM accepts or
   rejects, you collect points.
-- **Part 2, Rail Adventure games.** A GPS-driven mode. The map shows the
-  next stop; your team physically walks to it, the app unlocks the
-  task on arrival, and you submit on the spot. Plus optional
+- **Part 2, Rail Adventure games.** A mode with two kinds of task:
+  **Missions** (do them anywhere, no walking) and **Checkpoints**
+  (places on the map you walk to). You alternate between them and the
+  Gamemaster approves each one before you move on. Plus optional
   "specials" you can do any time and a PvP freeze mechanic.
 
 You won't always know in advance which type you're playing — both
@@ -136,41 +137,54 @@ Use it for:
   small "Broadcast" tag so you know they weren't aimed only at
   you.
 
-Type, tap **Send**, and you're done. Tap **Back** in the topbar to
-get back to your missions.
+When the GM writes to you (a direct message or a broadcast), your
+phone plays a short **notification tone** and the chat icon shows an
+orange dot — so you won't miss a message while you're looking at the
+map. Type, tap **Send**, and you're done. Tap **Back** in the topbar
+to get back to your missions.
 
 ::part:2:Playing Rail Adventure games
 
-Rail Adventure is the GPS-driven game type. Instead of running a list of
-photo missions in one place, your team physically walks between
-stops on a map. The next stop is shown; you arrive, the task
-unlocks, you submit, you move on. Specials and a PvP freeze
-mechanic add a layer on top.
+Rail Adventure has two kinds of task:
 
-The screens look similar to MiSSiONS but include a map and a couple
-of Rail Adventure only widgets.
+- **⚡ Missions** — do them **anywhere**, no walking required. These
+  are what you see first.
+- **📍 Checkpoints** — spots on the map. Your team physically **walks
+  there**; the task only unlocks once you've arrived.
+
+You **alternate** between the two: a Mission, then a Checkpoint, then
+a Mission, and so on. And each task has to be **accepted by the
+Gamemaster before you can do the next one** — after you submit, you
+can read what's coming but you can't complete it until the GM gives
+you the green light.
+
+The screens look similar to MiSSiONS but include a map and the
+two-row task layout.
 
 # The Rail Adventure home
 
 ::shot:cr-01-home
 
-The Rail Adventure player home replaces the MiSSiONS mission list with
-something more spatial. Top to bottom:
+The Rail Adventure player home shows your tasks in **two rows**:
 
 - **Topbar** — score on the left, game timer in the middle, chat /
   rules / language on the right. Same idea as MiSSiONS.
-- **Progress bar** — `STOP n / N` and the Rail Adventure mode name.
-- **Mini-map** — your team's position (the orange dot) plus every
-  mission stop. Tap the map to expand it fullscreen.
-- **Mission tiles** in route order. Each tile shows the stop number,
-  the mission name (or `??` if you haven't arrived yet), points on
-  offer, and a status pill.
+- **Mini-map** — your team's position (the orange dot) plus the
+  Checkpoint markers. Tap the map to expand it fullscreen.
+- **⚡ Missions row** — the no-GPS tasks. Tap one and do it on the
+  spot.
+- **📍 Checkpoints row** — the GPS tasks. Whichever row **isn't your
+  turn** is dimmed with a little 🔒 note ("finish a checkpoint /
+  mission first"); you can still tap a tile to read it, you just
+  can't submit yet.
 - **Gold star button** at the bottom — special-mission shortcut,
   covered below.
 
-Tap a tile to open the same mission detail sheet you saw in
-MiSSiONS. The submission flow (take photo / video / upload from
-gallery) is identical.
+Tap a tile to open the same mission detail sheet you saw in MiSSiONS.
+The submission flow (take photo / video / upload from gallery) is
+identical. After you submit, the tile shows **Awaiting review** and
+the rest stays locked until the GM accepts it — that's the alternation
+working as designed, not a bug.
 
 # The special-mission button
 
@@ -185,6 +199,26 @@ funny pose). Tap the star to open the special directly.
 If your route has **two or more** specials, they instead surface as
 gold-glowing tiles at the top of the tile grid and the round button
 disappears. If there are **zero**, the button is hidden.
+
+# Draw missions
+
+Some tasks ask you to **draw** something. Open the mission and tap
+**🎨 Draw** to get a fullscreen drawing pad. The header has:
+
+- **Mission** — shows the task (what to draw).
+- **Options** — pick a pencil, brush or eraser; change the size and
+  colour; undo your last stroke; or clear the canvas.
+- **Submit** — sends the drawing. If the Gamemaster set the mission to
+  need approval it goes to them to accept; otherwise you get the points
+  straight away.
+- **Back** — leaves without submitting.
+
+If the mission is **collaborative**, whoever starts it sees a **QR code**
+(also under the **Invite** button). Teammates scan it to join the **same
+canvas** and draw together in real time — everyone sees each stroke as it
+happens. Only the person who started has the Submit and Back buttons. You
+can turn your phone **sideways** for more room; the canvas re-fits and
+your drawing is kept.
 
 # The fullscreen map
 
@@ -293,7 +327,19 @@ iOS Safari requires you to grant camera permission in Settings →
 Safari → Camera (set to "Ask" or "Allow"). After granting, refresh
 the page.
 
-**A Rail Adventure mission stays locked even though I'm at the spot.**
-Your GPS accuracy might be poor. Step out of the building, into the
-open sky, and wait 5–10 seconds. If it still doesn't unlock, ask the
-GM to manually mark the arrival from their dashboard.
+**A Checkpoint stays locked even though I'm at the spot.**
+First check it's actually your turn — if you just finished a
+Checkpoint, the next thing has to be a **Mission** (the Checkpoints
+row will be dimmed). Also, if you submitted something, you have to
+wait for the GM to **accept** it before anything else unlocks. If it
+genuinely is your turn and nothing's pending, your GPS accuracy might
+be poor: step into the open sky and wait 5–10 seconds, or ask the GM.
+
+**There's no "skip" button.**
+Tasks aren't skippable unless the Gamemaster turned that on for that
+specific mission. If you truly can't do one, message the GM in chat.
+
+**Why can I open the next task but not submit it?**
+That's the alternation rule. You can always **read** ahead, but you
+can only **submit** the task whose turn it is — and only once the GM
+has accepted your previous one.

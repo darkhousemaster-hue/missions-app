@@ -18,10 +18,13 @@ types:
 - **Part 1, MiSSiONS games.** The classic mode: you start a game at
   a physical location, players join, work through a curated list of
   photo/video missions, and you approve their uploads.
-- **Part 2, Rail Adventure games.** A GPS-driven mode where players
-  physically walk to map markers, arrive at each target, and complete
-  the task there. The dashboard looks similar but adds a map, GPS
-  arrival signals, and special missions.
+- **Part 2, Rail Adventure games.** A mode built around two kinds of
+  task: **Missions** (do them anywhere, no GPS) and **Checkpoints**
+  (GPS targets players physically walk to). Players alternate between
+  the two — a Mission, then a Checkpoint, then a Mission… — and each
+  one must be GM-accepted before the next can be attempted. The
+  dashboard looks similar but adds a map, GPS arrival signals, and
+  special missions.
 
 If you only ever run one of the two, you can skip the other part,
 they don't overlap and each game stays in its own mode.
@@ -82,9 +85,13 @@ modal you can show or print for players to join.
 Your command center for a running game. Four areas:
 
 - **Top bar**: game ID, the **start/pause timer**, and the QR / 🎬
-  / cog / language icons on the right. The 🎬 button is greyed out
-  during play and lights up after the game ends, see *Exporting
-  the game's photos and videos* below.
+  / 🔔 / cog / language icons on the right. The 🎬 button is greyed
+  out during play and lights up after the game ends, see *Exporting
+  the game's photos and videos* below. The **🔔 bell** toggles the
+  **submission sound** — a short chime plays every time any team
+  submits something for review (both MiSSiONS and Rail Adventure), so
+  you don't have to keep staring at the screen. Tap it to mute/unmute;
+  the choice is remembered on your device.
 - **Team chips**: one per team that joined, with current score. A
   **🔔** on a chip means there's something pending for that team,
   usually a submission to review.
@@ -160,6 +167,18 @@ If a player accidentally uploaded a selfie or a chat photo instead
 of the mission photo, you'll see it on the mission card too, just
 reject with "wrong upload" and the team can retry.
 
+## Deleting a team
+
+In a team's detail view, next to **❄ Freeze**, there's a **🗑 Delete**
+button. It permanently removes that team and everything tied to it —
+progress, submissions, chat, GPS, rankings entry. Use it for the
+**empty/ghost teams** that sometimes get left behind when a join
+half-fails, or a duplicate someone created by mistake.
+
+It asks for confirmation first because **it can't be undone**. Don't
+use it on a team that's actively playing — there's no recovery and
+they'd have to re-join from scratch.
+
 # Broadcasting to everyone
 
 ::shot:m-08-broadcast
@@ -209,12 +228,28 @@ between sessions.
 
 ::part:2:Running Rail Adventure games
 
-Rail Adventure is the GPS-driven game type. Instead of doing missions at a
-single location, players physically walk between targets on a map,
-arrive within a set radius, then complete the task there. Everything
-you know from MiSSiONS still applies, the dashboard, the team
-chips, the chat, the broadcast, the freeze tool, the lightbox, but
-the game starts differently and there's an extra **map** tab.
+Rail Adventure splits a team's work into two kinds of task:
+
+- **Missions** — done anywhere, no GPS needed. Players see these
+  first.
+- **Checkpoints** — GPS targets. The team physically walks to the
+  spot and completes the task within a set radius.
+
+Players **alternate**: a Mission, then a Checkpoint, then a Mission,
+and so on. Crucially, **each task must be accepted by you before the
+next one can be attempted** — if a team submits a photo for a
+Mission, they can read the next Checkpoint but cannot complete it
+until you've accepted (or rejected) that Mission. Checkpoints stay
+locked until the team has finished a Mission, and vice-versa.
+
+Everything you know from MiSSiONS still applies — the dashboard, the
+team chips, chat, broadcast, the freeze tool, the lightbox — but the
+game starts differently and there's an extra **map** tab.
+
+> "Rail Adventure" is now **on by default** when you create a new
+> mode (it's a toggle in the mode editor, settings-side). A mode with
+> it switched off behaves like a plain ordered list with no
+> Mission/Checkpoint split.
 
 # Starting a Rail Adventure game
 
@@ -247,20 +282,38 @@ map** tab.
 
 ::shot:cr-04-team-detail
 
-Each Rail Adventure mission card looks similar to a MiSSiONS card with a
-few extra bits:
+A Rail Adventure team's detail view is split into **two columns**:
 
-- A **sequence number** on the left (`1`, `2`, `3`…), Rail Adventure
-  missions are ordered, and players unlock them one at a time. A
-  team must arrive at mission 1 before mission 2 is even visible.
-- A **⭐** prefix on **special missions**, these don't follow the
-  sequence; players can do them any time from a separate tray.
-- A **❔ status** when the team hasn't arrived yet, replaced by the
-  actual task and an Accept/Reject UI once they're on site and have
-  submitted media or an answer.
+- **⚡ Missions** — the no-GPS tasks.
+- **📍 Checkpoints** — the GPS targets.
 
-Acceptance, rejection, lightbox, and rotate all work exactly like
-in MiSSiONS, see the m-04 through m-07 shots in Part 1.
+This mirrors what the players see, so you can follow along. Each card
+works like a MiSSiONS card (name, task, points, status pill, and the
+Accept ✓ / Reject ✗ buttons once there's a submission to review).
+
+A few Rail-Adventure-specific things:
+
+- **⭐ Special** missions sit with the Checkpoints column; they're not
+  part of the alternation and can be done any time.
+- A Checkpoint's task stays hidden until the team **physically
+  arrives** within its radius — until then you (and they) only see the
+  description.
+- Because of the **alternation + acceptance rule**, accepting a card
+  is what lets the team move on. If you leave a submission pending,
+  that team is stuck until you act on it — so keep an eye on the 🔔
+  pending badge.
+
+Acceptance, rejection, lightbox, and rotate all work exactly like in
+MiSSiONS — see the m-04 through m-07 shots in Part 1. **A photo or
+video stays viewable after you accept it**: the thumbnail remains on
+the card, tap it to reopen the lightbox.
+
+**🎨 Draw missions** arrive here too. A team's finished drawing shows up
+as an image submission — accept or reject it exactly like a photo. (If a
+Draw mission was set to *not* need approval, it's auto-accepted and you
+won't have to act on it; it still lands in the gallery and collage.)
+Collaborative drawings come in as a single submission from the team even
+though several players drew on it together.
 
 # The map panel
 
@@ -345,7 +398,11 @@ Before walking away:
 
 1. Take a screenshot of the **Rankings** in the right panel, handy
    for the prize ceremony if you don't trust the players to
-   remember.
+   remember. A team that finished **all** its available missions
+   shows a small green **🏁 time-left** figure under its score — how
+   much was left on the clock when they finished. Use it as the
+   tie-breaker when two teams end on the same points (more time left
+   = faster = higher).
 2. Reject or accept any leftover pending submissions, don't leave
    them hanging.
 3. If a team had a bad-faith upload (off-topic, inappropriate), tap
@@ -408,12 +465,23 @@ Each game has its own join URL/QR. If you handed them the wrong
 code, end that game (or just ignore it) and have them re-join the
 right one. There's no migration, they have to start over.
 
-**A Rail Adventure team can't see the next mission.**
-They probably haven't physically arrived within the radius of the
-current target. Check the map panel, their dot should be inside the
-target circle. If it is and the mission still hasn't unlocked, their
-location accuracy may be too poor; have them step into the open and
-wait a few seconds.
+**A Rail Adventure team can't do the next task.**
+Two common causes. (1) **Alternation** — they just finished a Mission,
+so the next thing must be a Checkpoint (or vice-versa); the off-turn
+column is locked on purpose. (2) **Waiting on you** — they submitted a
+photo/video and it's still pending; nothing else unlocks until you
+Accept or Reject it (watch the 🔔 badge). For a *Checkpoint*
+specifically, they also have to be physically inside the target radius
+— check the map panel; if their dot is in the circle and it still
+won't unlock, their GPS accuracy is poor, so have them step into the
+open and wait a few seconds.
+
+**A team is stuck — can't skip a task they can't do.**
+Missions and Checkpoints are **not skippable by default**. Skipping is
+a per-mission option an admin turns on in the editor ("Skippable"). If
+a task is genuinely impossible (closed venue, missing prop), accept a
+best-effort attempt, or note it for the admin to mark skippable next
+time.
 
 **Players say they can't see missions in their language.**
 Each player picks their own language on the join screen. If it's

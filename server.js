@@ -623,6 +623,56 @@ app.post('/api/games/:gameId/media/upload',
   }
 );
 
+// ── Draw sessions (collaborative drawing) ──────────────────────────────────────
+// Ephemeral in-memory sessions for the Draw mission type. The starting device
+// ("master") creates a session and shows a QR; teammates scan it to join a
+// shared canvas. Strokes are relayed over socket.io and retained here so late
+// joiners can replay them. Sessions die on submit/cancel/master-disconnect and
+// in the hourly cron sweep. Solo draws use a single-participant session too, so
+// draw.html has one way to load its mission context.
+const drawSessions = new Map(); // token -> {gameId,teamId,missionId,strokes:[],masterId,createdAt}
+function makeDrawToken(){ return uuidv4().slice(0,8).toUpperCase(); }
+function drawPromptFor(m){
+  if(!m) return {de:'',en:'',fr:'',it:'',es:''};
+  return {
+    de: m.task_de||m.description_de||'', en: m.task_en||m.description_en||'',
+    fr: m.task_fr||m.description_fr||'', it: m.task_it||m.description_it||'',
+    es: m.task_es||m.description_es||'',
+  };
+}
+app.post('/api/games/:gameId/draw/session', (req,res) => {
+  const { teamId, missionId } = req.body;
+  const gameId = req.params.gameId;
+  const crMode = db.getGameCrMode(gameId);
+  if(!crMode) return res.status(400).json({error:'No Rail Adventure mode'});
+  const mission = db.getCrMission(Number(missionId));
+  if(!mission || !mission.use_draw) return res.status(400).json({error:'Not a draw mission'});
+  const token = makeDrawToken();
+  drawSessions.set(token, {
+    gameId, teamId:Number(teamId), missionId:Number(missionId),
+    collaborative: !!mission.draw_collaborative, strokes:[], masterId:null, createdAt:Date.now(),
+  });
+  const publicUrl = db.getSetting('public_url')||`http://localhost:${PORT}`;
+  const url = `${publicUrl}/draw.html?session=${token}`;
+  QRCode.toDataURL(url,{errorCorrectionLevel:'H',width:400,margin:2},(err,qr)=>{
+    res.json({ token, url, qrCode: err?null:qr });
+  });
+});
+app.get('/api/draw/session/:token', (req,res) => {
+  const s = drawSessions.get(req.params.token);
+  if(!s) return res.json({exists:false});
+  const mission = db.getCrMission(s.missionId);
+  const publicUrl = db.getSetting('public_url')||`http://localhost:${PORT}`;
+  const url = `${publicUrl}/draw.html?session=${req.params.token}`;
+  QRCode.toDataURL(url,{errorCorrectionLevel:'H',width:360,margin:2},(err,qr)=>{
+    res.json({
+      exists:true, gameId:s.gameId, teamId:s.teamId, missionId:s.missionId,
+      collaborative: !!s.collaborative, prompt: drawPromptFor(mission),
+      url, qrCode: err?null:qr,
+    });
+  });
+});
+
 // ── Team selfie (snapped at the start of the game) ────────────────────────────
 // One-shot upload — POST overwrites any previous selfie for the team.
 // The GM sees the latest selfie permanently in the dashboard.
@@ -1192,6 +1242,30 @@ function completeCrTeamMission(gameId, teamId, mission, score, opts={}) {
   return {state};
 }
 
+// Accept a CR media submission and award its points. Shared by the GM review
+// "accept" action and by Draw missions whose approval is turned off (which
+// auto-award on submit). Mirrors the special-vs-linear award split.
+function acceptCrSubmissionAndAward(sub, mission) {
+  db.acceptCrSubmission(sub.id);
+  if (mission.is_special) {
+    const score = mission.points || 0;
+    if (score > 0) db.addTeamScore(sub.team_id, score);
+    const prog = db.getCrSpecialProgress(sub.game_id, sub.team_id, mission.id) || {};
+    db.upsertCrSpecialProgress(sub.game_id, sub.team_id, mission.id, {
+      completed_count: (prog.completed_count || 0) + 1,
+    });
+    io.to(`gm_${sub.game_id}`).emit('rankings_update', db.getRankings(sub.game_id));
+    return { score };
+  }
+  const prog = db.getCrMissionProgress(sub.game_id, sub.team_id, mission.id)
+    || db.getCrProgress(sub.game_id, sub.team_id) || {};
+  const score = scoreForCrMission(mission, prog);
+  completeCrTeamMission(sub.game_id, sub.team_id, mission, score, {
+    status: 'completed', mediaPath: sub.media_path, mediaStatus: 'accepted',
+  });
+  return { score };
+}
+
 // Move a team to the next CR mission after a successful completion. Awards
 // points to the team and emits the appropriate sockets to player + GM.
 function advanceCrTeam(gameId, teamId, mission, missionIndex, score) {
@@ -1247,7 +1321,7 @@ app.post('/api/games/:gameId/cr/complete', (req,res) => {
 
   // Branch: media-bearing missions need GM approval. Don't advance yet.
   if(mediaPath) {
-    if (!crMediaMatchesMission(mission, mediaPath)) {
+    if (!mission.use_draw && !crMediaMatchesMission(mission, mediaPath)) {
       return res.status(400).json({error:'Media type does not match mission (photo vs video)'});
     }
     const sub = db.createCrSubmission(gameId, teamId, mission.id, mediaPath, playerKey||null);
@@ -1255,6 +1329,14 @@ app.post('/api/games/:gameId/cr/complete', (req,res) => {
       return res.status(409).json({error:'Teammate submission pending', code:'submission_conflict'});
     }
     const subId = sub.id;
+    // Draw mission with approval off: accept immediately (no GM review) but keep
+    // the drawing as an accepted submission so it still lands in the gallery/collage.
+    if (mission.use_draw && !mission.draw_needs_approval) {
+      const fullSub = db.getCrSubmission(subId);
+      const { score } = acceptCrSubmissionAndAward(fullSub, mission);
+      const stNow = crMissionState(gameId, teamId, missions);
+      return res.json({success:true, autoAwarded:true, score, ...crProgressPayload(gameId, teamId, missions, stNow)});
+    }
     db.upsertCrMissionProgress(gameId, teamId, mission.id, {
       status: 'pending',
       media_path: mediaPath,
@@ -1292,28 +1374,7 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
   const mission = missions[idx];
 
   if(action === 'accept') {
-    db.acceptCrSubmission(sub.id);
-    if(mission.is_special){
-      // Specials don't advance the linear progress — just award points and
-      // bump the completed counter.
-      const score = mission.points || 0;
-      db.addTeamScore(sub.team_id, score);
-      const prog = db.getCrSpecialProgress(sub.game_id, sub.team_id, mission.id) || {};
-      db.upsertCrSpecialProgress(sub.game_id, sub.team_id, mission.id, {
-        completed_count: (prog.completed_count||0) + 1,
-      });
-      io.to(`gm_${sub.game_id}`).emit('rankings_update', db.getRankings(sub.game_id));
-    } else {
-      const prog = db.getCrMissionProgress(sub.game_id, sub.team_id, mission.id)
-        || db.getCrProgress(sub.game_id, sub.team_id)
-        || {};
-      const score = scoreForCrMission(mission, prog);
-      completeCrTeamMission(sub.game_id, sub.team_id, mission, score, {
-        status: 'completed',
-        mediaPath: sub.media_path,
-        mediaStatus: 'accepted',
-      });
-    }
+    acceptCrSubmissionAndAward(sub, mission);
     io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:true});
   } else {
     db.rejectCrSubmission(sub.id, message);
@@ -1493,6 +1554,50 @@ io.on('connection', socket => {
     const game=db.getGame(gameId);
     if(game) socket.emit('timer_state',getTimerState(game));
   });
+
+  // ── Collaborative Draw relay ──
+  socket.on('draw_join', ({token, role}) => {
+    const s = drawSessions.get(token);
+    if(!s){ socket.emit('draw_closed', {reason:'gone'}); return; }
+    socket.join(`draw_${token}`);
+    socket.data.drawToken = token;
+    if(role === 'master' || role === 'solo') s.masterId = socket.id;
+    socket.emit('draw_init', { strokes: s.strokes });
+    socket.to(`draw_${token}`).emit('draw_peer', { count: io.sockets.adapter.rooms.get(`draw_${token}`)?.size || 1 });
+  });
+  socket.on('draw_stroke', ({token, stroke}) => {
+    const s = drawSessions.get(token); if(!s || !stroke) return;
+    if(s.strokes.length < 5000) s.strokes.push(stroke);
+    socket.to(`draw_${token}`).emit('draw_stroke', { stroke });
+  });
+  socket.on('draw_live', ({token, seg}) => {
+    if(!drawSessions.has(token)) return;
+    socket.to(`draw_${token}`).emit('draw_live', { seg });
+  });
+  socket.on('draw_remove', ({token, id}) => {
+    const s = drawSessions.get(token); if(!s) return;
+    s.strokes = s.strokes.filter(st => st.id !== id);
+    socket.to(`draw_${token}`).emit('draw_remove', { id });
+  });
+  socket.on('draw_clear', ({token}) => {
+    const s = drawSessions.get(token); if(!s) return;
+    s.strokes = [];
+    io.to(`draw_${token}`).emit('draw_clear', {});
+  });
+  socket.on('draw_close', ({token, reason}) => {
+    if(!drawSessions.has(token)) return;
+    io.to(`draw_${token}`).emit('draw_closed', { reason: reason||'closed' });
+    drawSessions.delete(token);
+  });
+  socket.on('disconnect', () => {
+    const token = socket.data && socket.data.drawToken;
+    if(!token) return;
+    const s = drawSessions.get(token);
+    if(s && s.masterId === socket.id){
+      io.to(`draw_${token}`).emit('draw_closed', {reason:'master_left'});
+      drawSessions.delete(token);
+    }
+  });
 });
 
 // Timer broadcast
@@ -1530,12 +1635,16 @@ cron.schedule('0 * * * *', () => {
     if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
     db.deleteGame(game.id);
   });
+  // Sweep abandoned draw sessions (master never closed) older than 6h.
+  const drawCutoff = Date.now()-6*60*60*1000;
+  for(const [token,s] of drawSessions){ if(s.createdAt < drawCutoff) drawSessions.delete(token); }
 });
 
 app.get('/gm*',        (req,res)=>res.sendFile(path.join(__dirname,'public','gm.html')));
 app.get('/join*',      (req,res)=>res.sendFile(path.join(__dirname,'public','join.html')));
 app.get('/play*',      (req,res)=>res.sendFile(path.join(__dirname,'public','play.html')));
 app.get('/cityrush*',  (req,res)=>res.sendFile(path.join(__dirname,'public','cityrush.html')));
+app.get('/draw*',      (req,res)=>res.sendFile(path.join(__dirname,'public','draw.html')));
 
 server.listen(PORT,'0.0.0.0',()=>{
   console.log(`\n🎮  MiSSiONS running on port ${PORT}`);

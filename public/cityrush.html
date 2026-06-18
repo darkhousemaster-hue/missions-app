@@ -724,6 +724,7 @@ const T = {
         selfie_help:'Bevor das Spiel startet: Bitte ein Gruppenfoto eures Teams machen. Der Spielleiter sieht dieses Foto, um euch zu erkennen.',
         selfie_shoot:'Foto machen', selfie_retake:'Erneut',
         selfie_upload:'Hochladen & weiter',
+        draw_start:'Zeichnen', draw_error:'Konnte nicht starten — bitte erneut versuchen',
         answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
         puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!', puzzle_start:'Puzzle starten', puzzle_title:'Puzzle', puzzle_peek:'Vorschau', puzzle_view:'Bild ansehen', puzzle_close_hint:'Tippe ✕ zum Schließen', puzzle_order_hint:'Bring die Bilder in die richtige Reihenfolge.',
         broadcast:'Rundruf',
@@ -772,6 +773,7 @@ const T = {
         selfie_help:'Before the game starts: please take a group photo of your team. The Gamemaster sees this photo to identify you.',
         selfie_shoot:'Take photo', selfie_retake:'Retake',
         selfie_upload:'Upload & continue',
+        draw_start:'Draw', draw_error:'Couldn\'t start — please try again',
         answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
         puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!', puzzle_start:'Start puzzle', puzzle_title:'Puzzle', puzzle_peek:'Peek', puzzle_view:'View image', puzzle_close_hint:'Tap ✕ to close', puzzle_order_hint:'Put the images in the right order.',
         broadcast:'Broadcast',
@@ -820,6 +822,7 @@ const T = {
         selfie_help:'Avant le début : prenez une photo de groupe de votre équipe. Le Gamemaster s\'en sert pour vous reconnaître.',
         selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
         selfie_upload:'Envoyer & continuer',
+        draw_start:'Dessiner', draw_error:'Impossible de démarrer — réessayez',
         answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
         puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !', puzzle_start:'Démarrer le puzzle', puzzle_title:'Puzzle', puzzle_peek:'Aperçu', puzzle_view:"Voir l'image", puzzle_close_hint:'Touche ✕ pour fermer', puzzle_order_hint:'Mets les images dans le bon ordre.',
         broadcast:'Annonce',
@@ -868,6 +871,7 @@ const T = {
         selfie_help:'Prima dell\'inizio: scattate una foto di gruppo della vostra squadra. Il Gamemaster la usa per riconoscervi.',
         selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
         selfie_upload:'Carica & continua',
+        draw_start:'Disegna', draw_error:'Avvio non riuscito — riprova',
         answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
         puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!', puzzle_start:'Avvia puzzle', puzzle_title:'Puzzle', puzzle_peek:'Anteprima', puzzle_view:'Vedi immagine', puzzle_close_hint:'Tocca ✕ per chiudere', puzzle_order_hint:'Metti le immagini nel giusto ordine.',
         broadcast:'Annuncio',
@@ -916,6 +920,7 @@ const T = {
         selfie_help:'Antes de empezar: haced una foto de grupo de vuestro equipo. El Gamemaster la usa para reconoceros.',
         selfie_shoot:'Hacer foto', selfie_retake:'Repetir',
         selfie_upload:'Subir y continuar',
+        draw_start:'Dibujar', draw_error:'No se pudo iniciar — inténtalo de nuevo',
         answer_required:'Por favor, escribe tu respuesta.', answer_wrong:'Incorrecto — inténtalo de nuevo.',
         puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!', puzzle_start:'Iniciar puzle', puzzle_title:'Puzle', puzzle_peek:'Vista previa', puzzle_view:'Ver imagen', puzzle_close_hint:'Toca ✕ para cerrar', puzzle_order_hint:'Ordena las imágenes correctamente.',
         broadcast:'Anuncio',
@@ -969,6 +974,9 @@ function normalizeCrMission(m){
     puzzle_grid: Number(m.puzzle_grid) || 3,
     puzzle_type: m.puzzle_type === 'order' ? 'order' : 'jigsaw',
     puzzle_order_images: _parseOrderImages(m.puzzle_order_images),
+    use_draw: toBool(m.use_draw),
+    draw_needs_approval: toBool(m.draw_needs_approval),
+    draw_collaborative: toBool(m.draw_collaborative),
   };
 }
 // Parse stored puzzle_order_images (JSON string or array) into a clean array.
@@ -1743,6 +1751,7 @@ function openSpecialChooser(){
     const name = m[`name_${lang}`] || m.name_de || 'Special';
     const icons = [
       m.use_puzzle?'🧩':'',
+      m.use_draw?'🎨':'',
       m.media_required==='photo'?'📷':m.media_required==='video'?'🎬':'',
       m.has_answer?'❓':'',
     ].filter(Boolean).join(' ');
@@ -1908,6 +1917,11 @@ function renderActionsForSpecial(m){
     const done = specialIsDone(m);
     renderPuzzle(m, actEl, () => completeSpecialMission(m, null), done);
     if(!done) addHintButton(actEl, m, 'answer');
+    return;
+  }
+  if(m.use_draw){
+    addActionBtn(actEl, '🎨 '+(t('draw_start')||'Zeichnen'), 'btn-primary', ()=>startDrawMission(m));
+    addHintButton(actEl, m, 'answer');
     return;
   }
   if(m.has_answer){
@@ -2735,6 +2749,12 @@ function renderActions(m){
     addHintButton(actEl, m);
     return;
   }
+  // Draw flow — opens the dedicated drawing page (solo or collaborative).
+  if(m.use_draw){
+    addActionBtn(actEl, '🎨 '+(t('draw_start')||'Zeichnen'), 'btn-primary', ()=>startDrawMission(m));
+    addHintButton(actEl, m);
+    return;
+  }
   // Answer/question flow.
   if(m.has_answer){
     const wrap = document.createElement('div');
@@ -2778,6 +2798,22 @@ function renderActions(m){
   // Plain "complete" action (no media, no answer).
   addActionBtn(actEl, t('complete'), 'btn-primary', ()=>completeMission());
   addHintButton(actEl, m);
+}
+
+// Draw mission launcher. Always creates a draw session (so draw.html has one way
+// to load its mission context) and navigates there: master role for a
+// collaborative draw (shows the invite QR + realtime), solo otherwise. Returning
+// from draw.html (history.back / its own redirect) restores the game view.
+async function startDrawMission(m){
+  try{
+    const r = await fetch(`/api/games/${gameId}/draw/session`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ teamId, missionId: m.id }),
+    }).then(r=>r.json());
+    if(!r || !r.token){ toast(t('draw_error')||'Konnte nicht starten','error'); return; }
+    const role = m.draw_collaborative ? 'master' : 'solo';
+    location.href = `draw.html?session=${encodeURIComponent(r.token)}&role=${role}&lang=${lang}`;
+  }catch(e){ toast(t('draw_error')||'Konnte nicht starten','error'); }
 }
 
 // Render previously-revealed hints inline so they persist between renders.

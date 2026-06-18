@@ -11,8 +11,9 @@ This manual covers every screen behind the **Settings** door of the
 MiSSiONS app. It's organised in three parts:
 
 - **Part 1, Administration.** The bits that aren't tied to a game type:
-  the password gate, the public URL, security, updates, and the QR
-  template you print for player access.
+  the password gate, the public URL, security, updates, the QR
+  template you print for player access, and the collage + profanity
+  options.
 - **Part 2, MiSSiONS configuration.** Locations, modes, missions, and
   the rules players see in-game. This is the bulk of day-to-day work.
 - **Part 3, Rail Adventure configuration.** A separate game type with its
@@ -99,6 +100,24 @@ drag the orange QR marker to where the code should land. Pick a paper
 size first, A4 by default. **Save position** persists the marker, and
 **Delete template** clears the upload. When a GM creates a new game,
 the QR is rendered onto this template at the position you set.
+
+# Collage
+
+The end-of-game **photo collage** (the MP4 slideshow the GM renders
+after a game) has its own settings tab. Here you tune the **timing** —
+how long each photo holds on screen and the crossfade between photos —
+and the title card. The defaults are sensible; change them only if the
+finished slideshow feels too fast or too slow. These values apply to
+every collage rendered from then on.
+
+# Profanity filter
+
+Team names are checked against a built-in multi-language bad-word list
+when players join, so groups can't enter slurs or obscenities. This
+tab has an **enable toggle** (on by default) and a **custom words**
+box where you can add your own banned terms (one per line), merged
+with the built-in list. Turn the filter off only for a closed, trusted
+group.
 
 ::part:2:MiSSiONS configuration
 
@@ -199,13 +218,16 @@ when done, unsaved edits are highlighted.
 
 ::part:3:Rail Adventure configuration
 
-Rail Adventure is a separate game type. Players physically walk to map
-markers, arrive at each target, and complete a task there. The
-Rail Adventure settings panel mirrors the MiSSiONS layout but with extra
-fields per mission for coordinates, hint sequences, and special
-missions. Modes and missions configured here are **only** offered
-when the GM starts a Rail Adventure game, they don't appear in MiSSiONS
-games and vice versa.
+Rail Adventure is a separate game type. A mode here can run in the
+**Rail Adventure** format (the default): the team's tasks are split
+into **Missions** (no GPS, done anywhere) and **Checkpoints** (GPS
+targets they walk to), and players alternate between the two with each
+task GM-accepted before the next. The settings panel mirrors the
+MiSSiONS layout but adds per-mission fields for coordinates, hint
+sequences, the Mission/Checkpoint placement, and special missions.
+Modes and missions configured here are **only** offered when the GM
+starts a Rail Adventure game, they don't appear in MiSSiONS games and
+vice versa.
 
 # Rail Adventure modes
 
@@ -222,22 +244,41 @@ A Rail Adventure mode carries its own:
 
 - **Name**: what the GM picks from the dropdown when starting a
   game.
+- **⚡ Rail Adventure** toggle: **on by default**. On = the
+  Mission/Checkpoint alternation format described above. Off = a plain
+  ordered list with no split (legacy behaviour). Leave it on unless
+  you specifically want the old linear style.
 - **Ruleset**: the same ruleset list as MiSSiONS, but the rules
   apply to this mode's games.
 - **Allowed media**: photo, video, or both. Affects which media-type
   missions are allowed in this mode.
+- **Allowed languages**: which of the five languages players may use
+  in this mode. Leave **all** ticked unless the content is only
+  written in some — a single language would strand players in it with
+  no switcher, so the player app treats "fewer than two" as "all".
 - **Default duration (minutes)**: the timer the game starts with.
 
 # Rail Adventure missions
 
 ::shot:cr-03-mission-add
 
-A Rail Adventure mission has every field a MiSSiONS mission has, plus the
-location-aware extras:
+A Rail Adventure mission has every field a MiSSiONS mission has, plus a
+**placement** choice and the location-aware extras.
 
-- **GPS coordinates + radius**: where the target is, and how close
-  (metres) players must get before the task unlocks. Use a small
-  radius (15–25 m) in dense city blocks; bigger (40–60 m) in open
+**Placement** (the segmented control in the editor) decides what kind
+of task this is — when the mode has Rail Adventure on you get three
+options:
+
+- **⚡ Mission** — no GPS. Players can do it anywhere; these are the
+  non-walking half of the alternation.
+- **📍 Checkpoint** — a GPS target (this is the "in the route" option).
+  The coordinate/radius/map fields below apply to it.
+- **⭐ Special** — outside the alternation, playable any time (see
+  below).
+
+- **GPS coordinates + radius** (Checkpoints): where the target is, and
+  how close (metres) players must get before the task unlocks. Use a
+  small radius (15–25 m) in dense city blocks; bigger (40–60 m) in open
   parks.
 - **Show on map**: whether the target marker is visible to players.
   Turn off for "find your way using only the hints" missions.
@@ -250,6 +291,10 @@ location-aware extras:
 - **Timed**: when a team taps "Start", a countdown begins.
   Penalties kick in when it's exceeded; configure the penalty
   interval and points right below.
+- **Skippable** (Extras): **off by default**. Off = players have no
+  skip button and must complete the task. Turn it on only for tasks
+  you're happy to let teams bypass for zero points (e.g. an optional
+  detour). This applies per mission.
 
 ## Answer-mode missions
 
@@ -265,8 +310,8 @@ mode per mission.
 
 ::shot:cr-05-mission-special
 
-Toggle **Special mission** to lift the mission out of the linear
-sequence. Special missions:
+Choosing the **⭐ Special** placement lifts the mission out of the
+Mission/Checkpoint alternation. Special missions:
 
 - Appear in the player's ⭐ tray, playable any time, in any order.
 - Skip the GPS-arrival step entirely, even if you set coordinates.
@@ -276,6 +321,29 @@ sequence. Special missions:
 
 Save when you're done. Players who already started a game won't see
 new missions added mid-game, push them out before launch.
+
+## Draw missions
+
+Pick the **🎨 Draw** mission type to have players *draw* the task on
+their phone instead of photographing or answering it. Write what they
+should draw in the **Task** tab — that text is shown on the drawing page
+when a player taps **Mission**.
+
+Two switches control how it works:
+
+- **Needs GM approval** — *on by default*. The finished drawing is sent
+  to your normal review queue (it behaves like a photo: accept to award
+  the points and add it to the gallery and final collage; reject to let
+  the team draw again). Turn it **off** to award the points the instant a
+  team submits — the drawing is still saved to the gallery.
+- **Collaborative** — *off by default*. Off = one person draws on the
+  team's phone. On = the starting device shows a **QR code**; teammates
+  scan it to join a shared, fullscreen canvas and everyone draws together
+  in real time. Only the person who started (the "master") gets the
+  **Submit** and **Back** buttons.
+
+A Draw mission can be a Mission, a Checkpoint, or a Special — the
+placement rules above still apply.
 
 ---
 

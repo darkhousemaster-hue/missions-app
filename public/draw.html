@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Draw</title>
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  :root{ --text-dim:var(--text); --text-muted:var(--text); }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:#0f0e0d; color:var(--text,#f4f2ee);
+    font-family:var(--body, system-ui, sans-serif); -webkit-user-select:none; user-select:none; touch-action:none; }
+  #app{ display:flex; flex-direction:column; height:100%; height:100dvh; }
+  /* Header — Back / Mission / Invite / Options / Submit (role-driven) */
+  #hdr{ display:flex; align-items:center; gap:.4rem; padding:.5rem .6rem; background:#171615;
+    border-bottom:1px solid var(--hairline,#2a2724); flex-wrap:nowrap; overflow-x:auto; }
+  #hdr .sp{ flex:1; }
+  .hbtn{ display:inline-flex; align-items:center; gap:.35rem; white-space:nowrap; padding:.5rem .7rem;
+    border-radius:999px; border:1px solid var(--hairline,#2a2724); background:var(--surface,#1f1d1b);
+    color:var(--text,#f4f2ee); font:600 13px/1 var(--body,sans-serif); cursor:pointer; }
+  .hbtn:active{ transform:translateY(1px); }
+  .hbtn.primary{ background:var(--orange,#e85f1e); border-color:var(--orange,#e85f1e); color:#fff; }
+  /* Stage + canvas */
+  #stage{ flex:1; position:relative; display:flex; align-items:center; justify-content:center;
+    background:#0f0e0d; min-height:0; padding:8px; }
+  #cv{ background:#fff; border-radius:6px; box-shadow:0 12px 40px -12px rgba(0,0,0,.7); touch-action:none; }
+  /* Overlays */
+  .ov{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:50;
+    background:rgba(10,9,8,.78); padding:1rem; }
+  .ov.show{ display:flex; }
+  .sheet{ width:100%; max-width:440px; max-height:86vh; overflow:auto; background:var(--surface,#1f1d1b);
+    border:1px solid var(--hairline,#2a2724); border-radius:16px; padding:1rem 1.05rem; }
+  .sheet h3{ margin:.1rem 0 .8rem; font:700 16px/1.2 var(--body,sans-serif); }
+  .lbl{ font:700 10px/1 var(--body,sans-serif); letter-spacing:.16em; text-transform:uppercase;
+    color:var(--text-muted,#9b9690); margin:.9rem 0 .45rem; }
+  .toolrow{ display:flex; gap:.5rem; flex-wrap:wrap; }
+  .tool{ flex:1; min-width:90px; display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+    padding:.7rem .5rem; border-radius:12px; border:1px solid var(--hairline,#2a2724);
+    background:#000; color:var(--text); font:600 13px/1 var(--body,sans-serif); cursor:pointer; }
+  .tool.on{ border-color:var(--orange,#e85f1e); box-shadow:inset 0 0 0 1px var(--orange,#e85f1e); }
+  .sw{ width:34px; height:34px; border-radius:50%; border:2px solid rgba(255,255,255,.25); cursor:pointer; }
+  .sw.on{ border-color:#fff; transform:scale(1.12); }
+  .swwrap{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+  input[type=range]{ width:100%; accent-color:var(--orange,#e85f1e); }
+  .actrow{ display:flex; gap:.5rem; margin-top:1rem; }
+  .abtn{ flex:1; padding:.7rem; border-radius:12px; border:1px solid var(--hairline,#2a2724);
+    background:#000; color:var(--text); font:700 13px/1 var(--body,sans-serif); cursor:pointer; }
+  .abtn.warn{ color:#ff8a7a; border-color:#5a2a24; }
+  .abtn.go{ background:var(--orange,#e85f1e); border-color:var(--orange,#e85f1e); color:#fff; }
+  .card{ width:100%; max-width:420px; background:var(--surface,#1f1d1b); border:1px solid var(--hairline,#2a2724);
+    border-radius:16px; padding:1.3rem; text-align:center; }
+  .card h2{ margin:.2rem 0 .6rem; font:800 20px/1.2 var(--body,sans-serif); }
+  .card p{ color:var(--text-muted,#9b9690); line-height:1.5; margin:.3rem 0; }
+  .card img{ width:240px; max-width:72vw; height:auto; border-radius:10px; background:#fff; padding:8px; margin:.6rem 0; }
+  .code{ font:800 22px/1 var(--mono,monospace); letter-spacing:.22em; color:var(--orange,#e85f1e); margin:.3rem 0 .2rem; }
+  .size-prev{ height:40px; display:flex; align-items:center; justify-content:center; }
+  .size-dot{ background:var(--text,#f4f2ee); border-radius:50%; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr"></div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+</div>
+
+<!-- Options sheet -->
+<div class="ov" id="ov-opts">
+  <div class="sheet">
+    <h3 id="opt-title">Optionen</h3>
+    <div class="lbl" id="lbl-tool">Werkzeug</div>
+    <div class="toolrow">
+      <button class="tool" id="tool-pencil" onclick="setTool('pencil')">✏️ <span id="t-pencil">Stift</span></button>
+      <button class="tool" id="tool-brush" onclick="setTool('brush')">🖌️ <span id="t-brush">Pinsel</span></button>
+      <button class="tool" id="tool-eraser" onclick="setTool('eraser')">🧽 <span id="t-eraser">Radierer</span></button>
+    </div>
+    <div class="lbl" id="lbl-size">Größe</div>
+    <div class="size-prev"><div class="size-dot" id="size-dot"></div></div>
+    <input type="range" id="size-range" min="2" max="48" value="8" oninput="setSize(this.value)">
+    <div class="lbl" id="lbl-color">Farbe</div>
+    <div class="swwrap" id="sw-list"></div>
+    <div style="margin-top:.6rem;display:flex;align-items:center;gap:.5rem;">
+      <input type="color" id="color-custom" value="#111111" onchange="setColor(this.value)" style="width:42px;height:34px;background:none;border:none;cursor:pointer;">
+      <span style="color:var(--text-muted,#9b9690);font-size:.85rem;" id="t-custom">Eigene Farbe</span>
+    </div>
+    <div class="actrow">
+      <button class="abtn" id="btn-undo" onclick="undoMine()">↩︎ <span id="t-undo">Rückgängig</span></button>
+      <button class="abtn warn" id="btn-clear" onclick="clearAll()">🗑 <span id="t-clear">Alles löschen</span></button>
+    </div>
+    <div class="actrow">
+      <button class="abtn go" onclick="closeOpts()" id="t-done">Fertig</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mission/task popup -->
+<div class="ov" id="ov-task">
+  <div class="card">
+    <h2 id="task-title">🎯 Aufgabe</h2>
+    <p id="task-body" style="color:var(--text);"></p>
+    <div class="actrow"><button class="abtn go" onclick="hide('ov-task')" id="t-close">Schließen</button></div>
+  </div>
+</div>
+
+<!-- Invite QR (master, collaborative) -->
+<div class="ov" id="ov-invite">
+  <div class="card">
+    <h2 id="inv-title">👥 Team einladen</h2>
+    <p id="inv-help">Lass deine Teammitglieder diesen Code scannen, um gemeinsam zu zeichnen.</p>
+    <img id="inv-qr" alt="QR">
+    <div class="code" id="inv-code"></div>
+    <div class="actrow"><button class="abtn go" onclick="hide('ov-invite')" id="t-start">Zeichnen starten</button></div>
+  </div>
+</div>
+
+<!-- Status (loading / submitted / ended) -->
+<div class="ov" id="ov-status">
+  <div class="card">
+    <h2 id="st-title">…</h2>
+    <p id="st-body"></p>
+    <div class="actrow" id="st-actions"></div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const DICT = {
+  de:{back:'Zurück',task:'Aufgabe',options:'Optionen',submit:'Abgeben',invite:'Einladen',
+    opt_title:'Optionen',tool:'Werkzeug',pencil:'Stift',brush:'Pinsel',eraser:'Radierer',size:'Größe',
+    color:'Farbe',custom:'Eigene Farbe',undo:'Rückgängig',clear:'Alles löschen',done:'Fertig',close:'Schließen',
+    task_title:'🎯 Aufgabe',no_task:'Zeichne, was der Spielleiter vorgegeben hat.',
+    inv_title:'👥 Team einladen',inv_help:'Lass deine Teammitglieder diesen Code scannen, um gemeinsam zu zeichnen.',start:'Zeichnen starten',
+    loading:'Lädt…',leave_confirm:'Zeichnung verlassen? Nicht abgegebene Zeichnungen gehen verloren.',
+    sent_title:'✓ Abgegeben!',sent_pending:'Deine Zeichnung wird vom Spielleiter geprüft.',sent_awarded:'Punkte gutgeschrieben!',
+    ended_title:'Sitzung beendet',ended_msg:'Die Zeichnung wurde abgegeben oder beendet. Du kannst dieses Fenster schließen.',
+    gone_title:'Sitzung nicht gefunden',gone_msg:'Diese Zeichensitzung ist abgelaufen.',back_game:'Zurück zum Spiel',err:'Fehler — bitte erneut versuchen'},
+  en:{back:'Back',task:'Task',options:'Options',submit:'Submit',invite:'Invite',
+    opt_title:'Options',tool:'Tool',pencil:'Pencil',brush:'Brush',eraser:'Eraser',size:'Size',
+    color:'Colour',custom:'Custom colour',undo:'Undo',clear:'Clear all',done:'Done',close:'Close',
+    task_title:'🎯 Task',no_task:'Draw what the Gamemaster set.',
+    inv_title:'👥 Invite team',inv_help:'Have your teammates scan this code to draw together.',start:'Start drawing',
+    loading:'Loading…',leave_confirm:'Leave the drawing? Unsubmitted drawings are lost.',
+    sent_title:'✓ Submitted!',sent_pending:'Your drawing is being reviewed by the Gamemaster.',sent_awarded:'Points awarded!',
+    ended_title:'Session ended',ended_msg:'The drawing was submitted or ended. You can close this window.',
+    gone_title:'Session not found',gone_msg:'This drawing session has expired.',back_game:'Back to game',err:'Error — please try again'},
+  fr:{back:'Retour',task:'Tâche',options:'Options',submit:'Envoyer',invite:'Inviter',
+    opt_title:'Options',tool:'Outil',pencil:'Crayon',brush:'Pinceau',eraser:'Gomme',size:'Taille',
+    color:'Couleur',custom:'Couleur perso',undo:'Annuler',clear:'Tout effacer',done:'Terminé',close:'Fermer',
+    task_title:'🎯 Tâche',no_task:'Dessinez ce que le Gamemaster a demandé.',
+    inv_title:'👥 Inviter l\'équipe',inv_help:'Faites scanner ce code à vos coéquipiers pour dessiner ensemble.',start:'Commencer à dessiner',
+    loading:'Chargement…',leave_confirm:'Quitter le dessin ? Les dessins non envoyés seront perdus.',
+    sent_title:'✓ Envoyé !',sent_pending:'Votre dessin est en cours de validation par le Gamemaster.',sent_awarded:'Points attribués !',
+    ended_title:'Session terminée',ended_msg:'Le dessin a été envoyé ou terminé. Vous pouvez fermer cette fenêtre.',
+    gone_title:'Session introuvable',gone_msg:'Cette session de dessin a expiré.',back_game:'Retour au jeu',err:'Erreur — réessayez'},
+  it:{back:'Indietro',task:'Compito',options:'Opzioni',submit:'Invia',invite:'Invita',
+    opt_title:'Opzioni',tool:'Strumento',pencil:'Matita',brush:'Pennello',eraser:'Gomma',size:'Dimensione',
+    color:'Colore',custom:'Colore personalizzato',undo:'Annulla',clear:'Cancella tutto',done:'Fatto',close:'Chiudi',
+    task_title:'🎯 Compito',no_task:'Disegna ciò che ha indicato il Gamemaster.',
+    inv_title:'👥 Invita la squadra',inv_help:'Fai scansionare questo codice ai compagni per disegnare insieme.',start:'Inizia a disegnare',
+    loading:'Caricamento…',leave_confirm:'Uscire dal disegno? I disegni non inviati andranno persi.',
+    sent_title:'✓ Inviato!',sent_pending:'Il tuo disegno è in revisione dal Gamemaster.',sent_awarded:'Punti assegnati!',
+    ended_title:'Sessione terminata',ended_msg:'Il disegno è stato inviato o terminato. Puoi chiudere questa finestra.',
+    gone_title:'Sessione non trovata',gone_msg:'Questa sessione di disegno è scaduta.',back_game:'Torna al gioco',err:'Errore — riprova'},
+  es:{back:'Atrás',task:'Tarea',options:'Opciones',submit:'Enviar',invite:'Invitar',
+    opt_title:'Opciones',tool:'Herramienta',pencil:'Lápiz',brush:'Pincel',eraser:'Goma',size:'Tamaño',
+    color:'Color',custom:'Color propio',undo:'Deshacer',clear:'Borrar todo',done:'Listo',close:'Cerrar',
+    task_title:'🎯 Tarea',no_task:'Dibuja lo que indicó el Gamemaster.',
+    inv_title:'👥 Invitar al equipo',inv_help:'Pide a tus compañeros que escaneen este código para dibujar juntos.',start:'Empezar a dibujar',
+    loading:'Cargando…',leave_confirm:'¿Salir del dibujo? Los dibujos no enviados se perderán.',
+    sent_title:'✓ ¡Enviado!',sent_pending:'El Gamemaster está revisando tu dibujo.',sent_awarded:'¡Puntos otorgados!',
+    ended_title:'Sesión finalizada',ended_msg:'El dibujo se envió o finalizó. Puedes cerrar esta ventana.',
+    gone_title:'Sesión no encontrada',gone_msg:'Esta sesión de dibujo ha caducado.',back_game:'Volver al juego',err:'Error — inténtalo de nuevo'},
+};
+const qs = new URLSearchParams(location.search);
+const token = qs.get('session') || '';
+let role = qs.get('role') || 'member';            // solo | master | member
+let lang = (qs.get('lang')||'de').toLowerCase(); if(!DICT[lang]) lang='de';
+const t = k => (DICT[lang] && DICT[lang][k]) || DICT.en[k] || k;
+document.documentElement.lang = lang;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const LOGW=1600, LOGH=1200, ASPECT=LOGW/LOGH;
+const clientId = Math.random().toString(36).slice(2,10);
+let gameId=null, teamId=null, missionId=null, collaborative=false, prompt5=null;
+let socket=null, joined=false, closed=false;
+let strokes=[];           // {id,clientId,tool,color,size,pts:[{x,y}]}
+let cur=null;             // current in-progress stroke
+let tool='pencil', color='#111111', size=8;
+const canSubmit = (role==='solo' || role==='master');
+const cv = document.getElementById('cv');
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+showStatus(t('loading'), '', []);
+(async function boot(){
+  if(!token){ return showGone(); }
+  let data=null;
+  try{ data = await fetch('/api/draw/session/'+encodeURIComponent(token)).then(r=>r.json()); }catch(e){}
+  if(!data || !data.exists){ return showGone(); }
+  gameId=data.gameId; teamId=data.teamId; missionId=data.missionId;
+  collaborative=!!data.collaborative; prompt5=data.prompt||{};
+  hide('ov-status');
+  buildHeader();
+  buildSwatches();
+  setTool('pencil'); setColor('#111111'); setSize(8);
+  applyText();
+  fitCanvas();
+  // Invite overlay first for a collaborative master.
+  if(role==='master' && collaborative){ showInvite(data.qrCode, token); }
+  connect();
+})();
+
+function connect(){
+  try{ socket = io(); }catch(e){ return; }
+  socket.on('connect', ()=>{ socket.emit('draw_join', {token, role}); joined=true; });
+  socket.on('draw_init', ({strokes:init})=>{ if(Array.isArray(init)){ strokes = init.slice(); redraw(); } });
+  socket.on('draw_stroke', ({stroke})=>{ if(stroke){ strokes.push(stroke); drawStrokeIncremental(stroke); } });
+  socket.on('draw_live', ({seg})=>{ if(seg) drawSeg(seg); });
+  socket.on('draw_remove', ({id})=>{ strokes = strokes.filter(s=>s.id!==id); redraw(); });
+  socket.on('draw_clear', ()=>{ strokes=[]; cur=null; redraw(); });
+  socket.on('draw_closed', ()=>{ if(closed) return; closed=true; if(canSubmit) return; showEnded(); });
+}
+
+// ── Header (role-driven) ───────────────────────────────────────────────────────
+function buildHeader(){
+  const h=document.getElementById('hdr'); h.innerHTML='';
+  const mk=(label,cls,fn)=>{ const b=document.createElement('button'); b.className='hbtn'+(cls?' '+cls:''); b.innerHTML=label; b.onclick=fn; return b; };
+  if(canSubmit) h.appendChild(mk('← <span>'+t('back')+'</span>','',goBack));
+  h.appendChild(mk('🎯 <span>'+t('task')+'</span>','',()=>show('ov-task')));
+  if(role==='master' && collaborative) h.appendChild(mk('👥 <span>'+t('invite')+'</span>','',()=>show('ov-invite')));
+  const sp=document.createElement('div'); sp.className='sp'; h.appendChild(sp);
+  h.appendChild(mk('⚙️ <span>'+t('options')+'</span>','',openOpts));
+  if(canSubmit) h.appendChild(mk('✓ <span>'+t('submit')+'</span>','primary',submitDrawing));
+}
+
+// ── Canvas sizing (handles landscape via resize/orientationchange) ─────────────
+function fitCanvas(){
+  const stage=document.getElementById('stage');
+  const availW=stage.clientWidth-16, availH=stage.clientHeight-16;
+  let w=availW, hgt=w/ASPECT;
+  if(hgt>availH){ hgt=availH; w=hgt*ASPECT; }
+  const dpr=Math.min(window.devicePixelRatio||1, 2);
+  cv.style.width=Math.round(w)+'px'; cv.style.height=Math.round(hgt)+'px';
+  cv.width=Math.round(w*dpr); cv.height=Math.round(hgt*dpr);
+  redraw();
+}
+let _rt=null;
+window.addEventListener('resize', ()=>{ clearTimeout(_rt); _rt=setTimeout(fitCanvas,120); });
+window.addEventListener('orientationchange', ()=>{ setTimeout(fitCanvas,250); });
+
+// ── Rendering ──────────────────────────────────────────────────────────────────
+function factor(){ return cv.width/LOGW; }
+function styleFor(ctx,s,f){
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.globalAlpha = s.tool==='brush'?0.82:1;
+  ctx.strokeStyle = s.tool==='eraser' ? '#ffffff' : (s.color||'#111');
+  ctx.lineWidth = Math.max(0.5,(s.size||8)) * f * (s.tool==='brush'?1.7:1);
+}
+function drawStrokeOn(ctx,s,f){
+  if(!s||!s.pts||!s.pts.length) return;
+  styleFor(ctx,s,f); ctx.beginPath();
+  ctx.moveTo(s.pts[0].x*f, s.pts[0].y*f);
+  if(s.pts.length===1){ ctx.lineTo(s.pts[0].x*f+0.1, s.pts[0].y*f+0.1); }
+  else for(let i=1;i<s.pts.length;i++) ctx.lineTo(s.pts[i].x*f, s.pts[i].y*f);
+  ctx.stroke(); ctx.globalAlpha=1;
+}
+function drawStrokeIncremental(s){ drawStrokeOn(cv.getContext('2d'), s, factor()); }
+function drawSeg(seg){
+  const ctx=cv.getContext('2d'), f=factor(); styleFor(ctx,seg,f);
+  ctx.beginPath(); ctx.moveTo(seg.a.x*f, seg.a.y*f); ctx.lineTo(seg.b.x*f, seg.b.y*f); ctx.stroke(); ctx.globalAlpha=1;
+}
+function redraw(){
+  const ctx=cv.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height);
+  const f=factor();
+  for(const s of strokes) drawStrokeOn(ctx,s,f);
+  if(cur) drawStrokeOn(ctx,cur,f);
+}
+
+// ── Drawing input ──────────────────────────────────────────────────────────────
+function logFromEvent(e){
+  const r=cv.getBoundingClientRect();
+  const cx=(e.clientX!=null)?e.clientX:(e.touches&&e.touches[0]?e.touches[0].clientX:0);
+  const cy=(e.clientY!=null)?e.clientY:(e.touches&&e.touches[0]?e.touches[0].clientY:0);
+  let x=(cx-r.left)/r.width*LOGW, y=(cy-r.top)/r.height*LOGH;
+  return { x:Math.max(0,Math.min(LOGW,x)), y:Math.max(0,Math.min(LOGH,y)) };
+}
+let drawing=false, lastEmit=0;
+function down(e){
+  if(closed) return;
+  e.preventDefault(); drawing=true;
+  const p=logFromEvent(e);
+  cur={ id:clientId+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), clientId, tool, color, size, pts:[p] };
+  // dot
+  drawSeg({tool,color,size,a:p,b:{x:p.x+0.1,y:p.y+0.1}});
+}
+function move(e){
+  if(!drawing||!cur) return;
+  e.preventDefault();
+  const p=logFromEvent(e); const prev=cur.pts[cur.pts.length-1];
+  cur.pts.push(p);
+  drawSeg({tool,color,size,a:prev,b:p});
+  const now=Date.now();
+  if(socket && now-lastEmit>=40){ lastEmit=now; socket.emit('draw_live',{token, seg:{tool,color,size,a:prev,b:p}}); }
+}
+function up(){
+  if(!drawing||!cur) return;
+  drawing=false;
+  strokes.push(cur);
+  if(socket) socket.emit('draw_stroke',{token, stroke:cur});
+  cur=null;
+}
+cv.addEventListener('pointerdown', down);
+cv.addEventListener('pointermove', move);
+window.addEventListener('pointerup', up);
+cv.addEventListener('pointercancel', up);
+// Touch fallback (older browsers)
+cv.addEventListener('touchstart', e=>{ if(!window.PointerEvent) down(e); }, {passive:false});
+cv.addEventListener('touchmove',  e=>{ if(!window.PointerEvent) move(e); }, {passive:false});
+window.addEventListener('touchend', ()=>{ if(!window.PointerEvent) up(); });
+
+// ── Tools / options ─────────────────────────────────────────────────────────────
+const PALETTE=['#111111','#ffffff','#e23b2e','#f5a623','#f8e71c','#2ecc71','#1f8ef1','#9b59b6','#8b572a','#ff6fb5'];
+function buildSwatches(){
+  const wrap=document.getElementById('sw-list'); wrap.innerHTML='';
+  PALETTE.forEach(c=>{ const d=document.createElement('div'); d.className='sw'; d.dataset.c=c; d.style.background=c;
+    d.onclick=()=>setColor(c); wrap.appendChild(d); });
+}
+function setTool(tp){ tool=tp; ['pencil','brush','eraser'].forEach(x=>{const e=document.getElementById('tool-'+x); if(e) e.classList.toggle('on',x===tp);}); }
+function setColor(c){ color=c; if(tool==='eraser') setTool('pencil');
+  document.querySelectorAll('#sw-list .sw').forEach(s=>s.classList.toggle('on', s.dataset.c&&s.dataset.c.toLowerCase()===c.toLowerCase()));
+  const cc=document.getElementById('color-custom'); if(cc && /^#[0-9a-f]{6}$/i.test(c)) cc.value=c; updateSizeDot(); }
+function setSize(v){ size=Number(v)||8; const r=document.getElementById('size-range'); if(r) r.value=size; updateSizeDot(); }
+function updateSizeDot(){ const d=document.getElementById('size-dot'); if(!d) return; const px=Math.max(4,Math.min(48,size));
+  d.style.width=px+'px'; d.style.height=px+'px'; d.style.background = tool==='eraser'?'#888':color; }
+function openOpts(){ updateSizeDot(); show('ov-opts'); }
+function closeOpts(){ hide('ov-opts'); }
+function undoMine(){
+  for(let i=strokes.length-1;i>=0;i--){ if(strokes[i].clientId===clientId){ const id=strokes[i].id; strokes.splice(i,1);
+    if(socket) socket.emit('draw_remove',{token,id}); redraw(); return; } }
+}
+function clearAll(){ if(!canSubmit) return; strokes=[]; cur=null; if(socket) socket.emit('draw_clear',{token}); redraw(); }
+
+// ── Submit ──────────────────────────────────────────────────────────────────────
+async function submitDrawing(){
+  if(!canSubmit || closed) return;
+  closed=true;
+  showStatus(t('loading'),'',[]);
+  try{
+    const off=document.createElement('canvas'); off.width=LOGW; off.height=LOGH;
+    const octx=off.getContext('2d'); octx.fillStyle='#ffffff'; octx.fillRect(0,0,LOGW,LOGH);
+    for(const s of strokes) drawStrokeOn(octx,s,1);
+    const blob=await new Promise(res=>off.toBlob(res,'image/png'));
+    const fd=new FormData(); fd.append('media', blob, 'drawing.png');
+    const up=await fetch(`/api/games/${gameId}/media/upload`,{method:'POST',body:fd}).then(r=>r.json());
+    if(!up||!up.mediaPath) throw new Error('upload');
+    const comp=await fetch(`/api/games/${gameId}/cr/complete`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({teamId, missionId, mediaPath:up.mediaPath})}).then(r=>r.json());
+    if(socket) socket.emit('draw_close',{token, reason:'submitted'});
+    showSent(comp && comp.autoAwarded);
+  }catch(e){ closed=false; showStatus(t('err'),'',[{label:t('close'),fn:()=>hide('ov-status')}]); }
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────────
+function goBack(){
+  if(canSubmit){ if(!confirm(t('leave_confirm'))) return; if(socket && collaborative) socket.emit('draw_close',{token,reason:'cancel'}); }
+  backToGame();
+}
+function backToGame(){ location.href=`/cityrush.html?game=${gameId}&team=${teamId}&lang=${lang}`; }
+
+// ── Overlays ──────────────────────────────────────────────────────────────────────
+function show(id){ document.getElementById(id).classList.add('show'); }
+function hide(id){ document.getElementById(id).classList.remove('show'); }
+function showStatus(title, body, actions){
+  document.getElementById('st-title').textContent=title;
+  document.getElementById('st-body').textContent=body||'';
+  const a=document.getElementById('st-actions'); a.innerHTML='';
+  (actions||[]).forEach(act=>{ const b=document.createElement('button'); b.className='abtn go'; b.textContent=act.label; b.onclick=act.fn; a.appendChild(b); });
+  show('ov-status');
+}
+function showInvite(qr, code){
+  if(qr) document.getElementById('inv-qr').src=qr; else document.getElementById('inv-qr').style.display='none';
+  document.getElementById('inv-code').textContent=code||'';
+  show('ov-invite');
+}
+function showSent(awarded){
+  showStatus(t('sent_title'), awarded?t('sent_awarded'):t('sent_pending'),
+    [{label:t('back_game'),fn:backToGame}]);
+  setTimeout(()=>{ if(role!=='member') backToGame(); }, 2200);
+}
+function showEnded(){ showStatus(t('ended_title'), t('ended_msg'), []); }
+function showGone(){ showStatus(t('gone_title'), t('gone_msg'), []); }
+
+// ── Static text (labels in overlays) ───────────────────────────────────────────────
+function applyText(){
+  const set=(id,txt)=>{const e=document.getElementById(id); if(e) e.textContent=txt;};
+  set('opt-title',t('opt_title')); set('lbl-tool',t('tool')); set('lbl-size',t('size')); set('lbl-color',t('color'));
+  set('t-pencil',t('pencil')); set('t-brush',t('brush')); set('t-eraser',t('eraser'));
+  set('t-custom',t('custom')); set('t-undo',t('undo')); set('t-clear',t('clear')); set('t-done',t('done'));
+  set('task-title',t('task_title')); set('t-close',t('close'));
+  set('inv-title',t('inv_title')); set('inv-help',t('inv_help')); set('t-start',t('start'));
+  const task = (prompt5 && (prompt5[lang]||prompt5.de||prompt5.en)) || '';
+  document.getElementById('task-body').textContent = task || t('no_task');
+  // Members can't clear everyone's canvas.
+  if(!canSubmit){ const c=document.getElementById('btn-clear'); if(c) c.style.display='none'; }
+}
+</script>
+</body>
+</html>
