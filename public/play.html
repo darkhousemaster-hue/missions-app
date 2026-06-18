@@ -312,11 +312,10 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   <!-- Team-selfie shortcut — only shown until a selfie exists. Lets the team
        (and the GM testing setups) snap/verify the camera at any time. -->
   <div id="selfie-cta-wrap" style="display:none;margin:0 18px 16px;text-align:center;">
-    <button id="selfie-cta-btn" type="button" onclick="document.getElementById('selfie-cta-input').click()"
-      style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:var(--surface);border:1px solid var(--hairline);color:var(--text);font:700 12px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">
+    <button id="selfie-cta-btn" type="button" onclick="openSelfieCamera()"
+      style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:var(--orange);border:0;color:#fff;font:700 12px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;box-shadow:0 10px 26px -10px var(--orange);">
       📸 <span id="selfie-cta-label">Team-Selfie aufnehmen</span>
     </button>
-    <input type="file" id="selfie-cta-input" accept="image/*" capture="user" style="display:none;" onchange="uploadSelfieCta(event)">
   </div>
   <div id="missions-list"></div>
 </div>
@@ -447,6 +446,7 @@ let cameraStream = null, mediaRecorder = null, recordedChunks = [];
 let capturedBlob = null, capturedIsVideo = false, capturedMimeType = 'video/webm';
 let currentMissionId = null, currentMissionType = 'photo';
 let useFront = false;
+let selfieMode = false;
 let currentView = 'missions';
 
 // ── Translations ─────────────────────────────────────────────────────────────
@@ -454,7 +454,7 @@ const T = {
   de: {
     times_up:'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.',
     description:'Beschreibung', task:'Aufgabe',
-    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!',
+    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!', error_generic:'Etwas ist schiefgelaufen',
     rules:'REGELN', rules_back:'← Zurück', send:'Senden', chat_ph:'Nachricht an Gamemaster…',
     pending:'⏳ Wird geprüft', accepted:'✓ Angenommen',
     take_photo:'Foto aufnehmen', take_video:'Video aufnehmen',
@@ -475,7 +475,7 @@ const T = {
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
     description:'Description', task:'Task',
-    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!',
+    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!', error_generic:'Something went wrong',
     rules:'RULES', rules_back:'← Back', send:'Send', chat_ph:'Message to Gamemaster…',
     pending:'⏳ Awaiting review', accepted:'✓ Accepted',
     take_photo:'Take photo', take_video:'Take video',
@@ -494,7 +494,7 @@ const T = {
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
   fr: {
-    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !',
+    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !', error_generic:'Une erreur est survenue',
     rules:'RÈGLES', rules_back:'← Retour', send:'Envoyer', chat_ph:'Message au Gamemaster…',
     pending:'⏳ En attente', accepted:'✓ Accepté',
     take_photo:'Prendre photo', take_video:'Enregistrer vidéo',
@@ -514,7 +514,7 @@ const T = {
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
   it: {
-    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!',
+    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!', error_generic:'Si è verificato un errore',
     rules:'REGOLE', rules_back:'← Indietro', send:'Invia', chat_ph:'Messaggio al Gamemaster…',
     pending:'⏳ In attesa', accepted:'✓ Accettato',
     take_photo:'Scatta foto', take_video:'Registra video',
@@ -536,7 +536,7 @@ const T = {
   es: {
     times_up:'¡Se acabó el tiempo! Volved al punto de encuentro acordado.',
     description:'Descripción', task:'Tarea',
-    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!',
+    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!', error_generic:'Algo salió mal',
     rules:'REGLAS', rules_back:'← Volver', send:'Enviar', chat_ph:'Mensaje al Gamemaster…',
     pending:'⏳ Pendiente de revisión', accepted:'✓ Aceptado',
     take_photo:'Hacer foto', take_video:'Grabar vídeo',
@@ -902,9 +902,33 @@ async function openCamera(missionId, type) {
     toast(t('times_up')||'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.', 'error');
     return;
   }
+  selfieMode         = false;
   currentMissionId   = missionId;
   currentMissionType = type;
   document.getElementById('shutter-icon').textContent = type==='video' ? '🔴' : '📷';
+  document.getElementById('camera-modal').style.display = 'flex';
+  document.getElementById('cam-preview').style.display  = 'block';
+  document.getElementById('cap-img').style.display      = 'none';
+  document.getElementById('cap-vid').style.display      = 'none';
+  document.getElementById('cam-bar-capture').style.display = 'flex';
+  document.getElementById('cam-bar-review').style.display  = 'none';
+  document.getElementById('rec-dot').style.display         = 'none';
+  document.getElementById('shutter-btn').classList.remove('recording');
+  capturedBlob = null;
+  await startStream();
+}
+
+// Team selfie reuses the in-app camera (same getUserMedia path as missions)
+// instead of a native `capture` file-input. The native intent launches the OS
+// camera app, which on low-RAM phones evicts the backgrounded browser tab and
+// surfaces Android's "Can't complete action due to low memory" — losing the
+// shot. Keeping capture in-tab avoids that and lets us cap the resolution.
+async function openSelfieCamera() {
+  selfieMode         = true;
+  useFront           = true;          // front camera for a team selfie
+  currentMissionId   = null;
+  currentMissionType = 'photo';
+  document.getElementById('shutter-icon').textContent = '📷';
   document.getElementById('camera-modal').style.display = 'flex';
   document.getElementById('cam-preview').style.display  = 'block';
   document.getElementById('cap-img').style.display      = 'none';
@@ -965,8 +989,9 @@ async function doCapture() {
         mediaRecorder.onstop = () => {
           capturedBlob = new Blob(recordedChunks, { type: capturedMimeType || 'video/webm' });
           capturedIsVideo = true;
-          const url = URL.createObjectURL(capturedBlob);
           const vid = document.getElementById('cap-vid');
+          revokeIfBlob(vid);
+          const url = URL.createObjectURL(capturedBlob);
           vid.src = url; vid.style.display = 'block';
           document.getElementById('cam-preview').style.display = 'none';
           document.getElementById('cam-bar-capture').style.display = 'none';
@@ -984,16 +1009,25 @@ async function doCapture() {
       }
     }
   } else {
-    // Photo
+    // Photo — cap the canvas to a sane max edge so low-RAM phones don't run
+    // out of memory: a 12MP frame is a ~48MB canvas buffer before the JPEG
+    // encode even starts, which is enough to OOM a budget device.
     const video  = document.getElementById('cam-preview');
+    const sw = video.videoWidth  || 1280;
+    const sh = video.videoHeight || 720;
+    const MAX = 1600;
+    const scale = Math.min(1, MAX / Math.max(sw, sh));
+    const cw = Math.max(1, Math.round(sw * scale));
+    const ch = Math.max(1, Math.round(sh * scale));
     const canvas = document.createElement('canvas');
-    canvas.width  = video.videoWidth  || 1280;
-    canvas.height = video.videoHeight || 720;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.width  = cw;
+    canvas.height = ch;
+    canvas.getContext('2d').drawImage(video, 0, 0, cw, ch);
     canvas.toBlob(blob => {
       capturedBlob = blob;
       capturedIsVideo = false;
       const img = document.getElementById('cap-img');
+      revokeIfBlob(img);
       img.src = URL.createObjectURL(blob); img.style.display = 'block';
       document.getElementById('cam-preview').style.display  = 'none';
       document.getElementById('cam-bar-capture').style.display = 'none';
@@ -1004,6 +1038,8 @@ async function doCapture() {
 
 function retake() {
   capturedBlob = null;
+  revokeIfBlob(document.getElementById('cap-img'));
+  revokeIfBlob(document.getElementById('cap-vid'));
   document.getElementById('cam-preview').style.display  = 'block';
   document.getElementById('cap-img').style.display      = 'none';
   document.getElementById('cap-vid').style.display      = 'none';
@@ -1013,8 +1049,25 @@ function retake() {
 }
 
 async function doUpload() {
-  if (!capturedBlob || !currentMissionId) return;
+  if (!capturedBlob) return;
 
+  // Team selfie path: the in-app camera was opened in selfie mode, so post the
+  // captured photo to the selfie endpoint and hide the CTA once it's saved.
+  if (selfieMode) {
+    const blob = capturedBlob;
+    closeCamera();
+    const fd = new FormData(); fd.append('media', blob, 'selfie.jpg');
+    try {
+      const r = await fetch(`/api/games/${gameId}/teams/${teamId}/selfie`, { method:'POST', body:fd }).then(r=>r.json());
+      if (r && r.success) {
+        const scw=document.getElementById('selfie-cta-wrap'); if(scw) scw.style.display='none';
+        toast(t('selfie_saved')||'Selfie gespeichert','success');
+      } else toast((r&&r.error)||t('error_generic')||'Fehler','error');
+    } catch(err){ toast(t('error_generic')||'Fehler','error'); }
+    return;
+  }
+
+  if (!currentMissionId) return;
   const blobToUpload = capturedBlob;
   const isVid        = capturedIsVideo;
   const ext          = isVid ? (capturedMimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
@@ -1053,6 +1106,12 @@ function closeCamera() {
   if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream = null; }
   if (mediaRecorder && mediaRecorder.state !== 'inactive') { try { mediaRecorder.stop(); } catch(e){} }
   document.getElementById('camera-modal').style.display = 'none';
+}
+
+// Release an <img>/<video> object-URL so the browser can reclaim the blob.
+// Critical on low-RAM phones where stale preview blobs pile up across retakes.
+function revokeIfBlob(el) {
+  try { if (el && el.src && el.src.startsWith('blob:')) URL.revokeObjectURL(el.src); } catch(e){}
 }
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
@@ -1234,22 +1293,6 @@ function showGameOver(message) {
   if(ci) ci.placeholder=t('chat_ph');
   document.getElementById('go-msg').textContent   = message || '';
   document.getElementById('gameover-overlay').style.display = 'flex';
-}
-
-// Team-selfie shortcut: upload the captured photo to the selfie endpoint,
-// then hide the button (a selfie now exists).
-async function uploadSelfieCta(e){
-  const f = e.target && e.target.files && e.target.files[0];
-  e.target.value = '';
-  if(!f) return;
-  const fd = new FormData(); fd.append('media', f, 'selfie.jpg');
-  try {
-    const r = await fetch(`/api/games/${gameId}/teams/${teamId}/selfie`, { method:'POST', body:fd }).then(r=>r.json());
-    if(r && r.success){
-      const scw=document.getElementById('selfie-cta-wrap'); if(scw) scw.style.display='none';
-      toast(t('selfie_saved')||'Selfie gespeichert','success');
-    } else toast((r&&r.error)||t('error_generic')||'Fehler','error');
-  } catch(err){ toast(t('error_generic')||'Fehler','error'); }
 }
 
 // ── Util ──────────────────────────────────────────────────────────────────────

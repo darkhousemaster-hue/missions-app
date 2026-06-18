@@ -142,10 +142,11 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #dash-panel .tabs{padding:0 .75rem;margin-bottom:0;flex-shrink:0;}
 .panel-content{flex:1;overflow:hidden;display:none;}
 .panel-content.active{display:flex;flex-direction:column;}
-.rankings-section{padding:.75rem;border-top:1px solid var(--border);flex-shrink:0;}
-/* Cap the rankings list so a long team list can't squeeze the chat out of the
-   panel — it scrolls instead, and the chat keeps its space. */
-#rankings-list{max-height:33vh;overflow-y:auto;}
+/* Chat (the active panel-content) and the rankings each take ~50% of the panel
+   height below the tabs; the rankings list scrolls within its half so a long
+   team list never pushes the chat away. */
+.rankings-section{padding:.75rem;border-top:1px solid var(--border);flex:1 1 0;min-height:0;display:flex;flex-direction:column;}
+#rankings-list{flex:1;min-height:0;overflow-y:auto;}
 .rankings-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
 .rankings-fs-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;cursor:pointer;font-size:.8rem;line-height:1;padding:.2rem .4rem;flex-shrink:0;}
 .rankings-fs-btn:hover{color:var(--text);border-color:rgba(255,255,255,.25);}

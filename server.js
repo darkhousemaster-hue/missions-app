@@ -576,6 +576,10 @@ app.post('/api/games/:gameId/teams', (req,res) => {
   });
   const team=db.getTeam(teamId);
   io.to(`gm_${req.params.gameId}`).emit('team_joined',team);
+  // Refresh the GM rankings so a newly-joined team appears immediately — joins
+  // alone don't change scores, so without this the list stayed at whoever was
+  // present on the last score event.
+  io.to(`gm_${req.params.gameId}`).emit('rankings_update', db.getRankings(req.params.gameId));
   res.json(team);
 });
 app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
