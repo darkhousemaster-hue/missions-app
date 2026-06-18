@@ -458,9 +458,10 @@ function takeSelfie() {
   const canvas = document.createElement('canvas');
   // Square crop centered on the video so the selfie matches the round preview.
   const side = Math.min(v.videoWidth, v.videoHeight);
-  canvas.width = side; canvas.height = side;
+  const out  = Math.min(side, 1600);   // cap output so low-RAM phones don't OOM
+  canvas.width = out; canvas.height = out;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(v, (v.videoWidth - side)/2, (v.videoHeight - side)/2, side, side, 0, 0, side, side);
+  ctx.drawImage(v, (v.videoWidth - side)/2, (v.videoHeight - side)/2, side, side, 0, 0, out, out);
   canvas.toBlob(b => {
     selfieBlob = b;
     if (selfieObjectUrl) URL.revokeObjectURL(selfieObjectUrl);

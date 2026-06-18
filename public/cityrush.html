@@ -1383,14 +1383,21 @@ async function _startSelfieCamera(){
 function crSelfieFlip(){ _selfieFront = !_selfieFront; _startSelfieCamera(); }
 function crSelfieCapture(){
   const v = document.getElementById('cr-selfie-video');
+  // Cap the canvas to a 1600px edge so low-RAM phones don't run out of memory
+  // allocating a full-resolution bitmap of the camera frame.
+  const sw = v.videoWidth || 720, sh = v.videoHeight || 720;
+  const scale = Math.min(1, 1600/Math.max(sw, sh));
+  const cw = Math.max(1, Math.round(sw*scale)), ch = Math.max(1, Math.round(sh*scale));
   const canvas = document.createElement('canvas');
-  canvas.width  = v.videoWidth || 720;
-  canvas.height = v.videoHeight || 720;
-  canvas.getContext('2d').drawImage(v, 0, 0);
+  canvas.width  = cw;
+  canvas.height = ch;
+  canvas.getContext('2d').drawImage(v, 0, 0, cw, ch);
   canvas.toBlob(b => {
     _selfieBlob = b;
-    document.getElementById('cr-selfie-preview').src = URL.createObjectURL(b);
-    document.getElementById('cr-selfie-preview').style.display = 'block';
+    const pv = document.getElementById('cr-selfie-preview');
+    crRevokeIfBlob(pv);
+    pv.src = URL.createObjectURL(b);
+    pv.style.display = 'block';
     v.style.display = 'none';
     document.getElementById('cr-selfie-bar').style.display = 'none';
     document.getElementById('cr-selfie-bar-review').style.display = 'flex';
@@ -1398,6 +1405,7 @@ function crSelfieCapture(){
 }
 function crSelfieRetake(){
   _selfieBlob = null;
+  crRevokeIfBlob(document.getElementById('cr-selfie-preview'));
   document.getElementById('cr-selfie-preview').style.display = 'none';
   document.getElementById('cr-selfie-video').style.display = 'block';
   document.getElementById('cr-selfie-bar').style.display = 'flex';
@@ -3467,8 +3475,9 @@ function crCapture(){
       mediaRecorder.onstop = () => {
         capturedBlob = new Blob(recordedChunks, {type: capturedMimeType||'video/webm'});
         capturedIsVideo = true;
-        const url = URL.createObjectURL(capturedBlob);
         const vid = document.getElementById('cr-cap-vid');
+        crRevokeIfBlob(vid);
+        const url = URL.createObjectURL(capturedBlob);
         vid.src = url; vid.style.display = 'block';
         document.getElementById('cr-cam-preview').style.display = 'none';
         document.getElementById('cr-cam-bar-capture').style.display = 'none';
@@ -3484,14 +3493,19 @@ function crCapture(){
     } catch(e){ toast((t('capture_failed')||'Aufnahme nicht möglich:')+' '+e.message,'error'); }
     return;
   }
-  // Photo path
+  // Photo path — cap the canvas to a 1600px edge so low-RAM phones don't run
+  // out of memory allocating a full-resolution bitmap of the camera frame.
   const video = document.getElementById('cr-cam-preview');
+  const sw = video.videoWidth||1280, sh = video.videoHeight||720;
+  const scale = Math.min(1, 1600/Math.max(sw, sh));
+  const cw = Math.max(1, Math.round(sw*scale)), ch = Math.max(1, Math.round(sh*scale));
   const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth||1280; canvas.height = video.videoHeight||720;
-  canvas.getContext('2d').drawImage(video,0,0);
+  canvas.width = cw; canvas.height = ch;
+  canvas.getContext('2d').drawImage(video,0,0,cw,ch);
   canvas.toBlob(blob=>{
     capturedBlob=blob; capturedIsVideo=false;
     const img=document.getElementById('cr-cap-img');
+    crRevokeIfBlob(img);
     img.src=URL.createObjectURL(blob); img.style.display='block';
     document.getElementById('cr-cam-preview').style.display='none';
     document.getElementById('cr-cam-bar-capture').style.display='none';
@@ -3500,6 +3514,8 @@ function crCapture(){
 }
 function crRetake(){
   capturedBlob=null; capturedIsVideo=false;
+  crRevokeIfBlob(document.getElementById('cr-cap-img'));
+  crRevokeIfBlob(document.getElementById('cr-cap-vid'));
   document.getElementById('cr-cam-preview').style.display='block';
   document.getElementById('cr-cap-img').style.display='none';
   document.getElementById('cr-cap-vid').style.display='none';
@@ -3573,7 +3589,14 @@ async function crUpload(){
 }
 function crCloseCamera(){
   if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  crRevokeIfBlob(document.getElementById('cr-cap-img'));
+  crRevokeIfBlob(document.getElementById('cr-cap-vid'));
   document.getElementById('cr-camera-modal').style.display='none';
+}
+// Release an <img>/<video> object-URL so the browser can reclaim the blob —
+// matters on low-RAM phones where stale preview blobs pile up across retakes.
+function crRevokeIfBlob(el){
+  try { if(el && el.src && el.src.startsWith('blob:')) URL.revokeObjectURL(el.src); } catch(e){}
 }
 
 // ── Util ──────────────────────────────────────────────────────────────────────
