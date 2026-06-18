@@ -7,6 +7,9 @@
 <title>MiSSiONS — Join</title>
 <link rel="stylesheet" href="/css/app.css?v=2.0.1">
 <style>
+/* Player side: no muted grey — secondary text + icons read full white. The
+   team-name placeholder keeps a (lighter) grey, see .name-field below. */
+:root { --text-dim: var(--text); --text-muted: var(--text); }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--text); font-family:var(--body); display:flex; flex-direction:column; }
 .shell { flex:1; display:flex; flex-direction:column; max-width:480px; margin:0 auto; width:100%; min-height:100vh; min-height:100dvh; }
@@ -55,7 +58,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
   outline:none; text-transform:uppercase;
   padding:0;
 }
-.name-field input::placeholder { color:var(--text-muted); text-transform:uppercase; font-family:var(--display); letter-spacing:.04em; }
+.name-field input::placeholder { color:#9B9690; text-transform:uppercase; font-family:var(--display); letter-spacing:.04em; }
 
 .lang-section { text-align:center; }
 .lang-label { font:600 10px/1 var(--body); letter-spacing:.22em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }

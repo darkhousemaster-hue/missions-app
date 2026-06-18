@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+/* Player side: no muted grey — secondary text + icons read full white. */
+:root { --text-dim: var(--text); --text-muted: var(--text); }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
 

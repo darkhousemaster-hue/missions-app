@@ -7,6 +7,8 @@
 <title>MiSSiONS</title>
 <link rel="stylesheet" href="/css/app.css?v=2.0.1">
 <style>
+/* Player side: no muted grey — secondary text + icons read full white. */
+:root { --text-dim: var(--text); --text-muted: var(--text); }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
 
@@ -307,6 +309,15 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
       <span id="leg-indoor">indoor</span>
     </span>
   </div>
+  <!-- Team-selfie shortcut — only shown until a selfie exists. Lets the team
+       (and the GM testing setups) snap/verify the camera at any time. -->
+  <div id="selfie-cta-wrap" style="display:none;margin:0 18px 16px;text-align:center;">
+    <button id="selfie-cta-btn" type="button" onclick="document.getElementById('selfie-cta-input').click()"
+      style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:var(--surface);border:1px solid var(--hairline);color:var(--text);font:700 12px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">
+      📸 <span id="selfie-cta-label">Team-Selfie aufnehmen</span>
+    </button>
+    <input type="file" id="selfie-cta-input" accept="image/*" capture="user" style="display:none;" onchange="uploadSelfieCta(event)">
+  </div>
   <div id="missions-list"></div>
 </div>
 
@@ -443,7 +454,7 @@ const T = {
   de: {
     times_up:'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.',
     description:'Beschreibung', task:'Aufgabe',
-    photo:'Foto', video:'Video', indoor:'Drinnen',
+    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!',
     rules:'REGELN', rules_back:'← Zurück', send:'Senden', chat_ph:'Nachricht an Gamemaster…',
     pending:'⏳ Wird geprüft', accepted:'✓ Angenommen',
     take_photo:'Foto aufnehmen', take_video:'Video aufnehmen',
@@ -464,7 +475,7 @@ const T = {
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
     description:'Description', task:'Task',
-    photo:'photo', video:'video', indoor:'indoor',
+    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!',
     rules:'RULES', rules_back:'← Back', send:'Send', chat_ph:'Message to Gamemaster…',
     pending:'⏳ Awaiting review', accepted:'✓ Accepted',
     take_photo:'Take photo', take_video:'Take video',
@@ -483,7 +494,7 @@ const T = {
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
   fr: {
-    photo:'photo', video:'vidéo', indoor:'intérieur',
+    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !',
     rules:'RÈGLES', rules_back:'← Retour', send:'Envoyer', chat_ph:'Message au Gamemaster…',
     pending:'⏳ En attente', accepted:'✓ Accepté',
     take_photo:'Prendre photo', take_video:'Enregistrer vidéo',
@@ -503,7 +514,7 @@ const T = {
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
   it: {
-    photo:'foto', video:'video', indoor:'al chiuso',
+    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!',
     rules:'REGOLE', rules_back:'← Indietro', send:'Invia', chat_ph:'Messaggio al Gamemaster…',
     pending:'⏳ In attesa', accepted:'✓ Accettato',
     take_photo:'Scatta foto', take_video:'Registra video',
@@ -525,7 +536,7 @@ const T = {
   es: {
     times_up:'¡Se acabó el tiempo! Volved al punto de encuentro acordado.',
     description:'Descripción', task:'Tarea',
-    photo:'foto', video:'vídeo', indoor:'interior',
+    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!',
     rules:'REGLAS', rules_back:'← Volver', send:'Enviar', chat_ph:'Mensaje al Gamemaster…',
     pending:'⏳ Pendiente de revisión', accepted:'✓ Aceptado',
     take_photo:'Hacer foto', take_video:'Grabar vídeo',
@@ -577,6 +588,7 @@ function applyTranslations() {
   document.getElementById('leg-photo').textContent = t('photo');
   document.getElementById('leg-video').textContent = t('video');
   document.getElementById('leg-indoor').textContent = t('indoor');
+  const scl=document.getElementById('selfie-cta-label'); if(scl) scl.textContent = t('take_selfie')||'Team-Selfie aufnehmen';
   document.getElementById('rules-title').textContent = t('rules');
   // Update just the label spans inside the back buttons so the <span class="back-arrow">←</span>
   // wrapper stays intact (otherwise replacing textContent wipes the arrow span and
@@ -717,6 +729,9 @@ async function loadMissions() {
   // loadMissions (no-op when nothing changes); the GM can edit the allow-list
   // mid-game and the player picks it up on next refresh without reload.
   if (data.allowed_langs) setAllowedLangs(data.allowed_langs);
+  // Selfie shortcut: show the button only while the team has no selfie yet.
+  const scw = document.getElementById('selfie-cta-wrap');
+  if (scw) scw.style.display = data.selfie_path ? 'none' : 'block';
   // Update teamName from server (fixes reload showing 'Team')
   if (data.name) {
     teamName = data.name;
@@ -1219,6 +1234,22 @@ function showGameOver(message) {
   if(ci) ci.placeholder=t('chat_ph');
   document.getElementById('go-msg').textContent   = message || '';
   document.getElementById('gameover-overlay').style.display = 'flex';
+}
+
+// Team-selfie shortcut: upload the captured photo to the selfie endpoint,
+// then hide the button (a selfie now exists).
+async function uploadSelfieCta(e){
+  const f = e.target && e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!f) return;
+  const fd = new FormData(); fd.append('media', f, 'selfie.jpg');
+  try {
+    const r = await fetch(`/api/games/${gameId}/teams/${teamId}/selfie`, { method:'POST', body:fd }).then(r=>r.json());
+    if(r && r.success){
+      const scw=document.getElementById('selfie-cta-wrap'); if(scw) scw.style.display='none';
+      toast(t('selfie_saved')||'Selfie gespeichert','success');
+    } else toast((r&&r.error)||t('error_generic')||'Fehler','error');
+  } catch(err){ toast(t('error_generic')||'Fehler','error'); }
 }
 
 // ── Util ──────────────────────────────────────────────────────────────────────

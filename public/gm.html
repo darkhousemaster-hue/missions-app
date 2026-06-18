@@ -143,6 +143,20 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .panel-content{flex:1;overflow:hidden;display:none;}
 .panel-content.active{display:flex;flex-direction:column;}
 .rankings-section{padding:.75rem;border-top:1px solid var(--border);flex-shrink:0;}
+/* Cap the rankings list so a long team list can't squeeze the chat out of the
+   panel — it scrolls instead, and the chat keeps its space. */
+#rankings-list{max-height:33vh;overflow-y:auto;}
+.rankings-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.rankings-fs-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;cursor:pointer;font-size:.8rem;line-height:1;padding:.2rem .4rem;flex-shrink:0;}
+.rankings-fs-btn:hover{color:var(--text);border-color:rgba(255,255,255,.25);}
+/* Fullscreen rankings overlay — a big, scrollable list of every team. */
+#rankings-fs{position:fixed;inset:0;z-index:3000;background:var(--bg);display:none;flex-direction:column;}
+#rankings-fs.open{display:flex;}
+#rankings-fs .rfs-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border);}
+#rankings-fs .rfs-title{font:800 1.3rem/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--text);}
+#rankings-fs .rfs-close{background:transparent;border:0;color:var(--text);font-size:1.6rem;line-height:1;cursor:pointer;padding:.2rem .5rem;}
+#rankings-fs .rfs-body{flex:1;overflow-y:auto;padding:1rem 1.25rem;max-width:760px;width:100%;margin:0 auto;}
+#rankings-fs .ranking-row{font-size:1.05rem;}
 /* Settings */
 #screen-settings{display:none;flex:1;flex-direction:column;overflow:hidden;}
 .stab{display:none;}.stab.active{display:block;}
@@ -466,10 +480,22 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
                box-shadow:0 2px 8px rgba(0,0,0,.5);">⛶</button>
     </div>
     <div class="rankings-section">
-      <div class="sidebar-title" id="db-rankings">RANGLISTE</div>
+      <div class="rankings-head">
+        <div class="sidebar-title" id="db-rankings">RANGLISTE</div>
+        <button class="rankings-fs-btn" type="button" onclick="openRankingsFullscreen()" id="btn-rankings-fs" title="Rangliste Vollbild" aria-label="Rankings fullscreen">⛶</button>
+      </div>
       <div id="rankings-list"></div>
     </div>
   </div>
+</div>
+
+<!-- Fullscreen rankings overlay (opened from the panel's ⛶ button) -->
+<div id="rankings-fs">
+  <div class="rfs-head">
+    <div class="rfs-title" id="rankings-fs-title">RANGLISTE</div>
+    <button class="rfs-close" type="button" onclick="closeRankingsFullscreen()" aria-label="Close">✕</button>
+  </div>
+  <div class="rfs-body"><div id="rankings-fs-list"></div></div>
 </div>
 
 <!-- SETTINGS GATE -->
@@ -1020,7 +1046,7 @@ const GMT={
   'tip-cr-mode-timer':'Standard-Spieldauer in Minuten, wenn ein neues Rail Adventure Spiel in diesem Modus erstellt wird.',
   'cr-mode-timer-label':'Standard-Dauer (Minuten)',
   'btn-delete-team-lbl':'Löschen','delete-team-tip':'Team löschen','team-delete-confirm':'Team "{name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.','team-deleted':'Team gelöscht','tb-adjust':'Timer',
-  'cr-rush-missions':'Missionen','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Überspringbar','cr-m-skippable-sub':'Aus = kann nicht übersprungen werden.','sound-on':'🔔 Ton an','sound-off':'🔕 Ton aus',
+  'cr-rush-missions':'Missionen','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Überspringbar','cr-m-skippable-sub':'Aus = kann nicht übersprungen werden.','sound-on':'🔔 Ton an','sound-off':'🔕 Ton aus','rankings-fs-tip':'Rangliste Vollbild',
   'tip-cr-lat':'Geografische Breite des Ziels (Dezimalgrad, z.B. 47.47620).',
   'tip-cr-lng':'Geografische Länge des Ziels (Dezimalgrad).',
   'tip-cr-radius':'Wie nah die Spieler am Ziel sein müssen, damit "Angekommen" ausgelöst wird (Meter).',
@@ -1144,7 +1170,7 @@ const GMT={
   'tip-cr-mode-timer':'Default game duration in minutes when creating a new Rail Adventure game in this mode.',
   'cr-mode-timer-label':'Default duration (minutes)',
   'btn-delete-team-lbl':'Delete','delete-team-tip':'Delete team','team-delete-confirm':'Really delete team "{name}"? This cannot be undone.','team-deleted':'Team deleted','tb-adjust':'Timer',
-  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Skippable','cr-m-skippable-sub':'Off = can\'t be skipped.','sound-on':'🔔 Sound on','sound-off':'🔕 Sound off',
+  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Skippable','cr-m-skippable-sub':'Off = can\'t be skipped.','sound-on':'🔔 Sound on','sound-off':'🔕 Sound off','rankings-fs-tip':'Rankings fullscreen',
   'tip-cr-lat':'Target latitude (decimal degrees, e.g. 47.47620).',
   'tip-cr-lng':'Target longitude (decimal degrees).',
   'tip-cr-radius':'How close players need to be to count as arrived (meters).',
@@ -1259,7 +1285,7 @@ const GMT={
   'tip-cr-mode-timer':'Durée par défaut (minutes) à la création d\'une partie Rail Adventure dans ce mode.',
   'cr-mode-timer-label':'Durée par défaut (minutes)',
   'btn-delete-team-lbl':'Supprimer','delete-team-tip':'Supprimer l\'équipe','team-delete-confirm':'Vraiment supprimer l\'équipe « {name} » ? C\'est irréversible.','team-deleted':'Équipe supprimée','tb-adjust':'Minuteur',
-  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Peut être sauté','cr-m-skippable-sub':'Désactivé = ne peut pas être sauté.','sound-on':'🔔 Son activé','sound-off':'🔕 Son coupé',
+  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Peut être sauté','cr-m-skippable-sub':'Désactivé = ne peut pas être sauté.','sound-on':'🔔 Son activé','sound-off':'🔕 Son coupé','rankings-fs-tip':'Classement plein écran',
   'tip-cr-lat':'Latitude de la cible (degrés décimaux, ex. 47.47620).',
   'tip-cr-lng':'Longitude de la cible (degrés décimaux).',
   'tip-cr-radius':'Distance (m) à laquelle l\'arrivée est validée.',
@@ -1374,7 +1400,7 @@ const GMT={
   'tip-cr-mode-timer':'Durata predefinita (minuti) creando una nuova partita Rail Adventure in questa modalità.',
   'cr-mode-timer-label':'Durata predefinita (minuti)',
   'btn-delete-team-lbl':'Elimina','delete-team-tip':'Elimina squadra','team-delete-confirm':'Eliminare davvero la squadra "{name}"? Non è reversibile.','team-deleted':'Squadra eliminata','tb-adjust':'Timer',
-  'cr-rush-missions':'Missioni','cr-normal-missions':'Checkpoint','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Missione','cr-m-place-route':'Checkpoint','cr-m-skippable':'Saltabile','cr-m-skippable-sub':'Off = non può essere saltata.','sound-on':'🔔 Audio attivo','sound-off':'🔕 Audio disattivato',
+  'cr-rush-missions':'Missioni','cr-normal-missions':'Checkpoint','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Missione','cr-m-place-route':'Checkpoint','cr-m-skippable':'Saltabile','cr-m-skippable-sub':'Off = non può essere saltata.','sound-on':'🔔 Audio attivo','sound-off':'🔕 Audio disattivato','rankings-fs-tip':'Classifica a schermo intero',
   'tip-cr-lat':'Latitudine target (gradi decimali, es. 47.47620).',
   'tip-cr-lng':'Longitudine target (gradi decimali).',
   'tip-cr-radius':'Distanza (m) a cui scatta l\'arrivo.',
@@ -1489,7 +1515,7 @@ const GMT={
   'tip-cr-mode-timer':'Duración por defecto (minutos) al crear una nueva partida Rail Adventure en este modo.',
   'cr-mode-timer-label':'Duración por defecto (minutos)',
   'btn-delete-team-lbl':'Eliminar','delete-team-tip':'Eliminar equipo','team-delete-confirm':'¿Eliminar el equipo "{name}"? No se puede deshacer.','team-deleted':'Equipo eliminado','tb-adjust':'Temporizador',
-  'cr-rush-missions':'Misiones','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Misión','cr-m-place-route':'Checkpoint','cr-m-skippable':'Se puede saltar','cr-m-skippable-sub':'Apagado = no se puede saltar.','sound-on':'🔔 Sonido activado','sound-off':'🔕 Sonido apagado',
+  'cr-rush-missions':'Misiones','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Misión','cr-m-place-route':'Checkpoint','cr-m-skippable':'Se puede saltar','cr-m-skippable-sub':'Apagado = no se puede saltar.','sound-on':'🔔 Sonido activado','sound-off':'🔕 Sonido apagado','rankings-fs-tip':'Clasificación pantalla completa',
   'tip-cr-lat':'Latitud del objetivo (grados decimales, p.ej. 47.47620).',
   'tip-cr-lng':'Longitud del objetivo (grados decimales).',
   'tip-cr-radius':'Distancia (m) a la que se considera que el jugador ha llegado.',
@@ -1626,6 +1652,7 @@ function applyGmLang(){
     ['btn-freeze-team-lbl','text','freeze-label'],
     ['btn-thaw-team-lbl','text','thaw-label'],
     ['btn-delete-team','title','delete-team-tip'],
+    ['btn-rankings-fs','title','rankings-fs-tip'],
     ['btn-manuals','title','manuals-tip'],
   ].forEach(([id, kind, key]) => {
     const el = document.getElementById(id);
@@ -2806,12 +2833,11 @@ function fmtLeftover(ms){
   const s=Math.max(0,Math.round(ms/1000));
   return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 }
-function renderRankings(rankings){
-  const list=document.getElementById('rankings-list');
-  if(!rankings.length){list.innerHTML='<p style="font-size:.8rem;color:var(--text-muted);">'+(gmt('no-teams-yet')||'Noch keine Teams.')+'</p>';return;}
+let _lastRankings = [];
+function _rankingRowsHtml(rankings){
   // Mockup 07 markup: pos / stripe / name / pts. The stripe is an inline
   // 3×18px element coloured by teamColor(r) — same hash the team chips use.
-  list.innerHTML=rankings.map((r,i)=>`
+  return rankings.map((r,i)=>`
     <div class="ranking-row">
       <span class="ranking-pos">${i+1}</span>
       <span class="ranking-stripe" style="background:${teamColor(r)};"></span>
@@ -2820,8 +2846,27 @@ function renderRankings(rankings){
         ? `<span style="display:block;font-size:.62rem;line-height:1.2;color:var(--green);font-weight:700;letter-spacing:.02em;" title="${gmt('rank-time-left')||'Restzeit bei Abschluss'}">🏁 ${fmtLeftover(r.time_left_ms)}</span>`
         : ''}</span>
     </div>`).join('');
-  rankings.forEach(r=>{const el=document.getElementById(`tscore-${r.id}`);if(el)el.textContent=`${r.score} PT`;});
 }
+function renderRankings(rankings){
+  _lastRankings = rankings || [];
+  const list=document.getElementById('rankings-list');
+  if(!rankings.length){list.innerHTML='<p style="font-size:.8rem;color:var(--text-muted);">'+(gmt('no-teams-yet')||'Noch keine Teams.')+'</p>';return;}
+  list.innerHTML=_rankingRowsHtml(rankings);
+  rankings.forEach(r=>{const el=document.getElementById(`tscore-${r.id}`);if(el)el.textContent=`${r.score} PT`;});
+  // Keep the fullscreen overlay live if it's open.
+  const fs=document.getElementById('rankings-fs');
+  if(fs && fs.classList.contains('open')) document.getElementById('rankings-fs-list').innerHTML=_rankingRowsHtml(rankings);
+}
+function openRankingsFullscreen(){
+  const fs=document.getElementById('rankings-fs'); if(!fs) return;
+  const title=document.getElementById('rankings-fs-title');
+  if(title) title.textContent = gmt('db-rankings')||'RANGLISTE';
+  document.getElementById('rankings-fs-list').innerHTML = _lastRankings.length
+    ? _rankingRowsHtml(_lastRankings)
+    : '<p style="color:var(--text-muted);">'+(gmt('no-teams-yet')||'Noch keine Teams.')+'</p>';
+  fs.classList.add('open');
+}
+function closeRankingsFullscreen(){ const fs=document.getElementById('rankings-fs'); if(fs) fs.classList.remove('open'); }
 
 function onSubmissionNew({teamId,missionId}){
   bumpPending(teamId, +1);
