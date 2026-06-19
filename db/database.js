@@ -625,11 +625,13 @@ const getRankings = gameId => {
     FROM teams t WHERE t.game_id=?
     ORDER BY t.score DESC,
       -- Tie-break — only ever decides between EQUAL scores (score sorts first, so a
-      -- sole points leader always wins on points alone). In a tie: 1) more rival
-      -- teams captured, 2) more checkpoints visited, 3) reached the total first
+      -- sole points leader always wins on points alone). Among tied teams each
+      -- accepted capture and each visited checkpoint is worth 1 tie-break point;
+      -- the higher COMBINED total wins, then the team that reached the total first
       -- (fastest last checkpoint). last_score_at=0 (never scored) sorts last.
-      captures DESC,
-      checkpoints DESC,
+      ((SELECT COUNT(*) FROM cr_team_captures c WHERE c.team_id=t.id AND c.status='accepted')
+        + (SELECT COUNT(*) FROM cr_mission_progress mp JOIN cr_missions cmx ON cmx.id=mp.mission_id
+             WHERE mp.team_id=t.id AND mp.status='completed' AND cmx.use_gps=1)) DESC,
       CASE WHEN t.last_score_at > 0 THEN t.last_score_at ELSE 9223372036854775807 END ASC,
       t.joined_at ASC, completed DESC`).all(gameId);
   // Enrich each row with how much time was left on the game clock when the team
