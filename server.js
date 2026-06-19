@@ -345,6 +345,13 @@ app.post('/api/modes', (req,res) => {
   const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60);
   res.json({id,success:true});
 });
+// NOTE: must be declared before '/api/modes/:id' or Express treats "reorder"
+// as the :id param. Body: { order: [modeId, ...] } in the desired display order.
+app.put('/api/modes/reorder', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.reorderModes(Array.isArray(req.body.order) ? req.body.order : []);
+  res.json({success:true});
+});
 app.put('/api/modes/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try { db.updateMode(req.params.id, req.body); res.json({success:true}); }
@@ -960,6 +967,12 @@ app.post('/api/cr/modes', (req,res) => {
   const {name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode} = req.body;
   const id = db.createCrMode({name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode});
   res.json({id, success:true});
+});
+// Declared before '/api/cr/modes/:id'. Body: { order: [crModeId, ...] }.
+app.put('/api/cr/modes/reorder', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.reorderCrModes(Array.isArray(req.body.order) ? req.body.order : []);
+  res.json({success:true});
 });
 app.put('/api/cr/modes/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});

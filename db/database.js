@@ -286,6 +286,10 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN skippable INTEGER DEFAULT 0");
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN use_draw INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN draw_needs_approval INTEGER DEFAULT 1"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN draw_collaborative INTEGER DEFAULT 0"); } catch(e) {}
+// Manual ordering of modes (MiSSiONS + Rail Adventure), set by drag-reorder in
+// the GM settings. Default 0 → existing rows fall back to name order.
+try { db.exec("ALTER TABLE modes ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_modes ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -456,12 +460,16 @@ const verifyGmToken = tok => {
 const rotateGmToken = () => { setSetting('gm_token_secret', crypto.randomBytes(32).toString('hex')); };
 
 // ── Modes ─────────────────────────────────────────────────────────────────────
-const getModes   = () => db.prepare('SELECT m.*, r.name as ruleset_name FROM modes m LEFT JOIN rulesets r ON r.id=m.ruleset_id ORDER BY m.name').all();
+const getModes   = () => db.prepare('SELECT m.*, r.name as ruleset_name FROM modes m LEFT JOIN rulesets r ON r.id=m.ruleset_id ORDER BY m.order_index, m.name').all();
 const getMode    = id => db.prepare('SELECT * FROM modes WHERE id=?').get(id);
 const createMode = (name, ruleset_id=1, timer_default=60) => num(db.prepare('INSERT INTO modes(name,ruleset_id,timer_default) VALUES(?,?,?)').run(name, ruleset_id||1, timer_default||60).lastInsertRowid);
 const updateMode = (id, {name, ruleset_id, timer_default}) =>
   db.prepare('UPDATE modes SET name=?,ruleset_id=?,timer_default=? WHERE id=?').run(name, ruleset_id||1, timer_default||60, id);
 const deleteMode = id => { if(Number(id)===1) throw new Error("Cannot delete default mode"); db.prepare('DELETE FROM modes WHERE id=?').run(id); };
+const reorderModes = (orderedIds=[]) => {
+  const stmt = db.prepare('UPDATE modes SET order_index=? WHERE id=?');
+  orderedIds.forEach((id,i)=>stmt.run(i+1, Number(id)));
+};
 
 // ── Rulesets ─────────────────────────────────────────────────────────────────
 const getRulesets   = () => db.prepare('SELECT * FROM rulesets ORDER BY name').all();
@@ -610,12 +618,18 @@ const getRankings = gameId => {
   const rows = db.prepare(`
     SELECT t.id, t.name, t.score, t.last_score_at, t.joined_at,
       (SELECT COUNT(*) FROM team_missions tm WHERE tm.team_id=t.id AND tm.status='accepted') as completed,
-      (SELECT COUNT(*) FROM team_missions tm WHERE tm.team_id=t.id) as assigned
+      (SELECT COUNT(*) FROM team_missions tm WHERE tm.team_id=t.id) as assigned,
+      (SELECT COUNT(*) FROM cr_team_captures c WHERE c.team_id=t.id AND c.status='accepted') as captures,
+      (SELECT COUNT(*) FROM cr_mission_progress mp JOIN cr_missions cmx ON cmx.id=mp.mission_id
+         WHERE mp.team_id=t.id AND mp.status='completed' AND cmx.use_gps=1) as checkpoints
     FROM teams t WHERE t.game_id=?
     ORDER BY t.score DESC,
-      -- Tie-break: among equal scores, the team that REACHED the total first
-      -- ranks higher. last_score_at=0 means "never scored / pre-migration" —
-      -- push those last by treating 0 as the largest possible value.
+      -- Tie-break — only ever decides between EQUAL scores (score sorts first, so a
+      -- sole points leader always wins on points alone). In a tie: 1) more rival
+      -- teams captured, 2) more checkpoints visited, 3) reached the total first
+      -- (fastest last checkpoint). last_score_at=0 (never scored) sorts last.
+      captures DESC,
+      checkpoints DESC,
       CASE WHEN t.last_score_at > 0 THEN t.last_score_at ELSE 9223372036854775807 END ASC,
       t.joined_at ASC, completed DESC`).all(gameId);
   // Enrich each row with how much time was left on the game clock when the team
@@ -701,8 +715,12 @@ const getGameRules = gameId => {
 
 
 // ── CityRush ─────────────────────────────────────────────────────────────────
-const getCrModes    = () => db.prepare('SELECT cm.*, r.name as ruleset_name FROM cr_modes cm LEFT JOIN rulesets r ON r.id=cm.ruleset_id ORDER BY cm.name').all();
+const getCrModes    = () => db.prepare('SELECT cm.*, r.name as ruleset_name FROM cr_modes cm LEFT JOIN rulesets r ON r.id=cm.ruleset_id ORDER BY cm.order_index, cm.name').all();
 const getCrMode     = id => db.prepare('SELECT * FROM cr_modes WHERE id=?').get(id);
+const reorderCrModes = (orderedIds=[]) => {
+  const stmt = db.prepare('UPDATE cr_modes SET order_index=? WHERE id=?');
+  orderedIds.forEach((id,i)=>stmt.run(i+1, Number(id)));
+};
 const createCrMode  = (data) => {
   // Backward-compat: callers used to pass just a name string.
   if (typeof data === 'string') data = {name: data};
@@ -1091,7 +1109,7 @@ module.exports = {
   getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
-  getModes,getMode,createMode,updateMode,deleteMode,getGameRules,
+  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,
   getMissions,getMission,createMission,updateMission,deleteMission,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
@@ -1100,7 +1118,7 @@ module.exports = {
   submitMission,acceptSubmission,rejectSubmission,
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,
   saveMessage,getMessages,
-  getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,
+  getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,reorderCrModes,
   getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,
   linkCrMode,getGameCrMode,isCrGame,
   getCrHints,getCrHint,createCrHint,updateCrHint,deleteCrHint,reorderCrHints,getTeamHintsUsed,incrementTeamHints,
