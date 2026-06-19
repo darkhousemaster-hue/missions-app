@@ -221,6 +221,48 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .cme-chip.soon{opacity:.5;cursor:not-allowed;}
 .cme-chip.soon:hover{border-color:var(--border);}
 .cme-chip .mini{font-size:.56rem;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;}
+/* ── Game-mode manager: mode pills + unified mission toolbar ─────────────── */
+.mm-modes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:.6rem;}
+.mm-modes .mm-lbl{font:700 10px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);margin-right:2px;}
+.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font:700 12px/1 var(--body);letter-spacing:.03em;text-transform:uppercase;cursor:grab;user-select:none;transition:color .15s,border-color .15s,background .15s;}
+.mode-pill:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+.mode-pill.active{background:var(--orange-soft);color:var(--text);border-color:var(--orange-dim);}
+.mode-pill .pill-grip{display:inline-flex;color:var(--text-muted);}
+.mode-pill .pill-edit{display:inline-flex;color:var(--text-muted);cursor:pointer;}
+.mode-pill .pill-edit:hover{color:var(--orange);}
+.mode-add{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:transparent;border:1px dashed var(--border);color:var(--text-dim);font:700 12px/1 var(--body);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:color .15s,border-color .15s;}
+.mode-add:hover{color:var(--text);border-color:var(--orange-dim);}
+.mm-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:.5rem;}
+.mm-ctx{display:flex;align-items:baseline;gap:8px;min-width:0;}
+.mm-ctx .mm-name{font:800 16px/1 var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--text);}
+.mm-ctx .mm-count{font:600 12px/1 var(--mono);color:var(--text-muted);}
+.mm-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.mm-seg{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.mm-seg>button{background:transparent;border:0;color:var(--text-dim);font:700 12px/1 var(--body);letter-spacing:.05em;text-transform:uppercase;padding:.5rem .75rem;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:color .12s,background .12s;}
+.mm-seg>button+button{border-left:1px solid var(--border);}
+.mm-seg>button:hover{color:var(--text);background:rgba(255,255,255,.05);}
+
+/* Selection mode — per-row checkboxes + the multiselect bar stay hidden until
+   the GM taps "Select". Toggled by body.sel-ms / body.sel-cr. */
+.ms-checkbox,.crms-checkbox{display:none;}
+#ms-toolbar,#crms-toolbar{display:none !important;}
+body.sel-ms .ms-checkbox{display:inline-block;}
+body.sel-ms #ms-toolbar{display:flex !important;}
+body.sel-cr .crms-checkbox{display:inline-block;}
+body.sel-cr #crms-toolbar{display:flex !important;}
+.btn.is-sel-on,.mm-seg>button.is-sel-on{background:var(--orange-soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--orange-dim);}
+
+/* Mobile: the desktop console is height-locked (body/#app overflow:hidden +
+   100vh) with no fallback — on phones that traps content (incl. the Settings
+   entry) off-screen. Re-enable vertical scrolling + stack the settings shell. */
+@media(max-width:768px){
+  body{height:auto;min-height:100vh;min-height:100dvh;overflow-y:auto;overflow-x:hidden;}
+  #app{overflow:visible;}
+  #screen-landing,#screen-settings,#screen-dashboard{overflow-y:auto;}
+  .settings-shell{grid-template-columns:1fr;grid-template-areas:'topbar' 'side' 'main';height:auto;min-height:0;}
+  .settings-side{grid-area:side;border-right:0;border-bottom:1px solid var(--hairline);max-height:none;}
+  .settings-main{grid-area:main;overflow:visible;padding:18px 16px 64px;}
+}
 </style>
 </head>
 <body>
@@ -690,18 +732,21 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
       <!-- Missions (with modes) -->
       <div id="stab-missions" class="stab">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
-          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
-            <span class="label" style="margin:0;" id="s-mode-label">Modus:</span>
-            <div id="mode-tabs" class="tabs" style="border:none;margin:0;"></div>
-            <button class="btn btn-ghost btn-sm" onclick="showAddMode()" id="s-add-mode">＋ Modus</button>
-          </div>
-          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <div class="mm-modes">
+          <span class="mm-lbl" id="s-mode-label">Modus</span>
+          <div id="mode-tabs" style="display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+          <button class="mode-add" onclick="showAddMode()" id="s-add-mode">＋ Modus</button>
+        </div>
+        <div class="mm-bar">
+          <div class="mm-actions">
             <select id="mission-filter" class="select" style="width:auto;" onchange="loadMissions()">
               <option value="">Alle</option>
               <option value="null">Pool</option>
             </select>
-            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file-input').click()" id="s-import-btn">⬆ Import</button>
+          </div>
+          <div class="mm-actions">
+            <button class="btn btn-ghost btn-sm" id="btn-ms-select" onclick="toggleSelectMs()">☑ <span class="lab">Auswählen</span></button>
+            <button class="btn btn-ghost btn-sm" onclick="exitSelectionModes();document.getElementById('import-file-input').click()" id="s-import-btn">⬆ Import</button>
             <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="importMissions(this.files[0])">
             <button class="btn btn-primary btn-sm" onclick="showAddMission()" id="s-add-mission">＋ MiSSiON</button>
           </div>
@@ -865,24 +910,28 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
       <!-- Rail Adventure -->
       <div id="stab-cityrush" class="stab">
         <div class="card mb-2">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;gap:.5rem;flex-wrap:wrap;">
             <h3 id="s-cr-title">🏃 Rail Adventure Modi</h3>
-            <button class="btn btn-primary btn-sm" onclick="showAddCrMode()" id="s-cr-add-mode">＋ Modus</button>
           </div>
           <p id="s-cr-info" style="font-size:.85rem;color:var(--text-muted);margin-bottom:.75rem;">
             Rail Adventure nutzt GPS-Ortung. Spieler folgen nichtlinearen Missionen durch verschiedene Städte.
           </p>
-          <div id="cr-mode-tabs" class="tabs" style="flex-wrap:wrap;border:none;margin-bottom:.5rem;"></div>
+          <div class="mm-modes">
+            <span class="mm-lbl" id="s-cr-mode-label">Modus</span>
+            <div id="cr-mode-tabs" style="display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+            <button class="mode-add" onclick="showAddCrMode()" id="s-cr-add-mode">＋ Modus</button>
+          </div>
           <div id="cr-mode-panel" style="display:none;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem;">
-              <h4 id="cr-mode-title">Missionen</h4>
-              <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
-                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cr-import-file-input').click()" id="s-cr-import">⬆ Import</button>
-                <input type="file" id="cr-import-file-input" accept=".json" style="display:none;" onchange="importCrMissions(this.files[0])">
-                <button class="btn btn-ghost btn-sm" onclick="exportCrMissions()" id="s-cr-export">⬇ Export</button>
-                <button class="btn btn-ghost btn-sm" onclick="showAddCrMission()" id="s-cr-add-mission">＋ Mission</button>
-                <button class="btn btn-ghost btn-sm" onclick="editCurrentCrMode()" id="s-cr-edit-mode">✎ Modus</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteCurrentCrMode()">🗑</button>
+            <div class="mm-bar">
+              <div class="mm-ctx"><span class="mm-name" id="cr-mode-title">Missionen</span></div>
+              <div class="mm-actions">
+                <button class="btn btn-ghost btn-sm" id="btn-cr-select" onclick="toggleSelectCr()">☑ <span class="lab">Auswählen</span></button>
+                <div class="mm-seg">
+                  <button onclick="exitSelectionModes();document.getElementById('cr-import-file-input').click()" id="s-cr-import">⬆ Import</button>
+                  <input type="file" id="cr-import-file-input" accept=".json" style="display:none;" onchange="importCrMissions(this.files[0])">
+                  <button onclick="exportCrMissions()" id="s-cr-export">⬇ Export</button>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="showAddCrMission()" id="s-cr-add-mission">＋ Mission</button>
               </div>
             </div>
             <p id="s-cr-drag-hint" style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">Drag &amp; drop zum Sortieren. Spieler sehen Missionen der Reihe nach.</p>
@@ -1047,7 +1096,7 @@ const GMT={
   'tip-cr-mode-timer':'Standard-Spieldauer in Minuten, wenn ein neues Rail Adventure Spiel in diesem Modus erstellt wird.',
   'cr-mode-timer-label':'Standard-Dauer (Minuten)',
   'btn-delete-team-lbl':'Löschen','delete-team-tip':'Team löschen','team-delete-confirm':'Team "{name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.','team-deleted':'Team gelöscht','tb-adjust':'Timer',
-  'cr-rush-missions':'Missionen','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Überspringbar','cr-m-skippable-sub':'Aus = kann nicht übersprungen werden.','sound-on':'🔔 Ton an','sound-off':'🔕 Ton aus','rankings-fs-tip':'Rangliste Vollbild','rank-tb-tip':'Gleichstand: 1 Punkt pro Capture & Checkpoint','cr-m-type-draw':'Zeichnen','cr-m-type-draw-d':'Aufgabe zeichnen','cr-m-type-draw-tip':'Spieler zeichnen die Aufgabe auf dem Handy.','cr-m-type-draw-tip2':'Optional gemeinsam per QR-Code. Du gibst die Zeichnung frei (oder Auto-Punkte).','cr-m-setup-draw':'Zeichnen','cr-m-draw-approval':'GM-Freigabe nötig','cr-m-draw-approval-tip':'An (Standard): die fertige Zeichnung kommt in die Prüf-Warteschlange — du gibst sie frei. Aus: Punkte werden sofort vergeben.','cr-m-draw-approval-sub':'An = du gibst jede Zeichnung frei.','cr-m-draw-collab':'Gemeinsam','cr-m-draw-collab-tip':'An: das Startgerät erhält einen QR-Code; Teammitglieder scannen und zeichnen gemeinsam in Echtzeit. Aus (Standard): eine Person zeichnet.','cr-m-draw-collab-sub':'Aus = eine Person zeichnet allein.','cr-m-draw-note':'Spieler zeichnen die Aufgabe auf dem Handy. Schreibe die Aufgabe in den „Aufgabe“-Tab unten.',
+  'cr-rush-missions':'Missionen','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Überspringbar','cr-m-skippable-sub':'Aus = kann nicht übersprungen werden.','sound-on':'🔔 Ton an','sound-off':'🔕 Ton aus','rankings-fs-tip':'Rangliste Vollbild','rank-tb-tip':'Gleichstand: 1 Punkt pro Capture & Checkpoint','select':'Auswählen','done':'Fertig','s-cr-mode-label':'Modus','cr-m-type-draw':'Zeichnen','cr-m-type-draw-d':'Aufgabe zeichnen','cr-m-type-draw-tip':'Spieler zeichnen die Aufgabe auf dem Handy.','cr-m-type-draw-tip2':'Optional gemeinsam per QR-Code. Du gibst die Zeichnung frei (oder Auto-Punkte).','cr-m-setup-draw':'Zeichnen','cr-m-draw-approval':'GM-Freigabe nötig','cr-m-draw-approval-tip':'An (Standard): die fertige Zeichnung kommt in die Prüf-Warteschlange — du gibst sie frei. Aus: Punkte werden sofort vergeben.','cr-m-draw-approval-sub':'An = du gibst jede Zeichnung frei.','cr-m-draw-collab':'Gemeinsam','cr-m-draw-collab-tip':'An: das Startgerät erhält einen QR-Code; Teammitglieder scannen und zeichnen gemeinsam in Echtzeit. Aus (Standard): eine Person zeichnet.','cr-m-draw-collab-sub':'Aus = eine Person zeichnet allein.','cr-m-draw-note':'Spieler zeichnen die Aufgabe auf dem Handy. Schreibe die Aufgabe in den „Aufgabe“-Tab unten.',
   'tip-cr-lat':'Geografische Breite des Ziels (Dezimalgrad, z.B. 47.47620).',
   'tip-cr-lng':'Geografische Länge des Ziels (Dezimalgrad).',
   'tip-cr-radius':'Wie nah die Spieler am Ziel sein müssen, damit "Angekommen" ausgelöst wird (Meter).',
@@ -1171,7 +1220,7 @@ const GMT={
   'tip-cr-mode-timer':'Default game duration in minutes when creating a new Rail Adventure game in this mode.',
   'cr-mode-timer-label':'Default duration (minutes)',
   'btn-delete-team-lbl':'Delete','delete-team-tip':'Delete team','team-delete-confirm':'Really delete team "{name}"? This cannot be undone.','team-deleted':'Team deleted','tb-adjust':'Timer',
-  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Skippable','cr-m-skippable-sub':'Off = can\'t be skipped.','sound-on':'🔔 Sound on','sound-off':'🔕 Sound off','rankings-fs-tip':'Rankings fullscreen','rank-tb-tip':'Tie-break: 1 point per capture & checkpoint','cr-m-type-draw':'Draw','cr-m-type-draw-d':'Draw the task','cr-m-type-draw-tip':'Players draw the task on their phone.','cr-m-type-draw-tip2':'Optionally collaborative via QR code. You approve the drawing (or auto-award).','cr-m-setup-draw':'Draw','cr-m-draw-approval':'Needs GM approval','cr-m-draw-approval-tip':'On (default): the finished drawing goes to the review queue — you approve it. Off: points are awarded immediately.','cr-m-draw-approval-sub':'On = you approve each drawing.','cr-m-draw-collab':'Collaborative','cr-m-draw-collab-tip':'On: the starting device gets a QR code; teammates scan and draw together in real time. Off (default): one person draws.','cr-m-draw-collab-sub':'Off = one person draws alone.','cr-m-draw-note':'Players draw the task on their phone. Put the task text in the "Task" tab below.',
+  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Skippable','cr-m-skippable-sub':'Off = can\'t be skipped.','sound-on':'🔔 Sound on','sound-off':'🔕 Sound off','rankings-fs-tip':'Rankings fullscreen','rank-tb-tip':'Tie-break: 1 point per capture & checkpoint','select':'Select','done':'Done','s-cr-mode-label':'Mode','cr-m-type-draw':'Draw','cr-m-type-draw-d':'Draw the task','cr-m-type-draw-tip':'Players draw the task on their phone.','cr-m-type-draw-tip2':'Optionally collaborative via QR code. You approve the drawing (or auto-award).','cr-m-setup-draw':'Draw','cr-m-draw-approval':'Needs GM approval','cr-m-draw-approval-tip':'On (default): the finished drawing goes to the review queue — you approve it. Off: points are awarded immediately.','cr-m-draw-approval-sub':'On = you approve each drawing.','cr-m-draw-collab':'Collaborative','cr-m-draw-collab-tip':'On: the starting device gets a QR code; teammates scan and draw together in real time. Off (default): one person draws.','cr-m-draw-collab-sub':'Off = one person draws alone.','cr-m-draw-note':'Players draw the task on their phone. Put the task text in the "Task" tab below.',
   'tip-cr-lat':'Target latitude (decimal degrees, e.g. 47.47620).',
   'tip-cr-lng':'Target longitude (decimal degrees).',
   'tip-cr-radius':'How close players need to be to count as arrived (meters).',
@@ -1286,7 +1335,7 @@ const GMT={
   'tip-cr-mode-timer':'Durée par défaut (minutes) à la création d\'une partie Rail Adventure dans ce mode.',
   'cr-mode-timer-label':'Durée par défaut (minutes)',
   'btn-delete-team-lbl':'Supprimer','delete-team-tip':'Supprimer l\'équipe','team-delete-confirm':'Vraiment supprimer l\'équipe « {name} » ? C\'est irréversible.','team-deleted':'Équipe supprimée','tb-adjust':'Minuteur',
-  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Peut être sauté','cr-m-skippable-sub':'Désactivé = ne peut pas être sauté.','sound-on':'🔔 Son activé','sound-off':'🔕 Son coupé','rankings-fs-tip':'Classement plein écran','rank-tb-tip':'Égalité : 1 point par capture et checkpoint','cr-m-type-draw':'Dessiner','cr-m-type-draw-d':'Dessiner la tâche','cr-m-type-draw-tip':'Les joueurs dessinent la tâche sur leur téléphone.','cr-m-type-draw-tip2':'En option collaboratif via QR code. Vous validez le dessin (ou points auto).','cr-m-setup-draw':'Dessin','cr-m-draw-approval':'Validation requise','cr-m-draw-approval-tip':'Activé (défaut) : le dessin terminé passe en file de validation — vous l\'approuvez. Désactivé : points attribués immédiatement.','cr-m-draw-approval-sub':'Activé = vous validez chaque dessin.','cr-m-draw-collab':'Collaboratif','cr-m-draw-collab-tip':'Activé : l\'appareil de départ reçoit un QR code ; les coéquipiers scannent et dessinent ensemble en temps réel. Désactivé (défaut) : une personne dessine.','cr-m-draw-collab-sub':'Désactivé = une seule personne dessine.','cr-m-draw-note':'Les joueurs dessinent la tâche sur leur téléphone. Mettez le texte dans l\'onglet « Tâche » ci-dessous.',
+  'cr-rush-missions':'Missions','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Mission','cr-m-place-route':'Checkpoint','cr-m-skippable':'Peut être sauté','cr-m-skippable-sub':'Désactivé = ne peut pas être sauté.','sound-on':'🔔 Son activé','sound-off':'🔕 Son coupé','rankings-fs-tip':'Classement plein écran','rank-tb-tip':'Égalité : 1 point par capture et checkpoint','select':'Sélectionner','done':'Terminé','s-cr-mode-label':'Mode','cr-m-type-draw':'Dessiner','cr-m-type-draw-d':'Dessiner la tâche','cr-m-type-draw-tip':'Les joueurs dessinent la tâche sur leur téléphone.','cr-m-type-draw-tip2':'En option collaboratif via QR code. Vous validez le dessin (ou points auto).','cr-m-setup-draw':'Dessin','cr-m-draw-approval':'Validation requise','cr-m-draw-approval-tip':'Activé (défaut) : le dessin terminé passe en file de validation — vous l\'approuvez. Désactivé : points attribués immédiatement.','cr-m-draw-approval-sub':'Activé = vous validez chaque dessin.','cr-m-draw-collab':'Collaboratif','cr-m-draw-collab-tip':'Activé : l\'appareil de départ reçoit un QR code ; les coéquipiers scannent et dessinent ensemble en temps réel. Désactivé (défaut) : une personne dessine.','cr-m-draw-collab-sub':'Désactivé = une seule personne dessine.','cr-m-draw-note':'Les joueurs dessinent la tâche sur leur téléphone. Mettez le texte dans l\'onglet « Tâche » ci-dessous.',
   'tip-cr-lat':'Latitude de la cible (degrés décimaux, ex. 47.47620).',
   'tip-cr-lng':'Longitude de la cible (degrés décimaux).',
   'tip-cr-radius':'Distance (m) à laquelle l\'arrivée est validée.',
@@ -1401,7 +1450,7 @@ const GMT={
   'tip-cr-mode-timer':'Durata predefinita (minuti) creando una nuova partita Rail Adventure in questa modalità.',
   'cr-mode-timer-label':'Durata predefinita (minuti)',
   'btn-delete-team-lbl':'Elimina','delete-team-tip':'Elimina squadra','team-delete-confirm':'Eliminare davvero la squadra "{name}"? Non è reversibile.','team-deleted':'Squadra eliminata','tb-adjust':'Timer',
-  'cr-rush-missions':'Missioni','cr-normal-missions':'Checkpoint','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Missione','cr-m-place-route':'Checkpoint','cr-m-skippable':'Saltabile','cr-m-skippable-sub':'Off = non può essere saltata.','sound-on':'🔔 Audio attivo','sound-off':'🔕 Audio disattivato','rankings-fs-tip':'Classifica a schermo intero','rank-tb-tip':'Parità: 1 punto per cattura e checkpoint','cr-m-type-draw':'Disegna','cr-m-type-draw-d':'Disegna il compito','cr-m-type-draw-tip':'I giocatori disegnano il compito sul telefono.','cr-m-type-draw-tip2':'Facoltativamente collaborativo tramite QR. Approvi il disegno (o punti automatici).','cr-m-setup-draw':'Disegno','cr-m-draw-approval':'Approvazione GM','cr-m-draw-approval-tip':'Attivo (predefinito): il disegno finito va in coda di revisione — lo approvi. Disattivo: punti assegnati subito.','cr-m-draw-approval-sub':'Attivo = approvi ogni disegno.','cr-m-draw-collab':'Collaborativo','cr-m-draw-collab-tip':'Attivo: il dispositivo iniziale riceve un QR; i compagni scansionano e disegnano insieme in tempo reale. Disattivo (predefinito): disegna una persona.','cr-m-draw-collab-sub':'Disattivo = disegna una sola persona.','cr-m-draw-note':'I giocatori disegnano il compito sul telefono. Scrivi il testo nel tab "Compito" qui sotto.',
+  'cr-rush-missions':'Missioni','cr-normal-missions':'Checkpoint','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Missione','cr-m-place-route':'Checkpoint','cr-m-skippable':'Saltabile','cr-m-skippable-sub':'Off = non può essere saltata.','sound-on':'🔔 Audio attivo','sound-off':'🔕 Audio disattivato','rankings-fs-tip':'Classifica a schermo intero','rank-tb-tip':'Parità: 1 punto per cattura e checkpoint','select':'Seleziona','done':'Fatto','s-cr-mode-label':'Modalità','cr-m-type-draw':'Disegna','cr-m-type-draw-d':'Disegna il compito','cr-m-type-draw-tip':'I giocatori disegnano il compito sul telefono.','cr-m-type-draw-tip2':'Facoltativamente collaborativo tramite QR. Approvi il disegno (o punti automatici).','cr-m-setup-draw':'Disegno','cr-m-draw-approval':'Approvazione GM','cr-m-draw-approval-tip':'Attivo (predefinito): il disegno finito va in coda di revisione — lo approvi. Disattivo: punti assegnati subito.','cr-m-draw-approval-sub':'Attivo = approvi ogni disegno.','cr-m-draw-collab':'Collaborativo','cr-m-draw-collab-tip':'Attivo: il dispositivo iniziale riceve un QR; i compagni scansionano e disegnano insieme in tempo reale. Disattivo (predefinito): disegna una persona.','cr-m-draw-collab-sub':'Disattivo = disegna una sola persona.','cr-m-draw-note':'I giocatori disegnano il compito sul telefono. Scrivi il testo nel tab "Compito" qui sotto.',
   'tip-cr-lat':'Latitudine target (gradi decimali, es. 47.47620).',
   'tip-cr-lng':'Longitudine target (gradi decimali).',
   'tip-cr-radius':'Distanza (m) a cui scatta l\'arrivo.',
@@ -1516,7 +1565,7 @@ const GMT={
   'tip-cr-mode-timer':'Duración por defecto (minutos) al crear una nueva partida Rail Adventure en este modo.',
   'cr-mode-timer-label':'Duración por defecto (minutos)',
   'btn-delete-team-lbl':'Eliminar','delete-team-tip':'Eliminar equipo','team-delete-confirm':'¿Eliminar el equipo "{name}"? No se puede deshacer.','team-deleted':'Equipo eliminado','tb-adjust':'Temporizador',
-  'cr-rush-missions':'Misiones','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Misión','cr-m-place-route':'Checkpoint','cr-m-skippable':'Se puede saltar','cr-m-skippable-sub':'Apagado = no se puede saltar.','sound-on':'🔔 Sonido activado','sound-off':'🔕 Sonido apagado','rankings-fs-tip':'Clasificación pantalla completa','rank-tb-tip':'Empate: 1 punto por captura y checkpoint','cr-m-type-draw':'Dibujar','cr-m-type-draw-d':'Dibujar la tarea','cr-m-type-draw-tip':'Los jugadores dibujan la tarea en el móvil.','cr-m-type-draw-tip2':'Opcionalmente colaborativo por QR. Apruebas el dibujo (o puntos automáticos).','cr-m-setup-draw':'Dibujo','cr-m-draw-approval':'Aprobación del GM','cr-m-draw-approval-tip':'Activado (predeterminado): el dibujo terminado va a la cola de revisión — lo apruebas. Desactivado: puntos al instante.','cr-m-draw-approval-sub':'Activado = apruebas cada dibujo.','cr-m-draw-collab':'Colaborativo','cr-m-draw-collab-tip':'Activado: el dispositivo inicial recibe un QR; los compañeros escanean y dibujan juntos en tiempo real. Desactivado (predeterminado): dibuja una persona.','cr-m-draw-collab-sub':'Desactivado = dibuja una sola persona.','cr-m-draw-note':'Los jugadores dibujan la tarea en el móvil. Escribe la tarea en la pestaña "Tarea" de abajo.',
+  'cr-rush-missions':'Misiones','cr-normal-missions':'Checkpoints','cr-mode-rush-label':'Rail Adventure','cr-m-place-rush':'Misión','cr-m-place-route':'Checkpoint','cr-m-skippable':'Se puede saltar','cr-m-skippable-sub':'Apagado = no se puede saltar.','sound-on':'🔔 Sonido activado','sound-off':'🔕 Sonido apagado','rankings-fs-tip':'Clasificación pantalla completa','rank-tb-tip':'Empate: 1 punto por captura y checkpoint','select':'Seleccionar','done':'Hecho','s-cr-mode-label':'Modo','cr-m-type-draw':'Dibujar','cr-m-type-draw-d':'Dibujar la tarea','cr-m-type-draw-tip':'Los jugadores dibujan la tarea en el móvil.','cr-m-type-draw-tip2':'Opcionalmente colaborativo por QR. Apruebas el dibujo (o puntos automáticos).','cr-m-setup-draw':'Dibujo','cr-m-draw-approval':'Aprobación del GM','cr-m-draw-approval-tip':'Activado (predeterminado): el dibujo terminado va a la cola de revisión — lo apruebas. Desactivado: puntos al instante.','cr-m-draw-approval-sub':'Activado = apruebas cada dibujo.','cr-m-draw-collab':'Colaborativo','cr-m-draw-collab-tip':'Activado: el dispositivo inicial recibe un QR; los compañeros escanean y dibujan juntos en tiempo real. Desactivado (predeterminado): dibuja una persona.','cr-m-draw-collab-sub':'Desactivado = dibuja una sola persona.','cr-m-draw-note':'Los jugadores dibujan la tarea en el móvil. Escribe la tarea en la pestaña "Tarea" de abajo.',
   'tip-cr-lat':'Latitud del objetivo (grados decimales, p.ej. 47.47620).',
   'tip-cr-lng':'Longitud del objetivo (grados decimales).',
   'tip-cr-radius':'Distancia (m) a la que se considera que el jugador ha llegado.',
@@ -3737,19 +3786,19 @@ async function loadModeTabs(){
   const modes=await API('/api/modes');
   const bar=document.getElementById('mode-tabs');
   bar.innerHTML=modes.map(m=>`
-    <span data-mode-id="${m.id}" style="display:inline-flex;align-items:center;gap:1px;margin-right:.25rem;">
-      <button class="tab ${sel(m.id===currentModeId)}" onclick="selectMode(${m.id},'${esc(m.name)}',this)">${esc(m.name)}</button>
-      <button style="padding:.2rem .35rem;font-size:.7rem;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius);cursor:pointer;" onclick="showEditMode(${m.id})" title="${gmt('edit')||'Bearbeiten'}">✎</button>
+    <span class="mode-pill ${m.id===currentModeId?'active':''}" data-mode-id="${m.id}" onclick="selectMode(${m.id},'${esc(m.name)}',this)" title="${esc(m.name)}">
+      <span class="pill-grip">${_gripSvg}</span>${esc(m.name)}<span class="pill-edit" onclick="event.stopPropagation();showEditMode(${m.id})" title="${gmt('edit')||'Bearbeiten'}">${_pencilSvg}</span>
     </span>`).join('');
   makeSortable(bar, 'data-mode-id', saveModeOrder);
 }
 async function selectMode(id,name,el){
+  exitSelectionModes();
   currentModeId=id;currentModeName=name;
-  document.querySelectorAll('#mode-tabs .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#mode-tabs .mode-pill').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
   await loadMissions();await loadMissionFilter();
 }
-async function showAddMode(){
+async function showAddMode(){ exitSelectionModes();
   const rulesets=await API('/api/rulesets');
   const rsOpts=rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
@@ -4218,7 +4267,7 @@ async function autoTranslate(section){
   toast(gmt('translated')||'Übersetzt! / Translated!','success');
 }
 
-async function showAddMission(){
+async function showAddMission(){ exitSelectionModes();
   const locs=await API('/api/locations');
   const modes=await API('/api/modes');
   document.getElementById('modal-content').innerHTML=`
@@ -4671,7 +4720,7 @@ async function loadCrModes() {
   }
   if(empty) empty.style.display = 'none';
   bar.innerHTML = modes.map(m =>
-    `<button type="button" class="tab ${m.id===currentCrModeId?'active':''}" data-cr-mode-id="${m.id}" onclick="selectCrMode(${m.id})">${esc(m.name)}</button>`
+    `<span class="mode-pill ${m.id===currentCrModeId?'active':''}" data-cr-mode-id="${m.id}" onclick="selectCrMode(${m.id})" title="${esc(m.name)}"><span class="pill-grip">${_gripSvg}</span>${esc(m.name)}<span class="pill-edit" onclick="event.stopPropagation();crEditMode(${m.id})" title="${gmt('edit')||'Bearbeiten'}">${_pencilSvg}</span></span>`
   ).join('');
   makeSortable(bar, 'data-cr-mode-id', saveCrModeOrder);
   // Also populate cr-mode-select in game creation screen
@@ -4688,10 +4737,11 @@ async function selectCrMode(id) {
   const modes = window._gmCrModesCache || [];
   const m = modes.find(x => x.id === id);
   if(!m) return;
+  exitSelectionModes();
   currentCrModeId = id;
   currentCrModeName = m.name;
   currentCrModeRush = (m.rush_mode === 1);
-  document.querySelectorAll('#cr-mode-tabs .tab').forEach(t=>{
+  document.querySelectorAll('#cr-mode-tabs .mode-pill').forEach(t=>{
     t.classList.toggle('active', Number(t.dataset.crModeId) === id);
   });
   const title = document.getElementById('cr-mode-title');
@@ -4797,7 +4847,7 @@ function crDrop(e,i){
 }
 function crDragEnd(){document.querySelectorAll('[id^="crmcard-"]').forEach(el=>{el.style.opacity='';el.style.borderTop='';});crDragIdx=null;}
 
-async function showAddCrMode(){
+async function showAddCrMode(){ exitSelectionModes();
   const rulesets=await API('/api/rulesets');
   const rsOpts=`<option value="">${gmt('no-cr-mode')||'— Kein Regelwerk —'}</option>`+rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
@@ -4889,9 +4939,12 @@ async function editCurrentCrMode(){
       <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cr-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler in diesem Rail Adventure Modus.'}</p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">${langCheckboxes('cr-mode-lang-edit-', m.allowed_langs)}</div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Abbrechen'}</button>
-      <button class="btn btn-primary" onclick="saveEditCrMode()">${gmt('save')||'Speichern'}</button>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-danger btn-sm" onclick="closeModal();deleteCurrentCrMode()">${gmt('delete')||'Löschen'}</button>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||'Abbrechen'}</button>
+        <button class="btn btn-primary" onclick="saveEditCrMode()">${gmt('save')||'Speichern'}</button>
+      </div>
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';
 }
@@ -5535,7 +5588,7 @@ function _hasTempHintWork(){
     (_crTempHintsByType[t]||[]).some(h => h._new || h._imageFile));
 }
 
-async function showAddCrMission(){
+async function showAddCrMission(){ exitSelectionModes();
   if(!currentCrModeId){toast(gmt('pick-mode-first')||'Erst einen Modus auswählen','warning');return;}
   _resetTempHints(); _crPuzzleFile=null;
   // Refresh the cached mode list so the modal can filter media options
@@ -5832,7 +5885,7 @@ async function autoTranslateHint(hintId, type){
 }
 
 // ── Rail Adventure mission export / import ─────────────────────────────────────────
-async function exportCrMissions(){
+async function exportCrMissions(){ exitSelectionModes();
   if(!currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
   const missions = await API(`/api/cr/missions?mode_id=${currentCrModeId}`);
   if(!missions.length){ toast(gmt('cr-no-missions')||'Keine Missionen','warning'); return; }
@@ -6091,6 +6144,34 @@ async function autoTranslateCrField(field){
 // ── Rail Adventure multiselect helpers ────────────────────────────────────────────
 // Same pattern as the MiSSiONS multiselect below — checkboxes + a toolbar
 // that only surfaces the Export button when at least one row is checked.
+// ── Mode-pill icons (shared by loadModeTabs + loadCrModes) ──────────────────
+const _gripSvg='<svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;stroke:none"><circle cx="9" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
+const _pencilSvg='<svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+async function crEditMode(id){ await selectCrMode(id); editCurrentCrMode(); }
+
+// ── "Select" toggle — per-row checkboxes + the multiselect bar stay hidden
+//    until the GM taps Select; auto-exits on mode/section switch or other action.
+function updateSelectBtns(){
+  [['btn-ms-select','sel-ms'],['btn-cr-select','sel-cr']].forEach(([bid,cls])=>{
+    const b=document.getElementById(bid); if(!b) return;
+    const on=document.body.classList.contains(cls);
+    b.classList.toggle('is-sel-on',on);
+    const lab=b.querySelector('.lab'); if(lab) lab.textContent = on ? (gmt('done')||'Fertig') : (gmt('select')||'Auswählen');
+  });
+}
+function exitSelectionModes(){
+  const had=document.body.classList.contains('sel-ms')||document.body.classList.contains('sel-cr');
+  document.body.classList.remove('sel-ms','sel-cr');
+  if(had){
+    document.querySelectorAll('.ms-checkbox,.crms-checkbox').forEach(b=>b.checked=false);
+    ['ms-select-all','crms-select-all'].forEach(id=>{const a=document.getElementById(id);if(a){a.checked=false;a.indeterminate=false;}});
+    try{onMsChange();}catch(e){} try{onCrMsChange();}catch(e){}
+  }
+  updateSelectBtns();
+}
+function toggleSelectMs(){ const on=document.body.classList.contains('sel-ms'); exitSelectionModes(); if(!on) document.body.classList.add('sel-ms'); updateSelectBtns(); }
+function toggleSelectCr(){ const on=document.body.classList.contains('sel-cr'); exitSelectionModes(); if(!on) document.body.classList.add('sel-cr'); updateSelectBtns(); }
+
 function onCrMsChange(){
   const boxes=document.querySelectorAll('.crms-checkbox');
   const checked=[...boxes].filter(b=>b.checked);
@@ -6323,6 +6404,7 @@ function closeModal(){document.getElementById('modal-overlay').style.display='no
 let _activeGameSubTab = 'missions';
 
 function switchSettingsTab(tab,el){
+  if(typeof exitSelectionModes==='function') exitSelectionModes();   // leaving a section cancels Select mode
   // Mockup 08 settings shell: items live in the sidebar, panels in main.
   // Sidebar items use .is-active (mockup naming); content panels still
   // use .active so the existing CSS .stab.active{display:block} works.
