@@ -252,16 +252,46 @@ body.sel-cr .crms-checkbox{display:inline-block;}
 body.sel-cr #crms-toolbar{display:flex !important;}
 .btn.is-sel-on,.mm-seg>button.is-sel-on{background:var(--orange-soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--orange-dim);}
 
-/* Mobile: the desktop console is height-locked (body/#app overflow:hidden +
-   100vh) with no fallback — on phones that traps content (incl. the Settings
-   entry) off-screen. Re-enable vertical scrolling + stack the settings shell. */
+/* ── Mobile (≤768px) — the GM console is desktop-first; this makes it usable on
+   a phone. The desktop layout is height-locked (body/#app overflow:hidden +
+   100vh) and uses fixed multi-column grids, so without this everything traps
+   off-screen, the logo overflows, and settings run off the right edge. */
 @media(max-width:768px){
   body{height:auto;min-height:100vh;min-height:100dvh;overflow-y:auto;overflow-x:hidden;}
   #app{overflow:visible;}
-  #screen-landing,#screen-settings,#screen-dashboard{overflow-y:auto;}
-  .settings-shell{grid-template-columns:1fr;grid-template-areas:'topbar' 'side' 'main';height:auto;min-height:0;}
-  .settings-side{grid-area:side;border-right:0;border-bottom:1px solid var(--hairline);max-height:none;}
-  .settings-main{grid-area:main;overflow:visible;padding:18px 16px 64px;}
+  #screen-landing,#screen-settings,#screen-dashboard,#screen-game-select{overflow-y:auto;}
+
+  /* Landing: cap the wide wordmark so it can't overflow / collide with the lang pills */
+  #screen-landing{padding:1rem .9rem;}
+  .landing-logo img{height:auto;max-height:88px;max-width:76%;}
+  .landing-logo h1{font-size:clamp(2rem,11vw,3rem);}
+
+  /* Settings: stack the shell + make sure no inner content forces a min-width
+     wider than the screen (the shell is a flex child → min-width:auto by default). */
+  .settings-shell{grid-template-columns:1fr;grid-template-areas:'topbar' 'side' 'main';height:auto;min-height:0;min-width:0;}
+  .settings-side{grid-area:side;border-right:0;border-bottom:1px solid var(--hairline);max-height:none;min-width:0;}
+  .settings-main{grid-area:main;overflow:visible;padding:18px 16px 64px;min-width:0;}
+  .settings-topbar{flex-wrap:wrap;gap:8px;padding:12px 16px;}
+  .form-grid{grid-template-columns:1fr;gap:6px 0;min-width:0;}
+  .form-grid .label{margin-bottom:.2rem;}
+  .form-grid .control,.form-grid .control .row{min-width:0;flex-wrap:wrap;}
+  .save-row,.settings-note{flex-wrap:wrap;}
+
+  /* Dashboard topbar: flex-wrap so the timer + action chips wrap instead of
+     running off-screen (the 3-col grid had no room on a phone). */
+  .dt-topbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 14px;}
+  .dt-topbar__left{min-width:0;flex:1 1 auto;}
+  .dt-topbar__actions{margin-left:auto;flex-wrap:wrap;justify-content:flex-end;}
+  .timer-block{order:3;width:100%;}
+  .dt-topbar__gameid{display:none;}
+  /* let the stacked dashboard grid + chat/rankings shrink to the screen width */
+  #screen-dashboard{min-width:0;}
+  #dash-main,#dash-panel,#dash-teams,#dash-panel .panel-content,#dash-panel .chat-messages,#dash-panel .chat-input-row,#dash-panel .chat-input-row .input,#dash-panel .rankings-section,#dash-panel #rankings-list{min-width:0;}
+
+  /* Modals: keep action buttons inside the dialog on a phone */
+  .modal{padding:1.25rem;}
+  .modal-footer{flex-wrap:wrap;}
+  .modal-footer .btn{flex:1 1 auto;}
 }
 </style>
 </head>
