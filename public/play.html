@@ -253,6 +253,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 #gameover-overlay p  { font-size:1.1rem; max-width:480px; margin:1rem auto; color:var(--text-dim); }
 
 @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.5} }
+/* New GM message: flash the whole chat button orange (not just the small dot). */
+@keyframes chatBtnFlash{ 50%{ background-color:var(--orange); border-color:var(--orange); color:#fff; box-shadow:0 0 16px -2px var(--orange); } }
+.chat-flash{ animation:chatBtnFlash .55s ease-in-out 3; }
 </style>
 </head>
 <body>
@@ -1202,6 +1205,7 @@ function onChatMessage(msg) {
 
   if (currentView !== 'chat') {
     document.getElementById('chat-dot').style.display = 'block';
+    flashChatBtn('btn-chat');
     document.getElementById('msg-popup-text').textContent = msg.content;
     document.getElementById('msg-popup').style.display = 'flex';
   }
@@ -1210,6 +1214,14 @@ function onChatMessage(msg) {
 function scrollChat() {
   const box = document.getElementById('chat-messages');
   setTimeout(() => { box.scrollTop = box.scrollHeight; }, 30);
+}
+// Flash the whole chat button orange for a new GM message. Restarts cleanly if
+// another message arrives mid-flash; the class is removed once the flash ends.
+function flashChatBtn(id) {
+  const b = document.getElementById(id);
+  if (!b) return;
+  b.classList.remove('chat-flash'); void b.offsetWidth; b.classList.add('chat-flash');
+  b.addEventListener('animationend', () => b.classList.remove('chat-flash'), { once: true });
 }
 
 async function uploadFromGallery(event, missionId, mediaType) {

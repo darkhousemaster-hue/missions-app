@@ -265,6 +265,9 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 #cr-rej-btn { max-width:380px; white-space:normal; line-height:1.25; }
 
 @keyframes pulse-red { 0%,100%{opacity:1}50%{opacity:.5} }
+/* New GM message: flash the whole chat button orange (not just the small dot). */
+@keyframes chatBtnFlash{ 50%{ background-color:var(--orange); border-color:var(--orange); color:#fff; box-shadow:0 0 16px -2px var(--orange); } }
+.chat-flash{ animation:chatBtnFlash .55s ease-in-out 3; }
 </style>
 </head>
 <body>
@@ -1311,6 +1314,14 @@ function crScrollChat(){
   const box = document.getElementById('cr-chat-messages');
   if(box) setTimeout(()=>{ box.scrollTop = box.scrollHeight; }, 30);
 }
+// Flash the whole chat button orange for a new GM message (not just the dot).
+// Restarts cleanly on rapid messages; the class clears once the flash ends.
+function crFlashChatBtn(){
+  const b = document.getElementById('btn-v-chat');
+  if(!b) return;
+  b.classList.remove('chat-flash'); void b.offsetWidth; b.classList.add('chat-flash');
+  b.addEventListener('animationend', () => b.classList.remove('chat-flash'), { once:true });
+}
 // Soft two-note "ping" played whenever a GM message (direct or broadcast)
 // reaches the player. Synthesised via WebAudio so no audio asset is needed;
 // the context is primed on the player's first interaction (autoplay rule).
@@ -1354,6 +1365,7 @@ function crOnChatMessage(msg){
   if(crActiveView !== 'chat'){
     const dot = document.getElementById('cr-chat-dot');
     if(dot) dot.style.display = 'block';
+    crFlashChatBtn();
     const popupTxt = document.getElementById('cr-msg-popup-text');
     const popup    = document.getElementById('cr-msg-popup');
     if(popupTxt && popup){
