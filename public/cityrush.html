@@ -1384,6 +1384,7 @@ function crOnChatMessage(msg){
 function crClosePopup(){
   const p = document.getElementById('cr-msg-popup');
   if(p) p.style.display = 'none';
+  _crSeenGm = _crGmCount; stopCrChatFlash();   // dismissing the popup counts as "seen"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

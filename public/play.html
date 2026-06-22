@@ -1277,7 +1277,7 @@ async function sendChat() {
   });
 }
 
-function closePopup() { document.getElementById('msg-popup').style.display = 'none'; }
+function closePopup() { document.getElementById('msg-popup').style.display = 'none'; _seenGm = _gmCount; stopChatFlash(); }
 
 // ── Rules ─────────────────────────────────────────────────────────────────────
 async function loadRules() {
