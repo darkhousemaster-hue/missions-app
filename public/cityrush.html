@@ -267,7 +267,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 @keyframes pulse-red { 0%,100%{opacity:1}50%{opacity:.5} }
 /* New GM message: flash the whole chat button orange (not just the small dot). */
 @keyframes chatBtnFlash{ 50%{ background-color:var(--orange); border-color:var(--orange); color:#fff; box-shadow:0 0 16px -2px var(--orange); } }
-.chat-flash{ animation:chatBtnFlash .55s ease-in-out 3; }
+.chat-flash{ animation:chatBtnFlash .7s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -293,7 +293,6 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
   <div class="cr-right">
     <button class="cr-icon-btn" id="btn-v-chat" onclick="crShowView('chat')" title="Chat" aria-label="Chat">
       <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span id="cr-chat-dot" style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--orange);display:none;border:2px solid var(--bg3);"></span>
     </button>
     <button class="cr-icon-btn" id="btn-v-rules" onclick="showRulesView()" title="Rules" aria-label="Rules">
       <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -1183,6 +1182,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   socket = io({ reconnection:true });
   socket.on('connect', () => socket.emit('join_game', {gameId, teamId}));
+  if(socket.io && socket.io.on) socket.io.on('reconnect', crResyncChat);   // network blip → pull missed messages
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') crResyncChat(); });
   socket.on('timer_update', updateGameTimer);
   socket.on('timer_state',  updateGameTimer);
   socket.on('gps_update',   onGpsUpdate);
@@ -1286,13 +1287,15 @@ function closeRulesView(){
 }
 
 // ── Chat (GM replies + broadcast to all teams) ───────────────────────────────
-async function loadCrChatHistory(){
+async function loadCrChatHistory(resync){
   try {
     const msgs = await fetch(`/api/games/${gameId}/chat?teamId=${teamId}`).then(r=>r.json());
     const box = document.getElementById('cr-chat-messages');
     if(!box) return;
     box.innerHTML = (msgs||[]).map(crChatBubble).join('');
     crScrollChat();
+    _crGmCount = _crCountGm(msgs);
+    if(!resync) _crSeenGm = _crGmCount;   // initial load: existing history counts as already seen
   } catch(e){}
 }
 // `team_id`/`teamId` is NULL on broadcast messages (sent to /game_<id>) and a
@@ -1314,13 +1317,17 @@ function crScrollChat(){
   const box = document.getElementById('cr-chat-messages');
   if(box) setTimeout(()=>{ box.scrollTop = box.scrollHeight; }, 30);
 }
-// Flash the whole chat button orange for a new GM message (not just the dot).
-// Restarts cleanly on rapid messages; the class clears once the flash ends.
-function crFlashChatBtn(){
-  const b = document.getElementById('btn-v-chat');
-  if(!b) return;
-  b.classList.remove('chat-flash'); void b.offsetWidth; b.classList.add('chat-flash');
-  b.addEventListener('animationend', () => b.classList.remove('chat-flash'), { once:true });
+// Chat unread state — the chat button flashes orange continuously until the
+// player opens chat. Counted by GM messages so it survives the phone sleeping;
+// crResyncChat() re-checks on reconnect / when the tab becomes visible again.
+let _crGmCount = 0, _crSeenGm = 0;
+function _crCountGm(msgs){ return (msgs||[]).filter(m=>m.from_gm===1||m.from_gm===true).length; }
+function startCrChatFlash(){ const b=document.getElementById('btn-v-chat'); if(b) b.classList.add('chat-flash'); }
+function stopCrChatFlash(){ const b=document.getElementById('btn-v-chat'); if(b) b.classList.remove('chat-flash'); }
+async function crResyncChat(){
+  await loadCrChatHistory(true);
+  if(crActiveView==='chat'){ _crSeenGm=_crGmCount; stopCrChatFlash(); }
+  else if(_crGmCount > _crSeenGm){ startCrChatFlash(); }
 }
 // Soft two-note "ping" played whenever a GM message (direct or broadcast)
 // reaches the player. Synthesised via WebAudio so no audio asset is needed;
@@ -1362,10 +1369,10 @@ function crOnChatMessage(msg){
   }
   // When the player isn't already in the chat view, surface the message as
   // an overlay popup (same UX as the missions app) plus the orange dot.
+  _crGmCount++;
+  if(crActiveView==='chat') _crSeenGm = _crGmCount;
   if(crActiveView !== 'chat'){
-    const dot = document.getElementById('cr-chat-dot');
-    if(dot) dot.style.display = 'block';
-    crFlashChatBtn();
+    startCrChatFlash();
     const popupTxt = document.getElementById('cr-msg-popup-text');
     const popup    = document.getElementById('cr-msg-popup');
     if(popupTxt && popup){
@@ -3334,8 +3341,7 @@ function crShowView(v){
   const btnChat = document.getElementById('btn-v-chat');
   if(btnChat) btnChat.classList.toggle('active', v==='chat');
   if(v==='chat'){
-    const dot = document.getElementById('cr-chat-dot');
-    if(dot) dot.style.display = 'none';
+    _crSeenGm = _crGmCount; stopCrChatFlash();
     crScrollChat();
   }
   // The jump-to-me + back buttons only make sense on the map view; both

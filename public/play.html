@@ -255,7 +255,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.5} }
 /* New GM message: flash the whole chat button orange (not just the small dot). */
 @keyframes chatBtnFlash{ 50%{ background-color:var(--orange); border-color:var(--orange); color:#fff; box-shadow:0 0 16px -2px var(--orange); } }
-.chat-flash{ animation:chatBtnFlash .55s ease-in-out 3; }
+.chat-flash{ animation:chatBtnFlash .7s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -283,7 +283,6 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   <div class="ph-right">
     <button class="icon-btn" id="btn-chat" onclick="showView('chat')" title="Chat" aria-label="Chat">
       <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span id="chat-dot" style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--orange);display:none;border:2px solid var(--bg3);"></span>
     </button>
     <button class="icon-btn" id="btn-rules" onclick="showView('rules')" title="Rules" aria-label="Rules">
       <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -635,7 +634,7 @@ function showView(v) {
     if (btn) btn.classList.toggle('active', name===v);
   });
   if (v==='chat') {
-    document.getElementById('chat-dot').style.display = 'none';
+    _seenGm = _gmCount; stopChatFlash();
     scrollChat();
   }
   if (v==='rules') loadRules();
@@ -681,7 +680,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Re-join after reconnect so timer/chat resume without page reload
   socket.on('reconnect', () => {
     joinRooms();
+    resyncChat();
   });
+  // Phone woke / tab refocused → pull anything missed while asleep and flash the
+  // chat button if there are unread GM messages.
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') resyncChat(); });
 
   socket.on('timer_update', updateTimer);
   socket.on('timer_state',  updateTimer);
@@ -1137,11 +1140,13 @@ function openLightbox(url, isVid) {
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
-async function loadChatHistory() {
+async function loadChatHistory(resync) {
   const msgs = await fetch(`/api/games/${gameId}/chat?teamId=${teamId}`).then(r=>r.json());
   const box  = document.getElementById('chat-messages');
   box.innerHTML = msgs.map(m => bubble(m)).join('');
   scrollChat();
+  _gmCount = _countGm(msgs);
+  if(!resync) _seenGm = _gmCount;   // initial load: existing history counts as already seen
 }
 
 // `team_id`/`teamId` is NULL on broadcast messages (sent to /game_<id>) and a
@@ -1203,25 +1208,29 @@ function onChatMessage(msg) {
     <div class="chat-meta">Gamemaster · ${time} ${tag}</div>${esc(msg.content)}</div>`);
   scrollChat();
 
+  _gmCount++;
   if (currentView !== 'chat') {
-    document.getElementById('chat-dot').style.display = 'block';
-    flashChatBtn('btn-chat');
+    startChatFlash();
     document.getElementById('msg-popup-text').textContent = msg.content;
     document.getElementById('msg-popup').style.display = 'flex';
-  }
+  } else { _seenGm = _gmCount; }
 }
 
 function scrollChat() {
   const box = document.getElementById('chat-messages');
   setTimeout(() => { box.scrollTop = box.scrollHeight; }, 30);
 }
-// Flash the whole chat button orange for a new GM message. Restarts cleanly if
-// another message arrives mid-flash; the class is removed once the flash ends.
-function flashChatBtn(id) {
-  const b = document.getElementById(id);
-  if (!b) return;
-  b.classList.remove('chat-flash'); void b.offsetWidth; b.classList.add('chat-flash');
-  b.addEventListener('animationend', () => b.classList.remove('chat-flash'), { once: true });
+// Chat unread state — the chat button flashes orange continuously until the
+// player opens chat. Counted by GM messages so it survives the phone sleeping:
+// resyncChat() re-checks on reconnect / when the tab becomes visible again.
+let _gmCount = 0, _seenGm = 0;
+function _countGm(msgs){ return (msgs||[]).filter(m=>m.from_gm===1||m.from_gm===true).length; }
+function startChatFlash(){ const b=document.getElementById('btn-chat'); if(b) b.classList.add('chat-flash'); }
+function stopChatFlash(){ const b=document.getElementById('btn-chat'); if(b) b.classList.remove('chat-flash'); }
+async function resyncChat(){
+  try{ await loadChatHistory(true); }catch(e){ return; }
+  if(currentView==='chat'){ _seenGm=_gmCount; stopChatFlash(); }
+  else if(_gmCount > _seenGm){ startChatFlash(); }
 }
 
 async function uploadFromGallery(event, missionId, mediaType) {
