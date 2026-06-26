@@ -5733,7 +5733,7 @@ function renderCrHintsInline(type){
           <button class="btn btn-danger btn-sm" onclick="removeCrHintInline('${h.id}','${type}')">✕</button>
         </div>
       </div>
-      ${h.image_path?`<img src="/uploads/${h.image_path}" onerror="this.style.display='none'" style="max-width:80px;max-height:50px;border-radius:3px;margin-bottom:.35rem;display:block;" alt="">`:''}
+      ${(h._imagePreview||h.image_path)?`<img src="${h._imagePreview||('/uploads/'+h.image_path)}" onerror="this.style.display='none'" style="max-width:80px;max-height:50px;border-radius:3px;margin-bottom:.35rem;display:block;" alt="">`:''}
       <div class="field" style="margin-bottom:.35rem;">
         <label class="label">Bild</label>
         <input type="file" accept="image/*" onchange="attachCrHintImage(this,'${h.id}','${type}')" style="color:var(--text);font-size:.8rem;">
