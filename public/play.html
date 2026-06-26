@@ -456,7 +456,7 @@ const T = {
   de: {
     times_up:'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.',
     description:'Beschreibung', task:'Aufgabe',
-    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!', error_generic:'Etwas ist schiefgelaufen',
+    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!', error_generic:'Etwas ist schiefgelaufen', view_image:'Bild ansehen',
     rules:'REGELN', rules_back:'← Zurück', send:'Senden', chat_ph:'Nachricht an Gamemaster…',
     pending:'⏳ Wird geprüft', accepted:'✓ Angenommen',
     take_photo:'Foto aufnehmen', take_video:'Video aufnehmen',
@@ -477,7 +477,7 @@ const T = {
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
     description:'Description', task:'Task',
-    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!', error_generic:'Something went wrong',
+    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!', error_generic:'Something went wrong', view_image:'View image',
     rules:'RULES', rules_back:'← Back', send:'Send', chat_ph:'Message to Gamemaster…',
     pending:'⏳ Awaiting review', accepted:'✓ Accepted',
     take_photo:'Take photo', take_video:'Take video',
@@ -496,7 +496,7 @@ const T = {
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
   fr: {
-    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !', error_generic:'Une erreur est survenue',
+    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !', error_generic:'Une erreur est survenue', view_image:'Voir l\'image',
     rules:'RÈGLES', rules_back:'← Retour', send:'Envoyer', chat_ph:'Message au Gamemaster…',
     pending:'⏳ En attente', accepted:'✓ Accepté',
     take_photo:'Prendre photo', take_video:'Enregistrer vidéo',
@@ -516,7 +516,7 @@ const T = {
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
   it: {
-    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!', error_generic:'Si è verificato un errore',
+    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!', error_generic:'Si è verificato un errore', view_image:'Vedi immagine',
     rules:'REGOLE', rules_back:'← Indietro', send:'Invia', chat_ph:'Messaggio al Gamemaster…',
     pending:'⏳ In attesa', accepted:'✓ Accettato',
     take_photo:'Scatta foto', take_video:'Registra video',
@@ -538,7 +538,7 @@ const T = {
   es: {
     times_up:'¡Se acabó el tiempo! Volved al punto de encuentro acordado.',
     description:'Descripción', task:'Tarea',
-    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!', error_generic:'Algo salió mal',
+    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!', error_generic:'Algo salió mal', view_image:'Ver imagen',
     rules:'REGLAS', rules_back:'← Volver', send:'Enviar', chat_ph:'Mensaje al Gamemaster…',
     pending:'⏳ Pendiente de revisión', accepted:'✓ Aceptado',
     take_photo:'Hacer foto', take_video:'Grabar vídeo',
@@ -859,6 +859,10 @@ function openMissionDetail(missionId) {
       </label>`;
   } else {
     actions.innerHTML = '';
+  }
+  // Optional task reference image → a "View image" button (only when one exists).
+  if (m.task_image) {
+    actions.insertAdjacentHTML('afterbegin', `<button type="button" class="md-btn md-btn--secondary" onclick="openLightbox('/uploads/${esc(m.task_image)}',false)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> ${esc(t('view_image')||'Bild ansehen')}</button>`);
   }
 
   document.getElementById('mission-detail-modal').classList.add('is-open');

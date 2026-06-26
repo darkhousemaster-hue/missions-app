@@ -290,6 +290,10 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN draw_collaborative INTEGER DEF
 // the GM settings. Default 0 → existing rows fall back to name order.
 try { db.exec("ALTER TABLE modes ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
+// Optional reference image attached to a mission's task. Shown to players via a
+// "View image" button (only when set). One column on each mission table.
+try { db.exec("ALTER TABLE missions ADD COLUMN task_image TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN task_image TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -523,6 +527,9 @@ const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en=''
 const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor}) =>
   db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,media_type=?,points=?,is_indoor=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',media_type,points,is_indoor?1:0,id);
 const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id);
+// Partial setter — task image is uploaded separately, so don't round-trip the
+// whole mission (updateMission rewrites every field). Pass null to remove it.
+const setMissionTaskImage = (id, p) => db.prepare('UPDATE missions SET task_image=? WHERE id=?').run(p||null, id);
 
 // ── Games ─────────────────────────────────────────────────────────────────────
 const getGame         = id => db.prepare('SELECT * FROM games WHERE id=?').get(id);
@@ -661,7 +668,7 @@ const getTeamMissions = teamId => db.prepare(`
   SELECT tm.*, m.name as mission_name, m.name_de, m.name_en, m.name_fr, m.name_it, m.name_es,
     m.description_de, m.description_en, m.description_fr, m.description_it, m.description_es,
     m.task_de, m.task_en, m.task_fr, m.task_it, m.task_es,
-    m.media_type, m.points, m.is_indoor
+    m.media_type, m.points, m.is_indoor, m.task_image
   FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
   WHERE tm.team_id=? ORDER BY tm.id`).all(teamId);
 const getSubmission          = (tid,mid) => db.prepare('SELECT * FROM team_missions WHERE team_id=? AND mission_id=?').get(tid,mid);
@@ -773,7 +780,7 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'use_puzzle','puzzle_image','puzzle_grid',
   'puzzle_peek_enabled','puzzle_peek_onetime','puzzle_peeks',
   'puzzle_type','puzzle_order_images',
-  'use_draw','draw_needs_approval','draw_collaborative'];
+  'use_draw','draw_needs_approval','draw_collaborative','task_image'];
 const toNullableNumber = v => {
   if (v === undefined) return undefined;
   if (v === null || v === '') return null;
@@ -1113,7 +1120,7 @@ module.exports = {
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,
-  getMissions,getMission,createMission,updateMission,deleteMission,
+  getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,

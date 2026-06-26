@@ -1046,6 +1046,40 @@ app.post('/api/cr/missions/:id/puzzle-image', upload.single('image'), (req,res) 
   res.json({success:true, puzzle_image: rel});
 });
 
+// Task reference image — optional image attached to a mission's task. Shown to
+// players via a "View image" button (only when set). Lands the file under
+// task_images/. POST with clear=1 and no file removes it. One uploader serves
+// both MiSSiONS missions and Rail Adventure cr_missions.
+function _moveTaskFileIntoPlace(req){
+  if(!req.file) return null;
+  const destDir = path.join(UPLOAD_DIR,'task_images');
+  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
+  const dest = path.join(destDir, req.file.filename);
+  try { fs.renameSync(req.file.path, dest); }
+  catch(e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+  return `task_images/${req.file.filename}`;
+}
+app.post('/api/missions/:id/task-image', upload.single('image'), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!db.getMission(req.params.id)) return res.status(404).json({error:'Not found'});
+  if(req.body.clear==='1' && !req.file){ db.setMissionTaskImage(req.params.id, null); io.emit('settings_updated',{type:'missions'}); return res.json({success:true, task_image:null}); }
+  if(!req.file) return res.status(400).json({error:'No file'});
+  const rel = _moveTaskFileIntoPlace(req);
+  db.setMissionTaskImage(req.params.id, rel);
+  io.emit('settings_updated', {type:'missions'});
+  res.json({success:true, task_image: rel});
+});
+app.post('/api/cr/missions/:id/task-image', upload.single('image'), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!db.getCrMission(req.params.id)) return res.status(404).json({error:'Not found'});
+  if(req.body.clear==='1' && !req.file){ db.updateCrMission(req.params.id, { task_image: null }); io.emit('settings_updated',{type:'cr_missions'}); return res.json({success:true, task_image:null}); }
+  if(!req.file) return res.status(400).json({error:'No file'});
+  const rel = _moveTaskFileIntoPlace(req);
+  db.updateCrMission(req.params.id, { task_image: rel });
+  io.emit('settings_updated', {type:'cr_missions'});
+  res.json({success:true, task_image: rel});
+});
+
 // Ordering-puzzle image upload. Not tied to a mission id (the GM builds the
 // ordered list before the mission even exists), so it just stores one file and
 // returns its path; the ordered list is persisted via puzzle_order_images.

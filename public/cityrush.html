@@ -725,7 +725,7 @@ const T = {
         selfie_title:'Team-Selfie',
         selfie_help:'Bevor das Spiel startet: Bitte ein Gruppenfoto eures Teams machen. Der Spielleiter sieht dieses Foto, um euch zu erkennen.',
         selfie_shoot:'Foto machen', selfie_retake:'Erneut',
-        selfie_upload:'Hochladen & weiter',
+        selfie_upload:'Hochladen & weiter', view_image:'Bild ansehen',
         draw_start:'Zeichnen', draw_error:'Konnte nicht starten — bitte erneut versuchen',
         answer_required:'Bitte Antwort eingeben.', answer_wrong:'Leider falsch. Versuche es erneut!',
         puzzle_hint:'Ziehe die Teile an die richtige Stelle.', puzzle_solved:'✓ Gelöst!', puzzle_start:'Puzzle starten', puzzle_title:'Puzzle', puzzle_peek:'Vorschau', puzzle_view:'Bild ansehen', puzzle_close_hint:'Tippe ✕ zum Schließen', puzzle_order_hint:'Bring die Bilder in die richtige Reihenfolge.',
@@ -774,7 +774,7 @@ const T = {
         selfie_title:'Team selfie',
         selfie_help:'Before the game starts: please take a group photo of your team. The Gamemaster sees this photo to identify you.',
         selfie_shoot:'Take photo', selfie_retake:'Retake',
-        selfie_upload:'Upload & continue',
+        selfie_upload:'Upload & continue', view_image:'View image',
         draw_start:'Draw', draw_error:'Couldn\'t start — please try again',
         answer_required:'Please type your answer.', answer_wrong:'Wrong — try again!',
         puzzle_hint:'Drag the pieces into the right place.', puzzle_solved:'✓ Solved!', puzzle_start:'Start puzzle', puzzle_title:'Puzzle', puzzle_peek:'Peek', puzzle_view:'View image', puzzle_close_hint:'Tap ✕ to close', puzzle_order_hint:'Put the images in the right order.',
@@ -823,7 +823,7 @@ const T = {
         selfie_title:'Selfie d\'équipe',
         selfie_help:'Avant le début : prenez une photo de groupe de votre équipe. Le Gamemaster s\'en sert pour vous reconnaître.',
         selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
-        selfie_upload:'Envoyer & continuer',
+        selfie_upload:'Envoyer & continuer', view_image:'Voir l\'image',
         draw_start:'Dessiner', draw_error:'Impossible de démarrer — réessayez',
         answer_required:'Veuillez saisir une réponse.', answer_wrong:'Faux — réessayez !',
         puzzle_hint:'Fais glisser les pièces au bon endroit.', puzzle_solved:'✓ Résolu !', puzzle_start:'Démarrer le puzzle', puzzle_title:'Puzzle', puzzle_peek:'Aperçu', puzzle_view:"Voir l'image", puzzle_close_hint:'Touche ✕ pour fermer', puzzle_order_hint:'Mets les images dans le bon ordre.',
@@ -872,7 +872,7 @@ const T = {
         selfie_title:'Selfie della squadra',
         selfie_help:'Prima dell\'inizio: scattate una foto di gruppo della vostra squadra. Il Gamemaster la usa per riconoscervi.',
         selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
-        selfie_upload:'Carica & continua',
+        selfie_upload:'Carica & continua', view_image:'Vedi immagine',
         draw_start:'Disegna', draw_error:'Avvio non riuscito — riprova',
         answer_required:'Inserisci la risposta.', answer_wrong:'Sbagliato — riprova!',
         puzzle_hint:'Trascina i pezzi al posto giusto.', puzzle_solved:'✓ Risolto!', puzzle_start:'Avvia puzzle', puzzle_title:'Puzzle', puzzle_peek:'Anteprima', puzzle_view:'Vedi immagine', puzzle_close_hint:'Tocca ✕ per chiudere', puzzle_order_hint:'Metti le immagini nel giusto ordine.',
@@ -921,7 +921,7 @@ const T = {
         selfie_title:'Selfie del equipo',
         selfie_help:'Antes de empezar: haced una foto de grupo de vuestro equipo. El Gamemaster la usa para reconoceros.',
         selfie_shoot:'Hacer foto', selfie_retake:'Repetir',
-        selfie_upload:'Subir y continuar',
+        selfie_upload:'Subir y continuar', view_image:'Ver imagen',
         draw_start:'Dibujar', draw_error:'No se pudo iniciar — inténtalo de nuevo',
         answer_required:'Por favor, escribe tu respuesta.', answer_wrong:'Incorrecto — inténtalo de nuevo.',
         puzzle_hint:'Arrastra las piezas a su sitio.', puzzle_solved:'✓ ¡Resuelto!', puzzle_start:'Iniciar puzle', puzzle_title:'Puzle', puzzle_peek:'Vista previa', puzzle_view:'Ver imagen', puzzle_close_hint:'Toca ✕ para cerrar', puzzle_order_hint:'Ordena las imágenes correctamente.',
@@ -1914,6 +1914,7 @@ function refreshSpecialPopup(){
     </div>
     ${desc?`<div class="cr-section-label">${t('desc')}</div><div class="cr-desc">${esc(desc)}</div>`:''}
     ${task?`<div class="cr-section-label">${t('task')}</div><div class="cr-task">${esc(task)}</div>`:''}
+    ${m.task_image?`<button type="button" class="btn btn-ghost btn-sm" style="margin-top:.5rem;align-self:flex-start;" onclick="openLightbox('/uploads/${esc(m.task_image)}')">🖼️ ${t('view_image')||'Bild ansehen'}</button>`:''}
     <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
     <div id="cr-actions" style="margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
   `;
@@ -2199,6 +2200,7 @@ function refreshPopup(){
     ${gpsHtml}${timerHtml}
     ${desc ? `<div class="cr-section-label">${t('desc')}</div><div class="cr-desc">${esc(desc)}</div>` : ''}
     ${task ? `<div class="cr-section-label">${t('task')}</div><div class="cr-task">${esc(task)}</div>` : ''}
+    ${m.task_image ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:.5rem;align-self:flex-start;" onclick="openLightbox('/uploads/${esc(m.task_image)}')">🖼️ ${t('view_image')||'Bild ansehen'}</button>` : ''}
     ${(isCurrent && m.use_gps && hint) ? `<div class="cr-section-label">${t('hint')}</div><div class="cr-desc">${esc(hint)}</div>` : ''}
     <!-- Inline revealed hints -->
     <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
