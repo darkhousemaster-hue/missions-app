@@ -645,7 +645,7 @@ let lang = (() => {
   return all.includes(pick) ? pick : 'de';
 })();
 let socket;
-let crMap = null, myMarker = null, teamMarkers = {};
+let crMap = null, myMarker = null, teamMarkers = {}, _autoCenteredOnPlayer = false;
 let crActiveView = 'mission';
 let _crUploadMissionId = null;   // linear mission id for in-flight media (stable after closing popup)
 let currentMission = null, missionIndex = 0, totalMissions = 0;
@@ -1836,6 +1836,8 @@ function updateMiniMap(){
   // Fit to all points; fall back to current mission if nothing else.
   if(points.length >= 2){
     try { crMiniMap.fitBounds(points, { padding:[20,20], maxZoom:17 }); } catch{}
+  } else if(typeof myLat === 'number' && typeof myLng === 'number'){
+    crMiniMap.setView([myLat, myLng], 16);   // only the player is known → center on them, not Zürich
   } else if(currentMission && hasCrCoords(currentMission)){
     crMiniMap.setView([currentMission.lat, currentMission.lng], 16);
   }
@@ -2168,10 +2170,12 @@ function refreshPopup(){
   const desc = m[`description_${lang}`] || m.description_de || '';
   let task   = m[`task_${lang}`] || m.task_de || '';
   const hint = m[`hint_${lang}`] || m.hint_de || '';
-  // The task is the "solve me" step — keep it hidden for GPS missions until
-  // the player physically arrives. The description (background/story) is
-  // always shown so the player has context while navigating.
-  if(m.use_gps && isCurrent && !hasArrivedFor(m)){
+  // The task — and its reference image — are the "solve me" step: keep them
+  // hidden for a GPS mission until the player physically arrives. The
+  // description (background/story) is always shown so they have context while
+  // navigating.
+  const taskLocked = m.use_gps && isCurrent && !hasArrivedFor(m);
+  if(taskLocked){
     task = '';
   }
   // GPS status (only meaningful for the current mission with use_gps).
@@ -2200,7 +2204,7 @@ function refreshPopup(){
     ${gpsHtml}${timerHtml}
     ${desc ? `<div class="cr-section-label">${t('desc')}</div><div class="cr-desc">${esc(desc)}</div>` : ''}
     ${task ? `<div class="cr-section-label">${t('task')}</div><div class="cr-task">${esc(task)}</div>` : ''}
-    ${m.task_image ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:.5rem;align-self:flex-start;" onclick="openLightbox('/uploads/${esc(m.task_image)}')">🖼️ ${t('view_image')||'Bild ansehen'}</button>` : ''}
+    ${(m.task_image && !taskLocked) ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:.5rem;align-self:flex-start;" onclick="openLightbox('/uploads/${esc(m.task_image)}')">🖼️ ${t('view_image')||'Bild ansehen'}</button>` : ''}
     ${(isCurrent && m.use_gps && hint) ? `<div class="cr-section-label">${t('hint')}</div><div class="cr-desc">${esc(hint)}</div>` : ''}
     <!-- Inline revealed hints -->
     <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
@@ -3360,9 +3364,15 @@ function crShowView(v){
   if(v==='map'){
     initMap();
     setTimeout(()=>crMap.invalidateSize(), 150);
-    if(myLat) updateMyMapMarker(myLat, myLng);
     renderAllMissionMarkers();
-    if(currentMission && (currentMission.use_map || currentMission.use_gps) && hasCrCoords(currentMission)) centerMapOnMission(currentMission);
+    // Prefer the player's location; fall back to the current mission, then to
+    // the default view until the first GPS fix arrives (which then auto-centers).
+    if(myLat != null && myLng != null){
+      updateMyMapMarker(myLat, myLng);
+      crMap.setView([myLat, myLng], 16);
+    } else if(currentMission && (currentMission.use_map || currentMission.use_gps) && hasCrCoords(currentMission)){
+      centerMapOnMission(currentMission);
+    }
   }
 }
 
@@ -3422,6 +3432,9 @@ function updateMyMapMarker(lat, lng){
       const targetZoom = Math.max(crMap.getZoom(), 17);
       crMap.setView(ll, targetZoom, {animate:true});
     });
+    // First GPS fix → zoom the map to the player instead of the Zürich default.
+    // Only auto-center once, so we never fight the player's own panning.
+    if(!_autoCenteredOnPlayer){ _autoCenteredOnPlayer = true; crMap.setView([lat,lng], 16, {animate:true}); }
   } else {
     myMarker.setLatLng([lat,lng]);
   }
