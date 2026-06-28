@@ -310,7 +310,8 @@ body.sel-cr #crms-toolbar{display:flex !important;}
   /* Mission-list rows: keep Edit / Delete in the TOP-RIGHT (matching the
      desktop design) — shrink the title column (min-width:0) so the buttons
      stay in view instead of overflowing, and compact the buttons a touch. */
-  .card-header [style*="flex:1"],.mission-header [style*="flex:1"]{min-width:0;}
+  .card-header [style*="flex:1"],.mission-header [style*="flex:1"]{min-width:0;overflow-wrap:anywhere;}
+  .card-header>div:last-child,.mission-header>div:last-child{flex-shrink:0;}
   .card-header .btn,.mission-header .btn{padding:.35rem .55rem;}
   .team-detail-head{flex-wrap:wrap;gap:.5rem;}
   .team-detail-head .right{flex-wrap:wrap;justify-content:flex-start;}
