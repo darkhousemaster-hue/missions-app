@@ -5487,6 +5487,7 @@ async function uploadCrPuzzleImage(missionId){
 
 // ── Scan puzzle editor (QR + AR image) ──────────────────────────────────────
 let _crScanFragments = [];          // fragment codes (fragment mode)
+let _scanQrTimer = null, _scanFragTimer = null;   // debounce QR preview requests
 let _crScanFile = null;             // freshly-picked AR source image
 let _crScanMindBlob = null;         // compiled MindAR .mind for that image
 function collectScanFragments(){ return (_crScanFragments||[]).map(s=>String(s||'').trim()).filter(Boolean); }
@@ -5536,8 +5537,15 @@ function crRenderScanQR(){
   const empty=document.getElementById('cr-scan-qr-empty');
   const btn=document.getElementById('cr-scan-print-btn');
   if(!img) return;
-  if(code){ img.src='/api/qr.png?size=340&text='+encodeURIComponent(code); img.style.display='block'; if(empty) empty.style.display='none'; if(btn) btn.disabled=false; }
-  else { img.removeAttribute('src'); img.style.display='none'; if(empty) empty.style.display='inline'; if(btn) btn.disabled=true; }
+  if(_scanQrTimer){ clearTimeout(_scanQrTimer); _scanQrTimer=null; }
+  if(!code){ img.removeAttribute('src'); img.style.display='none'; if(empty) empty.style.display='inline'; if(btn) btn.disabled=true; return; }
+  if(btn) btn.disabled=false;          // printing reads the live input, so enable at once
+  // Debounce the actual image request: fast typing fires ONE /api/qr.png, not
+  // one per keystroke (which on a busy server caused UI jank).
+  _scanQrTimer=setTimeout(()=>{
+    img.src='/api/qr.png?size=340&text='+encodeURIComponent(code);
+    img.style.display='block'; if(empty) empty.style.display='none';
+  }, 350);
 }
 function crRenderScanFragList(){
   const wrap=document.getElementById('cr-scan-frag-list'); if(!wrap) return;
@@ -5553,7 +5561,11 @@ function crRenderScanFragList(){
 function crUpdateScanFragment(i,val){
   _crScanFragments[i]=val;
   const img=document.querySelector('.cr-frag-qr[data-i="'+i+'"]');
-  if(img){ if(val.trim()){ img.src='/api/qr.png?size=120&text='+encodeURIComponent(val.trim()); img.style.visibility='visible'; } else img.style.visibility='hidden'; }
+  if(!img) return;
+  if(!val.trim()){ img.style.visibility='hidden'; return; }
+  // Debounce the thumbnail request so typing a fragment fires one /api/qr.png.
+  if(_scanFragTimer) clearTimeout(_scanFragTimer);
+  _scanFragTimer=setTimeout(()=>{ img.src='/api/qr.png?size=120&text='+encodeURIComponent(val.trim()); img.style.visibility='visible'; }, 350);
 }
 function crAddScanFragment(){ _crScanFragments.push(''); crRenderScanFragList(); }
 function crRemoveScanFragment(i){ _crScanFragments.splice(i,1); if(!_crScanFragments.length) _crScanFragments=['']; crRenderScanFragList(); }
