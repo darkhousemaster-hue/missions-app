@@ -264,9 +264,10 @@ body.sel-cr #crms-toolbar{display:flex !important;}
   #app{overflow:visible;}
   #screen-landing,#screen-settings,#screen-settings-gate,#screen-dashboard,#screen-game-select{overflow-y:auto;}
 
-  /* Landing: cap the wide wordmark so it can't overflow / collide with the lang pills */
-  #screen-landing{padding:1rem .9rem;}
-  .landing-logo img{height:auto;max-height:88px;max-width:76%;}
+  /* Landing: top-align with enough top padding to clear the absolutely-positioned
+     version + language pills, so the centered logo can't collide with them. */
+  #screen-landing{padding:64px .9rem 1.5rem;justify-content:flex-start;}
+  .landing-logo img{height:auto;max-height:84px;max-width:72%;}
   .landing-logo h1{font-size:clamp(2rem,11vw,3rem);}
 
   /* Settings: stack the shell + make sure no inner content forces a min-width
@@ -302,12 +303,25 @@ body.sel-cr #crms-toolbar{display:flex !important;}
   .modal .grid-2>*,.modal .grid-3>*{min-width:0;}
   .modal input,.modal select,.modal textarea{max-width:100%;min-width:0;}
   .modal .grid-2 input,.modal .grid-3 input,.modal .grid-2 .input,.modal .grid-3 .input{width:100%;}
+  /* Full-width buttons in the editor grids (e.g. "Use current location") must
+     wrap their label instead of overflowing — .btn is nowrap by default. */
+  .modal .grid-2 .btn,.modal .grid-3 .btn{white-space:normal;height:auto;line-height:1.2;}
 
-  /* Mission-list rows: let Edit / Delete wrap under the title instead of
-     running off the right edge. Team-detail action buttons wrap too. */
-  .card-header,.mission-header{flex-wrap:wrap;}
+  /* Mission-list rows: keep Edit / Delete in the TOP-RIGHT (matching the
+     desktop design) — shrink the title column (min-width:0) so the buttons
+     stay in view instead of overflowing, and compact the buttons a touch. */
+  .card-header [style*="flex:1"],.mission-header [style*="flex:1"]{min-width:0;}
+  .card-header .btn,.mission-header .btn{padding:.35rem .55rem;}
   .team-detail-head{flex-wrap:wrap;gap:.5rem;}
   .team-detail-head .right{flex-wrap:wrap;justify-content:flex-start;}
+
+  /* Team-detail review cards (.gcard): shrink the middle column + thumb so the
+     status pill and the score (N PT) never get clipped off the right edge. */
+  .gcard{grid-template-columns:48px minmax(0,1fr) auto;gap:10px;padding:12px;}
+  .gcard__thumb{width:48px;height:48px;}
+  .gcard__title-row{flex-wrap:wrap;gap:6px;}
+  .gcard__title{min-width:0;overflow-wrap:anywhere;}
+  .gcard__actions{flex-wrap:wrap;}
 
   /* Hard stop any horizontal overflow on the dashboard panels. */
   #dash-main,#dash-panel{overflow-x:hidden;}
