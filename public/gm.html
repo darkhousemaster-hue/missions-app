@@ -336,6 +336,32 @@ body.sel-cr #crms-toolbar{display:flex !important;}
   #dash-panel.rk-active .panel-content{display:none !important;}
   #dash-panel.rk-active .rankings-section{display:flex;}
 }
+/* ── Guided tutorial (coach marks) + launcher ─────────────────────────────── */
+#tut-launch{display:inline-flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:6px 11px;font:700 11px/1 var(--body);letter-spacing:.06em;color:var(--text-dim);cursor:pointer;text-transform:uppercase;}
+#tut-launch:hover{color:var(--text);border-color:var(--orange-dim);}
+.tut-menu{position:fixed;z-index:5210;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.6);padding:6px;min-width:240px;max-width:calc(100vw - 16px);display:flex;flex-direction:column;gap:2px;}
+.tut-menu .tut-mh{font:700 9px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);padding:8px 10px 4px;}
+.tut-menu button{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:var(--text);font:700 13px/1.3 var(--body);padding:10px;border-radius:8px;cursor:pointer;min-height:44px;}
+.tut-menu button:hover:not([disabled]){background:var(--surface2);}
+.tut-menu button[disabled]{opacity:.45;cursor:not-allowed;}
+.tut-menu .tm-ico{font-size:16px;width:22px;text-align:center;flex-shrink:0;}
+.tut-menu .tm-sub{display:block;font:500 11px/1.3 var(--body);color:var(--text-muted);margin-top:2px;}
+.tut-backdrop{position:fixed;inset:0;z-index:5205;background:transparent;}
+#tut-hole{position:fixed;z-index:5210;border-radius:10px;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.72);outline:3px solid var(--orange,#E85F1E);outline-offset:3px;transition:left .25s,top .25s,width .25s,height .25s;}
+#tut-hole.pulse{animation:tut-pulse 1.6s ease-in-out infinite;}
+@keyframes tut-pulse{0%,100%{outline-color:var(--orange,#E85F1E);}50%{outline-color:var(--red,#C22F19);}}
+#tut-callout{position:fixed;z-index:5211;width:min(330px,calc(100vw - 24px));background:var(--surface);border:1px solid var(--hairline);border-radius:14px;box-shadow:0 22px 60px rgba(0,0,0,.7);padding:15px 16px 13px;}
+#tut-callout .tc-step{font:700 9px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--orange);margin-bottom:6px;}
+#tut-callout .tc-title{font:800 1.1rem/1.2 var(--display);letter-spacing:.02em;color:var(--text);margin-bottom:5px;}
+#tut-callout .tc-body{font:400 .9rem/1.5 var(--body);color:var(--text-dim);margin-bottom:13px;}
+#tut-callout .tc-row{display:flex;align-items:center;gap:8px;}
+#tut-callout .tc-skip{margin-right:auto;background:transparent;border:0;color:var(--text-muted);font:600 12px/1 var(--body);cursor:pointer;padding:8px 4px;min-height:44px;}
+#tut-callout .tc-skip:hover{color:var(--text);}
+#tut-callout .tc-btn{background:var(--surface2);border:1px solid var(--hairline);color:var(--text);font:700 12px/1 var(--body);padding:11px 15px;border-radius:9px;cursor:pointer;min-height:44px;}
+#tut-callout .tc-btn.primary{background:var(--orange,#E85F1E);border-color:var(--orange,#E85F1E);color:#fff;}
+#tut-callout .tc-btn:hover{filter:brightness(1.08);}
+@media(prefers-reduced-motion:reduce){#tut-hole{transition:none;}#tut-hole.pulse{animation:none;}}
+@media(max-width:768px){#tut-launch .tl-lbl{display:none;}#tut-launch{padding:6px 9px;}}
 </style>
 </head>
 <body>
@@ -348,6 +374,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
     <!-- 5-segment language picker. setGmLang(lang) is the single entry
          point — applyGmLang() paints `.is-active` on whichever segment
          matches the current gmLang. -->
+    <button id="tut-launch" type="button" onclick="openTutMenu(this)" aria-haspopup="menu" title="Tutorial">🎓 <span class="tl-lbl">Tutorial</span></button>
     <div class="ll-langs" id="ll-langs">
       <button type="button" class="ll-lang" data-lang="de" onclick="setGmLang('de')">DE</button>
       <button type="button" class="ll-lang" data-lang="en" onclick="setGmLang('en')">EN</button>
@@ -537,6 +564,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
         <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <button class="icon-btn" id="gm-lang-btn" onclick="cycleGmLang()" title="Language" aria-label="Language">DE</button>
+      <button class="icon-btn" id="tut-launch-dash" onclick="openTutMenu(this)" title="Tutorial" aria-label="Tutorial" aria-haspopup="menu">🎓</button>
     </div>
   </div>
   <div id="dash-teams">
@@ -6965,6 +6993,201 @@ async function waitForRestart(){
     }catch(e){ wentDown = true; }
   }
   window.location.reload();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//   GUIDED TUTORIAL (coach marks) — launcher dropdown + spotlight engine
+// ════════════════════════════════════════════════════════════════════════════
+// Dependency-free product tour: a dimmed spotlight (box-shadow hole + pulsing
+// ring, pointer-events:none so it never locks the UI) follows one real element
+// at a time across screens, with a callout (Back/Next/Exit). Tour text lives in
+// _TUT (de+en now; fr/it/es fall back to de until translated).
+const _TUT = {
+  de:{ launch:'Tutorial', menu:'Tutorial wählen', step:'Schritt', next:'Weiter', back:'Zurück', skip:'Beenden', done:'Fertig', needGame:'Öffne zuerst ein Spiel.', demoName:'Demo', demoFail:'Demo-Team konnte nicht erstellt werden.', demoDeleted:'Demo-Team gelöscht.',
+    mMs:'MiSSiONS einrichten', mMsS:'Standort-Spiel Schritt für Schritt', mRa:'Rail Adventure einrichten', mRaS:'GPS-Route Schritt für Schritt', mDash:'Dashboard-Tour', mDashS:'Die Steuerzentrale erklärt', mIn:'Im Spiel (Demo-Team)', mInS:'Live üben mit einem Demo-Team', mAf:'Nach dem Spiel', mAfS:'Abschluss, Rangliste & Export',
+    ms1t:'Standort wählen', ms1b:'Tippe einen Startort an, um ein MiSSiONS-Spiel zu beginnen.', ms2t:'Modus wählen', ms2b:'Wähle, welche Missionen die Teams spielen.', ms3t:'Spiel erstellen', ms3b:'Erstellt das Spiel und seinen Beitritts-Code.', ms4t:'QR drucken', ms4b:'Lade das QR-PDF herunter und drucke je einen für jeden Team-Captain.', ms5t:'Dashboard öffnen', ms5b:'Dein Live-Kontrollzentrum für das laufende Spiel.',
+    ra1t:'Rail Adventure wählen', ra1b:'Tippe die Rail-Adventure-Kachel an (GPS-Route).', ra2t:'Route wählen', ra2b:'Wähle den Rail-Adventure-Modus für dieses Spiel.', ra3t:'Spiel erstellen', ra3b:'Erstellt das Spiel und seinen Beitritts-Code.', ra4t:'QR drucken', ra4b:'Lade das QR-PDF herunter und gib es jedem Team-Captain.', ra5t:'Dashboard öffnen', ra5b:'Verfolge Teams live auf Karte und Rangliste.',
+    d1t:'Teams', d1b:'Alle beigetretenen Teams erscheinen hier. Tippe ein Team an.', d2t:'Team-Details', d2b:'Fortschritt, Selfie und Einreichungen des Teams.', d3t:'Chat, Karte & Rangliste', d3b:'Wechsle zwischen Chat, Karte und Rangliste.', d4t:'QR & Export', d4b:'Beitritts-QR zeigen; am Ende Fotos und Collage exportieren.', d5t:'Timer', d5b:'Spielzeit starten, pausieren und anpassen.',
+    g1t:'Demo-Team', g1b:'Wir haben „📚 Demo" erstellt, um alles live zu zeigen.', g2t:'Team-Details', g2b:'Hier siehst du, woran das Team gerade arbeitet.', g3t:'Einreichungen prüfen', g3b:'Gib Fotos und Videos frei oder lehne sie ab.', g4t:'Chat', g4b:'Schreibe dem Team oder sende einen Broadcast an alle.', g5t:'Einfrieren', g5b:'Friere ein Team kurz ein, z. B. als Strafe.', g6t:'Team löschen', g6b:'Damit setzt du ein falsch beigetretenes Team zurück. Wir löschen jetzt das Demo-Team.',
+    a1t:'Rangliste', a1b:'Die Endplatzierung — im Vollbild ideal für die Siegerehrung.', a2t:'Fotos & Collage', a2b:'Lade alle Fotos und die Video-Collage des Spiels herunter.', a3t:'Fertig!', a3b:'Das war es. Starte jederzeit ein neues Spiel über „Spiele".' },
+  en:{ launch:'Tutorial', menu:'Choose a tutorial', step:'Step', next:'Next', back:'Back', skip:'Exit', done:'Done', needGame:'Open a game first.', demoName:'Demo', demoFail:'Could not create the demo team.', demoDeleted:'Demo team deleted.',
+    mMs:'MiSSiONS setup', mMsS:'Location game, step by step', mRa:'Rail Adventure setup', mRaS:'GPS route, step by step', mDash:'Dashboard tour', mDashS:'The control centre explained', mIn:'Inside the game (demo team)', mInS:'Practise live with a demo team', mAf:'After the game', mAfS:'Wrap-up, rankings and export',
+    ms1t:'Choose a location', ms1b:'Tap a starting location to begin a MiSSiONS game.', ms2t:'Choose the mode', ms2b:'Pick which set of missions teams will play.', ms3t:'Create the game', ms3b:'This creates the game and its join code.', ms4t:'Print the QR', ms4b:'Download the QR PDF and print one for each team captain.', ms5t:'Open the dashboard', ms5b:'Your live control centre for the running game.',
+    ra1t:'Pick Rail Adventure', ra1b:'Tap the Rail Adventure tile (GPS route).', ra2t:'Choose the route', ra2b:'Pick the Rail Adventure mode for this game.', ra3t:'Create the game', ra3b:'This creates the game and its join code.', ra4t:'Print the QR', ra4b:'Download the QR PDF and hand one to each team captain.', ra5t:'Open the dashboard', ra5b:'Track teams live on the map and rankings.',
+    d1t:'Teams', d1b:'All joined teams appear here. Tap a team.', d2t:'Team details', d2b:'The team progress, selfie and submissions.', d3t:'Chat, map & rankings', d3b:'Switch between chat, map and rankings.', d4t:'QR & export', d4b:'Show the join QR; export photos and collage at the end.', d5t:'Timer', d5b:'Start, pause and adjust the game time.',
+    g1t:'Demo team', g1b:'We created "📚 Demo" to show everything live.', g2t:'Team details', g2b:'Here you see what the team is working on.', g3t:'Review submissions', g3b:'Approve or reject photos and videos.', g4t:'Chat', g4b:'Message the team or broadcast to everyone.', g5t:'Freeze', g5b:'Briefly freeze a team, e.g. as a penalty.', g6t:'Delete team', g6b:'Use this to reset a team that joined wrong. We will delete the demo team now.',
+    a1t:'Rankings', a1b:'The final standings — great in fullscreen for the award ceremony.', a2t:'Photos & collage', a2b:'Download all photos and the game video collage.', a3t:'Done!', a3b:'That is it. Start a new game anytime via "Games".' },
+};
+function tt(k){ const l=_TUT[gmLang]||_TUT.de; return (l && l[k]!=null) ? l[k] : (_TUT.de[k]!=null ? _TUT.de[k] : k); }
+
+let _tut=null, _tutDemoTeamId=null;
+function _tutEnsureDom(){
+  if(document.getElementById('tut-hole')) return;
+  const hole=document.createElement('div'); hole.id='tut-hole'; hole.style.display='none';
+  const call=document.createElement('div'); call.id='tut-callout'; call.style.display='none';
+  call.setAttribute('role','dialog'); call.setAttribute('aria-live','polite');
+  document.body.appendChild(hole); document.body.appendChild(call);
+}
+function tutStart(steps, opts){
+  opts=opts||{}; if(!steps||!steps.length) return;
+  _tutEnsureDom();
+  _tut={ steps, i:0, onEnd:opts.onEnd, reduced:matchMedia('(prefers-reduced-motion:reduce)').matches };
+  document.addEventListener('keydown', _tutKey, true);
+  _tutLoop();
+  _tutGo(0);
+}
+async function _tutGo(i){
+  if(!_tut) return;
+  if(i>=_tut.steps.length){ tutEnd('done'); return; }
+  if(i<0) i=0;
+  _tut.i=i;
+  const s=_tut.steps[i];
+  try{ if(s.before) await s.before(); }catch(e){ console.warn('tut before',e); }
+  if(!_tut) return;
+  _tutRender();
+}
+function tutNext(){ if(_tut) _tutGo(_tut.i+1); }
+function tutBack(){ if(_tut) _tutGo(_tut.i-1); }
+async function tutEnd(reason){
+  if(!_tut) return;
+  const onEnd=_tut.onEnd; _tut=null;
+  document.removeEventListener('keydown', _tutKey, true);
+  const hole=document.getElementById('tut-hole'), call=document.getElementById('tut-callout');
+  if(hole) hole.style.display='none'; if(call) call.style.display='none';
+  try{ if(onEnd) await onEnd(reason); }catch(e){ console.warn('tut end',e); }
+}
+function _tutKey(e){
+  if(!_tut) return;
+  if(e.key==='Escape'){ e.preventDefault(); tutEnd('esc'); }
+  else if(e.key==='ArrowRight'){ e.preventDefault(); tutNext(); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); tutBack(); }
+}
+function _tutTarget(){ const s=_tut&&_tut.steps[_tut.i]; if(!s||!s.sel) return null; try{ return document.querySelector(s.sel); }catch(e){ return null; } }
+function _tutVisible(el){ if(!el) return false; const r=el.getBoundingClientRect(); return r.width>0&&r.height>0&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth; }
+function _tutRender(){
+  if(!_tut) return;
+  const s=_tut.steps[_tut.i], call=document.getElementById('tut-callout');
+  const n=_tut.i+1, total=_tut.steps.length, isLast=n===total;
+  call.innerHTML = `<div class="tc-step">${esc(tt('step'))} ${n}/${total}</div>
+    <div class="tc-title">${esc(s.title||'')}</div>
+    <div class="tc-body">${esc(s.body||'')}</div>
+    <div class="tc-row">
+      <button class="tc-skip" onclick="tutEnd('skip')">${esc(tt('skip'))}</button>
+      ${_tut.i>0?`<button class="tc-btn" onclick="tutBack()">${esc(tt('back'))}</button>`:''}
+      <button class="tc-btn primary" onclick="tutNext()">${esc(isLast?tt('done'):tt('next'))}</button>
+    </div>`;
+  call.style.display='block';
+  const tgt=_tutTarget();
+  if(tgt){ try{ tgt.scrollIntoView({block:'center',inline:'center',behavior:_tut.reduced?'auto':'smooth'}); }catch(e){} }
+  setTimeout(()=>{ if(_tut){ const pb=call.querySelector('.tc-btn.primary'); if(pb) pb.focus(); } }, 30);
+  _tutPosition();
+}
+function _tutPosition(){
+  if(!_tut) return;
+  const hole=document.getElementById('tut-hole'), call=document.getElementById('tut-callout');
+  if(!hole||!call) return;
+  const tgt=_tutTarget();
+  if(tgt && _tutVisible(tgt)){
+    const r=tgt.getBoundingClientRect(), pad=6;
+    hole.style.display='block'; hole.classList.add('pulse');
+    hole.style.left=(r.left-pad)+'px'; hole.style.top=(r.top-pad)+'px';
+    hole.style.width=(r.width+pad*2)+'px'; hole.style.height=(r.height+pad*2)+'px';
+    const cw=call.offsetWidth||300, ch=call.offsetHeight||160, gap=12;
+    let top=r.bottom+gap; if(top+ch>innerHeight-8) top=r.top-ch-gap;
+    if(top<8) top=Math.max(8, innerHeight-ch-8);
+    let left=r.left+r.width/2-cw/2; left=Math.max(8, Math.min(left, innerWidth-cw-8));
+    call.style.left=left+'px'; call.style.top=top+'px';
+  } else {
+    hole.style.display='block'; hole.classList.remove('pulse');
+    hole.style.left='50%'; hole.style.top='50%'; hole.style.width='0px'; hole.style.height='0px';
+    const cw=call.offsetWidth||300, ch=call.offsetHeight||160;
+    call.style.left=Math.max(8,(innerWidth-cw)/2)+'px';
+    call.style.top=Math.max(8,(innerHeight-ch)/2)+'px';
+  }
+}
+function _tutLoop(){ if(!_tut) return; _tutPosition(); requestAnimationFrame(_tutLoop); }
+
+// ── Launcher dropdown ───────────────────────────────────────────────────────
+function openTutMenu(anchor){
+  _tutCloseMenu();
+  const hasGame=!!currentGameId;
+  const items=[
+    {ico:'📍', t:tt('mMs'), s:tt('mMsS'), fn:tutMs, on:true},
+    {ico:'🚂', t:tt('mRa'), s:tt('mRaS'), fn:tutRa, on:true},
+    {ico:'🎛️', t:tt('mDash'), s:tt('mDashS'), fn:tutDash, on:hasGame},
+    {ico:'👥', t:tt('mIn'), s:tt('mInS'), fn:tutInside, on:hasGame},
+    {ico:'🏁', t:tt('mAf'), s:tt('mAfS'), fn:tutAfter, on:hasGame},
+  ];
+  const bd=document.createElement('div'); bd.className='tut-backdrop'; bd.onclick=_tutCloseMenu; document.body.appendChild(bd);
+  const m=document.createElement('div'); m.className='tut-menu'; m.id='tut-menu'; m.setAttribute('role','menu');
+  m.innerHTML=`<div class="tut-mh">${esc(tt('menu'))}</div>`+items.map((it,idx)=>
+    `<button role="menuitem" ${it.on?'':'disabled'}><span class="tm-ico">${it.ico}</span><span>${esc(it.t)}<span class="tm-sub">${esc(it.on?it.s:tt('needGame'))}</span></span></button>`).join('');
+  document.body.appendChild(m);
+  m.querySelectorAll('button').forEach((b,idx)=>{ if(items[idx].on) b.onclick=()=>{ _tutCloseMenu(); items[idx].fn(); }; });
+  const r=anchor.getBoundingClientRect(), mw=m.offsetWidth, mh=m.offsetHeight;
+  let left=Math.max(8, Math.min(r.left, innerWidth-mw-8));
+  let top=r.bottom+6; if(top+mh>innerHeight-8) top=Math.max(8, r.top-mh-6);
+  m.style.left=left+'px'; m.style.top=top+'px';
+  const fb=m.querySelector('button:not([disabled])'); if(fb) fb.focus();
+  document.addEventListener('keydown', _tutMenuKey, true);
+}
+function _tutCloseMenu(){ const m=document.getElementById('tut-menu'); if(m) m.remove(); const b=document.querySelector('.tut-backdrop'); if(b) b.remove(); document.removeEventListener('keydown', _tutMenuKey, true); }
+function _tutMenuKey(e){ if(e.key==='Escape'){ e.preventDefault(); _tutCloseMenu(); } }
+
+// ── The five tours ──────────────────────────────────────────────────────────
+function _show(scr){ return ()=>{ try{ showScreen(scr); }catch(e){} return new Promise(r=>setTimeout(r,280)); }; }
+function tutMs(){ const back=currentScreen(); tutStart([
+  {before:_show('screen-landing'), sel:'.location-grid .location-card', title:tt('ms1t'), body:tt('ms1b')},
+  {before:_show('screen-game-select'), sel:'#mode-select', title:tt('ms2t'), body:tt('ms2b')},
+  {sel:'#btn-new-game', title:tt('ms3t'), body:tt('ms3b')},
+  {sel:'#ng-qr-download', title:tt('ms4t'), body:tt('ms4b')},
+  {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', title:tt('ms5t'), body:tt('ms5b')},
+], {onEnd:()=>{ try{ showScreen(back); }catch(e){} }}); }
+function tutRa(){ const back=currentScreen(); tutStart([
+  {before:_show('screen-landing'), sel:'.location-card--cr', title:tt('ra1t'), body:tt('ra1b')},
+  {before:_show('screen-game-select'), sel:'#cr-mode-select', title:tt('ra2t'), body:tt('ra2b')},
+  {sel:'#btn-new-game', title:tt('ra3t'), body:tt('ra3b')},
+  {sel:'#ng-qr-download', title:tt('ra4t'), body:tt('ra4b')},
+  {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', title:tt('ra5t'), body:tt('ra5b')},
+], {onEnd:()=>{ try{ showScreen(back); }catch(e){} }}); }
+function tutDash(){ if(!currentGameId){ toast(tt('needGame'),'warning'); return; } tutStart([
+  {sel:'#dash-teams', title:tt('d1t'), body:tt('d1b')},
+  {sel:'#dash-main', title:tt('d2t'), body:tt('d2b')},
+  {sel:'#dash-panel .tabs', title:tt('d3t'), body:tt('d3b')},
+  {sel:'.dt-topbar__actions', title:tt('d4t'), body:tt('d4b')},
+  {sel:'.timer-block', title:tt('d5t'), body:tt('d5b')},
+]); }
+function tutAfter(){ if(!currentGameId){ toast(tt('needGame'),'warning'); return; } tutStart([
+  {before:()=>{ try{ switchPanel('rankings', document.getElementById('tab-rankings')); }catch(e){} return new Promise(r=>setTimeout(r,200)); }, sel:'.rankings-section', title:tt('a1t'), body:tt('a1b')},
+  {sel:'#btn-game-export', title:tt('a2t'), body:tt('a2b')},
+  {title:tt('a3t'), body:tt('a3b')},
+]); }
+async function tutInside(){
+  if(!currentGameId){ toast(tt('needGame'),'warning'); return; }
+  let t=null;
+  try{ t=await API('/api/games/'+currentGameId+'/teams',{method:'POST',body:{name:'📚 '+tt('demoName')}}); }catch(e){}
+  if(!t||!t.id){ toast(tt('demoFail'),'error'); return; }
+  _tutDemoTeamId=t.id;
+  await new Promise(r=>setTimeout(r,500));
+  if(!document.getElementById('tc-'+t.id)){
+    try{ if(typeof currentGame!=='undefined' && currentGame){ currentGame.teams=currentGame.teams||[]; if(!currentGame.teams.some(x=>x.id===t.id)) currentGame.teams.push(t); } renderTeamsBar((typeof currentGame!=='undefined'&&currentGame)?currentGame.teams:[t]); }catch(e){}
+  }
+  try{ await selectTeam(t.id); }catch(e){}
+  tutStart([
+    {sel:'#tc-'+t.id, title:tt('g1t'), body:tt('g1b')},
+    {sel:'.team-detail-head', title:tt('g2t'), body:tt('g2b')},
+    {sel:'#team-missions-list', title:tt('g3t'), body:tt('g3b')},
+    {sel:'#dash-panel .tabs', title:tt('g4t'), body:tt('g4b')},
+    {sel:'#btn-freeze-team', title:tt('g5t'), body:tt('g5b')},
+    {sel:'#btn-delete-team', title:tt('g6t'), body:tt('g6b')},
+  ], {onEnd:tutCleanupDemo});
+}
+async function tutCleanupDemo(){
+  const id=_tutDemoTeamId; _tutDemoTeamId=null;
+  if(!id) return;
+  try{ await API('/api/games/'+currentGameId+'/teams/'+id,{method:'DELETE'}); }catch(e){}
+  try{ _removeTeamFromUi(id); }catch(e){}
+  try{ toast(tt('demoDeleted'),'info'); }catch(e){}
 }
 </script>
 </body>
