@@ -192,7 +192,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .cme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;}
 .cme-card{position:relative;text-align:left;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:.85rem .8rem .8rem;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;}
 .cme-card:hover{border-color:var(--orange-dim);}
-.cme-card .cme-cico{width:38px;height:38px;border-radius:9px;background:#2c2825;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.25rem;margin-bottom:.55rem;}
+.cme-card .cme-cico{width:38px;height:38px;border-radius:9px;background:#2c2825;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.25rem;line-height:1;text-align:center;margin-bottom:.55rem;}
 .cme-card .cme-ct{font-weight:700;font-size:.9rem;color:var(--text);}
 .cme-card .cme-cd{color:var(--text-muted);font-size:.73rem;line-height:1.3;margin-top:.15rem;}
 .cme-card.selected{border-color:var(--orange);background:rgba(232,95,30,0.12);box-shadow:0 0 14px rgba(232,95,30,.4);}
@@ -251,6 +251,9 @@ body.sel-ms #ms-toolbar{display:flex !important;}
 body.sel-cr .crms-checkbox{display:inline-block;}
 body.sel-cr #crms-toolbar{display:flex !important;}
 .btn.is-sel-on,.mm-seg>button.is-sel-on{background:var(--orange-soft);color:var(--text);box-shadow:inset 0 0 0 1px var(--orange-dim);}
+/* Rankings tab is desktop-hidden (rankings always shows below the panel there);
+   it appears only on phones, where chat/rankings become a tab switch. */
+#tab-rankings{display:none;}
 
 /* ── Mobile (≤768px) — the GM console is desktop-first; this makes it usable on
    a phone. The desktop layout is height-locked (body/#app overflow:hidden +
@@ -259,7 +262,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
 @media(max-width:768px){
   body{height:auto;min-height:100vh;min-height:100dvh;overflow-y:auto;overflow-x:hidden;}
   #app{overflow:visible;}
-  #screen-landing,#screen-settings,#screen-dashboard,#screen-game-select{overflow-y:auto;}
+  #screen-landing,#screen-settings,#screen-settings-gate,#screen-dashboard,#screen-game-select{overflow-y:auto;}
 
   /* Landing: cap the wide wordmark so it can't overflow / collide with the lang pills */
   #screen-landing{padding:1rem .9rem;}
@@ -288,10 +291,35 @@ body.sel-cr #crms-toolbar{display:flex !important;}
   #screen-dashboard{min-width:0;}
   #dash-main,#dash-panel,#dash-teams,#dash-panel .panel-content,#dash-panel .chat-messages,#dash-panel .chat-input-row,#dash-panel .chat-input-row .input,#dash-panel .rankings-section,#dash-panel #rankings-list{min-width:0;}
 
-  /* Modals: keep action buttons inside the dialog on a phone */
-  .modal{padding:1.25rem;}
+  /* Modals: keep action buttons inside the dialog on a phone, fit the width,
+     and collapse the multi-column editor grids so nothing forces side-scroll. */
+  .modal{padding:1.25rem;max-width:100%;overflow-x:hidden;}
+  .modal-title{font-size:1.3rem;word-break:break-word;}
   .modal-footer{flex-wrap:wrap;}
   .modal-footer .btn{flex:1 1 auto;}
+  .modal .cme-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .modal .grid-2,.modal .grid-3{grid-template-columns:minmax(0,1fr);}
+  .modal .grid-2>*,.modal .grid-3>*{min-width:0;}
+  .modal input,.modal select,.modal textarea{max-width:100%;min-width:0;}
+  .modal .grid-2 input,.modal .grid-3 input,.modal .grid-2 .input,.modal .grid-3 .input{width:100%;}
+
+  /* Mission-list rows: let Edit / Delete wrap under the title instead of
+     running off the right edge. Team-detail action buttons wrap too. */
+  .card-header,.mission-header{flex-wrap:wrap;}
+  .team-detail-head{flex-wrap:wrap;gap:.5rem;}
+  .team-detail-head .right{flex-wrap:wrap;justify-content:flex-start;}
+
+  /* Hard stop any horizontal overflow on the dashboard panels. */
+  #dash-main,#dash-panel{overflow-x:hidden;}
+
+  /* Chat ⇄ Rankings as a tab switch so each gets the full panel height
+     instead of splitting it ~50/50 (cramped on a phone). On desktop the
+     rankings stay always-visible below the panel (this block doesn't apply). */
+  #tab-rankings{display:inline-flex;}
+  #dash-panel{max-height:none;min-height:64vh;}
+  #dash-panel:not(.rk-active) .rankings-section{display:none;}
+  #dash-panel.rk-active .panel-content{display:none !important;}
+  #dash-panel.rk-active .rankings-section{display:flex;}
 }
 </style>
 </head>
@@ -523,6 +551,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       <button class="tab active" onclick="switchPanel('chat',this)" id="tab-chat" type="button" style="position:relative;">Chat<span id="gm-chat-tab-dot" style="display:none;position:absolute;top:2px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px var(--bg2);"></span></button>
       <button class="tab" onclick="switchPanel('broadcast',this)" id="tab-broadcast">Broadcast</button>
       <button class="tab" onclick="switchPanel('crmap',this)" id="tab-crmap"><span id="tab-map-label">Karte</span></button>
+      <button class="tab" onclick="switchPanel('rankings',this)" id="tab-rankings" type="button"><span id="rank-tab">Rangliste</span></button>
     </div>
     <div id="panel-chat" class="panel-content active">
       <div id="gm-chat-messages" class="chat-messages" style="flex:1;"></div>
@@ -583,9 +612,9 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       <input id="gate-pw" type="password" class="input" autofocus
              onkeydown="if(event.key==='Enter')verifyGate()">
     </div>
-    <div style="display:flex;gap:.6rem;">
-      <button class="btn btn-ghost" onclick="goBack()" id="sg-back">← Zurück</button>
-      <button class="btn btn-primary btn-full" onclick="verifyGate()" id="sg-unlock">Entsperren</button>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="goBack()" id="sg-back" style="flex:0 0 auto;">← Zurück</button>
+      <button class="btn btn-primary" onclick="verifyGate()" id="sg-unlock" style="flex:1 1 auto;min-width:140px;">Entsperren</button>
     </div>
     <p id="gate-err" style="color:var(--red-light);font-size:.85rem;margin-top:.75rem;min-height:1.2em;"></p>
   </div>
@@ -1174,7 +1203,7 @@ const GMT={
   'update-ok':'Update erfolgreich! App startet neu…','update-failed':'Update fehlgeschlagen.',
   'ruleset-created':'Regelwerk erstellt!','cannot-del-default-rs':'Standard-Regelwerk kann nicht gelöscht werden.',
   'cr-mode-created':'Rail Adventure Modus erstellt!','pick-mode-first':'Erst einen Modus auswählen',
-  'cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
+  'rank-tab':'Rangliste','cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
   'hint-saved':'Hinweis gespeichert!','c-del-hint':'Hinweis löschen?','hint-not-found':'Hinweis nicht gefunden',
   'invalid-json':'Ungültige JSON-Datei','invalid-format':'Kein gültiges Format (missions-Array fehlt)',
   'pick-missions':'Keine MiSSiON ausgewählt','no-other-mode':'Kein anderer Modus vorhanden',
@@ -1293,7 +1322,7 @@ const GMT={
   'update-ok':'Update successful! Restarting app…','update-failed':'Update failed.',
   'ruleset-created':'Ruleset created!','cannot-del-default-rs':"Default ruleset can't be deleted.",
   'cr-mode-created':'Rail Adventure mode created!','pick-mode-first':'Pick a mode first',
-  'cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
+  'rank-tab':'Rankings','cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
   'hint-saved':'Hint saved!','c-del-hint':'Delete hint?','hint-not-found':'Hint not found',
   'invalid-json':'Invalid JSON file','invalid-format':'Invalid format (missions array missing)',
   'pick-missions':'No MiSSiON selected','no-other-mode':'No other mode available',
@@ -1408,7 +1437,7 @@ const GMT={
   'update-ok':'Mise à jour réussie ! Redémarrage…','update-failed':'Échec de la mise à jour.',
   'ruleset-created':'Jeu de règles créé !','cannot-del-default-rs':'Le jeu de règles par défaut ne peut pas être supprimé.',
   'cr-mode-created':'Mode Rail Adventure créé !','pick-mode-first':"Choisis d'abord un mode",
-  'cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
+  'rank-tab':'Classement','cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
   'hint-saved':'Indice enregistré !','c-del-hint':"Supprimer l'indice ?",'hint-not-found':'Indice introuvable',
   'invalid-json':'Fichier JSON invalide','invalid-format':'Format invalide (tableau missions manquant)',
   'pick-missions':'Aucune MiSSiON sélectionnée','no-other-mode':'Aucun autre mode',
@@ -1523,7 +1552,7 @@ const GMT={
   'update-ok':'Aggiornamento riuscito! Riavvio…','update-failed':'Aggiornamento fallito.',
   'ruleset-created':'Set di regole creato!','cannot-del-default-rs':'Set di regole predefinito non eliminabile.',
   'cr-mode-created':'Modalità Rail Adventure creata!','pick-mode-first':'Prima seleziona una modalità',
-  'cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
+  'rank-tab':'Classifica','cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
   'hint-saved':'Suggerimento salvato!','c-del-hint':'Eliminare il suggerimento?','hint-not-found':'Suggerimento non trovato',
   'invalid-json':'File JSON non valido','invalid-format':"Formato non valido (manca l'array missions)",
   'pick-missions':'Nessuna MiSSiON selezionata','no-other-mode':'Nessuna altra modalità',
@@ -1638,7 +1667,7 @@ const GMT={
   'update-ok':'¡Actualización correcta! Reiniciando…','update-failed':'Actualización fallida.',
   'ruleset-created':'¡Conjunto de reglas creado!','cannot-del-default-rs':'El conjunto de reglas predeterminado no se puede eliminar.',
   'cr-mode-created':'¡Modo Rail Adventure creado!','pick-mode-first':'Elige primero un modo',
-  'cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
+  'rank-tab':'Clasificación','cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
   'hint-saved':'¡Pista guardada!','c-del-hint':'¿Eliminar la pista?','hint-not-found':'Pista no encontrada',
   'invalid-json':'Archivo JSON no válido','invalid-format':'Formato no válido (falta el array missions)',
   'pick-missions':'Ninguna MiSSiON seleccionada','no-other-mode':'No hay otro modo',
@@ -3544,6 +3573,10 @@ function renderGmCrMissionMarkers(){
 function switchPanel(panel,el){
   document.querySelectorAll('#dash-panel .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  // On phones, "rankings" is its own tab: rk-active hides the chat/broadcast/map
+  // panels and shows the rankings section full-height (CSS, ≤768px). On desktop
+  // the rankings tab is hidden and rankings always show, so this is a no-op there.
+  document.getElementById('dash-panel').classList.toggle('rk-active', panel==='rankings');
   document.getElementById('panel-chat').classList.toggle('active',panel==='chat');
   document.getElementById('panel-broadcast').classList.toggle('active',panel==='broadcast');
   document.getElementById('panel-crmap').classList.toggle('active',panel==='crmap');

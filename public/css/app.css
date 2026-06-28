@@ -192,7 +192,7 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
    wordmark display font on the title gives modals the same identity
    as the settings gate and section headers. */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(2px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;}
-.modal{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:1.75rem;max-width:620px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.02);max-height:92vh;overflow-y:auto;}
+.modal{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:1.75rem;max-width:620px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.02);max-height:92vh;overflow:hidden auto;}
 .modal-title{font-family:var(--display);font-weight:800;font-size:1.55rem;letter-spacing:.04em;text-transform:uppercase;color:var(--text);margin-bottom:1.25rem;}
 .modal-footer{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--hairline);}
 
