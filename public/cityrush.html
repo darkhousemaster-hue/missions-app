@@ -206,6 +206,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 .cr-section-label { font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
   color:var(--text-muted); margin-bottom:.3rem; }
 .cr-desc { font-size:.95rem; line-height:1.6; color:var(--text-dim); margin-bottom:.75rem; }
+@keyframes cr-scanline{0%{top:0}50%{top:calc(100% - 3px)}100%{top:0}}
 .cr-task { font-size:.95rem; line-height:1.6; color:var(--text); background:rgba(212,43,43,.06);
   border-left:3px solid var(--red); padding:.6rem .8rem; border-radius:0 var(--radius) var(--radius) 0;
   margin-bottom:.75rem; }
@@ -691,6 +692,7 @@ const T = {
         gallery_upload:'Aus Galerie hochladen', show_hint:'💡 Hinweis anzeigen',
         rules:'REGELN', rules_back:'← Zurück', back:'← Zurück', close:'Schließen', fullscreen:'Vollbild',
         jump_to_me:'📍 Zu mir', answer_ph:'Antwort eingeben…', answer_btn:'✓ Antworten',
+        scan_btn:'Scannen', scan_to_reveal:'Scannen zum Aufdecken', scan_collected:'Gesammelt', scan_type_code:'Code stattdessen eingeben', scan_code_ph:'Code', scan_submit:'Absenden', scan_title:'Code scannen', scan_title_frag:'Fragment scannen', scan_title_reveal:'Zum Aufdecken scannen', scan_hint_qr:'Kamera auf den QR-Code richten', scan_hint_ar:'Kamera auf das Bild richten', scan_cam_denied:'Kamerazugriff verweigert. Nutze „Code eingeben".', scan_no_decoder:'Scanner nicht verfügbar — Code eingeben.', scan_no_match:'Nicht erkannt — weiter versuchen.', scan_fragment_ok:'Fragment gesammelt', scan_all_collected:'✓ Alle Fragmente gesammelt!', scan_revealed:'✓ Aufgabe aufgedeckt!', scan_ar_fail:'AR konnte nicht starten — bitte QR nutzen.',
         points:'Punkte', mission_locked:'Erst zum Ziel laufen…',
         time_left:'Zeit übrig', no_rules:'Keine Regeln vorhanden.',
         pending_review:'Wird vom Spielleiter geprüft…',
@@ -742,6 +744,7 @@ const T = {
         gallery_upload:'Upload from gallery', show_hint:'💡 Show hint',
         rules:'RULES', rules_back:'← Back', back:'← Back', close:'Close', fullscreen:'Fullscreen',
         jump_to_me:'📍 Jump to me', answer_ph:'Type your answer…', answer_btn:'✓ Answer',
+        scan_btn:'Scan', scan_to_reveal:'Scan to reveal', scan_collected:'Collected', scan_type_code:'Type the code instead', scan_code_ph:'Code', scan_submit:'Submit', scan_title:'Scan the code', scan_title_frag:'Scan a fragment', scan_title_reveal:'Scan to reveal', scan_hint_qr:'Point the camera at the QR code', scan_hint_ar:'Point the camera at the image', scan_cam_denied:'Camera access denied. Use "Type the code".', scan_no_decoder:'Scanner unavailable — type the code.', scan_no_match:'Not recognised — keep trying.', scan_fragment_ok:'Fragment collected', scan_all_collected:'✓ All fragments collected!', scan_revealed:'✓ Task revealed!', scan_ar_fail:'AR could not start — please use QR.',
         points:'points', mission_locked:'Walk to the destination first…',
         time_left:'Time left', no_rules:'No rules set.',
         pending_review:'Awaiting Gamemaster review…',
@@ -791,6 +794,7 @@ const T = {
         gallery_upload:'Charger depuis la galerie', show_hint:'💡 Afficher un indice',
         rules:'RÈGLES', rules_back:'← Retour', back:'← Retour', close:'Fermer', fullscreen:'Plein écran',
         jump_to_me:'📍 Vers moi', answer_ph:'Saisir la réponse…', answer_btn:'✓ Répondre',
+        scan_btn:'Scanner', scan_to_reveal:'Scanner pour révéler', scan_collected:'Collectés', scan_type_code:'Saisir le code à la place', scan_code_ph:'Code', scan_submit:'Envoyer', scan_title:'Scanner le code', scan_title_frag:'Scanner un fragment', scan_title_reveal:'Scanner pour révéler', scan_hint_qr:'Dirige la caméra vers le QR code', scan_hint_ar:'Dirige la caméra vers l\'image', scan_cam_denied:'Accès caméra refusé. Utilise « Saisir le code ».', scan_no_decoder:'Scanner indisponible — saisis le code.', scan_no_match:'Non reconnu — réessaie.', scan_fragment_ok:'Fragment collecté', scan_all_collected:'✓ Tous les fragments collectés !', scan_revealed:'✓ Tâche révélée !', scan_ar_fail:'L\'AR n\'a pas pu démarrer — utilise le QR.',
         points:'points', mission_locked:'Allez d\'abord à destination…',
         time_left:'Temps restant', no_rules:'Aucune règle.',
         pending_review:'En attente de validation du Gamemaster…',
@@ -840,6 +844,7 @@ const T = {
         gallery_upload:'Carica dalla galleria', show_hint:'💡 Mostra suggerimento',
         rules:'REGOLE', rules_back:'← Indietro', back:'← Indietro', close:'Chiudi', fullscreen:'Schermo intero',
         jump_to_me:'📍 Vai a me', answer_ph:'Scrivi la risposta…', answer_btn:'✓ Rispondi',
+        scan_btn:'Scansiona', scan_to_reveal:'Scansiona per rivelare', scan_collected:'Raccolti', scan_type_code:'Inserisci invece il codice', scan_code_ph:'Codice', scan_submit:'Invia', scan_title:'Scansiona il codice', scan_title_frag:'Scansiona un frammento', scan_title_reveal:'Scansiona per rivelare', scan_hint_qr:'Punta la fotocamera sul QR', scan_hint_ar:'Punta la fotocamera sull\'immagine', scan_cam_denied:'Accesso fotocamera negato. Usa "Inserisci il codice".', scan_no_decoder:'Scanner non disponibile — inserisci il codice.', scan_no_match:'Non riconosciuto — riprova.', scan_fragment_ok:'Frammento raccolto', scan_all_collected:'✓ Tutti i frammenti raccolti!', scan_revealed:'✓ Compito rivelato!', scan_ar_fail:'AR non avviabile — usa il QR.',
         points:'punti', mission_locked:'Vai prima alla destinazione…',
         time_left:'Tempo rimanente', no_rules:'Nessuna regola.',
         pending_review:'In attesa della revisione del Gamemaster…',
@@ -889,6 +894,7 @@ const T = {
         gallery_upload:'Subir desde galería', show_hint:'💡 Mostrar pista',
         rules:'REGLAS', rules_back:'← Volver', back:'← Volver', close:'Cerrar', fullscreen:'Pantalla completa',
         jump_to_me:'📍 Ir a mí', answer_ph:'Escribe la respuesta…', answer_btn:'✓ Responder',
+        scan_btn:'Escanear', scan_to_reveal:'Escanear para revelar', scan_collected:'Recogidos', scan_type_code:'Escribir el código en su lugar', scan_code_ph:'Código', scan_submit:'Enviar', scan_title:'Escanear el código', scan_title_frag:'Escanear un fragmento', scan_title_reveal:'Escanear para revelar', scan_hint_qr:'Apunta la cámara al código QR', scan_hint_ar:'Apunta la cámara a la imagen', scan_cam_denied:'Acceso a la cámara denegado. Usa "Escribir el código".', scan_no_decoder:'Escáner no disponible — escribe el código.', scan_no_match:'No reconocido — sigue intentando.', scan_fragment_ok:'Fragmento recogido', scan_all_collected:'✓ ¡Todos los fragmentos recogidos!', scan_revealed:'✓ ¡Tarea revelada!', scan_ar_fail:'No se pudo iniciar AR — usa QR.',
         points:'puntos', mission_locked:'Camina primero hasta el destino…',
         time_left:'Tiempo restante', no_rules:'No hay reglas.',
         pending_review:'A la espera de la revisión del Gamemaster…',
@@ -1905,7 +1911,10 @@ function refreshSpecialPopup(){
   if(!m) return;
   const name = m[`name_${lang}`] || m.name_de || '';
   const desc = m[`description_${lang}`] || m.description_de || '';
-  const task = m[`task_${lang}`] || m.task_de || '';
+  let task = m[`task_${lang}`] || m.task_de || '';
+  // Reveal-scan specials hide their task (and its image) until the player scans.
+  const specTaskLocked = m.use_scan && scanModeOf(m)==='reveal' && !hasArrivedFor(m);
+  if(specTaskLocked) task='';
   document.getElementById('cr-popup-content').innerHTML = `
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;">
       <div>
@@ -1916,7 +1925,7 @@ function refreshSpecialPopup(){
     </div>
     ${desc?`<div class="cr-section-label">${t('desc')}</div><div class="cr-desc">${esc(desc)}</div>`:''}
     ${task?`<div class="cr-section-label">${t('task')}</div><div class="cr-task">${esc(task)}</div>`:''}
-    ${m.task_image?`<button type="button" class="btn btn-ghost btn-sm" style="margin-top:.5rem;align-self:flex-start;" onclick="openLightbox('/uploads/${esc(m.task_image)}')">🖼️ ${t('view_image')||'Bild ansehen'}</button>`:''}
+    ${(m.task_image && !specTaskLocked)?`<button type="button" class="btn btn-ghost btn-sm" style="margin-top:.5rem;align-self:flex-start;" onclick="openLightbox('/uploads/${esc(m.task_image)}')">🖼️ ${t('view_image')||'Bild ansehen'}</button>`:''}
     <div id="cr-revealed-hints" style="margin-top:.5rem;"></div>
     <div id="cr-actions" style="margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem;"></div>
   `;
@@ -1934,6 +1943,11 @@ function renderActionsForSpecial(m){
     note.style.cssText='padding:.6rem .75rem;background:rgba(255,107,0,.08);border-left:3px solid var(--orange);border-radius:0 var(--radius) var(--radius) 0;font-size:.9rem;';
     note.innerHTML = '⏳ ' + (t('pending_review')||'Wird vom Spielleiter geprüft…');
     actEl.appendChild(note);
+    return;
+  }
+  if(m.use_scan){
+    renderScanActions(m, actEl, true);
+    addHintButton(actEl, m, 'answer');
     return;
   }
   if(m.use_puzzle && _puzzleReady(m)){
@@ -2174,7 +2188,9 @@ function refreshPopup(){
   // hidden for a GPS mission until the player physically arrives. The
   // description (background/story) is always shown so they have context while
   // navigating.
-  const taskLocked = m.use_gps && isCurrent && !hasArrivedFor(m);
+  // Task (and its image) stay hidden until the "unlock" step: GPS arrival, or —
+  // for a reveal-scan mission — until the player scans it.
+  const taskLocked = isCurrent && !hasArrivedFor(m) && (m.use_gps || (m.use_scan && scanModeOf(m)==='reveal'));
   if(taskLocked){
     task = '';
   }
@@ -2769,6 +2785,12 @@ function renderActions(m){
     actEl.appendChild(note);
     // Fall through to render upload buttons again so the player can retry.
   }
+  // Scan flow — in-app QR/AR camera (solving auto-completes; reveal unlocks).
+  if(m.use_scan){
+    renderScanActions(m, actEl, false);
+    addHintButton(actEl, m);
+    return;
+  }
   // Jigsaw puzzle flow — solving auto-completes the mission (no GM review).
   if(m.use_puzzle && _puzzleReady(m)){
     renderPuzzle(m, actEl, () => completeMission());
@@ -2966,6 +2988,247 @@ function addActionBtn(container, label, cls, fn){
   btn.textContent = label;
   btn.onclick = fn;
   container.appendChild(btn);
+}
+
+// ── Scan puzzle (in-app QR / AR image) ──────────────────────────────────────
+// A scan is the answer puzzle with a camera instead of a keyboard. QR decodes
+// with the native BarcodeDetector (Android) or a jsQR fallback (iOS); AR uses
+// MindAR against the GM-compiled .mind target. A "type the code" fallback is
+// always reachable (covers denied-camera / no-decoder). Codes never reach the
+// client — the server validates and (for solve/fragment) awards.
+let _scanOverlayEl=null, _scanStop=null, _scanStream=null, _scanLastFocus=null;
+let _scanFrag={};   // missionId -> collected count (session view; server is truth)
+function scanModeOf(m){ return ['solve','fragment','reveal'].includes(m&&m.scan_mode) ? m.scan_mode : 'solve'; }
+
+function renderScanActions(m, actEl, isSpecial){
+  const mode=scanModeOf(m), isImage=m.scan_type==='image';
+  // Reveal already unlocked → task is visible; just offer Complete.
+  if(mode==='reveal' && hasArrivedFor(m)){
+    addActionBtn(actEl, t('complete')||'Abschliessen', 'btn-primary',
+      ()=> isSpecial ? completeSpecialMission(m,null) : completeMission());
+    return;
+  }
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;gap:.5rem;';
+  if(mode==='fragment'){
+    const total=Number(m.scan_fragment_count)||0, have=_scanFrag[m.id]||0;
+    const prog=document.createElement('div'); prog.id='cr-scan-frag-prog';
+    prog.style.cssText='font-size:.9rem;color:var(--text-muted);font-weight:700;';
+    prog.textContent=`${t('scan_collected')||'Gesammelt'}: ${have} / ${total}`;
+    wrap.appendChild(prog);
+  }
+  const label = mode==='reveal' ? ('📷 '+(t('scan_to_reveal')||'Scannen zum Aufdecken'))
+                                : ('📷 '+(t('scan_btn')||'Scannen'));
+  const scanBtn=document.createElement('button');
+  scanBtn.className='btn btn-primary btn-full'; scanBtn.textContent=label;
+  scanBtn.onclick=()=>openScanOverlay(m, !!isSpecial);
+  wrap.appendChild(scanBtn);
+  // Type-the-code fallback (QR only — AR has no code to type).
+  if(!isImage){
+    const det=document.createElement('details');
+    det.style.cssText='font-size:.85rem;color:var(--text-muted);';
+    const sum=document.createElement('summary');
+    sum.style.cssText='cursor:pointer;padding:.35rem 0;list-style:revert;';
+    sum.textContent=t('scan_type_code')||'Code stattdessen eingeben';
+    det.appendChild(sum);
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;flex-direction:column;gap:.4rem;margin-top:.35rem;';
+    const inp=document.createElement('input');
+    inp.type='text'; inp.className='input'; inp.autocomplete='off';
+    inp.placeholder=t('scan_code_ph')||'Code';
+    const err=document.createElement('div'); err.style.cssText='color:var(--red-light);font-size:.82rem;min-height:1em;';
+    const submit=()=>{ const v=inp.value.trim(); if(!v) return; handleScanResult(m, v, false, !!isSpecial, (msg,isErr)=>{ if(isErr){ err.textContent=msg; } else { err.textContent=''; } }); };
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); }});
+    const sub=document.createElement('button'); sub.className='btn btn-secondary btn-full'; sub.textContent=t('scan_submit')||'Absenden'; sub.onclick=submit;
+    row.appendChild(inp); row.appendChild(sub); row.appendChild(err);
+    det.appendChild(row); wrap.appendChild(det);
+  }
+  actEl.appendChild(wrap);
+}
+
+async function openScanOverlay(m, isSpecial){
+  if(crIsFrozen && crIsFrozen()){ toast(t('frozen_wait')||'Eingefroren','warning'); return; }
+  closeScanOverlay();
+  const mode=scanModeOf(m), isImage=m.scan_type==='image';
+  _scanLastFocus=document.activeElement;
+  const ov=document.createElement('div');
+  ov.id='cr-scan-overlay'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true');
+  ov.setAttribute('aria-label', t('scan_title')||'Scannen');
+  ov.style.cssText='position:fixed;inset:0;z-index:1300;background:#000;touch-action:none;';
+  _scanOverlayEl=ov;
+  const video=document.createElement('video');
+  video.setAttribute('playsinline',''); video.muted=true; video.autoplay=true;
+  video.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;';
+  ov.appendChild(video);
+  const frame=document.createElement('div'); frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:min(72vw,300px);height:min(72vw,300px);border:3px solid rgba(255,255,255,.92);border-radius:18px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55);overflow:hidden;';
+  if(!isImage){ const line=document.createElement('div'); line.style.cssText='position:absolute;left:0;right:0;height:3px;background:var(--red,#C22F19);box-shadow:0 0 8px var(--red,#C22F19);animation:cr-scanline 2s ease-in-out infinite;'; frame.appendChild(line); }
+  ov.appendChild(frame);
+  const bar=document.createElement('div');
+  bar.style.cssText='position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:.6rem;padding:calc(env(safe-area-inset-top,0px) + .7rem) .9rem .7rem;background:linear-gradient(#000a,#0000);z-index:3;';
+  const title=document.createElement('div'); title.style.cssText='flex:1;color:#fff;font-weight:700;font-size:1rem;text-shadow:0 1px 3px #000;';
+  title.textContent = mode==='fragment' ? (t('scan_title_frag')||'Fragment scannen') : mode==='reveal' ? (t('scan_title_reveal')||'Zum Aufdecken scannen') : (t('scan_title')||'Code scannen');
+  const closeBtn=document.createElement('button');
+  closeBtn.className='btn btn-ghost btn-sm';
+  closeBtn.style.cssText='color:#fff;font-size:1.3rem;line-height:1;min-width:44px;min-height:44px;';
+  closeBtn.setAttribute('aria-label', t('close')||'Schliessen'); closeBtn.textContent='✕';
+  closeBtn.onclick=()=>closeScanOverlay();
+  bar.appendChild(title); bar.appendChild(closeBtn); ov.appendChild(bar);
+  const bottom=document.createElement('div');
+  bottom.style.cssText='position:absolute;left:0;right:0;bottom:0;padding:1rem 1.1rem calc(env(safe-area-inset-bottom,0px) + 1.1rem);background:linear-gradient(#0000,#000c);z-index:3;display:flex;flex-direction:column;gap:.5rem;align-items:center;text-align:center;';
+  const status=document.createElement('div'); status.id='cr-scan-status';
+  status.setAttribute('role','status'); status.setAttribute('aria-live','polite');
+  status.style.cssText='color:#fff;font-size:.95rem;min-height:1.3em;text-shadow:0 1px 3px #000;';
+  status.textContent = isImage ? (t('scan_hint_ar')||'Kamera auf das Bild richten') : (t('scan_hint_qr')||'Kamera auf den QR-Code richten');
+  bottom.appendChild(status);
+  let fragEl=null;
+  if(mode==='fragment'){ fragEl=document.createElement('div'); fragEl.style.cssText='color:#fff;font-weight:800;font-size:1.1rem;text-shadow:0 1px 3px #000;'; fragEl.textContent=`${_scanFrag[m.id]||0} / ${Number(m.scan_fragment_count)||0}`; bottom.appendChild(fragEl); }
+  ov.appendChild(bottom);
+  document.body.appendChild(ov);
+  ov._keyHandler=(e)=>{ if(e.key==='Escape'){ e.preventDefault(); closeScanOverlay(); } };
+  document.addEventListener('keydown', ov._keyHandler);
+  closeBtn.focus();
+  const setStatus=(msg,isErr)=>{ status.textContent=msg; status.style.color=isErr?'#ff9a9a':'#fff'; status.setAttribute('role', isErr?'alert':'status'); };
+  try{
+    _scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false});
+    video.srcObject=_scanStream; await video.play().catch(()=>{});
+  }catch(err){
+    setStatus(t('scan_cam_denied')||'Kamerazugriff verweigert. Nutze „Code eingeben".', true);
+    if(!isImage) _scanOverlayTypeFallback(ov, m, !!isSpecial, setStatus);
+    return;
+  }
+  if(isImage){
+    _scanStop=await startArLoop(video, '/uploads/'+m.scan_target, ()=>{ handleScanResult(m, null, true, !!isSpecial, setStatus, fragEl); }, setStatus);
+  } else {
+    _scanStop=await startQrLoop(video, async (code)=> await handleScanResult(m, code, false, !!isSpecial, setStatus, fragEl), setStatus);
+  }
+}
+
+// In-overlay fallback box when the camera can't be used.
+function _scanOverlayTypeFallback(ov, m, isSpecial, setStatus){
+  const box=document.createElement('div');
+  box.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;display:flex;flex-direction:column;gap:.55rem;width:min(86vw,340px);background:#16161a;border:1px solid #333;border-radius:12px;padding:1.1rem;';
+  const lbl=document.createElement('label'); lbl.textContent=t('scan_type_code')||'Code eingeben'; lbl.style.cssText='color:#ddd;font-size:.9rem;font-weight:700;';
+  const inp=document.createElement('input'); inp.type='text'; inp.className='input'; inp.autocomplete='off'; inp.placeholder=t('scan_code_ph')||'Code';
+  const sub=document.createElement('button'); sub.className='btn btn-primary btn-full'; sub.textContent=t('scan_submit')||'Absenden';
+  const submit=()=>{ const v=inp.value.trim(); if(!v) return; handleScanResult(m, v, false, isSpecial, setStatus); };
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); }});
+  sub.onclick=submit;
+  box.appendChild(lbl); box.appendChild(inp); box.appendChild(sub);
+  ov.appendChild(box); setTimeout(()=>inp.focus(),50);
+}
+
+function closeScanOverlay(){
+  if(_scanStop){ try{_scanStop();}catch(e){} _scanStop=null; }
+  if(_scanStream){ try{ _scanStream.getTracks().forEach(tr=>tr.stop()); }catch(e){} _scanStream=null; }
+  if(_scanOverlayEl){
+    if(_scanOverlayEl._keyHandler) document.removeEventListener('keydown', _scanOverlayEl._keyHandler);
+    _scanOverlayEl.remove(); _scanOverlayEl=null;
+  }
+  if(_scanLastFocus && _scanLastFocus.focus){ try{_scanLastFocus.focus();}catch(e){} }
+  _scanLastFocus=null;
+}
+
+// POST a scan attempt and react. Returns true if scanning should CONTINUE
+// (wrong code, or a non-final fragment), false to stop the camera loop.
+async function handleScanResult(m, payload, detected, isSpecial, setStatus, fragEl){
+  let res;
+  try{
+    res=await fetch(`/api/games/${gameId}/cr/scan`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({teamId, missionId:m.id, payload, detected})}).then(r=>r.json());
+  }catch(e){ setStatus(t('error_generic')||'Fehler', true); return true; }
+  if(!res || res.correct===false){ setStatus(t('scan_no_match')||'Nicht erkannt — weiter versuchen.', true); return true; }
+  const mode=scanModeOf(m);
+  if(mode==='reveal' && res.revealed){
+    toast(t('scan_revealed')||'✓ Aufgabe aufgedeckt!','success');
+    arrivedMissionIds.add(Number(m.id));
+    closeScanOverlay();
+    if(popupMissionId===m.id) refreshPopup();
+    return false;
+  }
+  if(mode==='fragment'){
+    _scanFrag[m.id]=res.collected||0;
+    if(fragEl) fragEl.textContent=`${res.collected||0} / ${res.total||Number(m.scan_fragment_count)||0}`;
+    const progEl=document.getElementById('cr-scan-frag-prog'); if(progEl) progEl.textContent=`${t('scan_collected')||'Gesammelt'}: ${res.collected||0} / ${res.total||0}`;
+    if(res.complete){ toast(t('scan_all_collected')||'✓ Alle Fragmente gesammelt!','success'); _finishScanMission(m, res, isSpecial); return false; }
+    setStatus(`✓ ${t('scan_fragment_ok')||'Fragment gesammelt'} (${res.collected}/${res.total})`, false);
+    return true;
+  }
+  if(res.complete){ toast(t('right_answer')||'✓ Richtig!','success'); _finishScanMission(m, res, isSpecial); return false; }
+  return true;
+}
+
+function _finishScanMission(m, res, isSpecial){
+  closeScanOverlay();
+  if(isSpecial){
+    if(typeof res.score==='number') toast(`+${res.score} ${t('points')||'Punkte'}!`,'success');
+    specialProgress[m.id]={...(specialProgress[m.id]||{}), last_attempt:Date.now(), completed_count:(specialProgress[m.id]?.completed_count||0)+1};
+    if(typeof refreshScore==='function') refreshScore();
+    if(typeof renderSpecialTiles==='function') renderSpecialTiles();
+    closeMissionPopup();
+    return;
+  }
+  // Linear: the server already awarded — apply the returned progress payload.
+  if(typeof stopMissionTimer==='function') stopMissionTimer();
+  completedMissionIds.add(Number(m.id));
+  applyProgressPayload(res);
+  closeMissionPopup();
+}
+
+// Lazy CDN loaders (only fetched the first time a player opens a scanner).
+function _loadScanScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('load '+src)); document.head.appendChild(s); }); }
+let _jsqrP=null;
+function loadJsQR(){ if(window.jsQR) return Promise.resolve(window.jsQR); if(!_jsqrP) _jsqrP=_loadScanScript('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js').then(()=>window.jsQR); return _jsqrP; }
+let _mindRtP=null;
+function loadMindARImage(){ if(window.MINDAR&&window.MINDAR.IMAGE) return Promise.resolve(window.MINDAR.IMAGE); if(!_mindRtP) _mindRtP=_loadScanScript('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js').then(()=>window.MINDAR.IMAGE); return _mindRtP; }
+
+// QR loop: native BarcodeDetector if present, else jsQR on sampled frames.
+async function startQrLoop(video, onCode, setStatus){
+  let stopped=false, busy=false, detector=null, jsqr=null;
+  if('BarcodeDetector' in window){ try{ detector=new BarcodeDetector({formats:['qr_code']}); }catch(e){ detector=null; } }
+  if(!detector){ jsqr=await loadJsQR().catch(()=>null); }
+  if(!detector && !jsqr){ setStatus(t('scan_no_decoder')||'Scanner nicht verfügbar — Code eingeben.', true); return ()=>{stopped=true;}; }
+  const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  const readOnce=async()=>{
+    if(video.readyState<2 || !video.videoWidth) return null;
+    if(detector){ const c=await detector.detect(video); return (c&&c[0])?c[0].rawValue:null; }
+    canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    const d=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const r=jsqr(d.data,d.width,d.height,{inversionAttempts:'dontInvert'});
+    return (r&&r.data)?r.data:null;
+  };
+  const tick=async()=>{
+    if(stopped) return;
+    if(!busy){
+      let val=null; try{ val=await readOnce(); }catch(e){}
+      if(val){ busy=true; let keep=true; try{ keep=await onCode(val); }catch(e){ keep=true; } if(!keep){ return; } setTimeout(()=>{busy=false;}, 1300); }
+    }
+    if(!stopped) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  return ()=>{ stopped=true; };
+}
+
+// AR loop: MindAR image tracking against the compiled .mind target. Detection-
+// only (no 3D render); a non-null worldMatrix means the target is in view. AR
+// is best-effort (device-dependent) — failures fall back to the status line.
+async function startArLoop(video, mindUrl, onDetect, setStatus){
+  let stopped=false, controller=null, fired=false;
+  try{
+    const IMAGE=await loadMindARImage();
+    controller=new IMAGE.Controller({
+      inputWidth: video.videoWidth||1280, inputHeight: video.videoHeight||720,
+      onUpdate:(data)=>{ if(stopped||fired) return; if(data && data.type==='updateMatrix' && data.worldMatrix){ fired=true; onDetect(); } },
+    });
+    await controller.addImageTargets(mindUrl);
+    await controller.dummyRun(video);
+    controller.processVideo(video);
+  }catch(e){
+    console.error('AR init failed', e);
+    setStatus(t('scan_ar_fail')||'AR konnte nicht starten — bitte QR nutzen.', true);
+  }
+  return ()=>{ stopped=true; try{ controller && controller.stopProcessVideo && controller.stopProcessVideo(); }catch(e){} };
 }
 
 // Disable + frosty-blue every interactive control inside the action area

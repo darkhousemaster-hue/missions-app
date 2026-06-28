@@ -945,6 +945,71 @@ app.post('/api/games/:gameId/cr/answer', (req,res) => {
   res.json({correct, message: correct ? 'Richtig!' : 'Leider falsch. Versuche es erneut!'});
 });
 
+// In-app scan puzzle (QR / AR image). One endpoint for all three modes.
+//   qr    → payload = decoded text, compared case-insensitively to scan_code / a fragment.
+//   image → detected:true from the client's MindAR (recognition is client-trusted; the
+//           .mind target is downloaded to the client anyway, so there's no secret to hide).
+// solve → award; reveal → unlock the task via the arrival flag; fragment → collect, award on last.
+app.post('/api/games/:gameId/cr/scan', (req,res) => {
+  const gameId = req.params.gameId;
+  const { teamId, missionId, payload, detected } = req.body;
+  if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
+  const mission = db.getCrMission(missionId);
+  if(!mission || !mission.use_scan) return res.status(400).json({error:'Not a scan mission'});
+  const norm = s => String(s||'').trim().toLowerCase();
+  const isImage = mission.scan_type === 'image';
+  const got = norm(payload);
+  const crMode = db.getGameCrMode(gameId);
+  const missions = crMode ? db.getLinearCrMissions(crMode.id) : [];
+
+  // ── fragment mode (QR only — image can't distinguish which fragment) ──
+  if(mission.scan_mode === 'fragment'){
+    if(isImage) return res.json({correct:false, message:'Fragments require QR'});
+    let fragments = [];
+    try { fragments = JSON.parse(mission.scan_fragments||'[]'); } catch {}
+    fragments = fragments.map(norm).filter(Boolean);
+    if(!fragments.length) return res.json({correct:false, message:'No fragments configured'});
+    if(!fragments.includes(got)) return res.json({correct:false});
+    const prog = db.getCrMissionProgress(gameId, teamId, mission.id) || {};
+    let collected = []; try { collected = JSON.parse(prog.scan_collected||'[]'); } catch {}
+    if(!collected.includes(got)) collected.push(got);
+    db.upsertCrMissionProgress(gameId, teamId, mission.id, { scan_collected: JSON.stringify(collected) });
+    const total = fragments.length, have = collected.filter(c=>fragments.includes(c)).length;
+    if(have >= total){
+      const score = scoreForCrMission(mission, prog);
+      const result = completeCrTeamMission(gameId, teamId, mission, score, {status:'completed'}) || {};
+      return res.json({correct:true, complete:true, collected:have, total, ...crProgressPayload(gameId, teamId, missions, result.state || crMissionState(gameId, teamId, missions))});
+    }
+    return res.json({correct:true, complete:false, collected:have, total});
+  }
+
+  // ── solve / reveal: match the single code (or trust image detection) ──
+  const matched = isImage ? !!detected : (norm(mission.scan_code) && got === norm(mission.scan_code));
+  if(!matched) return res.json({correct:false});
+
+  if(mission.scan_mode === 'reveal'){
+    // Unlock the task: reuse the arrival flag so the player's popup reveals the
+    // task (the player render treats a reveal-scan mission like a GPS lock).
+    db.recordCrArrival(gameId, teamId, mission.id);
+    io.to(`team_${teamId}`).emit('cr_arrived', {missionId: mission.id, distance:0, sticky:true, viaScan:true});
+    return res.json({correct:true, revealed:true});
+  }
+
+  // solve → award
+  if(mission.is_special){
+    const score = mission.points || 0;
+    if(score > 0) db.addTeamScore(teamId, score);
+    const sp = db.getCrSpecialProgress(gameId, teamId, mission.id) || {};
+    db.upsertCrSpecialProgress(gameId, teamId, mission.id, { completed_count:(sp.completed_count||0)+1, last_attempt:Date.now() });
+    io.to(`gm_${gameId}`).emit('rankings_update', db.getRankings(gameId));
+    return res.json({correct:true, complete:true, score});
+  }
+  const prog = db.getCrMissionProgress(gameId, teamId, mission.id) || db.getCrProgress(gameId, teamId) || {};
+  const score = scoreForCrMission(mission, prog);
+  const result = completeCrTeamMission(gameId, teamId, mission, score, {status:'completed'}) || {};
+  res.json({correct:true, complete:true, score, ...crProgressPayload(gameId, teamId, missions, result.state || crMissionState(gameId, teamId, missions))});
+});
+
 
 // ════════════════════════════════════════════════════════════
 //   CITYRUSH ROUTES
@@ -1080,6 +1145,36 @@ app.post('/api/cr/missions/:id/task-image', upload.single('image'), (req,res) =>
   res.json({success:true, task_image: rel});
 });
 
+// AR scan target upload — the source image a player points the camera at plus
+// the compiled MindAR `.mind` target (compiled client-side in the GM editor).
+// Both land under uploads/ar_targets/. POST with clear=1 and no files removes
+// them. Uses upload.fields because two files arrive together.
+function _moveScanFileIntoPlace(file){
+  if(!file) return null;
+  const destDir = path.join(UPLOAD_DIR,'ar_targets');
+  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
+  const dest = path.join(destDir, file.filename);
+  try { fs.renameSync(file.path, dest); }
+  catch(e) { fs.copyFileSync(file.path, dest); fs.unlinkSync(file.path); }
+  return `ar_targets/${file.filename}`;
+}
+app.post('/api/cr/missions/:id/scan-target', upload.fields([{name:'image',maxCount:1},{name:'mind',maxCount:1}]), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!db.getCrMission(req.params.id)) return res.status(404).json({error:'Not found'});
+  const img  = req.files && req.files.image && req.files.image[0];
+  const mind = req.files && req.files.mind  && req.files.mind[0];
+  if(req.body.clear==='1' && !img && !mind){
+    db.updateCrMission(req.params.id, { scan_image:null, scan_target:null });
+    io.emit('settings_updated', {type:'cr_missions'});
+    return res.json({success:true, scan_image:null, scan_target:null});
+  }
+  if(!img || !mind) return res.status(400).json({error:'Need both image and compiled target'});
+  const updates = { scan_image:_moveScanFileIntoPlace(img), scan_target:_moveScanFileIntoPlace(mind) };
+  db.updateCrMission(req.params.id, updates);
+  io.emit('settings_updated', {type:'cr_missions'});
+  res.json({success:true, ...updates});
+});
+
 // Ordering-puzzle image upload. Not tied to a mission id (the GM builds the
 // ordered list before the mission even exists), so it just stores one file and
 // returns its path; the ordered list is persisted via puzzle_order_images.
@@ -1106,6 +1201,22 @@ app.post('/api/settings/logo-image', upload.single('image'), (req,res) => {
   res.json({success:true, logo_image: rel});
 });
 
+// QR image for the GM to print (Scan puzzle). Encodes the raw code string
+// (NOT a URL), so a player scanning it in-app just decodes the code — it never
+// opens a website. Public + cached; length-capped to avoid abuse. Used for the
+// live preview in the mission editor and the printable QR sheet.
+app.get('/api/qr.png', (req,res) => {
+  const text = String(req.query.text||'').slice(0,512);
+  if(!text) return res.status(400).end();
+  const size = Math.min(1200, Math.max(120, parseInt(req.query.size)||400));
+  QRCode.toBuffer(text, {errorCorrectionLevel:'H', width:size, margin:2}, (err,buf)=>{
+    if(err) return res.status(500).end();
+    res.setHeader('Content-Type','image/png');
+    res.setHeader('Cache-Control','public, max-age=86400');
+    res.end(buf);
+  });
+});
+
 // ── CR Game info ──────────────────────────────────────────────────────────────
 app.get('/api/games/:id/cr', (req,res) => {
   const crMode = db.getGameCrMode(req.params.id);
@@ -1125,7 +1236,7 @@ app.get('/api/games/:id/cr', (req,res) => {
   const missionProgress = db.listCrMissionProgressForGame(req.params.id);
   const specialProgress = db.listCrSpecialProgressForGame(req.params.id);
   const freezes  = db.listFreezesForGame(req.params.id);
-  res.json({active:true, crMode, missions: missionsWithHints, progress, missionProgress, gps, captures, submissions, arrivals, specialProgress, freezes});
+  res.json({active:true, crMode, missions: missionsWithHints.map(sanitizeCrMissionForPlayer), progress, missionProgress, gps, captures, submissions, arrivals, specialProgress, freezes});
 });
 
 // Pending review counts per team (regular + CR), so the dashboard's
@@ -1166,13 +1277,13 @@ app.get('/api/games/:gameId/cr/progress/:teamId', (req,res) => {
     || {mission_index:state.nextIndex,status:state.finished?'finished':'active',score_earned:state.scoreEarned};
   state = crMissionState(req.params.gameId, req.params.teamId, linear);
   res.json({
-    active:true, progress, currentMission: state.nextMission,
+    active:true, progress, currentMission: sanitizeCrMissionForPlayer(state.nextMission),
     totalMissions: linear.length,
     missionProgress: state.rows,
     completedMissionIds: state.completedMissionIds,
     pendingMissionIds: state.pendingMissionIds,
     skippedMissionIds: state.skippedMissionIds,
-    specialMissions: special,
+    specialMissions: special.map(sanitizeCrMissionForPlayer),
     arrivedMissionIds: db.listCrArrivals(req.params.gameId, Number(req.params.teamId)),
     specialProgress:  db.getCrSpecialProgressForTeam(req.params.gameId, Number(req.params.teamId)),
   });
@@ -1236,6 +1347,23 @@ function syncCrAggregateProgress(gameId, teamId, missions, state) {
   return db.getCrProgress(gameId, teamId);
 }
 
+// Strip solution secrets before a mission object is sent to players — they can
+// read the raw network payload, so the QR/fragment codes must never travel to
+// the client. Keeps a fragment COUNT so the player UI can still show "x / N".
+// (scan_image / scan_target stay: AR needs the compiled target at runtime, and
+// it reveals no answer.) The GM editor uses the authed /api/cr/missions route,
+// which is left untouched.
+function sanitizeCrMissionForPlayer(m){
+  if(!m || typeof m !== 'object') return m;
+  const out = {...m};
+  let fragCount = 0;
+  try { const a = JSON.parse(out.scan_fragments||'[]'); if(Array.isArray(a)) fragCount = a.filter(x=>String(x||'').trim()).length; } catch {}
+  out.scan_fragment_count = fragCount;
+  delete out.scan_code;
+  delete out.scan_fragments;
+  return out;
+}
+
 function crProgressPayload(gameId, teamId, missions, state) {
   return {
     teamId: Number(teamId),
@@ -1243,7 +1371,7 @@ function crProgressPayload(gameId, teamId, missions, state) {
     completedMissionIds: state.completedMissionIds,
     pendingMissionIds: state.pendingMissionIds,
     skippedMissionIds: state.skippedMissionIds,
-    currentMission: state.nextMission,
+    currentMission: sanitizeCrMissionForPlayer(state.nextMission),
     missionIndex: state.nextIndex,
     totalMissions: missions.length,
     finished: state.finished,

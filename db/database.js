@@ -294,6 +294,19 @@ try { db.exec("ALTER TABLE cr_modes ADD COLUMN order_index INTEGER DEFAULT 0"); 
 // "View image" button (only when set). One column on each mission table.
 try { db.exec("ALTER TABLE missions ADD COLUMN task_image TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN task_image TEXT"); } catch(e) {}
+// Scan puzzle (RA): in-app QR or AR image-target. use_scan marks the type;
+// scan_type 'qr'|'image'; scan_mode 'solve'|'fragment'|'reveal'. scan_code is
+// the secret (also printed as a QR); scan_fragments is a JSON list of codes for
+// the collect mode; scan_image/scan_target hold the AR source image + compiled
+// .mind target. Per-team collected fragments live on cr_mission_progress.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN use_scan INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_type TEXT DEFAULT 'qr'"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_mode TEXT DEFAULT 'solve'"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_code TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_fragments TEXT DEFAULT '[]'"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_image TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_target TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_mission_progress ADD COLUMN scan_collected TEXT DEFAULT '[]'"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
 // Team selfie taken at the start of the game so the GM can see who's who.
@@ -780,7 +793,8 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'use_puzzle','puzzle_image','puzzle_grid',
   'puzzle_peek_enabled','puzzle_peek_onetime','puzzle_peeks',
   'puzzle_type','puzzle_order_images',
-  'use_draw','draw_needs_approval','draw_collaborative','task_image'];
+  'use_draw','draw_needs_approval','draw_collaborative','task_image',
+  'use_scan','scan_type','scan_mode','scan_code','scan_fragments','scan_image','scan_target'];
 const toNullableNumber = v => {
   if (v === undefined) return undefined;
   if (v === null || v === '') return null;
@@ -797,7 +811,7 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
-  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','skippable','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime','use_draw','draw_needs_approval','draw_collaborative'].forEach(f => {
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','skippable','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime','use_draw','draw_needs_approval','draw_collaborative','use_scan'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
   });
   // puzzle_peeks: accept an array or a JSON string; store a clean JSON string
@@ -826,6 +840,16 @@ const normalizeCrMissionData = (data = {}) => {
     if (!Array.isArray(arr)) arr = [];
     arr = arr.map(s => String(s || '').trim()).filter(Boolean).slice(0, 12);
     out.puzzle_order_images = JSON.stringify(arr);
+  }
+  // Scan puzzle: clamp type/mode to known values; clean the fragment list.
+  if (out.scan_type !== undefined && out.scan_type !== null) out.scan_type = (String(out.scan_type) === 'image') ? 'image' : 'qr';
+  if (out.scan_mode !== undefined && out.scan_mode !== null) { const sm = String(out.scan_mode); out.scan_mode = (sm === 'fragment' || sm === 'reveal') ? sm : 'solve'; }
+  if (out.scan_fragments !== undefined && out.scan_fragments !== null) {
+    let arr = out.scan_fragments;
+    if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch { arr = []; } }
+    if (!Array.isArray(arr)) arr = [];
+    arr = arr.map(s => String(s || '').trim()).filter(Boolean).slice(0, 20);
+    out.scan_fragments = JSON.stringify(arr);
   }
   return out;
 };
