@@ -762,7 +762,13 @@ app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
     }
     if(!req.file) return res.status(400).json({error:'No file'});
     const mediaPath=`${gameId}/${req.file.filename}`;
-    db.submitMission({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
+    const result=db.submitMission({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
+    if(result && result.alreadyAccepted){
+      // A teammate already got this mission accepted — discard this duplicate
+      // upload so it can't be scored twice, and tell the player it's done.
+      try{ fs.unlinkSync(path.join(UPLOAD_DIR, mediaPath)); }catch(e){}
+      return res.status(409).json({error:'Already completed', code:'already_completed'});
+    }
     const sub=db.getSubmission(Number(teamId),Number(missionId));
     if(!sub) return res.status(400).json({error:'Mission is not assigned to this team'});
     io.to(`gm_${gameId}`).emit('submission_new',{submissionId:sub.id,teamId:Number(teamId),missionId:Number(missionId),mediaPath});

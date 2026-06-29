@@ -703,10 +703,18 @@ const getAcceptedSubmissions = tid => db.prepare(`
   SELECT tm.*, m.media_type FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
   WHERE tm.team_id=? AND tm.status='accepted' AND tm.media_path IS NOT NULL`).all(tid);
 
-const submitMission = ({teamId,missionId,mediaPath}) =>
+const submitMission = ({teamId,missionId,mediaPath}) => {
+  // Guard against double-scoring: if a teammate already got this mission
+  // accepted, do NOT reset it back to pending — otherwise the GM could accept
+  // it a second time and the team would earn the point twice.
+  const cur = getSubmission(teamId, missionId);
+  if(cur && cur.status==='accepted') return {alreadyAccepted:true};
   db.prepare('UPDATE team_missions SET status=?,media_path=?,submitted_at=? WHERE team_id=? AND mission_id=?').run('pending',mediaPath,Date.now(),teamId,missionId);
+  return {ok:true};
+};
 const acceptSubmission = id => {
   const sub=getSubmissionById(id); if(!sub) return;
+  if(sub.status==='accepted') return;   // idempotent: never award the same mission twice
   const pts=getMission(sub.mission_id)?.points||1;
   db.prepare('UPDATE team_missions SET status=?,reviewed_at=? WHERE id=?').run('accepted',Date.now(),id);
   db.prepare('UPDATE teams SET score=score+?, last_score_at=? WHERE id=?').run(pts,Date.now(),sub.team_id);

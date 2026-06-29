@@ -471,6 +471,7 @@ const T = {
     capture_failed:'Aufnahme nicht möglich:',
     uploading_review:'Hochgeladen! Wird geprüft…',
     upload_failed:'Upload fehlgeschlagen',
+    already_solved:'Diese Mission wurde bereits von deinem Team gelöst!',
     broadcast:'Rundruf',
     flip:'🔄 Flip', you:'Du', no_missions:'Keine Missionen gefunden.', no_rules:'Keine Regeln vorhanden.',
   },
@@ -492,6 +493,7 @@ const T = {
     capture_failed:'Recording failed:',
     uploading_review:'Uploaded! Awaiting review…',
     upload_failed:'Upload failed',
+    already_solved:'This mission was already solved by your team!',
     broadcast:'Broadcast',
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
@@ -512,6 +514,7 @@ const T = {
     capture_failed:'Échec de l\'enregistrement :',
     uploading_review:'Envoyé ! En attente de validation…',
     upload_failed:'Échec de l\'envoi',
+    already_solved:'Cette mission a déjà été résolue par votre équipe !',
     broadcast:'Annonce',
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
@@ -532,6 +535,7 @@ const T = {
     capture_failed:'Registrazione non riuscita:',
     uploading_review:'Caricato! In attesa di revisione…',
     upload_failed:'Caricamento fallito',
+    already_solved:'Questa missione è già stata completata dalla tua squadra!',
     broadcast:'Annuncio',
     flip:'🔄 Ribalta', you:'Io', no_missions:'Nessuna missione trovata.', no_rules:'Nessuna regola.',
   },
@@ -553,6 +557,7 @@ const T = {
     capture_failed:'Grabación fallida:',
     uploading_review:'¡Subido! Pendiente de revisión…',
     upload_failed:'Subida fallida',
+    already_solved:'¡Esta misión ya fue resuelta por tu equipo!',
     broadcast:'Anuncio',
     flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
   }
@@ -1103,6 +1108,10 @@ async function doUpload() {
       // class, which left a stale status pill behind — same class of bug as
       // the accept handler.
       loadMissions();
+    } else if (xhr.status === 409) {
+      // A teammate already got this mission accepted while we were taking the photo.
+      toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
+      loadMissions();
     } else {
       toast(t('upload_failed')||'Upload fehlgeschlagen', 'error');
     }
@@ -1253,6 +1262,9 @@ async function uploadFromGallery(event, missionId, mediaType) {
     if(xhr.status === 200){
       toast(t('uploading_review')||'Hochgeladen! Wird geprüft…', 'success');
       // Repaint from server truth rather than the old dead-`mf-` footer patch.
+      loadMissions();
+    } else if(xhr.status === 409){
+      toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
       loadMissions();
     } else { toast(t('upload_failed')||'Upload fehlgeschlagen', 'error'); }
   };
