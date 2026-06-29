@@ -177,6 +177,14 @@ db.exec(`
     team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
     content TEXT NOT NULL, from_gm INTEGER DEFAULT 0,
     created_at INTEGER DEFAULT (unixepoch()*1000));
+  CREATE TABLE IF NOT EXISTS automated_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    enabled INTEGER DEFAULT 1,
+    trigger_seconds INTEGER NOT NULL,
+    game_kind TEXT NOT NULL DEFAULT 'missions',
+    location_id INTEGER,
+    message TEXT NOT NULL,
+    created_at INTEGER DEFAULT (unixepoch()*1000));
   CREATE TABLE IF NOT EXISTS rulesets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -714,6 +722,26 @@ const getMessages = (gameId,teamId) => {
   return db.prepare('SELECT m.*,t.name as team_name FROM messages m LEFT JOIN teams t ON t.id=m.team_id WHERE m.game_id=? ORDER BY m.created_at').all(gameId);
 };
 
+// ── Automated (scheduled) broadcast messages ────────────────────────────────
+// GM-configured: when a game's remaining time reaches trigger_seconds and the
+// game matches game_kind (+ location for missions), the text is auto-broadcast.
+const _amKind = k => (k==='cityrush' ? 'cityrush' : 'missions');
+const _amLoc  = l => (l!=null && l!=='' ? Number(l) : null);
+const getAutoMessages   = () => db.prepare('SELECT * FROM automated_messages ORDER BY trigger_seconds DESC, id').all();
+const createAutoMessage = ({trigger_seconds,game_kind,location_id,message,enabled=1}) =>
+  num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,message) VALUES(?,?,?,?,?)')
+    .run(enabled?1:0, Math.max(0,parseInt(trigger_seconds)||0), _amKind(game_kind), _amLoc(location_id), String(message||'')).lastInsertRowid);
+const updateAutoMessage = (id,d={}) => {
+  const cur = db.prepare('SELECT * FROM automated_messages WHERE id=?').get(id); if(!cur) return;
+  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,message=? WHERE id=?').run(
+    d.enabled!=null?(d.enabled?1:0):cur.enabled,
+    d.trigger_seconds!=null?Math.max(0,parseInt(d.trigger_seconds)||0):cur.trigger_seconds,
+    d.game_kind!=null?_amKind(d.game_kind):cur.game_kind,
+    d.location_id!==undefined?_amLoc(d.location_id):cur.location_id,
+    d.message!=null?String(d.message):cur.message, id);
+};
+const deleteAutoMessage = id => db.prepare('DELETE FROM automated_messages WHERE id=?').run(id);
+
 // Get rules for a game. CityRush games resolve their ruleset via the linked
 // cr_mode; regular games resolve via the regular mode.
 const getGameRules = gameId => {
@@ -1151,6 +1179,7 @@ module.exports = {
   submitMission,acceptSubmission,rejectSubmission,
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,
   saveMessage,getMessages,
+  getAutoMessages,createAutoMessage,updateAutoMessage,deleteAutoMessage,
   getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,reorderCrModes,
   getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,
   linkCrMode,getGameCrMode,isCrGame,

@@ -398,6 +398,28 @@ app.delete('/api/locations/:id', (req,res) => {
   db.deleteLocation(req.params.id); res.json({success:true});
 });
 
+// ── Automated (scheduled) broadcast messages ────────────────────────────────
+// GM config; the timer loop fires them when a game's remaining time reaches the
+// trigger and the game matches game_kind (+ location for missions).
+app.get('/api/automated-messages', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  res.json(db.getAutoMessages());
+});
+app.post('/api/automated-messages', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  // Allow creating an empty row (the GM fills it in after adding); the timer
+  // skips messages whose text is still blank.
+  res.json({id: db.createAutoMessage(req.body||{}), success:true});
+});
+app.put('/api/automated-messages/:id', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.updateAutoMessage(Number(req.params.id), req.body); res.json({success:true});
+});
+app.delete('/api/automated-messages/:id', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.deleteAutoMessage(Number(req.params.id)); res.json({success:true});
+});
+
 // ── Missions ──────────────────────────────────────────────────────────────────
 app.get('/api/missions', (req,res) => {
   const {mode_id, location_id} = req.query;
@@ -1783,13 +1805,41 @@ io.on('connection', socket => {
   });
 });
 
+// Automated (scheduled) broadcasts. Fired from the per-second timer loop when a
+// game's remaining time first reaches a rule's trigger. _autoSent guards against
+// re-sending every tick (per game+rule); cleared when the game ends.
+const _autoSent = {};
+function _sendAutoBroadcast(gameId, text){
+  try{
+    const msgId = db.saveMessage({gameId, teamId:null, content:text, fromGm:1});
+    // Mirror a GM broadcast: a no-team chat_message to game_<id> reaches every
+    // player and the GM dashboard (the GM also joins game_<id>).
+    io.to(`game_${gameId}`).emit('chat_message', {id:msgId, content:text, fromGm:1, teamId:null, gameId, timestamp:Date.now(), auto:true});
+  }catch(e){ console.warn('auto-broadcast failed', e); }
+}
+function _fireAutoMessages(game, remaining, autoMsgs){
+  // RA games are identified by a cr_game_links row (there is no is_cityrush column).
+  const kind = db.isCrGame(game.id) ? 'cityrush' : 'missions';
+  let sent = _autoSent[game.id]; if(!sent){ sent = _autoSent[game.id] = new Set(); }
+  for(const m of autoMsgs){
+    if(sent.has(m.id)) continue;
+    if(!m.message || !String(m.message).trim()) continue;   // skip blank (unfinished) rows
+    if(m.game_kind !== kind) continue;
+    if(kind==='missions' && m.location_id!=null && Number(m.location_id)!==Number(game.location_id)) continue;
+    if(remaining <= m.trigger_seconds){ sent.add(m.id); _sendAutoBroadcast(game.id, m.message); }
+  }
+}
+
 // Timer broadcast
 setInterval(() => {
+  const autoMsgs = db.getAutoMessages().filter(m=>m.enabled);
   db.getRunningGames().forEach(game => {
     const state=getTimerState(game);
     io.to(`game_${game.id}`).emit('timer_update',state);
     io.to(`gm_${game.id}`).emit('timer_update',state);
+    if(autoMsgs.length && state.running && state.remaining>0) _fireAutoMessages(game, state.remaining, autoMsgs);
     if(state.remaining<=0) {
+      delete _autoSent[game.id];
       db.updateGame(game.id,{timer_running:0,status:'ended'});
       // Pick timeout message for the game's language (fallback chain)
       const lang_key = 'timeout_text'; // base key
