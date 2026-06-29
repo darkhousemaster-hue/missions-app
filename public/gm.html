@@ -6347,6 +6347,43 @@ async function autoTranslateHint(hintId, type){
 }
 
 // ── Rail Adventure mission export / import ─────────────────────────────────────────
+// Round-trippable export shape for one Rail Adventure mission. Shared by the
+// full-mode Export and the selected-rows download so the two can't drift — they
+// did before, dropping is_rush/skippable/puzzle/draw/scan, which flattened an
+// imported mode out of its Mission/Checkpoint two-row grouping. Image-path
+// fields reference existing uploads; the binaries are not bundled.
+function _crExportShape(m, hints){
+  return {
+    name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
+    points: m.points||10,
+    lat: m.lat, lng: m.lng, radius_meters: m.radius_meters||30,
+    use_map: !!m.use_map, use_gps: !!m.use_gps,
+    is_timed: !!m.is_timed, timer_seconds: m.timer_seconds||300,
+    penalty_interval: m.penalty_interval||60, penalty_points: m.penalty_points||2,
+    media_required: m.media_required||'none',
+    is_special: !!m.is_special, is_repeatable: !!m.is_repeatable, repeat_minutes: m.repeat_minutes||0,
+    is_rush: !!m.is_rush, skippable: !!m.skippable, hide_until_arrival: !!m.hide_until_arrival,
+    use_puzzle: !!m.use_puzzle, puzzle_image: m.puzzle_image||null, puzzle_grid: m.puzzle_grid||3,
+    puzzle_peek_enabled: !!m.puzzle_peek_enabled, puzzle_peek_onetime: !!m.puzzle_peek_onetime,
+    puzzle_peeks: m.puzzle_peeks||'[]', puzzle_type: m.puzzle_type||'jigsaw', puzzle_order_images: m.puzzle_order_images||'[]',
+    use_draw: !!m.use_draw, draw_needs_approval: !!m.draw_needs_approval, draw_collaborative: !!m.draw_collaborative,
+    task_image: m.task_image||null,
+    use_scan: !!m.use_scan, scan_type: m.scan_type||'qr', scan_mode: m.scan_mode||'solve',
+    scan_code: m.scan_code||'', scan_fragments: m.scan_fragments||'[]', scan_image: m.scan_image||null, scan_target: m.scan_target||null,
+    hint_de:m.hint_de||'', hint_en:m.hint_en||'', hint_fr:m.hint_fr||'', hint_it:m.hint_it||'', hint_es:m.hint_es||'',
+    has_answer: !!m.has_answer,
+    answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
+    description_de:m.description_de||'', description_en:m.description_en||'',
+    description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
+    task_de:m.task_de||'', task_en:m.task_en||'',
+    task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
+    hints: (hints||[]).map(h => ({
+      hint_type: h.hint_type === 'gps' ? 'gps' : 'answer',
+      text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'', text_es:h.text_es||'',
+      image_path: h.image_path || null,
+    })),
+  };
+}
 async function exportCrMissions(){ exitSelectionModes();
   if(!currentCrModeId){ toast('Erst einen Modus auswählen','warning'); return; }
   const missions = await API(`/api/cr/missions?mode_id=${currentCrModeId}`);
@@ -6354,37 +6391,11 @@ async function exportCrMissions(){ exitSelectionModes();
   // Pull the hints for every mission so the export is round-trippable.
   const withHints = await Promise.all(missions.map(async m => {
     const hints = await API(`/api/cr/hints/${m.id}`);
-    return {
-      // Identity
-      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
-      // Gating + scoring
-      points: m.points||10,
-      lat: m.lat, lng: m.lng, radius_meters: m.radius_meters||30,
-      use_map: !!m.use_map, use_gps: !!m.use_gps,
-      is_timed: !!m.is_timed, timer_seconds: m.timer_seconds||300,
-      penalty_interval: m.penalty_interval||60, penalty_points: m.penalty_points||2,
-      media_required: m.media_required||'none',
-      is_special: !!m.is_special, is_repeatable: !!m.is_repeatable, repeat_minutes: m.repeat_minutes||0,
-      // Q/A
-      has_answer: !!m.has_answer,
-      answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
-      // Body
-      description_de:m.description_de||'', description_en:m.description_en||'',
-      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
-      task_de:m.task_de||'', task_en:m.task_en||'',
-      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
-      // Hints (split by type; images become URLs that the importer will skip
-      // unless the file is hand-edited to point at an existing upload).
-      hints: (hints||[]).map(h => ({
-        hint_type: h.hint_type === 'gps' ? 'gps' : 'answer',
-        text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'', text_es:h.text_es||'',
-        image_path: h.image_path || null,
-      })),
-    };
+    return _crExportShape(m, hints);
   }));
   const payload = {
     format: 'cityrush-missions-export',
-    version: '1.0',
+    version: '1.1',
     exported: new Date().toISOString(),
     mode_name: currentCrModeName,
     instructions: 'Upload via Settings → Rail Adventure → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
@@ -6407,15 +6418,23 @@ async function importCrMissions(file){
     toast(gmt('invalid-format')||'Kein gültiges Format (missions-Array fehlt)','error'); return;
   }
   let ok=0, errors=0;
+  // Append after any existing missions, preserving the file's order. order_index
+  // is assigned sequentially so the imported batch keeps its order even if the
+  // mode already has (possibly dragged) missions.
+  let base = 0;
+  try { const cur = await API(`/api/cr/missions?mode_id=${currentCrModeId}`); base = (cur||[]).reduce((mx,x)=>Math.max(mx, Number(x.order_index)||0), 0); } catch(e){}
+  let idx = 0;
   for(const m of data.missions){
     const body = {
       password: settingsPassword,
       mode_id: currentCrModeId,
+      order_index: base + 1 + idx,
       name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
       description_de:m.description_de||'', description_en:m.description_en||'',
       description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
       task_de:m.task_de||'', task_en:m.task_en||'',
       task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
+      hint_de:m.hint_de||'', hint_en:m.hint_en||'', hint_fr:m.hint_fr||'', hint_it:m.hint_it||'', hint_es:m.hint_es||'',
       points: Number(m.points)||10,
       lat: (m.lat ?? null), lng: (m.lng ?? null),
       radius_meters: Number(m.radius_meters)||30,
@@ -6428,10 +6447,22 @@ async function importCrMissions(file){
       is_special: m.is_special?1:0,
       is_repeatable: m.is_repeatable?1:0,
       repeat_minutes: Math.max(0, Number(m.repeat_minutes)||0),
+      // Previously-dropped flags — restoring is_rush is what keeps imported
+      // missions in their Mission/Checkpoint rows.
+      is_rush: m.is_rush?1:0, skippable: m.skippable?1:0, hide_until_arrival: m.hide_until_arrival?1:0,
+      // Puzzle / Draw / Scan (image paths reference existing uploads)
+      use_puzzle: m.use_puzzle?1:0, puzzle_image: m.puzzle_image||null, puzzle_grid: Number(m.puzzle_grid)||3,
+      puzzle_peek_enabled: m.puzzle_peek_enabled?1:0, puzzle_peek_onetime: m.puzzle_peek_onetime?1:0,
+      puzzle_peeks: m.puzzle_peeks||'[]', puzzle_type: m.puzzle_type||'jigsaw', puzzle_order_images: m.puzzle_order_images||'[]',
+      use_draw: m.use_draw?1:0, draw_needs_approval: m.draw_needs_approval?1:0, draw_collaborative: m.draw_collaborative?1:0,
+      task_image: m.task_image||null,
+      use_scan: m.use_scan?1:0, scan_type: m.scan_type||'qr', scan_mode: m.scan_mode||'solve',
+      scan_code: m.scan_code||'', scan_fragments: m.scan_fragments||'[]', scan_image: m.scan_image||null, scan_target: m.scan_target||null,
       has_answer: m.has_answer?1:0,
       answer_de:m.answer_de||'', answer_en:m.answer_en||'',
       answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
     };
+    idx++;
     const res = await API('/api/cr/missions',{method:'POST',body});
     if(res && res.id){
       ok++;
@@ -6660,31 +6691,11 @@ async function downloadSelectedCrMissions(){
   const picked = all.filter(m => ids.includes(m.id));
   const withHints = await Promise.all(picked.map(async m => {
     const hints = await API(`/api/cr/hints/${m.id}`);
-    return {
-      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
-      points: m.points||10,
-      lat: m.lat, lng: m.lng, radius_meters: m.radius_meters||30,
-      use_map: !!m.use_map, use_gps: !!m.use_gps,
-      is_timed: !!m.is_timed, timer_seconds: m.timer_seconds||300,
-      penalty_interval: m.penalty_interval||60, penalty_points: m.penalty_points||2,
-      media_required: m.media_required||'none',
-      is_special: !!m.is_special, is_repeatable: !!m.is_repeatable, repeat_minutes: m.repeat_minutes||0,
-      has_answer: !!m.has_answer,
-      answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
-      description_de:m.description_de||'', description_en:m.description_en||'',
-      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
-      task_de:m.task_de||'', task_en:m.task_en||'',
-      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
-      hints: (hints||[]).map(h => ({
-        hint_type: h.hint_type === 'gps' ? 'gps' : 'answer',
-        text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'', text_es:h.text_es||'',
-        image_path: h.image_path || null,
-      })),
-    };
+    return _crExportShape(m, hints);
   }));
   const payload = {
     format: 'cityrush-missions-export',
-    version: '1.0',
+    version: '1.1',
     exported: new Date().toISOString(),
     mode_name: currentCrModeName,
     instructions: 'Upload via Settings → Rail Adventure → Import to recreate these missions in the active mode. Images are not bundled; image_path values reference existing uploads.',
