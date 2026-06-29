@@ -2642,6 +2642,9 @@ function centerGmMapOnTeam(teamId){
     API(`/api/games/${currentGameId}/cr`).then(cr => {
       const g = (cr && cr.gps || []).find(x => x.team_id === teamId);
       if(!g || !gmCrMap) return;
+      // A team that hasn't broadcast a fix has null lat/lng — don't marker/centre
+      // on it (setView would project a null LatLng and throw).
+      if(!gmIsFiniteCoord(g.lat) || !gmIsFiniteCoord(g.lng)) return;
       upsertGmTeamMarker(teamId, g.lat, g.lng);
       gmCrMap.setView([g.lat, g.lng], 17, {animate:true});
     }).catch(()=>{});
@@ -3527,6 +3530,10 @@ function gmTeamInitials(tid){
 }
 function upsertGmTeamMarker(tid, lat, lng){
   if(!gmCrMap) return;
+  // Skip team GPS rows without a real fix — handing null/undefined coords to
+  // L.marker()/setLatLng() makes Leaflet store a null LatLng and throw on the
+  // next projection ("Cannot read properties of null (reading 'lat')").
+  if(!gmIsFiniteCoord(lat) || !gmIsFiniteCoord(lng)) return;
   const label = gmTeamInitials(tid);
   const name  = gmTeamName(tid);
   const html  = `<div style="background:var(--red);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">${esc(label)}</div>`;
@@ -3569,8 +3576,17 @@ function gmMissionRadiusMeters(m){
   const r = Number(String(m && m.radius_meters).replace(',', '.'));
   return Number.isFinite(r) && r > 0 ? r : 30;
 }
+// A coordinate is only usable if it's a real, finite number. NOTE: Number(null)
+// is 0 (finite!) and Number('') is 0 too, so the raw value MUST be screened for
+// null/undefined/'' BEFORE the Number() coercion — otherwise a coordinate-less
+// mission or fix-less team (lat/lng === null) slips through, and Leaflet later
+// throws "Cannot read properties of null (reading 'lat')" when it projects the
+// resulting null LatLng.
+function gmIsFiniteCoord(v){
+  return v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
+}
 function gmHasMissionCoords(m){
-  return m && Number.isFinite(Number(m.lat)) && Number.isFinite(Number(m.lng));
+  return !!m && gmIsFiniteCoord(m.lat) && gmIsFiniteCoord(m.lng);
 }
 function renderGmCrMissionMarkers(){
   if(!gmCrMap) return;
@@ -7038,6 +7054,7 @@ function tutStart(steps, opts){
 }
 async function _tutGo(i){
   if(!_tut) return;
+  _tutDetachClick();
   if(i>=_tut.steps.length){ tutEnd('done'); return; }
   if(i<0) i=0;
   _tut.i=i;
@@ -7045,11 +7062,34 @@ async function _tutGo(i){
   try{ if(s.before) await s.before(); }catch(e){ console.warn('tut before',e); }
   if(!_tut) return;
   _tutRender();
+  _tutAttachClick();
 }
-function tutNext(){ if(_tut) _tutGo(_tut.i+1); }
+// Next runs the step's action (e.g. actually click "Create game") and only
+// advances if it succeeded. Clicking the real highlighted control advances too.
+async function tutNext(){
+  if(!_tut) return;
+  const s=_tut.steps[_tut.i];
+  if(s && s.action){ let ok=true; try{ ok=await s.action(); }catch(e){ console.warn('tut action',e); ok=true; } if(!_tut) return; if(ok===false) return; }
+  _tutGo(_tut.i+1);
+}
 function tutBack(){ if(_tut) _tutGo(_tut.i-1); }
+function _tutAttachClick(){
+  _tutDetachClick();
+  const s=_tut&&_tut.steps[_tut.i]; if(!s||!s.advanceSel) return;
+  _tut._clickH=(e)=>{
+    if(!_tut) return;
+    const st=_tut.steps[_tut.i], sel=st&&st.advanceSel; if(!sel) return;
+    let hit=null; try{ hit=e.target.closest(sel); }catch(_){}
+    if(!hit) return;
+    const at=_tut.i, aw=st.advanceWhen;
+    setTimeout(()=>{ let ok=true; if(aw){ try{ ok=aw(); }catch(_){ ok=true; } } if(_tut && _tut.i===at && ok) _tutGo(_tut.i+1); }, 450);
+  };
+  document.addEventListener('click', _tut._clickH, true);
+}
+function _tutDetachClick(){ if(_tut && _tut._clickH){ document.removeEventListener('click', _tut._clickH, true); _tut._clickH=null; } }
 async function tutEnd(reason){
   if(!_tut) return;
+  _tutDetachClick();
   const onEnd=_tut.onEnd; _tut=null;
   document.removeEventListener('keydown', _tutKey, true);
   const hole=document.getElementById('tut-hole'), call=document.getElementById('tut-callout');
@@ -7074,7 +7114,7 @@ function _tutRender(){
     <div class="tc-row">
       <button class="tc-skip" onclick="tutEnd('skip')">${esc(tt('skip'))}</button>
       ${_tut.i>0?`<button class="tc-btn" onclick="tutBack()">${esc(tt('back'))}</button>`:''}
-      <button class="tc-btn primary" onclick="tutNext()">${esc(isLast?tt('done'):tt('next'))}</button>
+      ${s.noNext?'':`<button class="tc-btn primary" onclick="tutNext()">${esc(isLast?tt('done'):tt('next'))}</button>`}
     </div>`;
   call.style.display='block';
   const tgt=_tutTarget();
@@ -7110,13 +7150,12 @@ function _tutLoop(){ if(!_tut) return; _tutPosition(); requestAnimationFrame(_tu
 // ── Launcher dropdown ───────────────────────────────────────────────────────
 function openTutMenu(anchor){
   _tutCloseMenu();
-  const hasGame=!!currentGameId;
   const items=[
     {ico:'📍', t:tt('mMs'), s:tt('mMsS'), fn:tutMs, on:true},
     {ico:'🚂', t:tt('mRa'), s:tt('mRaS'), fn:tutRa, on:true},
-    {ico:'🎛️', t:tt('mDash'), s:tt('mDashS'), fn:tutDash, on:hasGame},
-    {ico:'👥', t:tt('mIn'), s:tt('mInS'), fn:tutInside, on:hasGame},
-    {ico:'🏁', t:tt('mAf'), s:tt('mAfS'), fn:tutAfter, on:hasGame},
+    {ico:'🎛️', t:tt('mDash'), s:tt('mDashS'), fn:tutDash, on:true},
+    {ico:'👥', t:tt('mIn'), s:tt('mInS'), fn:tutInside, on:true},
+    {ico:'🏁', t:tt('mAf'), s:tt('mAfS'), fn:tutAfter, on:true},
   ];
   const bd=document.createElement('div'); bd.className='tut-backdrop'; bd.onclick=_tutCloseMenu; document.body.appendChild(bd);
   const m=document.createElement('div'); m.className='tut-menu'; m.id='tut-menu'; m.setAttribute('role','menu');
@@ -7136,34 +7175,56 @@ function _tutMenuKey(e){ if(e.key==='Escape'){ e.preventDefault(); _tutCloseMenu
 
 // ── The five tours ──────────────────────────────────────────────────────────
 function _show(scr){ return ()=>{ try{ showScreen(scr); }catch(e){} return new Promise(r=>setTimeout(r,280)); }; }
-function tutMs(){ const back=currentScreen(); tutStart([
-  {before:_show('screen-landing'), sel:'.location-grid .location-card', title:tt('ms1t'), body:tt('ms1b')},
-  {before:_show('screen-game-select'), sel:'#mode-select', title:tt('ms2t'), body:tt('ms2b')},
-  {sel:'#btn-new-game', title:tt('ms3t'), body:tt('ms3b')},
+const _onNewGame=()=>currentScreen()==='screen-new-game';
+const _onGameSelect=()=>currentScreen()==='screen-game-select';
+const _onDash=()=>currentScreen()==='screen-dashboard';
+const _actCreate=async()=>{ try{ await createNewGame(); }catch(e){} return _onNewGame(); };
+const _actOpenDash=async()=>{ try{ await openDashboard(currentGameId); }catch(e){} return true; };
+function tutMs(){ tutStart([
+  {before:_show('screen-landing'), sel:'#screen-landing .location-grid', advanceSel:'.location-grid .location-card:not(.location-card--cr)', advanceWhen:_onGameSelect, noNext:true, title:tt('ms1t'), body:tt('ms1b')},
+  {sel:'#mode-select', title:tt('ms2t'), body:tt('ms2b')},
+  {sel:'#btn-new-game', advanceSel:'#btn-new-game', advanceWhen:_onNewGame, action:_actCreate, title:tt('ms3t'), body:tt('ms3b')},
   {sel:'#ng-qr-download', title:tt('ms4t'), body:tt('ms4b')},
-  {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', title:tt('ms5t'), body:tt('ms5b')},
-], {onEnd:()=>{ try{ showScreen(back); }catch(e){} }}); }
-function tutRa(){ const back=currentScreen(); tutStart([
-  {before:_show('screen-landing'), sel:'.location-card--cr', title:tt('ra1t'), body:tt('ra1b')},
-  {before:_show('screen-game-select'), sel:'#cr-mode-select', title:tt('ra2t'), body:tt('ra2b')},
-  {sel:'#btn-new-game', title:tt('ra3t'), body:tt('ra3b')},
+  {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceSel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceWhen:_onDash, action:_actOpenDash, title:tt('ms5t'), body:tt('ms5b')},
+]); }
+function tutRa(){ tutStart([
+  {before:_show('screen-landing'), sel:'#ll-cr-tile', advanceSel:'#ll-cr-tile', advanceWhen:_onGameSelect, noNext:true, title:tt('ra1t'), body:tt('ra1b')},
+  {sel:'#cr-mode-select', title:tt('ra2t'), body:tt('ra2b')},
+  {sel:'#btn-new-game', advanceSel:'#btn-new-game', advanceWhen:_onNewGame, action:_actCreate, title:tt('ra3t'), body:tt('ra3b')},
   {sel:'#ng-qr-download', title:tt('ra4t'), body:tt('ra4b')},
-  {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', title:tt('ra5t'), body:tt('ra5b')},
-], {onEnd:()=>{ try{ showScreen(back); }catch(e){} }}); }
-function tutDash(){ if(!currentGameId){ toast(tt('needGame'),'warning'); return; } tutStart([
+  {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceSel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceWhen:_onDash, action:_actOpenDash, title:tt('ra5t'), body:tt('ra5b')},
+]); }
+// Make sure a game + dashboard is available for the dashboard/inside/after
+// tours. Uses the open game if there is one; otherwise creates a demo game
+// (Rail Adventure mode if any, else a MiSSiONS location+mode) and opens it.
+async function _tutEnsureGame(){
+  if(currentGameId){
+    if(currentScreen()!=='screen-dashboard'){ try{ await openDashboard(currentGameId); await new Promise(r=>setTimeout(r,500)); }catch(e){} }
+    return true;
+  }
+  let made=null;
+  try{ const cr=await API('/api/cr/modes'); if(cr&&cr.length){ made=await API('/api/games',{method:'POST',body:{cr_mode_id:cr[0].id,mode_id:1,is_cityrush:1}}); } }catch(e){}
+  if(!made||!made.id){
+    try{ const modes=await API('/api/modes'), locs=await API('/api/locations'); if(modes&&modes.length&&locs&&locs.length){ made=await API('/api/games',{method:'POST',body:{location_id:locs[0].id,mode_id:modes[0].id,is_cityrush:0}}); } }catch(e){}
+  }
+  if(!made||!made.id){ toast(tt('needGame'),'warning'); return false; }
+  try{ await openDashboard(made.id); await new Promise(r=>setTimeout(r,650)); }catch(e){}
+  return true;
+}
+async function tutDash(){ if(!(await _tutEnsureGame())) return; tutStart([
   {sel:'#dash-teams', title:tt('d1t'), body:tt('d1b')},
   {sel:'#dash-main', title:tt('d2t'), body:tt('d2b')},
   {sel:'#dash-panel .tabs', title:tt('d3t'), body:tt('d3b')},
   {sel:'.dt-topbar__actions', title:tt('d4t'), body:tt('d4b')},
   {sel:'.timer-block', title:tt('d5t'), body:tt('d5b')},
 ]); }
-function tutAfter(){ if(!currentGameId){ toast(tt('needGame'),'warning'); return; } tutStart([
+async function tutAfter(){ if(!(await _tutEnsureGame())) return; tutStart([
   {before:()=>{ try{ switchPanel('rankings', document.getElementById('tab-rankings')); }catch(e){} return new Promise(r=>setTimeout(r,200)); }, sel:'.rankings-section', title:tt('a1t'), body:tt('a1b')},
   {sel:'#btn-game-export', title:tt('a2t'), body:tt('a2b')},
   {title:tt('a3t'), body:tt('a3b')},
 ]); }
 async function tutInside(){
-  if(!currentGameId){ toast(tt('needGame'),'warning'); return; }
+  if(!(await _tutEnsureGame())) return;
   let t=null;
   try{ t=await API('/api/games/'+currentGameId+'/teams',{method:'POST',body:{name:'📚 '+tt('demoName')}}); }catch(e){}
   if(!t||!t.id){ toast(tt('demoFail'),'error'); return; }
