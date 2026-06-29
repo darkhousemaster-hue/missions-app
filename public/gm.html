@@ -360,6 +360,16 @@ body.sel-cr #crms-toolbar{display:flex !important;}
 #tut-callout .tc-btn{background:var(--surface2);border:1px solid var(--hairline);color:var(--text);font:700 12px/1 var(--body);padding:11px 15px;border-radius:9px;cursor:pointer;min-height:44px;}
 #tut-callout .tc-btn.primary{background:var(--orange,#E85F1E);border-color:var(--orange,#E85F1E);color:#fff;}
 #tut-callout .tc-btn:hover{filter:brightness(1.08);}
+.tut-done-bd{position:fixed;inset:0;z-index:5220;background:rgba(0,0,0,.55);}
+#tut-done{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5221;width:min(360px,calc(100vw - 24px));background:var(--surface);border:1px solid var(--hairline);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.7);padding:22px 20px 18px;text-align:center;}
+#tut-done .td-emoji{font-size:2.2rem;line-height:1;margin-bottom:.4rem;}
+#tut-done .td-title{font:800 1.2rem/1.2 var(--display);letter-spacing:.02em;color:var(--text);margin-bottom:.35rem;}
+#tut-done .td-msg{font:400 .9rem/1.5 var(--body);color:var(--text-dim);margin-bottom:1rem;}
+#tut-done .td-row{display:flex;flex-direction:column;gap:.5rem;}
+#tut-done .td-allset{font:600 .85rem/1.4 var(--body);color:var(--green,#46b66a);margin-bottom:.2rem;}
+#tut-done .tc-btn{background:var(--surface2);border:1px solid var(--hairline);color:var(--text);font:700 13px/1 var(--body);padding:12px;border-radius:10px;cursor:pointer;min-height:44px;}
+#tut-done .tc-btn.primary{background:var(--orange,#E85F1E);border-color:var(--orange,#E85F1E);color:#fff;}
+#tut-done .tc-btn:hover{filter:brightness(1.08);}
 @media(prefers-reduced-motion:reduce){#tut-hole{transition:none;}#tut-hole.pulse{animation:none;}}
 @media(max-width:768px){#tut-launch .tl-lbl{display:none;}#tut-launch{padding:6px 9px;}}
 </style>
@@ -977,6 +987,16 @@ body.sel-cr #crms-toolbar{display:flex !important;}
            panel now just hosts the update trigger + log. -->
       <div id="stab-updates" class="stab">
         <div class="card mb-2">
+          <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'auto-update-chk')">
+            <div>
+              <div class="toggle-row-text" id="s-autoupd-label">Beim Start auf Updates prüfen</div>
+              <div class="toggle-row-sub" id="s-autoupd-sub">Zeigt automatisch ein Fenster, wenn eine neue Version verfügbar ist.</div>
+            </div>
+            <div class="toggle is-on" id="auto-update-toggle" onclick="event.stopPropagation();toggleSwitch(this,'auto-update-chk')"></div>
+          </div>
+          <input type="checkbox" id="auto-update-chk" checked style="display:none;" onchange="saveAutoUpdatePref()">
+        </div>
+        <div class="card mb-2">
           <h3 style="margin-bottom:1rem;" id="s-update-title">App aktualisieren</h3>
           <p style="margin-bottom:1rem;font-size:.85rem;color:var(--text-dim);" id="s-update-hint">Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe <strong style="color:var(--text);">Allgemein</strong>) und startet den Server neu.</p>
           <button class="btn btn-secondary btn-full" onclick="runUpdate()" id="btn-update">⬆ <span id="s-update-btn-label">Jetzt aktualisieren</span></button>
@@ -1246,7 +1266,7 @@ const GMT={
   'update-ok':'Update erfolgreich! App startet neu…','update-failed':'Update fehlgeschlagen.',
   'ruleset-created':'Regelwerk erstellt!','cannot-del-default-rs':'Standard-Regelwerk kann nicht gelöscht werden.',
   'cr-mode-created':'Rail Adventure Modus erstellt!','pick-mode-first':'Erst einen Modus auswählen',
-  'rank-tab':'Rangliste','cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
+  'rank-tab':'Rangliste','s-autoupd-label':'Beim Start auf Updates prüfen','s-autoupd-sub':'Zeigt automatisch ein Fenster, wenn eine neue Version verfügbar ist.','cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
   'hint-saved':'Hinweis gespeichert!','c-del-hint':'Hinweis löschen?','hint-not-found':'Hinweis nicht gefunden',
   'invalid-json':'Ungültige JSON-Datei','invalid-format':'Kein gültiges Format (missions-Array fehlt)',
   'pick-missions':'Keine MiSSiON ausgewählt','no-other-mode':'Kein anderer Modus vorhanden',
@@ -1365,7 +1385,7 @@ const GMT={
   'update-ok':'Update successful! Restarting app…','update-failed':'Update failed.',
   'ruleset-created':'Ruleset created!','cannot-del-default-rs':"Default ruleset can't be deleted.",
   'cr-mode-created':'Rail Adventure mode created!','pick-mode-first':'Pick a mode first',
-  'rank-tab':'Rankings','cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
+  'rank-tab':'Rankings','s-autoupd-label':'Check for updates on startup','s-autoupd-sub':'Automatically shows a window when a new version is available.','cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
   'hint-saved':'Hint saved!','c-del-hint':'Delete hint?','hint-not-found':'Hint not found',
   'invalid-json':'Invalid JSON file','invalid-format':'Invalid format (missions array missing)',
   'pick-missions':'No MiSSiON selected','no-other-mode':'No other mode available',
@@ -1480,7 +1500,7 @@ const GMT={
   'update-ok':'Mise à jour réussie ! Redémarrage…','update-failed':'Échec de la mise à jour.',
   'ruleset-created':'Jeu de règles créé !','cannot-del-default-rs':'Le jeu de règles par défaut ne peut pas être supprimé.',
   'cr-mode-created':'Mode Rail Adventure créé !','pick-mode-first':"Choisis d'abord un mode",
-  'rank-tab':'Classement','cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
+  'rank-tab':'Classement','s-autoupd-label':'Vérifier les mises à jour au démarrage','s-autoupd-sub':'Affiche automatiquement une fenêtre quand une nouvelle version est disponible.','cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
   'hint-saved':'Indice enregistré !','c-del-hint':"Supprimer l'indice ?",'hint-not-found':'Indice introuvable',
   'invalid-json':'Fichier JSON invalide','invalid-format':'Format invalide (tableau missions manquant)',
   'pick-missions':'Aucune MiSSiON sélectionnée','no-other-mode':'Aucun autre mode',
@@ -1595,7 +1615,7 @@ const GMT={
   'update-ok':'Aggiornamento riuscito! Riavvio…','update-failed':'Aggiornamento fallito.',
   'ruleset-created':'Set di regole creato!','cannot-del-default-rs':'Set di regole predefinito non eliminabile.',
   'cr-mode-created':'Modalità Rail Adventure creata!','pick-mode-first':'Prima seleziona una modalità',
-  'rank-tab':'Classifica','cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
+  'rank-tab':'Classifica','s-autoupd-label':'Controlla aggiornamenti all\'avvio','s-autoupd-sub':'Mostra automaticamente una finestra quando è disponibile una nuova versione.','cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
   'hint-saved':'Suggerimento salvato!','c-del-hint':'Eliminare il suggerimento?','hint-not-found':'Suggerimento non trovato',
   'invalid-json':'File JSON non valido','invalid-format':"Formato non valido (manca l'array missions)",
   'pick-missions':'Nessuna MiSSiON selezionata','no-other-mode':'Nessuna altra modalità',
@@ -1710,7 +1730,7 @@ const GMT={
   'update-ok':'¡Actualización correcta! Reiniciando…','update-failed':'Actualización fallida.',
   'ruleset-created':'¡Conjunto de reglas creado!','cannot-del-default-rs':'El conjunto de reglas predeterminado no se puede eliminar.',
   'cr-mode-created':'¡Modo Rail Adventure creado!','pick-mode-first':'Elige primero un modo',
-  'rank-tab':'Clasificación','cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
+  'rank-tab':'Clasificación','s-autoupd-label':'Buscar actualizaciones al iniciar','s-autoupd-sub':'Muestra automáticamente una ventana cuando hay una nueva versión.','cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
   'hint-saved':'¡Pista guardada!','c-del-hint':'¿Eliminar la pista?','hint-not-found':'Pista no encontrada',
   'invalid-json':'Archivo JSON no válido','invalid-format':'Formato no válido (falta el array missions)',
   'pick-missions':'Ninguna MiSSiON seleccionada','no-other-mode':'No hay otro modo',
@@ -1890,8 +1910,10 @@ window.addEventListener('DOMContentLoaded',async()=>{
     const vEl = document.getElementById('landing-version');
     if(vEl) vEl.textContent = v.full || v.version || '';
   } catch(e) {}
-  // Quietly check GitHub for a newer version and surface it to the GM.
-  checkForUpdate();
+  // Quietly check GitHub for a newer version and surface it to the GM —
+  // unless the GM turned the startup update check off in Settings › Updates.
+  _initAutoUpdateToggle();
+  if(localStorage.getItem('gm_auto_update') !== '0') checkForUpdate();
 });
 
 async function loadLanding(){
@@ -6952,6 +6974,16 @@ const UPD_I18N = {
 };
 function updL(){ return UPD_I18N[gmLang] || UPD_I18N.en; }
 
+// Startup update-check toggle (Settings › Updates). Persisted in localStorage;
+// when off, the automatic on-load check + popup is skipped (the GM can still
+// update manually from the Updates tab).
+function saveAutoUpdatePref(){ try{ localStorage.setItem('gm_auto_update', document.getElementById('auto-update-chk').checked?'1':'0'); }catch(e){} }
+function _initAutoUpdateToggle(){
+  const c=document.getElementById('auto-update-chk'); if(!c) return;
+  const on=(localStorage.getItem('gm_auto_update')!=='0');
+  c.checked=on;
+  const tg=document.getElementById('auto-update-toggle'); if(tg) tg.classList.toggle('is-on', on);
+}
 async function checkForUpdate(force){
   // Always check on every load. Only the "update available" POPUP is
   // rate-limited: it shows immediately for a NEW version, then at most once per
@@ -7045,6 +7077,7 @@ async function waitForRestart(){
 // _TUT (de+en now; fr/it/es fall back to de until translated).
 const _TUT = {
   de:{ launch:'Tutorial', menu:'Tutorial wählen', step:'Schritt', next:'Weiter', back:'Zurück', skip:'Beenden', done:'Fertig', needGame:'Öffne zuerst ein Spiel.', demoName:'Demo', demoFail:'Demo-Team konnte nicht erstellt werden.', demoDeleted:'Demo-Team gelöscht.',
+    tutDoneTitle:'Tutorial abgeschlossen', tutDoneMsg:'„{name}" ist abgeschlossen.', tutCont:'Weiter mit {name}', tutFinish:'Fertig', tutAllset:'Super — du kennst jetzt die Grundlagen!',
     mMs:'MiSSiONS einrichten', mMsS:'Standort-Spiel Schritt für Schritt', mRa:'Rail Adventure einrichten', mRaS:'GPS-Route Schritt für Schritt', mDash:'Dashboard-Tour', mDashS:'Die Steuerzentrale erklärt', mIn:'Im Spiel (Demo-Team)', mInS:'Live üben mit einem Demo-Team', mAf:'Nach dem Spiel', mAfS:'Abschluss, Rangliste & Export',
     ms1t:'Standort wählen', ms1b:'Tippe einen Startort an, um ein MiSSiONS-Spiel zu beginnen.', ms2t:'Modus wählen', ms2b:'Wähle, welche Missionen die Teams spielen.', ms3t:'Spiel erstellen', ms3b:'Erstellt das Spiel und seinen Beitritts-Code.', ms4t:'QR drucken', ms4b:'Lade das QR-PDF herunter und drucke je einen für jeden Team-Captain.', ms5t:'Dashboard öffnen', ms5b:'Dein Live-Kontrollzentrum für das laufende Spiel.',
     ra1t:'Rail Adventure wählen', ra1b:'Tippe die Rail-Adventure-Kachel an (GPS-Route).', ra2t:'Route wählen', ra2b:'Wähle den Rail-Adventure-Modus für dieses Spiel.', ra3t:'Spiel erstellen', ra3b:'Erstellt das Spiel und seinen Beitritts-Code.', ra4t:'QR drucken', ra4b:'Lade das QR-PDF herunter und gib es jedem Team-Captain.', ra5t:'Dashboard öffnen', ra5b:'Verfolge Teams live auf Karte und Rangliste.',
@@ -7052,6 +7085,7 @@ const _TUT = {
     g1t:'Demo-Team', g1b:'Wir haben „📚 Demo" erstellt, um alles live zu zeigen.', g2t:'Team-Details', g2b:'Hier siehst du, woran das Team gerade arbeitet.', g3t:'Einreichungen prüfen', g3b:'Gib Fotos und Videos frei oder lehne sie ab.', g4t:'Chat', g4b:'Schreibe dem Team oder sende einen Broadcast an alle.', g5t:'Einfrieren', g5b:'Friere ein Team kurz ein, z. B. als Strafe.', g6t:'Team löschen', g6b:'Damit setzt du ein falsch beigetretenes Team zurück. Wir löschen jetzt das Demo-Team.',
     a1t:'Rangliste', a1b:'Die Endplatzierung — im Vollbild ideal für die Siegerehrung.', a2t:'Fotos & Collage', a2b:'Lade alle Fotos und die Video-Collage des Spiels herunter.', a3t:'Fertig!', a3b:'Das war es. Starte jederzeit ein neues Spiel über „Spiele".' },
   en:{ launch:'Tutorial', menu:'Choose a tutorial', step:'Step', next:'Next', back:'Back', skip:'Exit', done:'Done', needGame:'Open a game first.', demoName:'Demo', demoFail:'Could not create the demo team.', demoDeleted:'Demo team deleted.',
+    tutDoneTitle:'Tutorial complete', tutDoneMsg:'"{name}" is complete.', tutCont:'Continue with {name}', tutFinish:'Done', tutAllset:'Great — you now know the basics!',
     mMs:'MiSSiONS setup', mMsS:'Location game, step by step', mRa:'Rail Adventure setup', mRaS:'GPS route, step by step', mDash:'Dashboard tour', mDashS:'The control centre explained', mIn:'Inside the game (demo team)', mInS:'Practise live with a demo team', mAf:'After the game', mAfS:'Wrap-up, rankings and export',
     ms1t:'Choose a location', ms1b:'Tap a starting location to begin a MiSSiONS game.', ms2t:'Choose the mode', ms2b:'Pick which set of missions teams will play.', ms3t:'Create the game', ms3b:'This creates the game and its join code.', ms4t:'Print the QR', ms4b:'Download the QR PDF and print one for each team captain.', ms5t:'Open the dashboard', ms5b:'Your live control centre for the running game.',
     ra1t:'Pick Rail Adventure', ra1b:'Tap the Rail Adventure tile (GPS route).', ra2t:'Choose the route', ra2b:'Pick the Rail Adventure mode for this game.', ra3t:'Create the game', ra3b:'This creates the game and its join code.', ra4t:'Print the QR', ra4b:'Download the QR PDF and hand one to each team captain.', ra5t:'Open the dashboard', ra5b:'Track teams live on the map and rankings.',
@@ -7072,7 +7106,7 @@ function _tutEnsureDom(){
 function tutStart(steps, opts){
   opts=opts||{}; if(!steps||!steps.length) return;
   _tutEnsureDom();
-  _tut={ steps, i:0, onEnd:opts.onEnd, reduced:matchMedia('(prefers-reduced-motion:reduce)').matches };
+  _tut={ steps, i:0, onEnd:opts.onEnd, key:opts.key, reduced:matchMedia('(prefers-reduced-motion:reduce)').matches };
   document.addEventListener('keydown', _tutKey, true);
   _tutLoop();
   _tutGo(0);
@@ -7115,11 +7149,13 @@ function _tutDetachClick(){ if(_tut && _tut._clickH){ document.removeEventListen
 async function tutEnd(reason){
   if(!_tut) return;
   _tutDetachClick();
-  const onEnd=_tut.onEnd; _tut=null;
+  const onEnd=_tut.onEnd, key=_tut.key; _tut=null;
   document.removeEventListener('keydown', _tutKey, true);
   const hole=document.getElementById('tut-hole'), call=document.getElementById('tut-callout');
   if(hole) hole.style.display='none'; if(call) call.style.display='none';
   try{ if(onEnd) await onEnd(reason); }catch(e){ console.warn('tut end',e); }
+  // Only a fully-completed tour (not Skip/Esc) shows the "completed → continue?" card.
+  if(reason==='done' && key) _tutComplete(key);
 }
 function _tutKey(e){
   if(!_tut) return;
@@ -7211,14 +7247,14 @@ function tutMs(){ tutStart([
   {sel:'#btn-new-game', advanceSel:'#btn-new-game', advanceWhen:_onNewGame, action:_actCreate, title:tt('ms3t'), body:tt('ms3b')},
   {sel:'#ng-qr-download', title:tt('ms4t'), body:tt('ms4b')},
   {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceSel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceWhen:_onDash, action:_actOpenDash, title:tt('ms5t'), body:tt('ms5b')},
-]); }
+], {key:'ms'}); }
 function tutRa(){ tutStart([
   {before:_show('screen-landing'), sel:'#ll-cr-tile', advanceSel:'#ll-cr-tile', advanceWhen:_onGameSelect, noNext:true, title:tt('ra1t'), body:tt('ra1b')},
   {sel:'#cr-mode-select', title:tt('ra2t'), body:tt('ra2b')},
   {sel:'#btn-new-game', advanceSel:'#btn-new-game', advanceWhen:_onNewGame, action:_actCreate, title:tt('ra3t'), body:tt('ra3b')},
   {sel:'#ng-qr-download', title:tt('ra4t'), body:tt('ra4b')},
   {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceSel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceWhen:_onDash, action:_actOpenDash, title:tt('ra5t'), body:tt('ra5b')},
-]); }
+], {key:'ra'}); }
 // Make sure a game + dashboard is available for the dashboard/inside/after
 // tours. Uses the open game if there is one; otherwise creates a demo game
 // (Rail Adventure mode if any, else a MiSSiONS location+mode) and opens it.
@@ -7242,12 +7278,12 @@ async function tutDash(){ if(!(await _tutEnsureGame())) return; tutStart([
   {sel:'#dash-panel .tabs', title:tt('d3t'), body:tt('d3b')},
   {sel:'.dt-topbar__actions', title:tt('d4t'), body:tt('d4b')},
   {sel:'.timer-block', title:tt('d5t'), body:tt('d5b')},
-]); }
+], {key:'dash'}); }
 async function tutAfter(){ if(!(await _tutEnsureGame())) return; tutStart([
   {before:()=>{ try{ switchPanel('rankings', document.getElementById('tab-rankings')); }catch(e){} return new Promise(r=>setTimeout(r,200)); }, sel:'.rankings-section', title:tt('a1t'), body:tt('a1b')},
   {sel:'#btn-game-export', title:tt('a2t'), body:tt('a2b')},
   {title:tt('a3t'), body:tt('a3b')},
-]); }
+], {key:'after'}); }
 async function tutInside(){
   if(!(await _tutEnsureGame())) return;
   let t=null;
@@ -7259,14 +7295,16 @@ async function tutInside(){
     try{ if(typeof currentGame!=='undefined' && currentGame){ currentGame.teams=currentGame.teams||[]; if(!currentGame.teams.some(x=>x.id===t.id)) currentGame.teams.push(t); } renderTeamsBar((typeof currentGame!=='undefined'&&currentGame)?currentGame.teams:[t]); }catch(e){}
   }
   try{ await selectTeam(t.id); }catch(e){}
-  tutStart([
+  const steps=[
     {sel:'#tc-'+t.id, title:tt('g1t'), body:tt('g1b')},
     {sel:'.team-detail-head', title:tt('g2t'), body:tt('g2b')},
     {sel:'#team-missions-list', title:tt('g3t'), body:tt('g3b')},
     {sel:'#dash-panel .tabs', title:tt('g4t'), body:tt('g4b')},
-    {sel:'#btn-freeze-team', title:tt('g5t'), body:tt('g5b')},
-    {sel:'#btn-delete-team', title:tt('g6t'), body:tt('g6b')},
-  ], {onEnd:tutCleanupDemo});
+  ];
+  // Freeze is a Rail Adventure-only mechanic — skip that step in a MiSSiONS game.
+  if(currentGame && currentGame.crMode) steps.push({sel:'#btn-freeze-team', title:tt('g5t'), body:tt('g5b')});
+  steps.push({sel:'#btn-delete-team', title:tt('g6t'), body:tt('g6b')});
+  tutStart(steps, {onEnd:tutCleanupDemo, key:'inside'});
 }
 async function tutCleanupDemo(){
   const id=_tutDemoTeamId; _tutDemoTeamId=null;
@@ -7274,6 +7312,37 @@ async function tutCleanupDemo(){
   try{ await API('/api/games/'+currentGameId+'/teams/'+id,{method:'DELETE'}); }catch(e){}
   try{ _removeTeamFromUi(id); }catch(e){}
   try{ toast(tt('demoDeleted'),'info'); }catch(e){}
+}
+
+// ── Completion card + chaining ──────────────────────────────────────────────
+// When a tour finishes (not skipped), offer to continue with the next one:
+// MiSSiONS/RA setup → Dashboard → Inside the game → After the game.
+const TUT_NEXT = { ms:'dash', ra:'dash', dash:'inside', inside:'after', after:null };
+const TUT_FN   = { ms:tutMs, ra:tutRa, dash:tutDash, inside:tutInside, after:tutAfter };
+function _tutName(k){ return ({ms:tt('mMs'),ra:tt('mRa'),dash:tt('mDash'),inside:tt('mIn'),after:tt('mAf')})[k]||''; }
+function _tutComplete(key){
+  _tutCloseDone();
+  const next=TUT_NEXT[key];
+  const bd=document.createElement('div'); bd.className='tut-done-bd'; bd.onclick=_tutCloseDone; document.body.appendChild(bd);
+  const card=document.createElement('div'); card.id='tut-done'; card.setAttribute('role','dialog'); card.setAttribute('aria-modal','true');
+  card.innerHTML=`<div class="td-emoji" aria-hidden="true">✅</div>
+    <div class="td-title">${esc(tt('tutDoneTitle'))}</div>
+    <div class="td-msg">${esc(tt('tutDoneMsg').replace('{name}', _tutName(key)))}</div>
+    <div class="td-row">
+      ${next?`<button class="tc-btn primary" id="td-cont">${esc(tt('tutCont').replace('{name}', _tutName(next)))}</button>`:`<div class="td-allset">${esc(tt('tutAllset'))}</div>`}
+      <button class="tc-btn" id="td-fin">${esc(tt('tutFinish'))}</button>
+    </div>`;
+  document.body.appendChild(card);
+  const cont=card.querySelector('#td-cont');
+  if(cont){ cont.onclick=()=>{ _tutCloseDone(); const fn=TUT_FN[next]; if(fn) fn(); }; }
+  const fin=card.querySelector('#td-fin'); fin.onclick=_tutCloseDone;
+  (cont||fin).focus();
+  card._key=(e)=>{ if(e.key==='Escape'){ e.preventDefault(); _tutCloseDone(); } };
+  document.addEventListener('keydown', card._key, true);
+}
+function _tutCloseDone(){
+  const c=document.getElementById('tut-done'); if(c){ if(c._key) document.removeEventListener('keydown',c._key,true); c.remove(); }
+  document.querySelectorAll('.tut-done-bd').forEach(x=>x.remove());
 }
 </script>
 </body>
