@@ -2303,8 +2303,11 @@ async function openDashboard(gameId){
   showScreen('screen-dashboard');
   document.getElementById('gm-game-id-display').textContent=`#${gameId}`;
   if(socket)socket.disconnect();
-  socket=io({reconnection:true});
-  socket.on('connect',()=>socket.emit('join_gm',{gameId}));
+  socket=io({reconnection:true, reconnectionAttempts:Infinity, reconnectionDelay:1000, reconnectionDelayMax:5000});
+  // Re-join + re-sync on EVERY (re)connect, so a dropped-then-restored socket
+  // immediately catches up on submissions instead of needing a page reload.
+  socket.on('connect',()=>{ socket.emit('join_gm',{gameId}); _gmResync(); });
+  _gmStartPoll();
   socket.on('timer_update',updateTimer);
   socket.on('timer_state',updateTimer);
   // Team selfie was just uploaded — refresh the chip + detail header live.
@@ -2498,6 +2501,27 @@ async function refreshPendingCounts(){
     Object.keys(map||{}).forEach(tid => setPendingCount(Number(tid), map[tid]));
   } catch(e) {}
 }
+
+// ── Live-update safety net ──────────────────────────────────────────────────
+// New submissions reach the dashboard via socket events. If the socket drops
+// (reverse-proxy idle, server restart on deploy, flaky mobile network) those
+// events are missed, so the GM would have to reload before they could accept
+// anything. This re-syncs over plain HTTP — on every socket (re)connect and on
+// a short poll — refreshing the pending-count dots and, when the SELECTED
+// team's pending set changes, re-rendering its detail. So new photo/video
+// submissions show up (and are acceptable) within a few seconds without a
+// reload, even if the socket is down.
+let _gmPollTimer=null;
+async function _gmResync(){
+  if(currentScreen()!=='screen-dashboard' || !currentGameId) return;
+  const before = (selectedTeamId!=null) ? (pendingCounts[selectedTeamId]||0) : null;
+  try{ await refreshPendingCounts(); }catch(e){}
+  if(selectedTeamId==null) return;
+  const after = pendingCounts[selectedTeamId]||0;
+  if(before!==null && after!==before){ try{ selectTeam(selectedTeamId); }catch(e){} }
+}
+function _gmStartPoll(){ _gmStopPoll(); _gmPollTimer=setInterval(_gmResync, 9000); }
+function _gmStopPoll(){ if(_gmPollTimer){ clearInterval(_gmPollTimer); _gmPollTimer=null; } }
 
 // Build the inner markup of a team chip — selfie thumbnail, name, score,
 // frozen indicator and notification dot. Pulled out of renderTeamsBar so the
@@ -3486,6 +3510,7 @@ document.addEventListener('fullscreenchange', () => {
 // kept alive (Leaflet doesn't like being recreated against the same DOM node)
 // but every marker, popup and cached payload tied to the prior game is cleared.
 function resetGmDashboardState(){
+  _gmStopPoll();
   // Drop cached payloads and per-team state
   currentGame = null;
   window._lastCrPayload = null;
