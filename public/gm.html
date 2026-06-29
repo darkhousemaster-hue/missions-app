@@ -2818,8 +2818,10 @@ async function renderCrTeamMissions(teamId){
     </article>`;
   };
   if(isRush){
-    const rushMs = cr.missions.filter(m => m.is_rush && !m.is_special);
-    const normMs = cr.missions.filter(m => !(m.is_rush && !m.is_special));
+    // Checkpoint = GPS/route mission; Mission = non-GPS task. Keyed off use_gps
+    // (intrinsic) so the split is right even for missions without is_rush set.
+    const rushMs = cr.missions.filter(m => !m.is_special && !m.use_gps);
+    const normMs = cr.missions.filter(m =>  m.is_special ||  m.use_gps);
     const display = [...rushMs, ...normMs];
     // Two side-by-side columns (Rush | Normal). flex-wrap lets them stack only
     // if the panel is ever too narrow for both.
@@ -4985,7 +4987,7 @@ async function loadCrMissions() {
   // (per-group when grouped).
   const card = (m, i, num) => {
     const flags = [
-      m.is_rush  ? '⚡ Mission' : '',
+      (currentCrModeRush && !m.is_special && !m.use_gps) ? '⚡ Mission' : '',
       m.is_special ? '⭐ Spezial' : '',
       m.use_gps  ? '📍 Checkpoint' : '',
       m.use_map  ? '🗺️ Karte' : '',
@@ -5012,11 +5014,16 @@ async function loadCrMissions() {
   };
   let body;
   if(currentCrModeRush){
-    // Rush Mode: show two rows — Rush missions and Normal missions. Grouping is
-    // derived from is_rush, so it survives reordering. The drag index stays
-    // global (rush cards first, then normal) to keep reorder consistent.
-    const rushMs = missions.filter(m => m.is_rush && !m.is_special);
-    const normMs = missions.filter(m => !(m.is_rush && !m.is_special));
+    // Rail Adventure mode: show two rows — Missions and Checkpoints. The drag
+    // index stays global (mission cards first, then checkpoints) to keep
+    // reorder consistent.
+    // A Checkpoint is any GPS/route mission; a Mission is a non-GPS task. Key
+    // off use_gps (intrinsic) rather than is_rush so missions made before Rail
+    // Adventure mode existed — or imported without the flag — still land in the
+    // right column. For editor-made missions the two are equivalent (placement
+    // sets is_rush ⇔ !use_gps). Specials fold into the Checkpoints column.
+    const rushMs = missions.filter(m => !m.is_special && !m.use_gps);
+    const normMs = missions.filter(m =>  m.is_special ||  m.use_gps);
     const display = [...rushMs, ...normMs];
     // Two side-by-side columns (Rush | Normal); wraps to stacked only if narrow.
     const col = (label, color, arr) => arr.length ? `
@@ -5940,7 +5947,10 @@ function crInitMissionType(m){
   crPickMissionType(type);
   let place='route';
   if(m && m.is_special) place='special';
-  else if(m && m.is_rush && currentCrModeRush) place='rush';
+  // Match the list grouping: in Rail Adventure mode a non-GPS task is a Mission
+  // (even if the older is_rush flag was never set), a GPS stop is a Checkpoint.
+  // Re-saving then heals is_rush via crPickPlacement.
+  else if(m && currentCrModeRush && !m.use_gps) place='rush';
   crPickPlacement(place);
 }
 // Delegated tooltip controller for the editor's ⓘ (.cme-info). Fixed-positioned

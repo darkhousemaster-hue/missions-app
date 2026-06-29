@@ -1594,11 +1594,13 @@ async function loadProgress(){
       const normalized = cr.missions.map(normalizeCrMission);
       specialMissions = normalized.filter(m =>  m.is_special);
       if(rushMode){
-        // Rush Mode: rush missions are non-GPS and shown first; GPS/route
-        // missions stay locked behind the gateway tile until a rush mission
-        // is completed.
-        rushMissions = normalized.filter(m => !m.is_special &&  m.is_rush);
-        allMissions  = normalized.filter(m => !m.is_special && !m.is_rush);
+        // Rush Mode: Missions are the non-GPS tasks (shown first); Checkpoints
+        // are the GPS/route stops, locked behind the gateway tile until a
+        // Mission is completed. Keyed off use_gps (intrinsic) rather than
+        // is_rush so the split is correct even for missions made/imported
+        // without the is_rush flag — for editor-made data the two are the same.
+        rushMissions = normalized.filter(m => !m.is_special && !m.use_gps);
+        allMissions  = normalized.filter(m => !m.is_special &&  m.use_gps);
       } else {
         rushMissions = [];
         allMissions  = normalized.filter(m => !m.is_special);
