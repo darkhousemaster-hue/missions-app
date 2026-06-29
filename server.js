@@ -1815,12 +1815,30 @@ io.on('connection', socket => {
 // game's remaining time first reaches a rule's trigger. _autoSent guards against
 // re-sending every tick (per game+rule); cleared when the game ends.
 const _autoSent = {};
-function _sendAutoBroadcast(gameId, text){
+const _AM_LANGS = ['de','en','fr','it','es'];
+// Build the {de,en,fr,it,es} map for an automated-message rule. Each language
+// the GM left blank falls back to the base text (German, else the first
+// non-empty language) so a player never gets an empty bubble.
+function _amLangMap(m){
+  const base = _AM_LANGS.map(l => String(m['message_'+l]||'').trim()).find(Boolean)
+            || String(m.message||'').trim();
+  const out = {};
+  for(const l of _AM_LANGS){
+    const v = String(m['message_'+l]||'').trim();
+    out[l] = v || base;
+  }
+  return out;
+}
+function _sendAutoBroadcast(gameId, langMsgs){
   try{
-    const msgId = db.saveMessage({gameId, teamId:null, content:text, fromGm:1});
+    const base = langMsgs.de || _AM_LANGS.map(l=>langMsgs[l]).find(Boolean) || '';
+    // Persist the base text for the GM dashboard + the per-language map so a
+    // player reloading mid-game still sees the broadcast in its own language.
+    const msgId = db.saveMessage({gameId, teamId:null, content:base, fromGm:1, contentLangs:langMsgs});
     // Mirror a GM broadcast: a no-team chat_message to game_<id> reaches every
-    // player and the GM dashboard (the GM also joins game_<id>).
-    io.to(`game_${gameId}`).emit('chat_message', {id:msgId, content:text, fromGm:1, teamId:null, gameId, timestamp:Date.now(), auto:true});
+    // player and the GM dashboard (the GM also joins game_<id>). `messages`
+    // carries all five languages; each player renders the one its app is set to.
+    io.to(`game_${gameId}`).emit('chat_message', {id:msgId, content:base, messages:langMsgs, fromGm:1, teamId:null, gameId, timestamp:Date.now(), auto:true});
   }catch(e){ console.warn('auto-broadcast failed', e); }
 }
 function _fireAutoMessages(game, remaining, autoMsgs){
@@ -1829,10 +1847,11 @@ function _fireAutoMessages(game, remaining, autoMsgs){
   let sent = _autoSent[game.id]; if(!sent){ sent = _autoSent[game.id] = new Set(); }
   for(const m of autoMsgs){
     if(sent.has(m.id)) continue;
-    if(!m.message || !String(m.message).trim()) continue;   // skip blank (unfinished) rows
+    const langMsgs = _amLangMap(m);
+    if(!_AM_LANGS.some(l => langMsgs[l])) continue;   // skip blank (unfinished) rows
     if(m.game_kind !== kind) continue;
     if(kind==='missions' && m.location_id!=null && Number(m.location_id)!==Number(game.location_id)) continue;
-    if(remaining <= m.trigger_seconds){ sent.add(m.id); _sendAutoBroadcast(game.id, m.message); }
+    if(remaining <= m.trigger_seconds){ sent.add(m.id); _sendAutoBroadcast(game.id, langMsgs); }
   }
 }
 

@@ -1311,13 +1311,21 @@ function _crIsBroadcast(m){
   const tid = m.teamId !== undefined ? m.teamId : m.team_id;
   return tid == null;
 }
+// Automated broadcasts carry a per-language copy so each device renders the
+// message in the language ITS app is set to. Live socket payloads expose it as
+// `messages`; stored history rows as `content_langs` (JSON). Else use `content`.
+function _crMsgText(m){
+  let langs = m.messages;
+  if(!langs && m.content_langs){ try{ langs = JSON.parse(m.content_langs); }catch(e){ langs = null; } }
+  return (langs && langs[lang]) || m.content || '';
+}
 function crChatBubble(m){
   const fromGm = m.from_gm===1 || m.from_gm===true;
   const broadcast = fromGm && _crIsBroadcast(m);
   const time = new Date(m.created_at||m.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const sender = fromGm ? 'GM' : (esc(teamName)||'Team');
   const tag = broadcast ? '<span class="chat-tag chat-tag-broadcast">📢 ' + (t('broadcast')||'Broadcast') + '</span>' : '';
-  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}${broadcast?' broadcast':''}"><div class="chat-meta">${sender} · ${time} ${tag}</div>${esc(m.content)}</div>`;
+  return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}${broadcast?' broadcast':''}"><div class="chat-meta">${sender} · ${time} ${tag}</div>${esc(_crMsgText(m))}</div>`;
 }
 function crScrollChat(){
   const box = document.getElementById('cr-chat-messages');
@@ -1370,7 +1378,7 @@ function crOnChatMessage(msg){
     const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     const broadcast = _crIsBroadcast(msg);
     const tag = broadcast ? '<span class="chat-tag chat-tag-broadcast">📢 ' + (t('broadcast')||'Broadcast') + '</span>' : '';
-    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm${broadcast?' broadcast':''}"><div class="chat-meta">GM · ${time} ${tag}</div>${esc(msg.content)}</div>`);
+    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm${broadcast?' broadcast':''}"><div class="chat-meta">GM · ${time} ${tag}</div>${esc(_crMsgText(msg))}</div>`);
     crScrollChat();
   }
   // When the player isn't already in the chat view, surface the message as
@@ -1382,7 +1390,7 @@ function crOnChatMessage(msg){
     const popupTxt = document.getElementById('cr-msg-popup-text');
     const popup    = document.getElementById('cr-msg-popup');
     if(popupTxt && popup){
-      popupTxt.textContent = msg.content || '';
+      popupTxt.textContent = _crMsgText(msg);
       popup.style.display = 'flex';
     }
   }

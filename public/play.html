@@ -1169,6 +1169,15 @@ function _isBroadcast(m){
   const tid = m.teamId !== undefined ? m.teamId : m.team_id;
   return tid == null;
 }
+// Automated broadcasts carry a per-language copy of the text so each device can
+// render the message in the language ITS app is set to. Live socket payloads
+// expose it as `messages` (object); stored history rows as `content_langs`
+// (JSON). Everything else just uses `content`.
+function _msgText(m){
+  let langs = m.messages;
+  if(!langs && m.content_langs){ try{ langs = JSON.parse(m.content_langs); }catch(e){ langs = null; } }
+  return (langs && langs[lang]) || m.content || '';
+}
 function bubble(m) {
   const fromGm = m.from_gm===1 || m.from_gm===true;
   const broadcast = fromGm && _isBroadcast(m);
@@ -1177,7 +1186,7 @@ function bubble(m) {
   const tag = broadcast ? `<span class="chat-tag chat-tag-broadcast">📢 ${t('broadcast')||'Broadcast'}</span>` : '';
   return `<div class="chat-bubble ${fromGm?'from-gm':'from-player'}${broadcast?' broadcast':''}">
     <div class="chat-meta">${sender} · ${time} ${tag}</div>
-    ${esc(m.content)}
+    ${esc(_msgText(m))}
   </div>`;
 }
 
@@ -1216,15 +1225,16 @@ function onChatMessage(msg) {
   const box  = document.getElementById('chat-messages');
   const time = new Date(msg.timestamp||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const broadcast = _isBroadcast(msg);
+  const text = _msgText(msg);
   const tag = broadcast ? `<span class="chat-tag chat-tag-broadcast">📢 ${t('broadcast')||'Broadcast'}</span>` : '';
   box.insertAdjacentHTML('beforeend', `<div class="chat-bubble from-gm${broadcast?' broadcast':''}">
-    <div class="chat-meta">Gamemaster · ${time} ${tag}</div>${esc(msg.content)}</div>`);
+    <div class="chat-meta">Gamemaster · ${time} ${tag}</div>${esc(text)}</div>`);
   scrollChat();
 
   _gmCount++;
   if (currentView !== 'chat') {
     startChatFlash();
-    document.getElementById('msg-popup-text').textContent = msg.content;
+    document.getElementById('msg-popup-text').textContent = text;
     document.getElementById('msg-popup').style.display = 'flex';
   } else { _seenGm = _gmCount; }
 }

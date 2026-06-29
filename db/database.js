@@ -342,6 +342,19 @@ try { db.exec("ALTER TABLE games ADD COLUMN collage_generated_at INTEGER"); } ca
 // languages in the cycler — the rest are hidden. Default is all five
 // supported languages so existing locations behave as before.
 try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,en,fr,it,es'"); } catch(e) {}
+// Automated messages are now authored per language so every player receives the
+// broadcast in the language THEIR app is set to. The legacy `message` column is
+// kept as the base/fallback (mirrors message_de). Older rows have only `message`,
+// which the fallback chain still uses.
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_de TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_en TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_fr TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_it TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_es TEXT DEFAULT ''"); } catch(e) {}
+// Per-language copy of a stored chat message (JSON {de,en,fr,it,es}), set only
+// for automated broadcasts. NULL for normal/DM messages. On reload the player
+// picks its own language from here; the GM dashboard keeps using `content`.
+try { db.exec("ALTER TABLE messages ADD COLUMN content_langs TEXT"); } catch(e) {}
 // Rival-team freeze. One row per (game, freezer, frozen). UNIQUE constraint
 // enforces "each team can only freeze each rival once". `until_ms` is the
 // absolute epoch when the freeze ends; rows are kept forever (used to grey
@@ -723,8 +736,9 @@ const rejectSubmission = (id,msg) =>
   db.prepare('UPDATE team_missions SET status=?,rejection_message=?,media_path=NULL,reviewed_at=? WHERE id=?').run('rejected',msg,Date.now(),id);
 
 // ── Messages ──────────────────────────────────────────────────────────────────
-const saveMessage = ({gameId,teamId,content,fromGm}) =>
-  num(db.prepare('INSERT INTO messages(game_id,team_id,content,from_gm) VALUES(?,?,?,?)').run(gameId,teamId||null,content,fromGm?1:0).lastInsertRowid);
+const saveMessage = ({gameId,teamId,content,fromGm,contentLangs=null}) =>
+  num(db.prepare('INSERT INTO messages(game_id,team_id,content,from_gm,content_langs) VALUES(?,?,?,?,?)')
+    .run(gameId,teamId||null,content,fromGm?1:0, contentLangs?JSON.stringify(contentLangs):null).lastInsertRowid);
 const getMessages = (gameId,teamId) => {
   if(teamId) return db.prepare('SELECT * FROM messages WHERE game_id=? AND (team_id=? OR team_id IS NULL) ORDER BY created_at').all(gameId,teamId);
   return db.prepare('SELECT m.*,t.name as team_name FROM messages m LEFT JOIN teams t ON t.id=m.team_id WHERE m.game_id=? ORDER BY m.created_at').all(gameId);
@@ -735,18 +749,43 @@ const getMessages = (gameId,teamId) => {
 // game matches game_kind (+ location for missions), the text is auto-broadcast.
 const _amKind = k => (k==='cityrush' ? 'cityrush' : 'missions');
 const _amLoc  = l => (l!=null && l!=='' ? Number(l) : null);
+const _AM_LANGS = ['de','en','fr','it','es'];
+// Pick the base/legacy `message` from the five language fields: prefer German,
+// then any non-empty language. Keeps the NOT NULL `message` column meaningful
+// and gives the per-language fallback chain a sensible default.
+const _amBase = langs => {
+  for(const l of _AM_LANGS){ const v=String(langs['message_'+l]||'').trim(); if(v) return v; }
+  return '';
+};
 const getAutoMessages   = () => db.prepare('SELECT * FROM automated_messages ORDER BY trigger_seconds DESC, id').all();
-const createAutoMessage = ({trigger_seconds,game_kind,location_id,message,enabled=1}) =>
-  num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,message) VALUES(?,?,?,?,?)')
-    .run(enabled?1:0, Math.max(0,parseInt(trigger_seconds)||0), _amKind(game_kind), _amLoc(location_id), String(message||'')).lastInsertRowid);
+const createAutoMessage = (d={}) => {
+  // Accept either the new per-language fields or a single legacy `message`
+  // (mapped onto German) so older callers keep working.
+  const langs = {};
+  _AM_LANGS.forEach(l => { langs['message_'+l] = String(d['message_'+l] ?? '').trim(); });
+  if(!langs.message_de && d.message) langs.message_de = String(d.message).trim();
+  const base = _amBase(langs);
+  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?)')
+    .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind), _amLoc(d.location_id),
+      base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es).lastInsertRowid);
+};
 const updateAutoMessage = (id,d={}) => {
   const cur = db.prepare('SELECT * FROM automated_messages WHERE id=?').get(id); if(!cur) return;
-  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,message=? WHERE id=?').run(
+  // Merge each language field: take the incoming value when provided, else keep
+  // the stored one (falling back to the legacy `message` for de on old rows).
+  const langs = {};
+  _AM_LANGS.forEach(l => {
+    const k='message_'+l;
+    langs[k] = d[k]!=null ? String(d[k]) : (cur[k]!=null ? cur[k] : (l==='de' ? (cur.message||'') : ''));
+  });
+  if(d.message!=null && d.message_de==null) langs.message_de = String(d.message); // legacy single-field update
+  const base = _amBase(langs) || (d.message!=null?String(d.message):cur.message) || '';
+  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
     d.enabled!=null?(d.enabled?1:0):cur.enabled,
     d.trigger_seconds!=null?Math.max(0,parseInt(d.trigger_seconds)||0):cur.trigger_seconds,
     d.game_kind!=null?_amKind(d.game_kind):cur.game_kind,
     d.location_id!==undefined?_amLoc(d.location_id):cur.location_id,
-    d.message!=null?String(d.message):cur.message, id);
+    base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es, id);
 };
 const deleteAutoMessage = id => db.prepare('DELETE FROM automated_messages WHERE id=?').run(id);
 
