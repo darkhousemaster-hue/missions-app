@@ -890,6 +890,7 @@ async function refreshTeamScore(){
 
 function onAccepted(missionId) {
   toast(t('mission_accepted')||'✓ Mission angenommen!', 'success');
+  playAcceptedTone();   // celebratory chime for the players (not the GM)
   // Re-fetch + re-render rather than hand-patching DOM. The old code set
   // card.className='accepted' (green outline) and wrote to a non-existent
   // `mf-${id}` footer, so the real status pill (mcard__pending-tag, still
@@ -1212,6 +1213,22 @@ function playGmMessageTone(){
     g.gain.exponentialRampToValueAtTime(0.22, tt+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, tt+0.3);
     o.start(tt); o.stop(tt+0.32);
+  });
+}
+// Bright rising triad played to the PLAYER when the GM accepts their mission.
+// Deliberately different from the chat ping so "accepted!" feels celebratory.
+// (The GM has a separate chime that fires only on NEW submissions.)
+function playAcceptedTone(){
+  const ctx = _ensureMsgAudio(); if(!ctx) return;
+  const now = ctx.currentTime;
+  [[523.25,0],[659.25,0.10],[783.99,0.20]].forEach(([f,d]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(ctx.destination);
+    const tt = now+d;
+    g.gain.setValueAtTime(0.0001, tt);
+    g.gain.exponentialRampToValueAtTime(0.25, tt+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, tt+0.34);
+    o.start(tt); o.stop(tt+0.36);
   });
 }
 window.addEventListener('pointerdown', () => { _ensureMsgAudio(); }, { once:true });

@@ -1218,6 +1218,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       pendingMissionIds.delete(Number(missionId));
       completedMissionIds.add(Number(missionId));
       toast('✓ ' + (t('accepted')||'Angenommen!'), 'success');
+      playAcceptedTone();   // celebratory chime for the players (not the GM)
       refreshScore();
       loadProgress();
     } else {
@@ -1365,6 +1366,22 @@ function playGmMessageTone(){
     g.gain.exponentialRampToValueAtTime(0.22, tt+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, tt+0.3);
     o.start(tt); o.stop(tt+0.32);
+  });
+}
+// Bright rising triad played to the PLAYER when the GM accepts their submission.
+// Distinct from the chat ping so "accepted!" feels celebratory. (The GM's own
+// chime fires only on NEW submissions, never on accept.)
+function playAcceptedTone(){
+  const ctx = _crEnsureMsgAudio(); if(!ctx) return;
+  const now = ctx.currentTime;
+  [[523.25,0],[659.25,0.10],[783.99,0.20]].forEach(([f,d]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(ctx.destination);
+    const tt = now+d;
+    g.gain.setValueAtTime(0.0001, tt);
+    g.gain.exponentialRampToValueAtTime(0.25, tt+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, tt+0.34);
+    o.start(tt); o.stop(tt+0.36);
   });
 }
 window.addEventListener('pointerdown', () => { _crEnsureMsgAudio(); }, { once:true });
