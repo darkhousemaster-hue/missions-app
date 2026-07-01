@@ -1904,6 +1904,21 @@ app.get('/play*',      (req,res)=>res.sendFile(path.join(__dirname,'public','pla
 app.get('/cityrush*',  (req,res)=>res.sendFile(path.join(__dirname,'public','cityrush.html')));
 app.get('/draw*',      (req,res)=>res.sendFile(path.join(__dirname,'public','draw.html')));
 
+// Turn Multer's file-size limit (200 MB, see `upload` above) into a clean 413
+// the player app can explain ("video too large"), instead of a generic 500 that
+// surfaces as an unhelpful "upload failed". A 45s 4K clip commonly exceeds it.
+const MAX_UPLOAD_MB = 200;
+app.use((err, req, res, next) => {
+  if(err && err.code === 'LIMIT_FILE_SIZE'){
+    return res.status(413).json({ error:'File too large', code:'file_too_large', maxMb: MAX_UPLOAD_MB });
+  }
+  if(err && err.name === 'MulterError'){
+    return res.status(400).json({ error: err.message, code:'upload_error' });
+  }
+  if(err){ console.error('Unhandled error:', err); return res.status(500).json({ error:'Server error' }); }
+  next();
+});
+
 server.listen(PORT,'0.0.0.0',()=>{
   console.log(`\n🎮  MiSSiONS running on port ${PORT}`);
   console.log(`🖥️   Gamemaster: http://localhost:${PORT}/gm.html\n`);

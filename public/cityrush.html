@@ -714,7 +714,7 @@ const T = {
         no_camera:'Kamera nicht verfügbar — bitte erlauben',
         no_mic:'Mikrofon nicht verfügbar – kein Ton',
         capture_failed:'Aufnahme nicht möglich:',
-        upload_failed:'Upload fehlgeschlagen', upload_failed_net:'Upload fehlgeschlagen — Netzwerk/Verbindung',
+        upload_failed:'Upload fehlgeschlagen', file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.', upload_failed_net:'Upload fehlgeschlagen — Netzwerk/Verbindung',
         selfie_upload_failed:'Selfie-Upload fehlgeschlagen — bitte erneut versuchen',
         chat_send_failed:'Chat senden fehlgeschlagen',
         no_hints_left:'Keine Hinweise mehr',
@@ -765,7 +765,7 @@ const T = {
         no_camera:'Camera unavailable — please grant permission',
         no_mic:'Microphone unavailable – no audio',
         capture_failed:'Recording failed:',
-        upload_failed:'Upload failed', upload_failed_net:'Upload failed — network/connection',
+        upload_failed:'Upload failed', file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.', upload_failed_net:'Upload failed — network/connection',
         selfie_upload_failed:'Selfie upload failed — please try again',
         chat_send_failed:'Couldn\'t send chat',
         no_hints_left:'No more hints',
@@ -815,7 +815,7 @@ const T = {
         no_camera:'Caméra indisponible — autorisez l\'accès',
         no_mic:'Micro indisponible – pas de son',
         capture_failed:'Échec de l\'enregistrement :',
-        upload_failed:'Échec de l\'envoi', upload_failed_net:'Échec de l\'envoi — réseau/connexion',
+        upload_failed:'Échec de l\'envoi', file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.', upload_failed_net:'Échec de l\'envoi — réseau/connexion',
         selfie_upload_failed:'Échec du selfie — réessayez',
         chat_send_failed:'Impossible d\'envoyer le message',
         no_hints_left:'Plus d\'indices',
@@ -865,7 +865,7 @@ const T = {
         no_camera:'Fotocamera non disponibile — concedi i permessi',
         no_mic:'Microfono non disponibile – nessun audio',
         capture_failed:'Registrazione non riuscita:',
-        upload_failed:'Caricamento fallito', upload_failed_net:'Caricamento fallito — rete/connessione',
+        upload_failed:'Caricamento fallito', file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.', upload_failed_net:'Caricamento fallito — rete/connessione',
         selfie_upload_failed:'Caricamento selfie non riuscito — riprova',
         chat_send_failed:'Impossibile inviare il messaggio',
         no_hints_left:'Nessun altro suggerimento',
@@ -915,7 +915,7 @@ const T = {
         no_camera:'Cámara no disponible — concede los permisos',
         no_mic:'Micrófono no disponible – sin sonido',
         capture_failed:'Grabación fallida:',
-        upload_failed:'Subida fallida', upload_failed_net:'Subida fallida — red/conexión',
+        upload_failed:'Subida fallida', file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.', upload_failed_net:'Subida fallida — red/conexión',
         selfie_upload_failed:'Subida del selfie fallida — inténtalo de nuevo',
         chat_send_failed:'No se pudo enviar el mensaje',
         no_hints_left:'No quedan más pistas',
@@ -3886,9 +3886,18 @@ function crRetake(){
 // Helper: upload media bytes to the regular upload endpoint and return the
 // server-stored path. Surfaces HTTP/network errors to the user via a toast so
 // failures don't silently swallow the player's tap. Returns null on failure.
+// Media uploads are capped server-side at 200 MB (multer). A 45s 4K clip often
+// exceeds that; we pre-check size on the client and translate a server 413 into
+// a clear message instead of a generic "upload failed".
+const MAX_UPLOAD_MB = 200, MAX_UPLOAD_BYTES = MAX_UPLOAD_MB*1024*1024;
+function crTooLargeToast(bytes){
+  const mb = Math.max(1, Math.round((bytes||0)/1048576));
+  toast((t('file_too_large')||'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.').replace('{size}',mb).replace('{max}',MAX_UPLOAD_MB), 'error');
+}
 async function _crSendMedia(form){
   try {
     const r = await fetch(`/api/games/${gameId}/media/upload`, {method:'POST', body:form});
+    if(r.status === 413){ const f=form.get('media'); crTooLargeToast(f && f.size); return null; }
     if(!r.ok){
       let msg = `Upload fehlgeschlagen (${r.status})`;
       try { const j = await r.json(); if(j && j.error) msg = `${msg}: ${j.error}`; } catch(e){}
@@ -3904,6 +3913,7 @@ async function _crSendMedia(form){
 
 async function crUploadBlob(blob){
   // Direct upload without camera (gallery selected)
+  if(blob && blob.size > MAX_UPLOAD_BYTES){ crTooLargeToast(blob.size); return; }
   const isVid = blob.type.startsWith('video');
   const ext = isVid ? 'mp4' : 'jpg';
   const filename = blob.name || `capture.${ext}`;
@@ -3927,6 +3937,7 @@ async function crUploadBlob(blob){
 
 async function crUpload(){
   if(!capturedBlob) return;
+  if(capturedBlob.size > MAX_UPLOAD_BYTES){ crTooLargeToast(capturedBlob.size); crCloseCamera(); return; }
   crCloseCamera();
   const isVid = capturedIsVideo;
   const ext = isVid ? (capturedMimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';

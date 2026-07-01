@@ -472,6 +472,7 @@ const T = {
     uploading_review:'Hochgeladen! Wird geprüft…',
     upload_failed:'Upload fehlgeschlagen',
     already_solved:'Diese Mission wurde bereits von deinem Team gelöst!',
+    file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.',
     broadcast:'Rundruf',
     flip:'🔄 Flip', you:'Du', no_missions:'Keine Missionen gefunden.', no_rules:'Keine Regeln vorhanden.',
   },
@@ -494,6 +495,7 @@ const T = {
     uploading_review:'Uploaded! Awaiting review…',
     upload_failed:'Upload failed',
     already_solved:'This mission was already solved by your team!',
+    file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.',
     broadcast:'Broadcast',
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
@@ -515,6 +517,7 @@ const T = {
     uploading_review:'Envoyé ! En attente de validation…',
     upload_failed:'Échec de l\'envoi',
     already_solved:'Cette mission a déjà été résolue par votre équipe !',
+    file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.',
     broadcast:'Annonce',
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
@@ -536,6 +539,7 @@ const T = {
     uploading_review:'Caricato! In attesa di revisione…',
     upload_failed:'Caricamento fallito',
     already_solved:'Questa missione è già stata completata dalla tua squadra!',
+    file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.',
     broadcast:'Annuncio',
     flip:'🔄 Ribalta', you:'Io', no_missions:'Nessuna missione trovata.', no_rules:'Nessuna regola.',
   },
@@ -558,6 +562,7 @@ const T = {
     uploading_review:'¡Subido! Pendiente de revisión…',
     upload_failed:'Subida fallida',
     already_solved:'¡Esta misión ya fue resuelta por tu equipo!',
+    file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.',
     broadcast:'Anuncio',
     flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
   }
@@ -1064,6 +1069,14 @@ function retake() {
   document.getElementById('shutter-icon').textContent = currentMissionType==='video' ? '🔴' : '📷';
 }
 
+// Media uploads are capped server-side at 200 MB (multer). A 45s 4K video often
+// exceeds that, so we pre-check the size and show a clear message instead of
+// letting the player wait through a doomed upload and get a generic failure.
+const MAX_UPLOAD_MB = 200, MAX_UPLOAD_BYTES = MAX_UPLOAD_MB*1024*1024;
+function tooLargeToast(bytes){
+  const mb = Math.max(1, Math.round((bytes||0)/1048576));
+  toast((t('file_too_large')||'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.').replace('{size}',mb).replace('{max}',MAX_UPLOAD_MB), 'error');
+}
 async function doUpload() {
   if (!capturedBlob) return;
 
@@ -1085,6 +1098,7 @@ async function doUpload() {
 
   if (!currentMissionId) return;
   const blobToUpload = capturedBlob;
+  if (blobToUpload && blobToUpload.size > MAX_UPLOAD_BYTES) { closeCamera(); tooLargeToast(blobToUpload.size); return; }
   const isVid        = capturedIsVideo;
   const ext          = isVid ? (capturedMimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
   closeCamera();
@@ -1113,6 +1127,8 @@ async function doUpload() {
       // A teammate already got this mission accepted while we were taking the photo.
       toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
       loadMissions();
+    } else if (xhr.status === 413) {
+      tooLargeToast(blobToUpload.size);
     } else {
       toast(t('upload_failed')||'Upload fehlgeschlagen', 'error');
     }
@@ -1276,6 +1292,7 @@ async function resyncChat(){
 async function uploadFromGallery(event, missionId, mediaType) {
   const file = event.target.files?.[0];
   if(!file) return;
+  if(file.size > MAX_UPLOAD_BYTES){ tooLargeToast(file.size); event.target.value=''; return; }
   currentMissionId = missionId;
   const ub   = document.getElementById(`ub-${missionId}`);
   const fill = document.getElementById(`uf-${missionId}`);
@@ -1293,7 +1310,8 @@ async function uploadFromGallery(event, missionId, mediaType) {
     } else if(xhr.status === 409){
       toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
       loadMissions();
-    } else { toast(t('upload_failed')||'Upload fehlgeschlagen', 'error'); }
+    } else if(xhr.status === 413){ tooLargeToast(file.size); }
+    else { toast(t('upload_failed')||'Upload fehlgeschlagen', 'error'); }
   };
   xhr.onerror = () => { if(ub) ub.style.display='none'; toast(t('upload_failed')||'Upload fehlgeschlagen','error'); };
   xhr.open('POST', `/api/games/${gameId}/teams/${teamId}/missions/${missionId}/upload`);
