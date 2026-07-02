@@ -342,6 +342,12 @@ try { db.exec("ALTER TABLE games ADD COLUMN collage_generated_at INTEGER"); } ca
 // languages in the cycler — the rest are hidden. Default is all five
 // supported languages so existing locations behave as before.
 try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,en,fr,it,es'"); } catch(e) {}
+// Per-location / per-RA-mode player colour scheme. JSON:
+//   { vars:{"--bg":"#101010",...}, logo:"themes/x.png"|null, stamp:"...", wordmark:"..." }
+// NULL = the built-in default look (what shipped before theming). Only the
+// player pages (join/play/cityrush) consume it; the GM dashboard is never themed.
+try { db.exec("ALTER TABLE locations ADD COLUMN theme TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE cr_modes ADD COLUMN theme TEXT"); } catch(e) {}
 // Automated messages are now authored per language so every player receives the
 // broadcast in the language THEIR app is set to. The legacy `message` column is
 // kept as the base/fallback (mirrors message_de). Older rows have only `message`,
@@ -540,13 +546,46 @@ function normLangs(v) {
 }
 const getLocations   = () => db.prepare('SELECT * FROM locations ORDER BY name').all();
 const getLocation    = id => db.prepare('SELECT * FROM locations WHERE id=?').get(id);
-const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs}) => {
-  const langs = normLangs(allowed_langs);
-  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs) VALUES(?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs).lastInsertRowid);
+// Sanitize a theme payload: accept an object or JSON string, keep only the
+// known keys, require #hex colors in vars, cap the size. Returns a JSON string
+// or null (= default look). Never throws on garbage — falls back to null.
+const normTheme = t => {
+  try {
+    if (t == null || t === '') return null;
+    const o = typeof t === 'string' ? JSON.parse(t) : t;
+    if (typeof o !== 'object' || Array.isArray(o)) return null;
+    const out = {};
+    if (o.vars && typeof o.vars === 'object') {
+      const vars = {};
+      for (const [k, v] of Object.entries(o.vars)) {
+        if (/^--[a-z0-9-]{1,32}$/.test(k) && /^#[0-9a-fA-F]{3,8}$/.test(String(v))) vars[k] = String(v);
+      }
+      if (Object.keys(vars).length) out.vars = vars;
+    }
+    if (typeof o.logo === 'string' && /^themes\/[\w.-]+$/.test(o.logo)) out.logo = o.logo;
+    if (typeof o.stamp === 'string' && o.stamp.trim()) out.stamp = o.stamp.trim().slice(0, 60);
+    if (typeof o.wordmark === 'string' && o.wordmark.trim()) out.wordmark = o.wordmark.trim().slice(0, 60);
+    if (!Object.keys(out).length) return null;
+    const json = JSON.stringify(out);
+    return json.length > 20000 ? null : json;
+  } catch (e) { return null; }
 };
-const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs}) =>
-  db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),id);
+const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme}) => {
+  const langs = normLangs(allowed_langs);
+  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs,theme) VALUES(?,?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs,normTheme(theme)).lastInsertRowid);
+};
+const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme}) => {
+  // theme===undefined → keep the stored theme (the normal editor doesn't send
+  // it); explicit null/'' clears back to default; a value replaces it.
+  const cur = getLocation(id) || {};
+  const th = theme === undefined ? (cur.theme || null) : normTheme(theme);
+  return db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=?,theme=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),th,id);
+};
 const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(id);
+// Dedicated theme setters — the generic update mappers rewrite every column,
+// so the theme designer (which only knows about the theme) uses these instead.
+const setLocationTheme = (id, t) => db.prepare('UPDATE locations SET theme=? WHERE id=?').run(normTheme(t), id);
+const setCrModeTheme   = (id, t) => db.prepare('UPDATE cr_modes SET theme=? WHERE id=?').run(normTheme(t), id);
 
 // ── Missions ──────────────────────────────────────────────────────────────────
 const getMissions = (modeId, locationId) => {
@@ -835,8 +874,9 @@ const updateCrMode  = (id, data) => {
   const timer_default = data.timer_default !== undefined ? (Number(data.timer_default)||60) : (existing.timer_default||60);
   const allowed_langs = data.allowed_langs !== undefined ? normLangs(data.allowed_langs) : (existing.allowed_langs || 'de,en,fr,it,es');
   const rush_mode     = data.rush_mode     !== undefined ? (data.rush_mode?1:0) : (existing.rush_mode?1:0);
-  db.prepare('UPDATE cr_modes SET name=?, allow_photo=?, allow_video=?, ruleset_id=?, timer_default=?, allowed_langs=?, rush_mode=? WHERE id=?')
-    .run(name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode, id);
+  const theme         = data.theme         !== undefined ? normTheme(data.theme) : (existing.theme || null);
+  db.prepare('UPDATE cr_modes SET name=?, allow_photo=?, allow_video=?, ruleset_id=?, timer_default=?, allowed_langs=?, rush_mode=?, theme=? WHERE id=?')
+    .run(name, allow_photo, allow_video, ruleset_id, timer_default, allowed_langs, rush_mode, theme, id);
 };
 const deleteCrMode  = id => {
   runTx(() => {
@@ -1218,7 +1258,7 @@ module.exports = {
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,getGameRules,
-  getLocations,getLocation,createLocation,updateLocation,deleteLocation,
+  getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,deleteTeam,getRankings,

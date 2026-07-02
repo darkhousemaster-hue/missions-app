@@ -398,6 +398,49 @@ app.delete('/api/locations/:id', (req,res) => {
   db.deleteLocation(req.params.id); res.json({success:true});
 });
 
+// ── Player colour schemes (per location / per RA mode) ──────────────────────
+// Public: players resolve their game's theme on join/play load. NULL theme =
+// the built-in default look. The GM dashboard never consumes this.
+app.get('/api/games/:id/theme', (req,res) => {
+  const game = db.getGame(req.params.id);
+  if(!game) return res.status(404).json({error:'Not found'});
+  let raw = null;
+  if (game.location_id) { const loc = db.getLocation(game.location_id); raw = loc && loc.theme; }
+  else { const cm = db.getGameCrMode(game.id); raw = cm && cm.theme; }
+  let theme = null; try { theme = raw ? JSON.parse(raw) : null; } catch(e) {}
+  res.json({ theme });
+});
+// Theme save (GM-gated). Dedicated routes so the designer can write ONLY the
+// theme; the generic PUTs rewrite every column and would blank the rest.
+app.put('/api/locations/:id/theme', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.setLocationTheme(Number(req.params.id), req.body.theme ?? null);
+  res.json({success:true});
+});
+app.put('/api/cr/modes/:id/theme', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.setCrModeTheme(Number(req.params.id), req.body.theme ?? null);
+  res.json({success:true});
+});
+// Theme logo upload (GM-gated). Multer drops the file in misc/; move it into
+// themes/ so the stored path matches normTheme's whitelist. No SVG — an SVG
+// served from /uploads could carry scripts on the app origin.
+app.post('/api/theme-logo', upload.single('image'), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!req.file) return res.status(400).json({error:'No file'});
+  const ext = path.extname(req.file.filename).toLowerCase();
+  if(!['.png','.jpg','.jpeg','.webp','.gif'].includes(ext)){
+    try{ fs.unlinkSync(req.file.path); }catch(e){}
+    return res.status(400).json({error:'Images only (png/jpg/webp/gif)'});
+  }
+  const destDir = path.join(UPLOAD_DIR,'themes');
+  fs.mkdirSync(destDir,{recursive:true});
+  const dest = path.join(destDir, req.file.filename);
+  try { fs.renameSync(req.file.path, dest); }
+  catch(e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+  res.json({ success:true, path: `themes/${req.file.filename}` });
+});
+
 // ── Automated (scheduled) broadcast messages ────────────────────────────────
 // GM config; the timer loop fires them when a game's remaining time reaches the
 // trigger and the game matches game_kind (+ location for missions).

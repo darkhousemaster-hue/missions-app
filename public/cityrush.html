@@ -6,6 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
 <link rel="stylesheet" href="/css/app.css?v=2.0.1">
+<script src="/js/theme.js?v=1"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1159,8 +1160,39 @@ function applyCrTranslations(){
   if(cbl) cbl.textContent = (t('chat_back')||t('back')||'Zurück').replace(/^←\s*/,'');
 }
 
+// Theme-designer preview (?preview=1): static demo home with the real CSS
+// classes so colours preview faithfully. No GPS, no socket, no map, no network.
+function enterCrPreview(){
+  document.getElementById('cr-team-name-text').textContent = 'Demo Team';
+  const sc = document.getElementById('cr-team-score');    if(sc) sc.textContent = '25';
+  const tm = document.getElementById('cr-game-timer');    if(tm) tm.textContent = '58:30';
+  const pf = document.getElementById('cr-progress-fill'); if(pf) pf.style.width = '40%';
+  const pt = document.getElementById('cr-progress-text'); if(pt) pt.textContent = 'STOP 2 / 5';
+  const pm = document.getElementById('cr-progress-mode'); if(pm) pm.textContent = 'DEMO TOUR';
+  // The mini-map can't render without Leaflet init; show a mission card demo
+  // in its place so surface/border/accent colours are visible.
+  const mapCard = document.getElementById('cr-mini-map-card');
+  if(mapCard){
+    const demo = document.createElement('div');
+    demo.className = 'cr-mission-card';
+    demo.style.margin = '0 18px';
+    demo.innerHTML = `
+      <div style="padding:14px 16px;">
+        <div style="font:700 10px/1 var(--mono);letter-spacing:.14em;color:var(--orange);text-transform:uppercase;margin-bottom:6px;">Mission 2</div>
+        <div style="font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.04em;color:var(--text);margin-bottom:6px;">Bahnhofplatz</div>
+        <div style="font:400 13px/1.5 var(--body);color:var(--text-dim);margin-bottom:12px;">Findet die goldene Uhr und macht ein Teamfoto davor.</div>
+        <div style="display:flex;gap:8px;">
+          <span style="flex:1;text-align:center;padding:10px 0;border-radius:var(--radius);background:var(--orange);color:#fff;font:600 13px/1 var(--body);">📷 Foto</span>
+          <span style="padding:10px 14px;border-radius:var(--radius);background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font:600 13px/1 var(--body);">💡 Hinweis</span>
+        </div>
+      </div>`;
+    mapCard.replaceWith(demo);
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  if(window.ArTheme && ArTheme.preview){ enterCrPreview(); return; }
   if(!gameId || !teamId){ window.location.href='/'; return; }
   // Set the team name on the inner span so we don't wipe out the score chip.
   document.getElementById('cr-team-name-text').textContent = teamName;

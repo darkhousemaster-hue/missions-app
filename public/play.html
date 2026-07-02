@@ -6,6 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
 <link rel="stylesheet" href="/css/app.css?v=2.0.1">
+<script src="/js/theme.js?v=1"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -650,8 +651,27 @@ function showView(v) {
   if (v==='rules') loadRules();
 }
 
+// Theme-designer preview (?preview=1): render canned missions through the
+// REAL missionCard() renderer so colours preview exactly what players get.
+// No network, no sockets, no redirects; theme.js re-paints on postMessage.
+function enterPlayPreview(){
+  teamName = 'Demo Team';
+  const nameEl = document.getElementById('team-name-text');
+  if (nameEl) nameEl.textContent = teamName;
+  applyTranslations();
+  showView('missions');
+  updateScoreDisplay(3);
+  const mock = [
+    { mission_id:1, name_de:'Gruppenfoto',    description_de:'Macht ein Foto mit dem ganzen Team.', task_de:'Alle müssen zu sehen sein.', media_type:'photo', points:1, status:'accepted' },
+    { mission_id:2, name_de:'Brunnen-Video',  description_de:'Filmt euch beim Brunnen.',            task_de:'Maximal 30 Sekunden.',       media_type:'video', points:2, status:'pending' },
+    { mission_id:3, name_de:'Denkmal-Selfie', description_de:'Selfie vor dem Denkmal.',             task_de:'',                           media_type:'photo', points:1, status:'open' },
+  ];
+  document.getElementById('missions-list').innerHTML = mock.map(m => missionCard(m)).join('');
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  if (window.ArTheme && ArTheme.preview) { enterPlayPreview(); return; }
   const p = new URLSearchParams(window.location.search);
   gameId   = p.get('game')  || sessionStorage.getItem('gameId');
   teamId   = parseInt(p.get('team') || sessionStorage.getItem('teamId'));

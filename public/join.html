@@ -6,6 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS — Join</title>
 <link rel="stylesheet" href="/css/app.css?v=2.0.1">
+<script src="/js/theme.js?v=1"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. The
    team-name placeholder keeps a (lighter) grey, see .name-field below. */
@@ -490,6 +491,13 @@ function acceptSelfie() {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  // Theme-designer preview (?preview=1): static demo join screen, no network,
+  // no redirects. theme.js applies postMessage'd themes live on top.
+  if (window.ArTheme && ArTheme.preview) {
+    document.getElementById('game-id-display').textContent = 'GAME · DEMO';
+    show('create');
+    return;
+  }
   if (!gameId) { show('error'); return; }
 
   // Already joined this exact game — go straight to play / Rail Adventure
