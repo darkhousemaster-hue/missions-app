@@ -1160,34 +1160,38 @@ function applyCrTranslations(){
   if(cbl) cbl.textContent = (t('chat_back')||t('back')||'Zurück').replace(/^←\s*/,'');
 }
 
-// Theme-designer preview (?preview=1): static demo home with the real CSS
-// classes so colours preview faithfully. No GPS, no socket, no map, no network.
+// Theme-designer preview (?preview=1): demo home rendered through the REAL
+// tile renderer so the preview shows exactly what players get (two rows:
+// Missions + Checkpoints). No GPS, no socket, no map, no network. The home
+// content lives inside #cr-mission-wrap, which is hidden until the normal
+// loader reveals it — the preview must do that reveal itself, or the phone
+// shows only the "Laden…" placeholder.
 function enterCrPreview(){
   document.getElementById('cr-team-name-text').textContent = 'Demo Team';
   const sc = document.getElementById('cr-team-score');    if(sc) sc.textContent = '25';
   const tm = document.getElementById('cr-game-timer');    if(tm) tm.textContent = '58:30';
+  const ld = document.getElementById('cr-loading');       if(ld) ld.style.display = 'none';
+  const wrap = document.getElementById('cr-mission-wrap');if(wrap) wrap.style.display = 'block';
   const pf = document.getElementById('cr-progress-fill'); if(pf) pf.style.width = '40%';
   const pt = document.getElementById('cr-progress-text'); if(pt) pt.textContent = 'STOP 2 / 5';
   const pm = document.getElementById('cr-progress-mode'); if(pm) pm.textContent = 'DEMO TOUR';
-  // The mini-map can't render without Leaflet init; show a mission card demo
-  // in its place so surface/border/accent colours are visible.
+  // The mini-map can't render without Leaflet init — drop it in preview.
   const mapCard = document.getElementById('cr-mini-map-card');
-  if(mapCard){
-    const demo = document.createElement('div');
-    demo.className = 'cr-mission-card';
-    demo.style.margin = '0 18px';
-    demo.innerHTML = `
-      <div style="padding:14px 16px;">
-        <div style="font:700 10px/1 var(--mono);letter-spacing:.14em;color:var(--orange);text-transform:uppercase;margin-bottom:6px;">Mission 2</div>
-        <div style="font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.04em;color:var(--text);margin-bottom:6px;">Bahnhofplatz</div>
-        <div style="font:400 13px/1.5 var(--body);color:var(--text-dim);margin-bottom:12px;">Findet die goldene Uhr und macht ein Teamfoto davor.</div>
-        <div style="display:flex;gap:8px;">
-          <span style="flex:1;text-align:center;padding:10px 0;border-radius:var(--radius);background:var(--orange);color:#fff;font:600 13px/1 var(--body);">📷 Foto</span>
-          <span style="padding:10px 14px;border-radius:var(--radius);background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font:600 13px/1 var(--body);">💡 Hinweis</span>
-        </div>
-      </div>`;
-    mapCard.replaceWith(demo);
-  }
+  if(mapCard) mapCard.remove();
+  // Canned missions through the real renderer: one done, one current, plus two
+  // GPS checkpoints, so tile states (done/current/available) all preview.
+  rushMode = true;
+  rushMissions = [
+    { id:9001, name_de:'Gruppenfoto',   is_rush:1, use_gps:0, use_map:0, media_required:'photo', points:2, is_special:0 },
+    { id:9002, name_de:'Quiz: Bahnhof', is_rush:1, use_gps:0, use_map:0, has_answer:1, media_required:'none', points:1, is_special:0 },
+  ];
+  allMissions = [
+    { id:9003, name_de:'Bahnhofplatz',  is_rush:0, use_gps:1, use_map:1, media_required:'photo', points:3, is_special:0 },
+    { id:9004, name_de:'Goldene Uhr',   is_rush:0, use_gps:1, use_map:1, media_required:'video', points:3, is_special:0 },
+  ];
+  completedMissionIds.add(9001);
+  currentMission = rushMissions[1];
+  try { renderTiles(); } catch(e){}
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

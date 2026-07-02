@@ -555,6 +555,14 @@ app.post('/api/games', (req,res) => {
 app.delete('/api/games/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try {
+    // Statistics: a manually deleted game leaves the stats UNLESS it was
+    // completed (timer ran out) — completed games count even after the GM
+    // cleans up the list. The 72h auto-cleanup never touches game_stats.
+    const g = db.getGame(req.params.id);
+    try {
+      if (g && g.status === 'ended') db.markGameStatEnded(req.params.id);
+      else db.dropGameStat(req.params.id);
+    } catch(e){}
     const dir=path.join(UPLOAD_DIR,req.params.id);
     if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
     db.deleteGame(req.params.id);

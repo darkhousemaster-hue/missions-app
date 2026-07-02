@@ -826,6 +826,10 @@ const bumpGameStatTeams = gameId => {
 };
 const markGameStatStarted = gameId => db.prepare('UPDATE game_stats SET started_at=COALESCE(started_at,?) WHERE game_id=?').run(Date.now(), gameId);
 const markGameStatEnded   = gameId => db.prepare('UPDATE game_stats SET ended_at=COALESCE(ended_at,?) WHERE game_id=?').run(Date.now(), gameId);
+// Manual GM deletion removes the game from the statistics — it was a test or
+// an aborted game. Completed games and the 72h auto-cleanup keep their rows
+// (the cleanup cron never calls this).
+const dropGameStat = gameId => db.prepare('DELETE FROM game_stats WHERE game_id=?').run(gameId);
 const getStatsSummary = (fromMs, toMs) => {
   const f = Number(fromMs) || 0, t = Number(toMs) || (Date.now() + 86400000);
   const W = 'created_at>=? AND created_at<=?';
@@ -1326,7 +1330,7 @@ module.exports = {
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,
   saveMessage,getMessages,
   getAutoMessages,createAutoMessage,updateAutoMessage,deleteAutoMessage,
-  recordGameStat,bumpGameStatTeams,markGameStatStarted,markGameStatEnded,getStatsSummary,
+  recordGameStat,bumpGameStatTeams,markGameStatStarted,markGameStatEnded,dropGameStat,getStatsSummary,
   getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,reorderCrModes,
   getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,
   linkCrMode,getGameCrMode,isCrGame,
