@@ -348,6 +348,37 @@ try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,e
 // player pages (join/play/cityrush) consume it; the GM dashboard is never themed.
 try { db.exec("ALTER TABLE locations ADD COLUMN theme TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN theme TEXT"); } catch(e) {}
+// Play statistics. Games are deleted 72h after creation (cron cleanup), so
+// counting "what was played where" needs its own table that survives both the
+// game cleanup and deletion of locations/modes — hence the denormalized name
+// columns. One row per game, written when the game is created; team_count is
+// the PEAK number of joined teams (teams can be deleted mid-game).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS game_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT UNIQUE,
+    kind TEXT NOT NULL DEFAULT 'missions',
+    location_id INTEGER, location_name TEXT,
+    cr_mode_id INTEGER,  cr_mode_name TEXT,
+    mode_id INTEGER,     mode_name TEXT,
+    team_count INTEGER DEFAULT 0,
+    created_at INTEGER DEFAULT (unixepoch()*1000),
+    started_at INTEGER, ended_at INTEGER);
+`);
+// Seed from games that still exist (idempotent via UNIQUE(game_id)) so the
+// statistics don't start empty on servers with running games.
+try {
+  db.exec(`INSERT OR IGNORE INTO game_stats(game_id,kind,location_id,location_name,cr_mode_id,cr_mode_name,mode_id,mode_name,team_count,created_at)
+    SELECT g.id,
+      CASE WHEN cgl.cr_mode_id IS NULL THEN 'missions' ELSE 'cityrush' END,
+      g.location_id, l.name, cgl.cr_mode_id, cm.name, g.mode_id, m.name,
+      (SELECT COUNT(*) FROM teams t WHERE t.game_id=g.id), g.created_at
+    FROM games g
+    LEFT JOIN cr_game_links cgl ON cgl.game_id=g.id
+    LEFT JOIN locations l ON l.id=g.location_id
+    LEFT JOIN modes m ON m.id=g.mode_id
+    LEFT JOIN cr_modes cm ON cm.id=cgl.cr_mode_id`);
+} catch(e) {}
 // Automated messages are now authored per language so every player receives the
 // broadcast in the language THEIR app is set to. The legacy `message` column is
 // kept as the base/fallback (mirrors message_de). Older rows have only `message`,
@@ -781,6 +812,34 @@ const saveMessage = ({gameId,teamId,content,fromGm,contentLangs=null}) =>
 const getMessages = (gameId,teamId) => {
   if(teamId) return db.prepare('SELECT * FROM messages WHERE game_id=? AND (team_id=? OR team_id IS NULL) ORDER BY created_at').all(gameId,teamId);
   return db.prepare('SELECT m.*,t.name as team_name FROM messages m LEFT JOIN teams t ON t.id=m.team_id WHERE m.game_id=? ORDER BY m.created_at').all(gameId);
+};
+
+// ── Play statistics ──────────────────────────────────────────────────────────
+// One row per created game, denormalized so history survives deleting the
+// game/location/mode. team_count is a high-water mark (teams can be deleted).
+const recordGameStat = ({game_id, kind, location_id=null, location_name=null, cr_mode_id=null, cr_mode_name=null, mode_id=null, mode_name=null}) =>
+  db.prepare('INSERT OR IGNORE INTO game_stats(game_id,kind,location_id,location_name,cr_mode_id,cr_mode_name,mode_id,mode_name) VALUES(?,?,?,?,?,?,?,?)')
+    .run(game_id, kind==='cityrush'?'cityrush':'missions', location_id, location_name, cr_mode_id, cr_mode_name, mode_id, mode_name);
+const bumpGameStatTeams = gameId => {
+  const n = Number(db.prepare('SELECT COUNT(*) c FROM teams WHERE game_id=?').get(gameId).c) || 0;
+  db.prepare('UPDATE game_stats SET team_count=MAX(team_count,?) WHERE game_id=?').run(n, gameId);
+};
+const markGameStatStarted = gameId => db.prepare('UPDATE game_stats SET started_at=COALESCE(started_at,?) WHERE game_id=?').run(Date.now(), gameId);
+const markGameStatEnded   = gameId => db.prepare('UPDATE game_stats SET ended_at=COALESCE(ended_at,?) WHERE game_id=?').run(Date.now(), gameId);
+const getStatsSummary = (fromMs, toMs) => {
+  const f = Number(fromMs) || 0, t = Number(toMs) || (Date.now() + 86400000);
+  const W = 'created_at>=? AND created_at<=?';
+  return {
+    total:      db.prepare(`SELECT COUNT(*) games, COALESCE(SUM(team_count),0) teams FROM game_stats WHERE ${W}`).get(f,t),
+    byKind:     db.prepare(`SELECT kind, COUNT(*) games, COALESCE(SUM(team_count),0) teams FROM game_stats WHERE ${W} GROUP BY kind`).all(f,t),
+    byLocation: db.prepare(`SELECT COALESCE(location_name,'–') name, COUNT(*) games, COALESCE(SUM(team_count),0) teams FROM game_stats WHERE ${W} AND kind='missions' GROUP BY location_name ORDER BY games DESC, name`).all(f,t),
+    byCrMode:   db.prepare(`SELECT COALESCE(cr_mode_name,'–') name, COUNT(*) games, COALESCE(SUM(team_count),0) teams FROM game_stats WHERE ${W} AND kind='cityrush' GROUP BY cr_mode_name ORDER BY games DESC, name`).all(f,t),
+    byMonth:    db.prepare(`SELECT strftime('%Y-%m', created_at/1000, 'unixepoch') month,
+                    SUM(CASE WHEN kind='missions' THEN 1 ELSE 0 END) missions,
+                    SUM(CASE WHEN kind='cityrush' THEN 1 ELSE 0 END) cityrush,
+                    COALESCE(SUM(team_count),0) teams
+                  FROM game_stats WHERE ${W} GROUP BY month ORDER BY month DESC LIMIT 24`).all(f,t),
+  };
 };
 
 // ── Automated (scheduled) broadcast messages ────────────────────────────────
@@ -1267,6 +1326,7 @@ module.exports = {
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,
   saveMessage,getMessages,
   getAutoMessages,createAutoMessage,updateAutoMessage,deleteAutoMessage,
+  recordGameStat,bumpGameStatTeams,markGameStatStarted,markGameStatEnded,getStatsSummary,
   getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,reorderCrModes,
   getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,
   linkCrMode,getGameCrMode,isCrGame,

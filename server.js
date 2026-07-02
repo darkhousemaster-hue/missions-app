@@ -463,6 +463,12 @@ app.delete('/api/automated-messages/:id', (req,res) => {
   db.deleteAutoMessage(Number(req.params.id)); res.json({success:true});
 });
 
+// ── Play statistics (GM-gated) ───────────────────────────────────────────────
+app.get('/api/stats', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  res.json(db.getStatsSummary(req.query.from, req.query.to));
+});
+
 // ── Missions ──────────────────────────────────────────────────────────────────
 app.get('/api/missions', (req,res) => {
   const {mode_id, location_id} = req.query;
@@ -522,6 +528,21 @@ app.post('/api/games', (req,res) => {
   const gameId     = uuidv4().slice(0,8).toUpperCase();
   db.createGame({id:gameId, location_id:location_id||null, mode_id:mode_id||1, timer_duration:timerSecs, missions:missionIds});
   if(req.body.cr_mode_id) db.linkCrMode(gameId, req.body.cr_mode_id);
+  // Play statistics: one denormalized row per game, written at creation so it
+  // survives the 72h game cleanup.
+  try {
+    const cmRow = req.body.cr_mode_id ? db.getCrMode(req.body.cr_mode_id) : null;
+    db.recordGameStat({
+      game_id: gameId,
+      kind: isCrGame ? 'cityrush' : 'missions',
+      location_id: location ? location.id : null,
+      location_name: location ? location.name : null,
+      cr_mode_id: cmRow ? cmRow.id : null,
+      cr_mode_name: cmRow ? cmRow.name : null,
+      mode_id: isCrGame ? null : (mode_id||1),
+      mode_name: (!isCrGame && mode) ? mode.name : null,
+    });
+  } catch(e){ console.warn('game stat record failed', e); }
   creatingLocks.delete(lockKey);
   const publicUrl = db.getSetting('public_url')||`http://localhost:${PORT}`;
   const joinUrl   = `${publicUrl}/join.html?game=${gameId}`;
@@ -647,6 +668,7 @@ app.post('/api/games/:gameId/teams', (req,res) => {
     gps_anchor_key: req.body.gps_anchor_key || req.body.gpsAnchorKey || null,
   });
   const team=db.getTeam(teamId);
+  try { db.bumpGameStatTeams(req.params.gameId); } catch(e){}
   io.to(`gm_${req.params.gameId}`).emit('team_joined',team);
   // Refresh the GM rankings so a newly-joined team appears immediately — joins
   // alone don't change scores, so without this the list stayed at whoever was
@@ -902,6 +924,7 @@ app.post('/api/games/:gameId/timer', (req,res) => {
   const now=Date.now();
   if(action==='start' && !game.timer_running) {
     db.updateGame(req.params.gameId,{timer_started_at: now-(game.timer_paused_elapsed||0), timer_running:1, status:'active'});
+    try { db.markGameStatStarted(req.params.gameId); } catch(e){}
   } else if(action==='pause' && game.timer_running && game.timer_started_at) {
     db.updateGame(req.params.gameId,{timer_paused_elapsed: now-game.timer_started_at, timer_running:0});
   } else if(action==='adjust' && typeof seconds==='number') {
@@ -1909,6 +1932,7 @@ setInterval(() => {
     if(state.remaining<=0) {
       delete _autoSent[game.id];
       db.updateGame(game.id,{timer_running:0,status:'ended'});
+      try { db.markGameStatEnded(game.id); } catch(e){}
       // Pick timeout message for the game's language (fallback chain)
       const lang_key = 'timeout_text'; // base key
       const msg = db.getSetting('timeout_text_de') || db.getSetting('timeout_text') || 'Die Zeit ist abgelaufen!';
