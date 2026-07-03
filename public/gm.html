@@ -3197,6 +3197,25 @@ function playSubmissionSound(){
     o.start(t); o.stop(t + 0.3);
   });
 }
+// Incoming PLAYER chat message. Deliberately the opposite character of the
+// submission chime — lower, descending, triangle timbre, quicker — so the GM
+// can tell "message" from "new submission" without looking. Same 🔔 mute.
+function playChatSound(){
+  if(!_gmSoundOn) return;
+  const ctx = _ensureGmAudio();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  [[620,0],[465,0.1]].forEach(([freq,delay]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = freq;
+    o.connect(g); g.connect(ctx.destination);
+    const t = now + delay;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.start(t); o.stop(t + 0.2);
+  });
+}
 function applySoundToggleUi(){
   const b = document.getElementById('btn-sound-toggle');
   if(!b) return;
@@ -3308,6 +3327,9 @@ function onChatMessage(msg){
   }
   // Skip GM's own direct messages - already added optimistically in sendGmChat
   if(fromGm) return;
+  // Player message from ANY team → distinct chat tone (not the submission
+  // chime), so the GM can tell the two apart by ear.
+  playChatSound();
   // Only show player messages for the selected team
   if(msg.teamId===selectedTeamId){
     const box=document.getElementById('gm-chat-messages');
