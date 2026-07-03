@@ -1881,11 +1881,6 @@ function updateMiniMap(){
   if(!crMiniMap) return;
   if(!crMiniLayer) crMiniLayer = L.layerGroup().addTo(crMiniMap);
   crMiniLayer.clearLayers();
-  // Player position.
-  if(typeof myLat === 'number' && typeof myLng === 'number'){
-    L.circleMarker([myLat,myLng], { radius:6, color:'#5AA0FF', fillColor:'#5AA0FF', fillOpacity:1, weight:2 }).addTo(crMiniLayer);
-    L.circleMarker([myLat,myLng], { radius:14, color:'#5AA0FF', fillColor:'#5AA0FF', fillOpacity:.18, weight:0 }).addTo(crMiniLayer);
-  }
   // Show every show_on_map stop. The current mission gets the orange
   // arrival ring + a bigger marker; others are small neutral dots.
   const points = [];
@@ -1901,6 +1896,12 @@ function updateMiniMap(){
     }
     points.push([m.lat,m.lng]);
   });
+  // Player position LAST — SVG circle markers stack in draw order, so drawing
+  // it after the mission dots keeps "where am I" on top when they overlap.
+  if(typeof myLat === 'number' && typeof myLng === 'number'){
+    L.circleMarker([myLat,myLng], { radius:6, color:'#5AA0FF', fillColor:'#5AA0FF', fillOpacity:1, weight:2 }).addTo(crMiniLayer);
+    L.circleMarker([myLat,myLng], { radius:14, color:'#5AA0FF', fillColor:'#5AA0FF', fillOpacity:.18, weight:0 }).addTo(crMiniLayer);
+  }
   if(typeof myLat === 'number' && typeof myLng === 'number') points.push([myLat,myLng]);
   // Fit to all points; fall back to current mission if nothing else.
   if(points.length >= 2){
@@ -3749,7 +3750,9 @@ function updateMyMapMarker(lat, lng){
   updateMiniMap();
   if(!crMap) return;
   if(!myMarker){
-    myMarker = L.marker([lat,lng], {icon:makeMarkerIcon('Ich',true)}).addTo(crMap);
+    // zIndexOffset lifts the own-position marker above every mission marker
+    // (default 0) so "where am I" never hides behind a target.
+    myMarker = L.marker([lat,lng], {icon:makeMarkerIcon('Ich',true), zIndexOffset:1000}).addTo(crMap);
     // Tapping your own marker should zoom the map in on your position —
     // it shouldn't act as a shortcut to the mission popup (that's what the
     // missions tab is for).
@@ -3793,7 +3796,7 @@ function onGpsUpdate({teamId:tid, lat, lng, playerKey}){
   // in every other player's browser.
   const label = esc(team ? team.name.substring(0,3).toUpperCase() : '?');
   if(teamMarkers[markerKey]) teamMarkers[markerKey].setLatLng([lat,lng]);
-  else teamMarkers[markerKey] = L.marker([lat,lng],{icon:makeMarkerIcon(label,false)}).addTo(crMap)
+  else teamMarkers[markerKey] = L.marker([lat,lng],{icon:makeMarkerIcon(label,false), zIndexOffset:900}).addTo(crMap)
     .bindPopup(esc(team?team.name:'Team'));
 }
 

@@ -2449,6 +2449,7 @@ async function openDashboard(gameId){
       gmFreezes = list || [];
     } catch(e) { gmFreezes = []; }
     if(currentGame && currentGame.teams) currentGame.teams.forEach(t => paintFrozenTag(t.id));
+    try { refreshGmMarkerLabels(); } catch(e){}   // flip map markers to/from the ice look
   });
   socket.on('team_joined',(team)=>{
     // Cache the team so subsequent gps_update events can resolve a real name
@@ -3371,10 +3372,19 @@ function paintFrozenTag(teamId){
   if(remEl) remEl.textContent = `${mm}:${ss}`;
   tag.style.display = 'inline-flex';
 }
-// Repaint frozen tags every second so countdowns tick smoothly.
+// Repaint frozen tags every second so countdowns tick smoothly. Also flip map
+// markers between the normal and ice look when a team's frozen state changes —
+// freeze expiry has no socket event, so this tick is what thaws the marker.
 setInterval(() => {
   if(currentGame && currentGame.teams) currentGame.teams.forEach(t => paintFrozenTag(t.id));
   if(selectedTeamId) paintTeamDetailFreezeButtons(selectedTeamId);
+  Object.keys(gmCrMarkers).forEach(tid => {
+    const mk = gmCrMarkers[tid];
+    if(!mk) return;
+    if(mk._arFrozen !== isTeamFrozenNow(Number(tid))){
+      try { const ll = mk.getLatLng(); upsertGmTeamMarker(Number(tid), ll.lat, ll.lng); } catch(e){}
+    }
+  });
 }, 1000);
 
 // Helper: is this team currently frozen (via the cached gmFreezes list)?
@@ -3685,14 +3695,29 @@ function upsertGmTeamMarker(tid, lat, lng){
   // L.marker()/setLatLng() makes Leaflet store a null LatLng and throw on the
   // next projection ("Cannot read properties of null (reading 'lat')").
   if(!gmIsFiniteCoord(lat) || !gmIsFiniteCoord(lng)) return;
-  const label = gmTeamInitials(tid);
-  const name  = gmTeamName(tid);
-  const html  = `<div style="background:var(--red);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">${esc(label)}</div>`;
+  const label  = gmTeamInitials(tid);
+  const name   = gmTeamName(tid);
+  const frozen = isTeamFrozenNow(Number(tid));
+  // Frozen teams turn ice-blue with icicles hanging off the marker (+ a ❄
+  // badge), so the GM sees the freeze on the map at a glance. The icicle SVG
+  // overflows the 30px icon box on purpose; divIcons don't clip.
+  const html = frozen
+    ? `<div class="gm-marker-frozen" style="position:relative;width:30px;height:30px;">
+        <div style="background:linear-gradient(180deg,#a5e3ff 0%,#2f9fdd 100%);color:#083c5a;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;border:2px solid #eaf9ff;box-shadow:0 0 10px rgba(120,200,255,.8);">${esc(label)}</div>
+        <svg width="24" height="12" viewBox="0 0 24 12" style="position:absolute;left:3px;top:26px;pointer-events:none;">
+          <path d="M1 0 L3.2 8 L5.4 0 Z"      fill="#cdeeff" stroke="#8fd6f9" stroke-width=".6"/>
+          <path d="M7 0 L8.8 5 L10.6 0 Z"     fill="#cdeeff" stroke="#8fd6f9" stroke-width=".6"/>
+          <path d="M12.2 0 L14.6 11.5 L17 0 Z" fill="#cdeeff" stroke="#8fd6f9" stroke-width=".6"/>
+          <path d="M18.6 0 L20.4 6 L22.2 0 Z" fill="#cdeeff" stroke="#8fd6f9" stroke-width=".6"/>
+        </svg>
+        <span style="position:absolute;top:-8px;right:-8px;font-size:12px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));">❄️</span>
+      </div>`
+    : `<div style="background:var(--red);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);">${esc(label)}</div>`;
   const icon  = L.divIcon({className:'', html, iconSize:[30,30], iconAnchor:[15,15]});
   // Leaflet renders popup/tooltip *strings* as HTML, so a team name like
   // `<img onerror=…>` would execute in the GM's browser (which holds the
   // settings password). Escape before handing the name to Leaflet.
-  const safeName = esc(name);
+  const safeName = esc(name) + (frozen ? ' ❄️' : '');
   let mk = gmCrMarkers[tid];
   if(mk){
     mk.setLatLng([lat, lng]);
@@ -3702,11 +3727,14 @@ function upsertGmTeamMarker(tid, lat, lng){
     if(mk.getTooltip()) mk.setTooltipContent(safeName);
     else mk.bindTooltip(safeName, {permanent:false, direction:'top', offset:[0,-16]});
   } else {
-    mk = L.marker([lat, lng], {icon}).addTo(gmCrMap)
+    // zIndexOffset lifts team markers above every mission/checkpoint marker
+    // (default offset 0), so a team standing on a target stays findable.
+    mk = L.marker([lat, lng], {icon, zIndexOffset:1000}).addTo(gmCrMap)
       .bindPopup(safeName)
       .bindTooltip(safeName, {permanent:false, direction:'top', offset:[0,-16]});
     gmCrMarkers[tid] = mk;
   }
+  mk._arFrozen = frozen;   // remembered so the 1s tick only rebuilds on state change
 }
 // When a new team joins mid-game, refresh any existing markers so labels and
 // initials reflect the freshly-known name (was previously stuck on "Team").
