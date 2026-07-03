@@ -154,12 +154,15 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .td-row .td-reset{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.95rem;padding:.1rem .3rem;flex-shrink:0;}
 .td-row .td-reset:hover{color:var(--text);}
 .td-row input[type=text]{flex:1;min-width:0;}
-.td-preview{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start;justify-content:center;flex:2 1 560px;}
+/* Sticky: the phones pin to the top of the designer's scroll area so they stay
+   visible while the GM scrolls through the lower field groups. align-self keeps
+   the box at its own height (a stretched flex item can't stick). */
+.td-preview{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start;justify-content:center;flex:2 1 560px;position:sticky;top:0;align-self:flex-start;}
 .td-phone{display:flex;flex-direction:column;align-items:center;gap:.55rem;}
 .td-phone .td-lbl{font:700 .66rem/1 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--text-muted);}
 .td-bezel{width:262px;height:546px;border-radius:32px;border:9px solid #050505;background:#050505;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.55);}
 .td-bezel iframe{width:375px;height:812px;border:0;transform:scale(.6507);transform-origin:0 0;pointer-events:none;display:block;}
-@media(max-width:768px){ .td-preview{flex:1 1 100%;} .td-bezel{width:224px;height:468px;} .td-bezel iframe{transform:scale(.5493);} }
+@media(max-width:768px){ .td-preview{flex:1 1 100%;position:static;} .td-bezel{width:224px;height:468px;} .td-bezel iframe{transform:scale(.5493);} }
 /* ── Play statistics tables ── */
 .stats-table{width:100%;border-collapse:collapse;font:400 .85rem/1.4 var(--body);}
 .stats-table th{font:700 .66rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:.3rem .5rem;border-bottom:1px solid var(--hairline);}
