@@ -154,6 +154,7 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .td-row .td-reset{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.95rem;padding:.1rem .3rem;flex-shrink:0;}
 .td-row .td-reset:hover{color:var(--text);}
 .td-row input[type=text]{flex:1;min-width:0;}
+.td-row.hl{outline:2px solid var(--orange);outline-offset:1px;border-radius:6px;background:var(--orange-soft);}
 /* Sticky: the phones pin to the top of the designer's scroll area so they stay
    visible while the GM scrolls through the lower field groups. align-self keeps
    the box at its own height (a stretched flex item can't stick). */
@@ -161,7 +162,9 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .td-phone{display:flex;flex-direction:column;align-items:center;gap:.55rem;}
 .td-phone .td-lbl{font:700 .66rem/1 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--text-muted);}
 .td-bezel{width:262px;height:546px;border-radius:32px;border:9px solid #050505;background:#050505;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.55);}
-.td-bezel iframe{width:375px;height:812px;border:0;transform:scale(.6507);transform-origin:0 0;pointer-events:none;display:block;}
+/* pointer-events ON so hovering the preview can report which role is under the
+   cursor; the preview page (theme.js) blocks clicks so nothing navigates. */
+.td-bezel iframe{width:375px;height:812px;border:0;transform:scale(.6507);transform-origin:0 0;display:block;}
 @media(max-width:768px){ .td-preview{flex:1 1 100%;position:static;} .td-bezel{width:224px;height:468px;} .td-bezel iframe{transform:scale(.5493);} }
 /* ── Play statistics tables ── */
 .stats-table{width:100%;border-collapse:collapse;font:400 .85rem/1.4 var(--body);}
@@ -1334,7 +1337,7 @@ const GMT={
   'ruleset-created':'Regelwerk erstellt!','cannot-del-default-rs':'Standard-Regelwerk kann nicht gelöscht werden.',
   'cr-mode-created':'Rail Adventure Modus erstellt!','pick-mode-first':'Erst einen Modus auswählen',
   'rank-tab':'Rangliste','s-msgs-nav':'Auto-Nachrichten','s-msgs-title':'Automatische Nachrichten','s-msgs-subtitle':'Sende automatisch eine Nachricht an alle Teams, wenn die Restzeit einen bestimmten Wert erreicht.','s-msgs-add':'Nachricht hinzufügen','s-msgs-when':'Restzeit (Minuten)','s-msgs-mode':'Spielmodus','s-msgs-loc':'Standort','s-msgs-all-loc':'Alle Standorte','s-msgs-text':'Nachricht','s-msgs-ph':'z. B. Noch 5 Minuten!','s-msgs-lang-hint':'Jedes Team erhält die Nachricht in der Sprache, die in seiner App eingestellt ist.',
-'th-label':'Farbschema (Spieler)','th-hint-loc':'Eigenes Aussehen der Spieler-App für diesen Standort. Standard = aktuelles Design.','th-hint-mode':'Eigenes Aussehen der Spieler-App für diesen Rail Adventure Modus. Standard = aktuelles Design.','th-open':'Farbschema bearbeiten','th-title':'Farbschema','th-g-brand':'Logo & Text','th-g-bg':'Hintergrund','th-g-surface':'Flächen','th-g-text':'Text','th-g-accent':'Akzente','th-stamp':'Kopfzeile (klein)','th-wordmark':'Wortmarke','th-logo':'Logo-Bild (ersetzt Text)','th-logo-up':'⬆ Hochladen','th-reset':'Standard','th-reset-all':'Standard wiederherstellen','th-reset-confirm':'Alle Farben, Texte und das Logo auf den Standard zurücksetzen?','th-prev-join':'Beitritt','th-prev-play':'Spiel','th-hint':'Leere Felder behalten den Standard. Änderungen erscheinen sofort in der Vorschau.','th-saved':'Farbschema gespeichert!','th-v-bg':'App-Hintergrund','th-v-bg2':'Leisten (dunkel)','th-v-bg3':'Kopfzeile','th-v-surface':'Karten','th-v-surface2':'Eingaben & Buttons','th-v-border':'Rahmenlinien','th-v-text':'Text','th-v-text-dim':'Text sekundär','th-v-text-muted':'Text gedämpft','th-v-red':'Marke & Wortmarke','th-v-orange':'Buttons & Akzent','th-v-green':'Erfolg',
+'th-label':'Farbschema (Spieler)','th-hint-loc':'Eigenes Aussehen der Spieler-App für diesen Standort. Standard = aktuelles Design.','th-hint-mode':'Eigenes Aussehen der Spieler-App für diesen Rail Adventure Modus. Standard = aktuelles Design.','th-open':'Farbschema bearbeiten','th-title':'Farbschema','th-g-brand':'Logo & Text','th-g-tile':'Kacheln','th-g-button':'Buttons','th-g-input':'Eingabefelder','th-g-border':'Rahmen','th-v-tile':'Kachel-Füllung','th-v-tile-text':'Kachel-Text','th-v-btn-bg':'Button-Füllung','th-v-btn-text':'Button-Text','th-v-input-bg':'Feld-Füllung','th-v-logo':'Logo & Wortmarke','th-border-width':'Rahmenstärke','th-g-bg':'Hintergrund','th-g-surface':'Flächen','th-g-text':'Text','th-g-accent':'Akzente','th-stamp':'Kopfzeile (klein)','th-wordmark':'Wortmarke','th-logo':'Logo-Bild (ersetzt Text)','th-logo-up':'⬆ Hochladen','th-reset':'Standard','th-reset-all':'Standard wiederherstellen','th-reset-confirm':'Alle Farben, Texte und das Logo auf den Standard zurücksetzen?','th-prev-join':'Beitritt','th-prev-play':'Spiel','th-hint':'Leere Felder behalten den Standard. Änderungen erscheinen sofort in der Vorschau.','th-saved':'Farbschema gespeichert!','th-v-bg':'App-Hintergrund','th-v-bg2':'Leisten (dunkel)','th-v-bg3':'Kopfzeile','th-v-surface':'Karten','th-v-surface2':'Eingaben & Buttons','th-v-border':'Rahmenlinien','th-v-text':'Text','th-v-text-dim':'Text sekundär','th-v-text-muted':'Text gedämpft','th-v-red':'Marke & Wortmarke','th-v-orange':'Buttons & Akzent','th-v-green':'Erfolg',
 'st-stats-lbl':'Statistik','s-stats-title':'Statistik','s-stats-subtitle':'Wie viele Spiele wo gespielt wurden. Teams = Höchststand pro Spiel.','s-stats-period':'Zeitraum','s-stats-p-all':'Gesamt','s-stats-p-year':'Dieses Jahr','s-stats-p-month':'Dieser Monat','s-stats-p-30':'Letzte 30 Tage','stats-games':'Spiele','stats-teams':'Teams','stats-total':'Spiele gesamt','stats-teams-total':'Teams gesamt','stats-by-loc':'Nach Standort (MiSSiONS)','stats-by-mode':'Nach Rail Adventure Modus','stats-by-month':'Pro Monat','stats-loc':'Standort','stats-mode':'Modus','stats-month':'Monat','stats-empty':'Noch keine Spiele im gewählten Zeitraum. Die Zählung beginnt mit dieser Version; ältere, bereits bereinigte Spiele fehlen.','stats-error':'Statistik konnte nicht geladen werden.','s-msgs-empty':'Noch keine automatischen Nachrichten.','s-msgs-del-confirm':'Diese automatische Nachricht löschen?','s-autoupd-label':'Beim Start auf Updates prüfen','s-autoupd-sub':'Zeigt automatisch ein Fenster, wenn eine neue Version verfügbar ist.','cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
   'hint-saved':'Hinweis gespeichert!','c-del-hint':'Hinweis löschen?','hint-not-found':'Hinweis nicht gefunden',
   'invalid-json':'Ungültige JSON-Datei','invalid-format':'Kein gültiges Format (missions-Array fehlt)',
@@ -1456,7 +1459,7 @@ const GMT={
   'ruleset-created':'Ruleset created!','cannot-del-default-rs':"Default ruleset can't be deleted.",
   'cr-mode-created':'Rail Adventure mode created!','pick-mode-first':'Pick a mode first',
   'rank-tab':'Rankings','s-msgs-nav':'Auto messages','s-msgs-title':'Automated messages','s-msgs-subtitle':'Automatically send a message to all teams when the remaining time reaches a set value.','s-msgs-add':'Add message','s-msgs-when':'Remaining time (minutes)','s-msgs-mode':'Game mode','s-msgs-loc':'Location','s-msgs-all-loc':'All locations','s-msgs-text':'Message','s-msgs-ph':'e.g. 5 minutes left!','s-msgs-lang-hint':'Each team receives the message in the language their app is set to.',
-'th-label':'Colour scheme (players)','th-hint-loc':'Custom look of the player app for this location. Default = the current design.','th-hint-mode':'Custom look of the player app for this Rail Adventure mode. Default = the current design.','th-open':'Edit colour scheme','th-title':'Colour scheme','th-g-brand':'Logo & text','th-g-bg':'Background','th-g-surface':'Surfaces','th-g-text':'Text','th-g-accent':'Accents','th-stamp':'Header (small)','th-wordmark':'Wordmark','th-logo':'Logo image (replaces text)','th-logo-up':'⬆ Upload','th-reset':'Default','th-reset-all':'Restore defaults','th-reset-confirm':'Reset all colours, texts and the logo to the default?','th-prev-join':'Join','th-prev-play':'Game','th-hint':'Empty fields keep the default. Changes appear instantly in the preview.','th-saved':'Colour scheme saved!','th-v-bg':'App background','th-v-bg2':'Bars (dark)','th-v-bg3':'Header','th-v-surface':'Cards','th-v-surface2':'Inputs & buttons','th-v-border':'Borders','th-v-text':'Text','th-v-text-dim':'Secondary text','th-v-text-muted':'Muted text','th-v-red':'Brand & wordmark','th-v-orange':'Buttons & accent','th-v-green':'Success',
+'th-label':'Colour scheme (players)','th-hint-loc':'Custom look of the player app for this location. Default = the current design.','th-hint-mode':'Custom look of the player app for this Rail Adventure mode. Default = the current design.','th-open':'Edit colour scheme','th-title':'Colour scheme','th-g-brand':'Logo & text','th-g-tile':'Tiles','th-g-button':'Buttons','th-g-input':'Input fields','th-g-border':'Border','th-v-tile':'Tile fill','th-v-tile-text':'Tile text','th-v-btn-bg':'Button fill','th-v-btn-text':'Button text','th-v-input-bg':'Field fill','th-v-logo':'Logo & wordmark','th-border-width':'Border thickness','th-g-bg':'Background','th-g-surface':'Surfaces','th-g-text':'Text','th-g-accent':'Accents','th-stamp':'Header (small)','th-wordmark':'Wordmark','th-logo':'Logo image (replaces text)','th-logo-up':'⬆ Upload','th-reset':'Default','th-reset-all':'Restore defaults','th-reset-confirm':'Reset all colours, texts and the logo to the default?','th-prev-join':'Join','th-prev-play':'Game','th-hint':'Empty fields keep the default. Changes appear instantly in the preview.','th-saved':'Colour scheme saved!','th-v-bg':'App background','th-v-bg2':'Bars (dark)','th-v-bg3':'Header','th-v-surface':'Cards','th-v-surface2':'Inputs & buttons','th-v-border':'Borders','th-v-text':'Text','th-v-text-dim':'Secondary text','th-v-text-muted':'Muted text','th-v-red':'Brand & wordmark','th-v-orange':'Buttons & accent','th-v-green':'Success',
 'st-stats-lbl':'Statistics','s-stats-title':'Statistics','s-stats-subtitle':'How many games were played, and where. Teams = peak per game.','s-stats-period':'Period','s-stats-p-all':'All time','s-stats-p-year':'This year','s-stats-p-month':'This month','s-stats-p-30':'Last 30 days','stats-games':'Games','stats-teams':'Teams','stats-total':'Games total','stats-teams-total':'Teams total','stats-by-loc':'By location (MiSSiONS)','stats-by-mode':'By Rail Adventure mode','stats-by-month':'Per month','stats-loc':'Location','stats-mode':'Mode','stats-month':'Month','stats-empty':'No games in the chosen period yet. Counting starts with this version; older, already cleaned-up games are missing.','stats-error':'Could not load the statistics.','s-msgs-empty':'No automated messages yet.','s-msgs-del-confirm':'Delete this automated message?','s-autoupd-label':'Check for updates on startup','s-autoupd-sub':'Automatically shows a window when a new version is available.','cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
   'hint-saved':'Hint saved!','c-del-hint':'Delete hint?','hint-not-found':'Hint not found',
   'invalid-json':'Invalid JSON file','invalid-format':'Invalid format (missions array missing)',
@@ -1574,7 +1577,7 @@ const GMT={
   'ruleset-created':'Jeu de règles créé !','cannot-del-default-rs':'Le jeu de règles par défaut ne peut pas être supprimé.',
   'cr-mode-created':'Mode Rail Adventure créé !','pick-mode-first':"Choisis d'abord un mode",
   'rank-tab':'Classement','s-msgs-nav':'Messages auto','s-msgs-title':'Messages automatiques','s-msgs-subtitle':'Envoie automatiquement un message à toutes les équipes quand le temps restant atteint une valeur définie.','s-msgs-add':'Ajouter un message','s-msgs-when':'Temps restant (minutes)','s-msgs-mode':'Mode de jeu','s-msgs-loc':'Lieu','s-msgs-all-loc':'Tous les lieux','s-msgs-text':'Message','s-msgs-ph':'p. ex. Plus que 5 minutes !','s-msgs-lang-hint':'Chaque équipe reçoit le message dans la langue configurée dans son application.',
-'th-label':'Thème de couleurs (joueurs)','th-hint-loc':'Apparence personnalisée de l\'app joueur pour ce lieu. Standard = design actuel.','th-hint-mode':'Apparence personnalisée de l\'app joueur pour ce mode Rail Adventure. Standard = design actuel.','th-open':'Modifier le thème','th-title':'Thème de couleurs','th-g-brand':'Logo & texte','th-g-bg':'Arrière-plan','th-g-surface':'Surfaces','th-g-text':'Texte','th-g-accent':'Accents','th-stamp':'En-tête (petit)','th-wordmark':'Logotype','th-logo':'Image du logo (remplace le texte)','th-logo-up':'⬆ Téléverser','th-reset':'Standard','th-reset-all':'Restaurer le standard','th-reset-confirm':'Réinitialiser toutes les couleurs, les textes et le logo au standard ?','th-prev-join':'Inscription','th-prev-play':'Jeu','th-hint':'Les champs vides gardent le standard. Les changements apparaissent immédiatement dans l\'aperçu.','th-saved':'Thème enregistré !','th-v-bg':'Fond de l\'app','th-v-bg2':'Barres (sombre)','th-v-bg3':'En-tête','th-v-surface':'Cartes','th-v-surface2':'Champs & boutons','th-v-border':'Bordures','th-v-text':'Texte','th-v-text-dim':'Texte secondaire','th-v-text-muted':'Texte atténué','th-v-red':'Marque & logotype','th-v-orange':'Boutons & accent','th-v-green':'Succès',
+'th-label':'Thème de couleurs (joueurs)','th-hint-loc':'Apparence personnalisée de l\'app joueur pour ce lieu. Standard = design actuel.','th-hint-mode':'Apparence personnalisée de l\'app joueur pour ce mode Rail Adventure. Standard = design actuel.','th-open':'Modifier le thème','th-title':'Thème de couleurs','th-g-brand':'Logo & texte','th-g-tile':'Tuiles','th-g-button':'Boutons','th-g-input':'Champs','th-g-border':'Bordure','th-v-tile':'Fond des tuiles','th-v-tile-text':'Texte des tuiles','th-v-btn-bg':'Fond des boutons','th-v-btn-text':'Texte des boutons','th-v-input-bg':'Fond des champs','th-v-logo':'Logo & logotype','th-border-width':'Épaisseur de bordure','th-g-bg':'Arrière-plan','th-g-surface':'Surfaces','th-g-text':'Texte','th-g-accent':'Accents','th-stamp':'En-tête (petit)','th-wordmark':'Logotype','th-logo':'Image du logo (remplace le texte)','th-logo-up':'⬆ Téléverser','th-reset':'Standard','th-reset-all':'Restaurer le standard','th-reset-confirm':'Réinitialiser toutes les couleurs, les textes et le logo au standard ?','th-prev-join':'Inscription','th-prev-play':'Jeu','th-hint':'Les champs vides gardent le standard. Les changements apparaissent immédiatement dans l\'aperçu.','th-saved':'Thème enregistré !','th-v-bg':'Fond de l\'app','th-v-bg2':'Barres (sombre)','th-v-bg3':'En-tête','th-v-surface':'Cartes','th-v-surface2':'Champs & boutons','th-v-border':'Bordures','th-v-text':'Texte','th-v-text-dim':'Texte secondaire','th-v-text-muted':'Texte atténué','th-v-red':'Marque & logotype','th-v-orange':'Boutons & accent','th-v-green':'Succès',
 'st-stats-lbl':'Statistiques','s-stats-title':'Statistiques','s-stats-subtitle':'Combien de parties ont été jouées, et où. Équipes = maximum par partie.','s-stats-period':'Période','s-stats-p-all':'Tout','s-stats-p-year':'Cette année','s-stats-p-month':'Ce mois-ci','s-stats-p-30':'30 derniers jours','stats-games':'Parties','stats-teams':'Équipes','stats-total':'Parties au total','stats-teams-total':'Équipes au total','stats-by-loc':'Par lieu (MiSSiONS)','stats-by-mode':'Par mode Rail Adventure','stats-by-month':'Par mois','stats-loc':'Lieu','stats-mode':'Mode','stats-month':'Mois','stats-empty':'Aucune partie sur la période choisie. Le comptage commence avec cette version ; les parties déjà nettoyées manquent.','stats-error':'Impossible de charger les statistiques.','s-msgs-empty':'Aucun message automatique pour l\'instant.','s-msgs-del-confirm':'Supprimer ce message automatique ?','s-autoupd-label':'Vérifier les mises à jour au démarrage','s-autoupd-sub':'Affiche automatiquement une fenêtre quand une nouvelle version est disponible.','cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
   'hint-saved':'Indice enregistré !','c-del-hint':"Supprimer l'indice ?",'hint-not-found':'Indice introuvable',
   'invalid-json':'Fichier JSON invalide','invalid-format':'Format invalide (tableau missions manquant)',
@@ -1692,7 +1695,7 @@ const GMT={
   'ruleset-created':'Set di regole creato!','cannot-del-default-rs':'Set di regole predefinito non eliminabile.',
   'cr-mode-created':'Modalità Rail Adventure creata!','pick-mode-first':'Prima seleziona una modalità',
   'rank-tab':'Classifica','s-msgs-nav':'Messaggi auto','s-msgs-title':'Messaggi automatici','s-msgs-subtitle':'Invia automaticamente un messaggio a tutte le squadre quando il tempo rimanente raggiunge un valore.','s-msgs-add':'Aggiungi messaggio','s-msgs-when':'Tempo rimanente (minuti)','s-msgs-mode':'Modalità','s-msgs-loc':'Luogo','s-msgs-all-loc':'Tutti i luoghi','s-msgs-text':'Messaggio','s-msgs-ph':'es. Ancora 5 minuti!','s-msgs-lang-hint':'Ogni squadra riceve il messaggio nella lingua impostata nella sua app.',
-'th-label':'Schema colori (giocatori)','th-hint-loc':'Aspetto personalizzato dell\'app giocatori per questa sede. Standard = design attuale.','th-hint-mode':'Aspetto personalizzato dell\'app giocatori per questa modalità Rail Adventure. Standard = design attuale.','th-open':'Modifica schema colori','th-title':'Schema colori','th-g-brand':'Logo & testo','th-g-bg':'Sfondo','th-g-surface':'Superfici','th-g-text':'Testo','th-g-accent':'Accenti','th-stamp':'Intestazione (piccola)','th-wordmark':'Logotipo','th-logo':'Immagine logo (sostituisce il testo)','th-logo-up':'⬆ Carica','th-reset':'Standard','th-reset-all':'Ripristina lo standard','th-reset-confirm':'Ripristinare tutti i colori, i testi e il logo allo standard?','th-prev-join':'Iscrizione','th-prev-play':'Gioco','th-hint':'I campi vuoti mantengono lo standard. Le modifiche appaiono subito nell\'anteprima.','th-saved':'Schema colori salvato!','th-v-bg':'Sfondo dell\'app','th-v-bg2':'Barre (scuro)','th-v-bg3':'Intestazione','th-v-surface':'Schede','th-v-surface2':'Campi & pulsanti','th-v-border':'Bordi','th-v-text':'Testo','th-v-text-dim':'Testo secondario','th-v-text-muted':'Testo attenuato','th-v-red':'Marchio & logotipo','th-v-orange':'Pulsanti & accento','th-v-green':'Successo',
+'th-label':'Schema colori (giocatori)','th-hint-loc':'Aspetto personalizzato dell\'app giocatori per questa sede. Standard = design attuale.','th-hint-mode':'Aspetto personalizzato dell\'app giocatori per questa modalità Rail Adventure. Standard = design attuale.','th-open':'Modifica schema colori','th-title':'Schema colori','th-g-brand':'Logo & testo','th-g-tile':'Caselle','th-g-button':'Pulsanti','th-g-input':'Campi','th-g-border':'Bordo','th-v-tile':'Sfondo caselle','th-v-tile-text':'Testo caselle','th-v-btn-bg':'Sfondo pulsanti','th-v-btn-text':'Testo pulsanti','th-v-input-bg':'Sfondo campi','th-v-logo':'Logo & logotipo','th-border-width':'Spessore bordo','th-g-bg':'Sfondo','th-g-surface':'Superfici','th-g-text':'Testo','th-g-accent':'Accenti','th-stamp':'Intestazione (piccola)','th-wordmark':'Logotipo','th-logo':'Immagine logo (sostituisce il testo)','th-logo-up':'⬆ Carica','th-reset':'Standard','th-reset-all':'Ripristina lo standard','th-reset-confirm':'Ripristinare tutti i colori, i testi e il logo allo standard?','th-prev-join':'Iscrizione','th-prev-play':'Gioco','th-hint':'I campi vuoti mantengono lo standard. Le modifiche appaiono subito nell\'anteprima.','th-saved':'Schema colori salvato!','th-v-bg':'Sfondo dell\'app','th-v-bg2':'Barre (scuro)','th-v-bg3':'Intestazione','th-v-surface':'Schede','th-v-surface2':'Campi & pulsanti','th-v-border':'Bordi','th-v-text':'Testo','th-v-text-dim':'Testo secondario','th-v-text-muted':'Testo attenuato','th-v-red':'Marchio & logotipo','th-v-orange':'Pulsanti & accento','th-v-green':'Successo',
 'st-stats-lbl':'Statistiche','s-stats-title':'Statistiche','s-stats-subtitle':'Quante partite sono state giocate, e dove. Squadre = massimo per partita.','s-stats-period':'Periodo','s-stats-p-all':'Totale','s-stats-p-year':'Quest\'anno','s-stats-p-month':'Questo mese','s-stats-p-30':'Ultimi 30 giorni','stats-games':'Partite','stats-teams':'Squadre','stats-total':'Partite totali','stats-teams-total':'Squadre totali','stats-by-loc':'Per sede (MiSSiONS)','stats-by-mode':'Per modalità Rail Adventure','stats-by-month':'Per mese','stats-loc':'Sede','stats-mode':'Modalità','stats-month':'Mese','stats-empty':'Nessuna partita nel periodo scelto. Il conteggio inizia con questa versione; le partite già ripulite mancano.','stats-error':'Impossibile caricare le statistiche.','s-msgs-empty':'Nessun messaggio automatico.','s-msgs-del-confirm':'Eliminare questo messaggio automatico?','s-autoupd-label':'Controlla aggiornamenti all\'avvio','s-autoupd-sub':'Mostra automaticamente una finestra quando è disponibile una nuova versione.','cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
   'hint-saved':'Suggerimento salvato!','c-del-hint':'Eliminare il suggerimento?','hint-not-found':'Suggerimento non trovato',
   'invalid-json':'File JSON non valido','invalid-format':"Formato non valido (manca l'array missions)",
@@ -1810,7 +1813,7 @@ const GMT={
   'ruleset-created':'¡Conjunto de reglas creado!','cannot-del-default-rs':'El conjunto de reglas predeterminado no se puede eliminar.',
   'cr-mode-created':'¡Modo Rail Adventure creado!','pick-mode-first':'Elige primero un modo',
   'rank-tab':'Clasificación','s-msgs-nav':'Mensajes auto','s-msgs-title':'Mensajes automáticos','s-msgs-subtitle':'Envía automáticamente un mensaje a todos los equipos cuando el tiempo restante alcanza un valor.','s-msgs-add':'Añadir mensaje','s-msgs-when':'Tiempo restante (minutos)','s-msgs-mode':'Modo de juego','s-msgs-loc':'Ubicación','s-msgs-all-loc':'Todas las ubicaciones','s-msgs-text':'Mensaje','s-msgs-ph':'p. ej. ¡Quedan 5 minutos!','s-msgs-lang-hint':'Cada equipo recibe el mensaje en el idioma configurado en su app.',
-'th-label':'Esquema de colores (jugadores)','th-hint-loc':'Aspecto personalizado de la app de jugadores para esta ubicación. Estándar = diseño actual.','th-hint-mode':'Aspecto personalizado de la app de jugadores para este modo Rail Adventure. Estándar = diseño actual.','th-open':'Editar esquema de colores','th-title':'Esquema de colores','th-g-brand':'Logo & texto','th-g-bg':'Fondo','th-g-surface':'Superficies','th-g-text':'Texto','th-g-accent':'Acentos','th-stamp':'Encabezado (pequeño)','th-wordmark':'Logotipo','th-logo':'Imagen del logo (sustituye el texto)','th-logo-up':'⬆ Subir','th-reset':'Estándar','th-reset-all':'Restaurar el estándar','th-reset-confirm':'¿Restablecer todos los colores, textos y el logo al estándar?','th-prev-join':'Registro','th-prev-play':'Juego','th-hint':'Los campos vacíos mantienen el estándar. Los cambios aparecen al instante en la vista previa.','th-saved':'¡Esquema de colores guardado!','th-v-bg':'Fondo de la app','th-v-bg2':'Barras (oscuro)','th-v-bg3':'Encabezado','th-v-surface':'Tarjetas','th-v-surface2':'Campos & botones','th-v-border':'Bordes','th-v-text':'Texto','th-v-text-dim':'Texto secundario','th-v-text-muted':'Texto atenuado','th-v-red':'Marca & logotipo','th-v-orange':'Botones & acento','th-v-green':'Éxito',
+'th-label':'Esquema de colores (jugadores)','th-hint-loc':'Aspecto personalizado de la app de jugadores para esta ubicación. Estándar = diseño actual.','th-hint-mode':'Aspecto personalizado de la app de jugadores para este modo Rail Adventure. Estándar = diseño actual.','th-open':'Editar esquema de colores','th-title':'Esquema de colores','th-g-brand':'Logo & texto','th-g-tile':'Casillas','th-g-button':'Botones','th-g-input':'Campos','th-g-border':'Borde','th-v-tile':'Relleno de casillas','th-v-tile-text':'Texto de casillas','th-v-btn-bg':'Relleno de botones','th-v-btn-text':'Texto de botones','th-v-input-bg':'Relleno de campos','th-v-logo':'Logo & logotipo','th-border-width':'Grosor del borde','th-g-bg':'Fondo','th-g-surface':'Superficies','th-g-text':'Texto','th-g-accent':'Acentos','th-stamp':'Encabezado (pequeño)','th-wordmark':'Logotipo','th-logo':'Imagen del logo (sustituye el texto)','th-logo-up':'⬆ Subir','th-reset':'Estándar','th-reset-all':'Restaurar el estándar','th-reset-confirm':'¿Restablecer todos los colores, textos y el logo al estándar?','th-prev-join':'Registro','th-prev-play':'Juego','th-hint':'Los campos vacíos mantienen el estándar. Los cambios aparecen al instante en la vista previa.','th-saved':'¡Esquema de colores guardado!','th-v-bg':'Fondo de la app','th-v-bg2':'Barras (oscuro)','th-v-bg3':'Encabezado','th-v-surface':'Tarjetas','th-v-surface2':'Campos & botones','th-v-border':'Bordes','th-v-text':'Texto','th-v-text-dim':'Texto secundario','th-v-text-muted':'Texto atenuado','th-v-red':'Marca & logotipo','th-v-orange':'Botones & acento','th-v-green':'Éxito',
 'st-stats-lbl':'Estadísticas','s-stats-title':'Estadísticas','s-stats-subtitle':'Cuántas partidas se jugaron, y dónde. Equipos = máximo por partida.','s-stats-period':'Período','s-stats-p-all':'Total','s-stats-p-year':'Este año','s-stats-p-month':'Este mes','s-stats-p-30':'Últimos 30 días','stats-games':'Partidas','stats-teams':'Equipos','stats-total':'Partidas en total','stats-teams-total':'Equipos en total','stats-by-loc':'Por ubicación (MiSSiONS)','stats-by-mode':'Por modo Rail Adventure','stats-by-month':'Por mes','stats-loc':'Ubicación','stats-mode':'Modo','stats-month':'Mes','stats-empty':'Aún no hay partidas en el período elegido. El conteo empieza con esta versión; faltan las partidas ya limpiadas.','stats-error':'No se pudieron cargar las estadísticas.','s-msgs-empty':'Aún no hay mensajes automáticos.','s-msgs-del-confirm':'¿Eliminar este mensaje automático?','s-autoupd-label':'Buscar actualizaciones al iniciar','s-autoupd-sub':'Muestra automáticamente una ventana cuando hay una nueva versión.','cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
   'hint-saved':'¡Pista guardada!','c-del-hint':'¿Eliminar la pista?','hint-not-found':'Pista no encontrada',
   'invalid-json':'Archivo JSON no válido','invalid-format':'Formato no válido (falta el array missions)',
@@ -7443,28 +7446,39 @@ async function loadStats(){
 // Two live phone iframes (join + play|cityrush in ?preview=1 mode) repaint on
 // every input via postMessage. NULL theme = the built-in default look.
 const THEME_DEFAULTS = {
-  '--bg':'#0f0e0d','--bg2':'#15130f','--bg3':'#1c1916',
-  '--surface':'#1a1817','--surface2':'#221f1d','--border':'#2a2724',
+  '--bg':'#0f0e0d','--bg3':'#1c1916',
+  '--surface':'#1a1817','--tile-text':'#f4f2ee',
+  '--btn-bg':'#e85f1e','--btn-text':'#ffffff',
+  '--input-bg':'#221f1d',
   '--text':'#f4f2ee','--text-dim':'#9b9690','--text-muted':'#6a6560',
-  '--red':'#d42b2b','--orange':'#e85f1e','--green':'#4ade80',
+  '--card-border':'#2a2724',
+  '--orange':'#e85f1e','--green':'#4ade80','--logo-color':'#d42b2b',
 };
+const THEME_BW_DEFAULT = 1;   // border thickness in px
+// Each field: [cssVar, label, previewRole]. previewRole matches what theme.js
+// reports on hover so the designer can highlight the right field.
 const THEME_GROUPS = () => [
   { lbl: gmt('th-g-bg')||'Hintergrund', vars: [
-    ['--bg',        gmt('th-v-bg')||'App-Hintergrund'],
-    ['--bg3',       gmt('th-v-bg3')||'Kopfzeile'],
-    ['--bg2',       gmt('th-v-bg2')||'Leisten (dunkel)'] ]},
-  { lbl: gmt('th-g-surface')||'Flächen', vars: [
-    ['--surface',   gmt('th-v-surface')||'Karten'],
-    ['--surface2',  gmt('th-v-surface2')||'Eingaben & Buttons'],
-    ['--border',    gmt('th-v-border')||'Rahmenlinien'] ]},
+    ['--bg',        gmt('th-v-bg')||'App-Hintergrund','bg'],
+    ['--bg3',       gmt('th-v-bg3')||'Kopfzeile','header'] ]},
+  { lbl: gmt('th-g-tile')||'Kacheln', vars: [
+    ['--surface',   gmt('th-v-tile')||'Kachel-Füllung','tile'],
+    ['--tile-text', gmt('th-v-tile-text')||'Kachel-Text','tile-text'] ]},
+  { lbl: gmt('th-g-button')||'Buttons', vars: [
+    ['--btn-bg',    gmt('th-v-btn-bg')||'Button-Füllung','button'],
+    ['--btn-text',  gmt('th-v-btn-text')||'Button-Text','button'] ]},
+  { lbl: gmt('th-g-input')||'Eingabefelder', vars: [
+    ['--input-bg',  gmt('th-v-input-bg')||'Feld-Füllung','input'] ]},
   { lbl: gmt('th-g-text')||'Text', vars: [
-    ['--text',      gmt('th-v-text')||'Text'],
-    ['--text-dim',  gmt('th-v-text-dim')||'Text sekundär'],
-    ['--text-muted',gmt('th-v-text-muted')||'Text gedämpft'] ]},
-  { lbl: gmt('th-g-accent')||'Akzente', vars: [
-    ['--red',       gmt('th-v-red')||'Marke & Wortmarke'],
-    ['--orange',    gmt('th-v-orange')||'Buttons & Akzent'],
-    ['--green',     gmt('th-v-green')||'Erfolg'] ]},
+    ['--text',      gmt('th-v-text')||'Text','text'],
+    ['--text-dim',  gmt('th-v-text-dim')||'Text sekundär','text'],
+    ['--text-muted',gmt('th-v-text-muted')||'Text gedämpft','text'] ]},
+  { lbl: gmt('th-g-border')||'Rahmen', border:true, vars: [
+    ['--card-border', gmt('th-v-border')||'Rahmenfarbe','border'] ]},
+  { lbl: gmt('th-g-accent')||'Akzente & Logo', vars: [
+    ['--orange',    gmt('th-v-orange')||'Akzent','accent'],
+    ['--green',     gmt('th-v-green')||'Erfolg','accent'],
+    ['--logo-color',gmt('th-v-logo')||'Logo & Wortmarke','logo'] ]},
 ];
 let _td = null;   // { kind:'location'|'crmode', id, name, theme:{vars,logo,stamp,wordmark} }
 
@@ -7478,7 +7492,7 @@ async function openThemeDesigner(kind, id){
   if(!row){ toast('Not found','error'); return; }
   let theme = {};
   try { theme = row.theme ? JSON.parse(row.theme) : {}; } catch(e){ theme = {}; }
-  _td = { kind, id: Number(id), name: row.name||'', theme: { vars: Object.assign({}, theme.vars||{}), logo: theme.logo||null, stamp: theme.stamp||'', wordmark: theme.wordmark||'' } };
+  _td = { kind, id: Number(id), name: row.name||'', theme: { vars: Object.assign({}, theme.vars||{}), logo: theme.logo||null, stamp: theme.stamp||'', wordmark: theme.wordmark||'', borderWidth: (theme.borderWidth!=null?theme.borderWidth:null) } };
   let el = document.getElementById('theme-designer');
   if(!el){ el = document.createElement('div'); el.id = 'theme-designer'; document.body.appendChild(el); }
   el.innerHTML = _tdHtml();
@@ -7486,15 +7500,20 @@ async function openThemeDesigner(kind, id){
 }
 function _tdHtml(){
   const t = _td.theme;
+  const bw = (t.borderWidth!=null?t.borderWidth:THEME_BW_DEFAULT);
   const rows = THEME_GROUPS().map(g => `
     <div class="td-group"><div class="td-glbl">${esc(g.lbl)}</div>
-      ${g.vars.map(([k,lbl]) => {
+      ${g.vars.map(([k,lbl,role]) => {
         const cur = t.vars[k] || THEME_DEFAULTS[k];
-        return `<div class="td-row"><span class="td-name">${esc(lbl)}</span>
+        return `<div class="td-row" data-role="${role||''}"><span class="td-name">${esc(lbl)}</span>
           <input type="color" value="${esc(cur)}" data-var="${k}" oninput="tdVarInput(this)">
           <code class="td-hex" id="td-hex-${k.replace(/-/g,'')}">${esc(cur)}</code>
           <button class="td-reset" title="${esc(gmt('th-reset')||'Standard')}" onclick="tdVarReset('${k}')">↺</button></div>`;
       }).join('')}
+      ${g.border ? `<div class="td-row" data-role="border"><span class="td-name">${esc(gmt('th-border-width')||'Rahmenstärke')}</span>
+        <input type="number" min="0" max="8" step="1" value="${bw}" style="width:54px;flex:none;" oninput="tdBorderWidth(this.value)">
+        <code class="td-hex">px</code>
+        <button class="td-reset" title="${esc(gmt('th-reset')||'Standard')}" onclick="tdBwReset()">↺</button></div>` : ''}
     </div>`).join('');
   const prevPages = _td.kind==='location'
     ? [['/join.html?preview=1', gmt('th-prev-join')||'Beitritt'], ['/play.html?preview=1', gmt('th-prev-play')||'Spiel']]
@@ -7538,6 +7557,7 @@ function _tdTheme(){
   if(t.logo) out.logo = t.logo;
   if(t.stamp && t.stamp.trim()) out.stamp = t.stamp.trim();
   if(t.wordmark && t.wordmark.trim()) out.wordmark = t.wordmark.trim();
+  if(t.borderWidth!=null && t.borderWidth!==THEME_BW_DEFAULT) out.borderWidth = t.borderWidth;
   return Object.keys(out).length ? out : null;
 }
 function _tdPost(){
@@ -7551,13 +7571,33 @@ function _tdPost(){
 // initial draft lands even though the iframes load after the designer opens.
 window.addEventListener('message', e => {
   if(e.origin !== location.origin) return;
-  if(e.data && e.data.type === 'ar-theme-ready' && _td) _tdPost();
+  const d = e.data; if(!d) return;
+  if(d.type === 'ar-theme-ready' && _td) _tdPost();
+  if(d.type === 'ar-theme-hover' && _td) _tdHighlightRole(d.role);
 });
+// Highlight the field(s) that change whatever the GM is hovering in a preview.
+function _tdHighlightRole(role){
+  document.querySelectorAll('#theme-designer .td-row.hl').forEach(r=>r.classList.remove('hl'));
+  if(!role) return;
+  const rows=[...document.querySelectorAll(`#theme-designer .td-row[data-role="${role}"]`)];
+  rows.forEach(r=>r.classList.add('hl'));
+  if(rows[0]) rows[0].scrollIntoView({block:'nearest'});
+}
 function tdVarInput(el){
   const k = el.dataset.var, v = String(el.value).toLowerCase();
   if(v === THEME_DEFAULTS[k]) delete _td.theme.vars[k]; else _td.theme.vars[k] = v;
   const hex = document.getElementById('td-hex-'+k.replace(/-/g,''));
   if(hex) hex.textContent = v;
+  _tdPost();
+}
+function tdBorderWidth(v){
+  _td.theme.borderWidth = Math.max(0, Math.min(8, Math.round(Number(v))||0));
+  _tdPost();
+}
+function tdBwReset(){
+  _td.theme.borderWidth = null;
+  const inp = document.querySelector('#theme-designer input[type=number]');
+  if(inp) inp.value = THEME_BW_DEFAULT;
   _tdPost();
 }
 function tdVarReset(k){
@@ -7594,7 +7634,7 @@ function tdRemoveLogo(){
 }
 function tdResetAll(){
   if(!confirm(gmt('th-reset-confirm')||'Alle Farben, Texte und das Logo auf den Standard zurücksetzen?')) return;
-  _td.theme = { vars:{}, logo:null, stamp:'', wordmark:'' };
+  _td.theme = { vars:{}, logo:null, stamp:'', wordmark:'', borderWidth:null };
   const el = document.getElementById('theme-designer');
   if(el){ el.innerHTML = _tdHtml(); }
   _tdPost();

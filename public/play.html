@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
-<link rel="stylesheet" href="/css/app.css?v=2.0.1">
-<script src="/js/theme.js?v=1"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.26">
+<script src="/js/theme.js?v=2"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -30,7 +30,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .ph-right { justify-self:end;   display:flex; align-items:center; gap:6px; }
 .ph-center{ text-align:center; line-height:1; }
 .ph-center .ar-stamp{font:700 9px/1 var(--body);letter-spacing:.32em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
-.ph-center .play-wordmark{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:.06em;color:var(--red);line-height:1;}
+.ph-center .play-wordmark{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:.06em;color:var(--logo-color,var(--red));line-height:1;}
 .ph-center .ph-meta{font:500 11px/1.4 var(--mono);color:var(--text-muted);margin-top:6px;display:inline-flex;gap:6px;align-items:center;justify-content:center;}
 .ph-center .ph-sep{opacity:.4;}
 .ph-center .play-team-name{font:600 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);font-family:var(--body);}
@@ -113,7 +113,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
    body (title + desc + task), points pill on the right. Whole card is
    tappable to open the detail modal. State variants: card--done (green
    check overlay), card--pending (orange tint), card--rejected (red dim). */
-.p-mission-card{position:relative;display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:start;padding:14px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;cursor:pointer;transition:border-color .12s,background .12s;}
+.p-mission-card{position:relative;display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:start;padding:14px;background:var(--tile-bg,var(--surface));border:var(--border-width,1px) solid var(--card-border,var(--hairline));border-radius:12px;cursor:pointer;transition:border-color .12s,background .12s;}
 .p-mission-card:hover{border-color:rgba(255,255,255,.18);background:var(--surface2);}
 .p-mission-card.pending{border-color:rgba(232,95,30,.45);}
 .p-mission-card.accepted{border-color:rgba(74,222,128,.45);box-shadow:0 0 0 1px rgba(74,222,128,.18) inset;}
@@ -121,11 +121,11 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .mcard__type{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);}
 .mcard__type svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
 .mcard__body{min-width:0;}
-.mcard__title{font:700 14px/1.2 var(--body);color:var(--text);margin-bottom:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.mcard__title{font:700 14px/1.2 var(--body);color:var(--tile-text,var(--text));margin-bottom:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .mcard__title .indoor{display:inline-flex;color:var(--text-dim);}
 .mcard__title .indoor svg{width:13px;height:13px;}
 .mcard__desc{font:400 12px/1.35 var(--body);color:var(--text-dim);margin-bottom:6px;}
-.mcard__task{font:500 12px/1.35 var(--body);color:var(--text);display:flex;align-items:flex-start;gap:6px;}
+.mcard__task{font:500 12px/1.35 var(--body);color:var(--tile-text,var(--text));display:flex;align-items:flex-start;gap:6px;}
 .mcard__task .arrow{color:var(--orange);font-weight:700;flex-shrink:0;}
 .mcard__points{align-self:start;font:700 11px/1 var(--mono);color:var(--text);background:rgba(255,255,255,.05);border:1px solid var(--hairline);padding:5px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap;}
 .mcard__check{align-self:start;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--green);margin-top:6px;}
@@ -666,7 +666,16 @@ function enterPlayPreview(){
     { mission_id:2, name_de:'Brunnen-Video',  description_de:'Filmt euch beim Brunnen.',            task_de:'Maximal 30 Sekunden.',       media_type:'video', points:2, status:'pending' },
     { mission_id:3, name_de:'Denkmal-Selfie', description_de:'Selfie vor dem Denkmal.',             task_de:'',                           media_type:'photo', points:1, status:'open' },
   ];
-  document.getElementById('missions-list').innerHTML = mock.map(m => missionCard(m)).join('');
+  // A demo control row so the Button + Input theme roles are visible here too
+  // (not just on the join screen). Uses the real .btn / .input classes.
+  const controls = `<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
+    <input class="input" placeholder="${esc(t('team_name_placeholder')||'Teamname')}" value="Demo Team" readonly>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;">${esc(t('take_photo')||'Foto aufnehmen')}</button>
+      <button class="btn btn-secondary">${esc(t('gallery_upload')||'Galerie')}</button>
+    </div>
+  </div>`;
+  document.getElementById('missions-list').innerHTML = mock.map(m => missionCard(m)).join('') + controls;
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────

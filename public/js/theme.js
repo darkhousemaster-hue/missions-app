@@ -83,6 +83,10 @@
   function apply(theme){
     theme = theme || {};
     applyVars(theme.vars || null);
+    // Border thickness is numeric, so it lives outside `vars` (which is hex-only).
+    const root = document.documentElement;
+    if (theme.borderWidth != null && theme.borderWidth !== '') root.style.setProperty('--border-width', theme.borderWidth + 'px');
+    else root.style.removeProperty('--border-width');
     if (document.body) applyBranding(theme);
     else document.addEventListener('DOMContentLoaded', () => applyBranding(theme), { once:true });
   }
@@ -95,6 +99,27 @@
       const d = e.data;
       if (d && d.type === 'ar-theme') apply(d.theme || null);
     });
+    // Hover-to-highlight: report which themable role the pointer is over so the
+    // designer can flag the matching field. Clicks are swallowed (the preview
+    // must not navigate or open the camera when the GM mouses over it).
+    const roleOf = el => {
+      if (!el || !el.closest) return 'bg';
+      if (el.closest('.btn-primary, .selfie-square')) return 'button';
+      if (el.closest('.mcard__title, .mcard__task, .cr-tile .name')) return 'tile-text';
+      if (el.closest('.p-mission-card, .cr-tile, .mission-card, .cr-mission-card')) return 'tile';
+      if (el.closest('input, textarea, select, [contenteditable]')) return 'input';
+      if (el.closest('.wordmark, .play-wordmark, .theme-logo')) return 'logo';
+      if (el.closest('.join-header, .play-topbar, .cr-topbar')) return 'header';
+      return 'bg';
+    };
+    let _lastRole;
+    document.addEventListener('mousemove', e => {
+      const r = roleOf(e.target);
+      if (r !== _lastRole) { _lastRole = r; try { parent.postMessage({ type:'ar-theme-hover', role:r }, location.origin); } catch(e){} }
+    }, { passive:true });
+    document.addEventListener('mouseleave', () => { _lastRole = null; try { parent.postMessage({ type:'ar-theme-hover', role:null }, location.origin); } catch(e){} });
+    document.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); }, true);
+    document.addEventListener('submit', e => { e.preventDefault(); }, true);
     // Tell the opener we're ready to receive the current draft.
     document.addEventListener('DOMContentLoaded', () => {
       try { parent.postMessage({ type:'ar-theme-ready' }, location.origin); } catch(e){}

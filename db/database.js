@@ -606,6 +606,7 @@ const normTheme = t => {
     if (typeof o.logo === 'string' && /^themes\/[\w.-]+$/.test(o.logo)) out.logo = o.logo;
     if (typeof o.stamp === 'string' && o.stamp.trim()) out.stamp = o.stamp.trim().slice(0, 60);
     if (typeof o.wordmark === 'string' && o.wordmark.trim()) out.wordmark = o.wordmark.trim().slice(0, 60);
+    if (o.borderWidth != null && o.borderWidth !== '') { const bw = Math.round(Number(o.borderWidth)); if (Number.isFinite(bw) && bw >= 0 && bw <= 8) out.borderWidth = bw; }
     if (!Object.keys(out).length) return null;
     const json = JSON.stringify(out);
     return json.length > 20000 ? null : json;
