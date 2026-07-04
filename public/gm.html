@@ -1251,7 +1251,8 @@ function inlineIcon(name, sizeCls){
   return sizeCls ? svg.replace('class="icon ICN"', `class="icon ${sizeCls} ICN"`) : svg;
 }
 const GMT={
-  de:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'Rail Adventure nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein Rail Adventure Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine Rail Adventure Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
+  de:{'ms-drag-hint':'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Modus „Nicht zufällig“ ist.','mode-norand-label':'Reihenfolge','mode-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.','mode-norand-pill':'Nicht zufällig',
+    'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'Rail Adventure nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein Rail Adventure Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine Rail Adventure Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
   // CR mission modal labels
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (Meter)','cr-m-points':'Punkte',
   'cr-m-gps':'📍 GPS-Trigger','cr-m-map':'🗺️ Karte anzeigen','cr-m-timed':'⏱ Zeitlimit',
@@ -1378,7 +1379,8 @@ const GMT={
   'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
   'manuals-gm':'GM-Handbuch','manuals-settings':'Einstellungs-Handbuch',
   'manuals-others':'Andere Sprachen'},
-  en:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No Rail Adventure mode yet. Click ＋ Mode.','cr-no-missions':'No Rail Adventure missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
+  en:{'ms-drag-hint':'Drag to reorder. The order only matters when the mode is set to "Do Not Randomize".','mode-norand-label':'Order','mode-norand-hint':'On: missions appear in the arranged order (drag the list to sort). Off: random, as before.','mode-norand-pill':'Do Not Randomize',
+    'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No Rail Adventure mode yet. Click ＋ Mode.','cr-no-missions':'No Rail Adventure missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
   'cr-m-gps-hint':'Hint for players (GPS trigger)','cr-m-time-secs':'Time (seconds)','cr-m-pen-int':'Penalty every X sec.','cr-m-pen-pts':'Penalty (points)',
@@ -1495,7 +1497,8 @@ const GMT={
   'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
   'manuals-others':'Other languages'},
-  fr:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modes Rail Adventure','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode Rail Adventure. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission Rail Adventure. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
+  fr:{'ms-drag-hint':'Glisser pour réorganiser. L\'ordre ne compte que si le mode est réglé sur « Ne pas mélanger ».','mode-norand-label':'Ordre','mode-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste pour trier). Désactivé : aléatoire, comme avant.','mode-norand-pill':'Ne pas mélanger',
+    'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modes Rail Adventure','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode Rail Adventure. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission Rail Adventure. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
   'cr-m-gps-hint':'Indice pour les joueurs (GPS)','cr-m-time-secs':'Temps (secondes)','cr-m-pen-int':'Pénalité toutes les X sec.','cr-m-pen-pts':'Pénalité (points)',
@@ -1612,7 +1615,8 @@ const GMT={
   'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
   'manuals-others':'Autres langues'},
-  it:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modalità Rail Adventure','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'Rail Adventure usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità Rail Adventure. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione Rail Adventure. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
+  it:{'ms-drag-hint':'Trascina per riordinare. L\'ordine conta solo se la modalità è impostata su «Non mescolare».','mode-norand-label':'Ordine','mode-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista per ordinare). Off: casuale, come prima.','mode-norand-pill':'Non mescolare',
+    'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modalità Rail Adventure','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'Rail Adventure usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità Rail Adventure. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione Rail Adventure. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
   'cr-m-gps-hint':'Suggerimento per i giocatori (GPS)','cr-m-time-secs':'Tempo (secondi)','cr-m-pen-int':'Penalità ogni X sec.','cr-m-pen-pts':'Penalità (punti)',
@@ -1729,7 +1733,8 @@ const GMT={
   'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
   'manuals-others':'Altre lingue'},
-  es:{'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modos Rail Adventure','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'Rail Adventure usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo Rail Adventure. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones Rail Adventure. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
+  es:{'ms-drag-hint':'Arrastra para reordenar. El orden solo importa si el modo está en «No aleatorizar».','mode-norand-label':'Orden','mode-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista para ordenar). Desactivado: aleatorio, como antes.','mode-norand-pill':'No aleatorizar',
+    'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modos Rail Adventure','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'Rail Adventure usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo Rail Adventure. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones Rail Adventure. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
   'cr-m-name':'Nombre','cr-m-lat':'Latitud','cr-m-lng':'Longitud','cr-m-radius':'Radio (metros)','cr-m-points':'Puntos',
   'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
   'cr-m-gps-hint':'Pista para los jugadores (GPS)','cr-m-time-secs':'Tiempo (segundos)','cr-m-pen-int':'Penalización cada X seg.','cr-m-pen-pts':'Penalización (puntos)',
@@ -4130,6 +4135,11 @@ async function showAddMode(){ exitSelectionModes();
     <div class="field" data-tip="mode-ruleset"><label class="label" data-tip="mode-ruleset">${gmt('ruleset')||'Regelwerk / Ruleset'}</label>
       <select id="mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" id="mode-timer-label" data-tip="mode-timer">Timer (Minuten / Minutes)</label><input id="mode-timer" type="number" class="input" value="60" min="1" data-tip="mode-timer"></div>
+    <div class="field">
+      <label class="label">${gmt('mode-norand-label')||'Reihenfolge'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('mode-norand-hint')||'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.'}</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">${checkPillRow([{id:'new-mode-norand', label:'🔢 '+(gmt('mode-norand-pill')||'Nicht zufällig'), isOn:false}])}</div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveNewMode()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
@@ -4148,6 +4158,11 @@ async function showEditMode(id){
       <select id="edit-mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" data-tip="mode-timer">Timer (${gmt('min-label')||'Minuten / Minutes'})</label>
       <input id="edit-mode-timer" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="mode-timer"></div>
+    <div class="field">
+      <label class="label">${gmt('mode-norand-label')||'Reihenfolge'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('mode-norand-hint')||'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.'}</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">${checkPillRow([{id:'edit-mode-norand', label:'🔢 '+(gmt('mode-norand-pill')||'Nicht zufällig'), isOn:m.no_randomize===1}])}</div>
+    </div>
     <div class="modal-footer" style="justify-content:space-between;">
       <div>
         ${m.id!==1?`<button class="btn btn-danger btn-sm" onclick="confirmDeleteMode(${m.id});closeModal()">${gmt('delete')||'Löschen'}</button>`:''}
@@ -4164,7 +4179,7 @@ async function saveEditMode(id){
   if(!name){toast(gmt('name-required')||'Name required','error');return;}
   const rulesetId=Number(document.getElementById('edit-mode-ruleset').value);
   const timer=Number(document.getElementById('edit-mode-timer').value)||60;
-  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer}});
+  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer,no_randomize:document.getElementById('edit-mode-norand')?.checked?1:0}});
   if(res.success){closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast(gmt('saved')||'Gespeichert!','success');}
   else toast(res.error,'error');
 }
@@ -4180,7 +4195,7 @@ async function saveNewMode(){
   if(!name){toast(gmt('name-required')||'Name erforderlich','error');return;}
   const rulesetEl=document.getElementById('mode-ruleset');const rulesetId=rulesetEl?Number(rulesetEl.value):1;
   const timerEl=document.getElementById('mode-timer');const modeTimer=timerEl?Number(timerEl.value):60;
-  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer}});
+  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer,no_randomize:document.getElementById('new-mode-norand')?.checked?1:0}});
   if(res.success){closeModal();loadModeTabs();toast(gmt('mode-created')||'Modus erstellt!','success');}
 }
 
@@ -4332,10 +4347,13 @@ async function loadMissions(){
     </label>
     <button class="btn btn-ghost btn-sm" onclick="copySelectedMissions()" id="btn-ms-copy" style="display:none;">${gmt('copy-to-mode-btn')||'⎘ Kopieren nach Modus…'}</button>
     <button class="btn btn-ghost btn-sm" onclick="downloadSelectedMissions()" id="btn-ms-download" style="display:none;">${gmt('export-btn')||'⬇ Export'}</button>
-  </div>`;
-  list.innerHTML = toolbar + missions.map(m=>`
-    <div class="card mb-1" id="mcard-s-${m.id}">
+  </div>
+  <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .5rem;">${gmt('ms-drag-hint')||'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Modus „Nicht zufällig“ ist.'}</p>`;
+  list.innerHTML = toolbar + missions.map((m,i)=>`
+    <div class="card mb-1" id="mcard-s-${m.id}" draggable="true"
+      ondragstart="msDragStart(event,${i})" ondragover="msDragOver(event,${i})" ondrop="msDrop(event,${i})" ondragend="msDragEnd()">
       <div class="card-header" style="align-items:flex-start;">
+        <span style="cursor:grab;color:var(--text-muted);margin:.15rem .35rem 0 0;flex-shrink:0;user-select:none;" title="${gmt('ms-drag-hint')||'Ziehen zum Sortieren'}">⠿</span>
         <input type="checkbox" class="ms-checkbox" data-id="${m.id}" onchange="onMsChange()" style="accent-color:var(--red);margin-top:.2rem;margin-right:.25rem;width:16px;height:16px;flex-shrink:0;">
         <div style="flex:1;">
           <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:.25rem;">
@@ -4353,7 +4371,26 @@ async function loadMissions(){
         </div>
       </div>
     </div>`).join('');
+  initMsDrag();
 }
+// Drag-reorder for the MiSSiONS settings list (mirrors the RA crmcard pattern).
+// Reordering writes order_index; it only changes what players see when the mode
+// has "Do Not Randomize" on.
+let msDragIdx=null, msOrder=[];
+function initMsDrag(){ msOrder=[]; document.querySelectorAll('[id^="mcard-s-"]').forEach(el=>msOrder.push(parseInt(el.id.replace('mcard-s-','')))); }
+function msDragStart(e,i){ msDragIdx=i; e.target.style.opacity='.4'; }
+function msDragOver(e,i){ e.preventDefault(); if(i===msDragIdx) return;
+  document.querySelectorAll('[id^="mcard-s-"]').forEach(el=>el.style.borderTop='');
+  const el=document.querySelectorAll('[id^="mcard-s-"]')[i]; if(el) el.style.borderTop='3px solid var(--red)';
+}
+function msDrop(e,i){
+  e.preventDefault(); if(msDragIdx===null) return;
+  const moved=msOrder.splice(msDragIdx,1)[0];
+  msOrder.splice(i,0,moved);
+  API('/api/missions/reorder',{method:'POST',body:{password:settingsPassword,order:msOrder}});
+  msDragIdx=null; loadMissions();
+}
+function msDragEnd(){ document.querySelectorAll('[id^="mcard-s-"]').forEach(el=>{el.style.opacity='';el.style.borderTop='';}); msDragIdx=null; }
 
 
 async function autoTranslateMissionName(){
@@ -4370,7 +4407,12 @@ async function autoTranslateMissionName(){
   toast(gmt('translated')||'Übersetzt!','success');
 }
 function missionModal(m,locs){
-  const locOpts=locs.map(l=>`<option value="${l.id}" ${sel(m&&m.location_id==l.id)}>${esc(l.name)}</option>`).join('');
+  // New mission: default the location to whatever the settings list is filtered
+  // to (a specific location), so the GM doesn't re-pick it every time. "All" and
+  // "Pool" filters leave it on Pool as before. Editing keeps the saved location.
+  const _flt = document.getElementById('mission-filter')?.value;
+  const _selLoc = m ? (m.location_id||null) : ((_flt && _flt!=='null' && _flt!=='') ? Number(_flt) : null);
+  const locOpts=locs.map(l=>`<option value="${l.id}" ${sel(String(_selLoc)===String(l.id))}>${esc(l.name)}</option>`).join('');
   const v=(f)=>m?esc(m[f]||''):'';
   // RAW value for langTabFields (it escapes internally — v() would double-escape).
   const vr=(f)=>m?String(m[f]??''):'';
@@ -4456,7 +4498,7 @@ function missionModal(m,locs){
       <div class="cme-shead"><span class="cme-step">4</span><span class="cme-stitle">${gmt('mm-assign')||'Zuordnung'}</span></div>
       <div class="grid-2">
         <div class="field" style="margin:0;"><label class="label">${gmt('loc-label')||'Standort'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Zu welchem Ort die Mission gehört.</strong> „Pool" = ohne Zuordnung, für jedes Spiel wählbar.</span></i></label>
-          <select id="m-loc" class="select"><option value="" ${sel(!m||!m.location_id)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
+          <select id="m-loc" class="select"><option value="" ${sel(!_selLoc)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
         <div class="field" style="margin:0;"><label class="label">${gmt('mode-label-modal')||'Modus'}<i class="cme-info" tabindex="0">i<span class="cme-tip">In welchem Spielmodus / Regelwerk die Mission erscheint.</span></i></label>
           <select id="m-mode" class="select"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
       </div>

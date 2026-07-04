@@ -343,6 +343,7 @@ app.get('/api/modes', (req,res) => res.json(db.getModes()));
 app.post('/api/modes', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60);
+  if(req.body.no_randomize !== undefined) db.setModeNoRandomize(id, req.body.no_randomize);
   res.json({id,success:true});
 });
 // NOTE: must be declared before '/api/modes/:id' or Express treats "reorder"
@@ -354,7 +355,13 @@ app.put('/api/modes/reorder', (req,res) => {
 });
 app.put('/api/modes/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  try { db.updateMode(req.params.id, req.body); res.json({success:true}); }
+  try {
+    // Only run the full update when core fields are present; a no_randomize-only
+    // PUT must not require name/ruleset (updateMode rejects an undefined name).
+    if(req.body.name !== undefined) db.updateMode(req.params.id, req.body);
+    if(req.body.no_randomize !== undefined) db.setModeNoRandomize(Number(req.params.id), req.body.no_randomize);
+    res.json({success:true});
+  }
   catch(e) { res.status(400).json({error:e.message}); }
 });
 app.delete('/api/modes/:id', (req,res) => {
@@ -480,6 +487,12 @@ app.post('/api/missions', (req,res) => {
   const {password,...d}=req.body;
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const newId=db.createMission(d); io.emit('settings_updated',{type:'missions'}); res.json({id:newId,success:true});
+});
+// Drag-reorder MiSSiONS missions in the settings list. Body: { order:[id,...] }.
+app.post('/api/missions/reorder', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.reorderMissions(Array.isArray(req.body.order) ? req.body.order : []);
+  res.json({success:true});
 });
 app.put('/api/missions/:id', (req,res) => {
   const {password,...d}=req.body;

@@ -348,6 +348,11 @@ try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,e
 // player pages (join/play/cityrush) consume it; the GM dashboard is never themed.
 try { db.exec("ALTER TABLE locations ADD COLUMN theme TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN theme TEXT"); } catch(e) {}
+// MiSSiONS mission ordering: the GM can drag-reorder missions in the settings
+// list; when the mode has no_randomize=1, selectMissions returns them in this
+// order instead of shuffling.
+try { db.exec("ALTER TABLE missions ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE modes ADD COLUMN no_randomize INTEGER DEFAULT 0"); } catch(e) {}
 // Play statistics. Games are deleted 72h after creation (cron cleanup), so
 // counting "what was played where" needs its own table that survives both the
 // game cleanup and deletion of locations/modes — hence the denormalized name
@@ -538,6 +543,11 @@ const rotateGmToken = () => { setSetting('gm_token_secret', crypto.randomBytes(3
 const getModes   = () => db.prepare('SELECT m.*, r.name as ruleset_name FROM modes m LEFT JOIN rulesets r ON r.id=m.ruleset_id ORDER BY m.order_index, m.name').all();
 const getMode    = id => db.prepare('SELECT * FROM modes WHERE id=?').get(id);
 const createMode = (name, ruleset_id=1, timer_default=60) => num(db.prepare('INSERT INTO modes(name,ruleset_id,timer_default) VALUES(?,?,?)').run(name, ruleset_id||1, timer_default||60).lastInsertRowid);
+const setModeNoRandomize = (id, v) => db.prepare('UPDATE modes SET no_randomize=? WHERE id=?').run(v?1:0, id);
+const reorderMissions = orderedIds => {
+  const stmt = db.prepare('UPDATE missions SET order_index=? WHERE id=?');
+  runTx(() => orderedIds.forEach((id, i) => stmt.run(i + 1, Number(id))));
+};
 const updateMode = (id, {name, ruleset_id, timer_default}) =>
   db.prepare('UPDATE modes SET name=?,ruleset_id=?,timer_default=? WHERE id=?').run(name, ruleset_id||1, timer_default||60, id);
 const deleteMode = id => { if(Number(id)===1) throw new Error("Cannot delete default mode"); db.prepare('DELETE FROM modes WHERE id=?').run(id); };
@@ -620,14 +630,16 @@ const setCrModeTheme   = (id, t) => db.prepare('UPDATE cr_modes SET theme=? WHER
 
 // ── Missions ──────────────────────────────────────────────────────────────────
 const getMissions = (modeId, locationId) => {
-  if (modeId===undefined && locationId===undefined) return db.prepare('SELECT * FROM missions ORDER BY id').all();
-  if (locationId===null) return db.prepare('SELECT * FROM missions WHERE mode_id=? AND location_id IS NULL ORDER BY id').all(modeId);
-  if (locationId!==undefined) return db.prepare('SELECT * FROM missions WHERE mode_id=? AND location_id=? ORDER BY id').all(modeId, locationId);
-  return db.prepare('SELECT * FROM missions WHERE mode_id=? ORDER BY id').all(modeId);
+  if (modeId===undefined && locationId===undefined) return db.prepare('SELECT * FROM missions ORDER BY order_index, id').all();
+  if (locationId===null) return db.prepare('SELECT * FROM missions WHERE mode_id=? AND location_id IS NULL ORDER BY order_index, id').all(modeId);
+  if (locationId!==undefined) return db.prepare('SELECT * FROM missions WHERE mode_id=? AND location_id=? ORDER BY order_index, id').all(modeId, locationId);
+  return db.prepare('SELECT * FROM missions WHERE mode_id=? ORDER BY order_index, id').all(modeId);
 };
 const getMission = id => db.prepare('SELECT * FROM missions WHERE id=?').get(id);
+// New missions append to the end of their mode's arranged order.
+const _nextMissionOrder = modeId => (Number(db.prepare('SELECT MAX(order_index) mx FROM missions WHERE mode_id=?').get(modeId||1)?.mx) || 0) + 1;
 const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',name_es='',description_de='',description_en='',description_fr='',description_it='',description_es='',task_de='',task_en='',task_fr='',task_it='',task_es='',media_type='photo',points=1,is_indoor=0}) =>
-  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',media_type,points,is_indoor?1:0).lastInsertRowid);
+  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,order_index) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',media_type,points,is_indoor?1:0,_nextMissionOrder(mode_id)).lastInsertRowid);
 const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor}) =>
   db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,media_type=?,points=?,is_indoor=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',media_type,points,is_indoor?1:0,id);
 const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id);
@@ -684,7 +696,11 @@ const getGameFull = gameId => {
 
 // ── Mission selection ─────────────────────────────────────────────────────────
 function selectMissions(location, modeId) {
-  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+  // no_randomize modes keep the GM's arranged order (order_index); otherwise the
+  // classic shuffle. getMissions already returns rows in order_index order, so
+  // ordered mode just skips every shuffle.
+  const mode = getMode(modeId) || {};
+  const shuffle = arr => mode.no_randomize ? [...arr] : [...arr].sort(() => Math.random() - 0.5);
   const locMs  = shuffle(getMissions(modeId, location.id));
   const poolMs = shuffle(getMissions(modeId, null));
   const total  = location.missions_count || 10;
@@ -1320,7 +1336,7 @@ module.exports = {
   getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
-  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,getGameRules,
+  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
