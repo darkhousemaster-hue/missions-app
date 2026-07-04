@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS — Join</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.26">
+<link rel="stylesheet" href="/css/app.css?v=2.4.27">
 <script src="/js/theme.js?v=2"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. The
@@ -280,6 +280,12 @@ let isCityRush = false;
 
 // ── i18n ──────────────────────────────────────────────────────────────────
 const JOIN_LANGS = ['de','en','fr','it','es'];
+// Custom (GM-defined) languages for this game's location: [{code,label,base}].
+// Populated once the game loads; the picker offers them and jt() falls each
+// one's fixed labels back to its chosen base language.
+let joinCustomLangs = [];
+function joinCustomLang(l){ return joinCustomLangs.find(c => c.code === l); }
+function joinBaseOf(l){ const c = joinCustomLang(l); return c ? (c.base||'de') : l; }
 function _detectJoinLang() {
   const stored = localStorage.getItem('m_lang') || localStorage.getItem('cr_lang');
   if (stored && JOIN_LANGS.includes(stored)) return stored;
@@ -344,7 +350,7 @@ const JOIN_T = {
        cam_denied:'Acceso a cámara denegado.', cam_unavailable:'Cámara no disponible.',
        sm_retake:'Repetir', sm_accept:'Usar'},
 };
-function jt(k) { return (JOIN_T[joinLang] || JOIN_T.de)[k] || k; }
+function jt(k) { const L = joinBaseOf(joinLang); return (JOIN_T[L] || JOIN_T.de)[k] || k; }
 
 function ensureCrPlayerKey() {
   if (sessionStorage.getItem('crPlayerKey')) return;
@@ -380,7 +386,7 @@ function _applyJoinTranslations() {
 }
 
 function setJoinLang(lang) {
-  if (!JOIN_LANGS.includes(lang)) return;
+  if (!JOIN_LANGS.includes(lang) && !joinCustomLang(lang)) return;
   joinLang = lang;
   _persistJoinLang();
   _applyJoinTranslations();
@@ -390,16 +396,37 @@ function setJoinLang(lang) {
   refreshJoinExistingVisibility();
 }
 
+// Add picker buttons for the location's custom (GM-defined) languages. Uses a
+// short label; the underlying value is the custom code passed on to play.html.
+function _renderJoinCustomLangs() {
+  const picker = document.getElementById('lang-picker');
+  if (!picker) return;
+  picker.querySelectorAll('.lang-tab.is-custom').forEach(b => b.remove());
+  joinCustomLangs.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'lang-tab is-custom';
+    b.dataset.lang = c.code;
+    b.textContent = (c.label || c.code).slice(0, 3);
+    b.title = c.label || c.code;
+    b.onclick = () => setJoinLang(c.code);
+    picker.appendChild(b);
+  });
+}
+
 // Snap to the location's allowed language list if our pick isn't permitted.
+// Custom languages are always permitted (they only exist when the GM added them).
 function _applyJoinAllowedLangs(csv) {
   const arr = String(csv || '').split(',').map(s => s.trim()).filter(l => JOIN_LANGS.includes(l));
-  if (arr.length === 0) return;
-  // Restrict the picker buttons to the allowed set.
-  document.querySelectorAll('#lang-picker .lang-tab').forEach(t => {
-    t.style.display = arr.includes(t.dataset.lang) ? '' : 'none';
+  const custom = joinCustomLangs.map(c => c.code);
+  const allowed = arr.concat(custom);
+  if (allowed.length === 0) return;
+  // Restrict the built-in picker buttons to the allowed set (custom buttons,
+  // rendered separately, always show).
+  document.querySelectorAll('#lang-picker .lang-tab:not(.is-custom)').forEach(t => {
+    t.style.display = (arr.length === 0 || arr.includes(t.dataset.lang)) ? '' : 'none';
   });
-  if (!arr.includes(joinLang)) {
-    joinLang = arr[0];
+  if (!allowed.includes(joinLang)) {
+    joinLang = allowed[0];
     localStorage.setItem('m_lang', joinLang);
     localStorage.setItem('cr_lang', joinLang);
   }
@@ -525,7 +552,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (game.location) {
       document.getElementById('location-info').textContent = '📍 ' + game.location.name;
-      if (game.location.allowed_langs) _applyJoinAllowedLangs(game.location.allowed_langs);
+      // Custom (GM-defined) languages for this location → extra picker buttons.
+      if (game.location.custom_langs) { try { joinCustomLangs = JSON.parse(game.location.custom_langs) || []; } catch { joinCustomLangs = []; } }
+      _renderJoinCustomLangs();
+      if (game.location.allowed_langs || joinCustomLangs.length) _applyJoinAllowedLangs(game.location.allowed_langs || '');
     }
     if (isCityRush) {
       const cur = document.getElementById('location-info').textContent;

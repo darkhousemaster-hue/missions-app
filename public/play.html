@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.26">
+<link rel="stylesheet" href="/css/app.css?v=2.4.27">
 <script src="/js/theme.js?v=2"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
@@ -431,9 +431,12 @@ let socket;
 let lang = (() => {
   const all = ['de','en','fr','it','es'];
   const q = new URLSearchParams(window.location.search).get('lang');
-  const pick = (q && all.includes(q)) ? q : (localStorage.getItem('m_lang') || 'de');
+  // Accept a built-in code, or provisionally any slug-shaped code (may be a
+  // location's custom language — validated later by setAllowedLangs()).
+  const qok = q && (all.includes(q) || /^[a-z0-9-]{2,20}$/.test(q));
+  const pick = qok ? q : (localStorage.getItem('m_lang') || 'de');
   try { localStorage.setItem('m_lang', pick); } catch(e) {}
-  return all.includes(pick) ? pick : 'de';
+  return pick || 'de';
 })();
 
 // Inline SVG icons matching the GM-side redesign family. Returned as
@@ -573,7 +576,31 @@ const ALL_LANGS = ['de','en','fr','it','es'];
 // down via setAllowedLangs() once we know the game's location restrictions.
 // Until then we accept all five so the page renders something on first load.
 let LANGS = ['de','en','fr','it','es'];
-function t(k) { return (T[lang]||T.de)[k]||k; }
+// Custom (GM-defined) languages for this game's location, from the team
+// payload: [{code,label,base}]. They carry typed mission content; the app's
+// fixed labels fall back to each one's chosen base language.
+let customLangs = [];
+function customLang(l){ return customLangs.find(c => c.code === l); }
+// The built-in language whose UI strings a given lang uses (itself if built-in,
+// else the custom language's base).
+function baseOf(l){ const c = customLang(l); return c ? (c.base||'de') : l; }
+function t(k) { const L = baseOf(lang); return (T[L]||T.de)[k]||k; }
+// Compact button label + full tooltip for the language cycler.
+function langBtnLabel(){ const c = customLang(lang); return c ? (c.label||c.code).slice(0,2).toUpperCase() : lang.toUpperCase(); }
+function langFullLabel(){ const c = customLang(lang); return c ? (c.label||c.code) : lang.toUpperCase(); }
+// Localized mission field ('name'|'description'|'task') with custom-language
+// support: prefer the custom content, else fall back to the base language.
+function mField(m, field){
+  const c = customLang(lang);
+  if (c){
+    if (m.__ci === undefined){ try { m.__ci = m.custom_i18n ? JSON.parse(m.custom_i18n) : null; } catch { m.__ci = null; } }
+    const v = m.__ci && m.__ci[lang] && m.__ci[lang][field];
+    if (v && String(v).trim()) return v;
+    const b = c.base || 'de';
+    return m[field+'_'+b] || m[field+'_de'] || m[field+'_en'] || '';
+  }
+  return m[field+'_'+lang] || m[field+'_de'] || m[field+'_en'] || '';
+}
 
 // Replace the active language allow-list. Called after fetching the team
 // payload (which carries the location's `allowed_langs`). If the player's
@@ -584,7 +611,8 @@ function setAllowedLangs(csv) {
   // switcher and overrides their join-screen choice — almost never intended, so
   // treat anything under 2 languages as "no restriction" → all 5.
   if (arr.length < 2) arr = ALL_LANGS.slice();
-  LANGS = arr;
+  // Append the location's custom (GM-defined) languages so players can pick them.
+  LANGS = arr.concat(customLangs.map(c => c.code).filter(Boolean));
   const btn = document.getElementById('btn-lang');
   if (btn) btn.style.display = LANGS.length > 1 ? '' : 'none';
   if (!LANGS.includes(lang)) {
@@ -597,7 +625,8 @@ function setAllowedLangs(csv) {
 }
 
 function applyTranslations() {
-  document.getElementById('btn-lang').textContent = lang.toUpperCase();
+  const _lb = document.getElementById('btn-lang');
+  if (_lb) { _lb.textContent = langBtnLabel(); _lb.title = langFullLabel(); }
   document.getElementById('leg-photo').textContent = t('photo');
   document.getElementById('leg-video').textContent = t('video');
   document.getElementById('leg-indoor').textContent = t('indoor');
@@ -770,10 +799,17 @@ function updateTimer({ remaining, running }) {
 let _missionMap = {};
 async function loadMissions() {
   const data = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
+  // Custom (GM-defined) languages for this location. Set before setAllowedLangs
+  // so the cycler includes them.
+  customLangs = Array.isArray(data.custom_langs) ? data.custom_langs : [];
   // Apply the location's allowed-language restriction. Safe to call on every
   // loadMissions (no-op when nothing changes); the GM can edit the allow-list
   // mid-game and the player picks it up on next refresh without reload.
   if (data.allowed_langs) setAllowedLangs(data.allowed_langs);
+  // Refresh the language button now that customLangs is known — its compact
+  // label/tooltip depend on it and the first applyTranslations ran before the
+  // team payload arrived.
+  applyTranslations();
   // Selfie shortcut: show the button only while the team has no selfie yet.
   const scw = document.getElementById('selfie-cta-wrap');
   if (scw) scw.style.display = data.selfie_path ? 'none' : 'block';
@@ -806,10 +842,10 @@ async function loadMissions() {
 // tint and the top-right overlay (green check, "PENDING" tag, etc).
 function missionCard(m) {
   const icon   = m.media_type==='video' ? ICONS.video : ICONS.camera;
-  const desc   = m[`description_${lang}`] || m.description_de || m.description_en || '';
-  const task   = m[`task_${lang}`] || m.task_de || m.task_en || '';
+  const desc   = mField(m,'description');
+  const task   = mField(m,'task');
   const status = m.status || 'open';
-  const name   = m['name_'+lang] || m.mission_name || m.name || '';
+  const name   = mField(m,'name') || m.mission_name || m.name || '';
   const indoor = m.is_indoor ? `<span class="indoor">${ICONS.house}</span>` : '';
   // State overlay (top-right). When a status tag is shown (pending /
    // rejected), it takes the points pill's slot — the points become a
@@ -849,9 +885,9 @@ function openMissionDetail(missionId) {
   if (!m) return;
   _openMissionId = missionId;
   const status = m.status || 'open';
-  const name   = m['name_'+lang] || m.mission_name || m.name || '';
-  const desc   = m[`description_${lang}`] || m.description_de || m.description_en || '';
-  const task   = m[`task_${lang}`] || m.task_de || m.task_en || '';
+  const name   = mField(m,'name') || m.mission_name || m.name || '';
+  const desc   = mField(m,'description');
+  const task   = mField(m,'task');
 
   document.getElementById('md-title').textContent = name;
   document.getElementById('md-points').textContent = `+${m.points}pt`;

@@ -353,6 +353,16 @@ try { db.exec("ALTER TABLE cr_modes ADD COLUMN theme TEXT"); } catch(e) {}
 // order instead of shuffling.
 try { db.exec("ALTER TABLE missions ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN no_randomize INTEGER DEFAULT 0"); } catch(e) {}
+// "Do Not Randomize" lives on the LOCATION (a location's mission set is what
+// gets shuffled). The modes column above is legacy/unused now.
+try { db.exec("ALTER TABLE locations ADD COLUMN no_randomize INTEGER DEFAULT 0"); } catch(e) {}
+// Custom (extra) player languages defined per location. JSON array of
+// {code,label,base} where base is one of the 5 built-ins (UI-chrome fallback,
+// since a custom language can't translate the app's fixed labels). Missions at
+// that location carry their content for it in missions.custom_i18n
+// ({code:{name,description,task}}).
+try { db.exec("ALTER TABLE locations ADD COLUMN custom_langs TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE missions ADD COLUMN custom_i18n TEXT"); } catch(e) {}
 // Play statistics. Games are deleted 72h after creation (cron cleanup), so
 // counting "what was played where" needs its own table that survives both the
 // game cleanup and deletion of locations/modes — hence the denormalized name
@@ -587,6 +597,49 @@ function normLangs(v) {
 }
 const getLocations   = () => db.prepare('SELECT * FROM locations ORDER BY name').all();
 const getLocation    = id => db.prepare('SELECT * FROM locations WHERE id=?').get(id);
+// Sanitize a location's custom-language list. Accepts an array or JSON string of
+// {code,label,base}. code = 2–12 char slug (derived from label if missing),
+// base = a built-in language (default 'de'). Dedup by code, cap at 8. Returns a
+// JSON string or null.
+const _slug = s => String(s||'').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,12);
+const normCustomLangs = v => {
+  try {
+    if (v == null || v === '') return null;
+    let arr = typeof v === 'string' ? JSON.parse(v) : v;
+    if (!Array.isArray(arr)) return null;
+    const seen = new Set(), out = [];
+    for (const it of arr) {
+      if (!it || typeof it !== 'object') continue;
+      const label = String(it.label || '').trim().slice(0, 40);
+      let code = _slug(it.code || label);
+      if (code.length < 2 || !label) continue;
+      if (ALL_LANGS.includes(code)) continue;      // don't shadow a built-in
+      if (seen.has(code)) continue; seen.add(code);
+      const base = ALL_LANGS.includes(it.base) ? it.base : 'de';
+      out.push({ code, label, base });
+      if (out.length >= 8) break;
+    }
+    return out.length ? JSON.stringify(out) : null;
+  } catch (e) { return null; }
+};
+// Sanitize a mission's custom-language content: {code:{name,description,task}}.
+const normCustomI18n = v => {
+  try {
+    if (v == null || v === '') return null;
+    const o = typeof v === 'string' ? JSON.parse(v) : v;
+    if (typeof o !== 'object' || Array.isArray(o)) return null;
+    const out = {};
+    for (const [rawCode, val] of Object.entries(o)) {
+      const code = _slug(rawCode);
+      if (code.length < 2 || ALL_LANGS.includes(code) || !val || typeof val !== 'object') continue;
+      const rec = {};
+      for (const f of ['name','description','task']) if (typeof val[f] === 'string' && val[f].trim()) rec[f] = val[f].slice(0, 2000);
+      if (Object.keys(rec).length) out[code] = rec;
+      if (Object.keys(out).length >= 8) break;
+    }
+    return Object.keys(out).length ? JSON.stringify(out) : null;
+  } catch (e) { return null; }
+};
 // Sanitize a theme payload: accept an object or JSON string, keep only the
 // known keys, require #hex colors in vars, cap the size. Returns a JSON string
 // or null (= default look). Never throws on garbage — falls back to null.
@@ -612,16 +665,18 @@ const normTheme = t => {
     return json.length > 20000 ? null : json;
   } catch (e) { return null; }
 };
-const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme}) => {
+const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize=0}) => {
   const langs = normLangs(allowed_langs);
-  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs,theme) VALUES(?,?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs,normTheme(theme)).lastInsertRowid);
+  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs,theme,custom_langs,no_randomize) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs,normTheme(theme),normCustomLangs(custom_langs),no_randomize?1:0).lastInsertRowid);
 };
-const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme}) => {
-  // theme===undefined → keep the stored theme (the normal editor doesn't send
-  // it); explicit null/'' clears back to default; a value replaces it.
+const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize}) => {
+  // theme/custom_langs/no_randomize===undefined → keep the stored value (the
+  // normal editor may not send them); explicit null/'' clears; a value replaces it.
   const cur = getLocation(id) || {};
   const th = theme === undefined ? (cur.theme || null) : normTheme(theme);
-  return db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=?,theme=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),th,id);
+  const cl = custom_langs === undefined ? (cur.custom_langs || null) : normCustomLangs(custom_langs);
+  const nr = no_randomize === undefined ? (cur.no_randomize?1:0) : (no_randomize?1:0);
+  return db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=?,theme=?,custom_langs=?,no_randomize=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),th,cl,nr,id);
 };
 const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(id);
 // Dedicated theme setters — the generic update mappers rewrite every column,
@@ -639,10 +694,13 @@ const getMissions = (modeId, locationId) => {
 const getMission = id => db.prepare('SELECT * FROM missions WHERE id=?').get(id);
 // New missions append to the end of their mode's arranged order.
 const _nextMissionOrder = modeId => (Number(db.prepare('SELECT MAX(order_index) mx FROM missions WHERE mode_id=?').get(modeId||1)?.mx) || 0) + 1;
-const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',name_es='',description_de='',description_en='',description_fr='',description_it='',description_es='',task_de='',task_en='',task_fr='',task_it='',task_es='',media_type='photo',points=1,is_indoor=0}) =>
-  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,order_index) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',media_type,points,is_indoor?1:0,_nextMissionOrder(mode_id)).lastInsertRowid);
-const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor}) =>
-  db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,media_type=?,points=?,is_indoor=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',media_type,points,is_indoor?1:0,id);
+const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',name_es='',description_de='',description_en='',description_fr='',description_it='',description_es='',task_de='',task_en='',task_fr='',task_it='',task_es='',media_type='photo',points=1,is_indoor=0,custom_i18n=null}) =>
+  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,order_index,custom_i18n) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',media_type,points,is_indoor?1:0,_nextMissionOrder(mode_id),normCustomI18n(custom_i18n)).lastInsertRowid);
+const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,custom_i18n}) => {
+  const cur = getMission(id) || {};
+  const ci = custom_i18n === undefined ? (cur.custom_i18n || null) : normCustomI18n(custom_i18n);
+  return db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,media_type=?,points=?,is_indoor=?,custom_i18n=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',media_type,points,is_indoor?1:0,ci,id);
+};
 const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id);
 // Partial setter — task image is uploaded separately, so don't round-trip the
 // whole mission (updateMission rewrites every field). Pass null to remove it.
@@ -697,11 +755,10 @@ const getGameFull = gameId => {
 
 // ── Mission selection ─────────────────────────────────────────────────────────
 function selectMissions(location, modeId) {
-  // no_randomize modes keep the GM's arranged order (order_index); otherwise the
-  // classic shuffle. getMissions already returns rows in order_index order, so
-  // ordered mode just skips every shuffle.
-  const mode = getMode(modeId) || {};
-  const shuffle = arr => mode.no_randomize ? [...arr] : [...arr].sort(() => Math.random() - 0.5);
+  // A location marked no_randomize keeps the GM's arranged order (order_index);
+  // otherwise the classic shuffle. getMissions already returns rows in
+  // order_index order, so ordered locations just skip every shuffle.
+  const shuffle = arr => (location && location.no_randomize) ? [...arr] : [...arr].sort(() => Math.random() - 0.5);
   const locMs  = shuffle(getMissions(modeId, location.id));
   const poolMs = shuffle(getMissions(modeId, null));
   const total  = location.missions_count || 10;
@@ -789,7 +846,7 @@ const getTeamMissions = teamId => db.prepare(`
   SELECT tm.*, m.name as mission_name, m.name_de, m.name_en, m.name_fr, m.name_it, m.name_es,
     m.description_de, m.description_en, m.description_fr, m.description_it, m.description_es,
     m.task_de, m.task_en, m.task_fr, m.task_it, m.task_es,
-    m.media_type, m.points, m.is_indoor, m.task_image
+    m.media_type, m.points, m.is_indoor, m.task_image, m.custom_i18n
   FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
   WHERE tm.team_id=? ORDER BY tm.id`).all(teamId);
 const getSubmission          = (tid,mid) => db.prepare('SELECT * FROM team_missions WHERE team_id=? AND mission_id=?').get(tid,mid);

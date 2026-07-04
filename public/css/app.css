@@ -66,8 +66,11 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
    structural brand bits like the divider and bracket corners. */
 .btn-primary{background:var(--btn-bg,var(--orange));color:var(--btn-text,#fff);box-shadow:inset 0 0 0 1px var(--orange-dim);}
 .btn-primary:hover{background:#ff7438;box-shadow:var(--glow-orange);}
-.btn-secondary{background:var(--surface2);color:var(--text);box-shadow:inset 0 0 0 1px var(--hairline);}
-.btn-secondary:hover{background:var(--surface);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);}
+.btn-secondary{background:var(--input-bg,var(--surface2));color:var(--btn-text,var(--text));box-shadow:inset 0 0 0 1px var(--hairline);}
+/* Hover brightens the ring only — it must NOT swap to var(--surface), which a
+   theme may set to the tile/background colour (looked like the button vanished
+   into the app background). */
+.btn-secondary:hover{background:var(--input-bg,var(--surface2));box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);}
 .btn-ghost{background:transparent;color:var(--text-dim);box-shadow:inset 0 0 0 1px transparent;}
 .btn-ghost:hover{color:var(--text);box-shadow:inset 0 0 0 1px var(--hairline);}
 .btn-danger{background:rgba(212,43,43,0.14);color:var(--red-light);box-shadow:inset 0 0 0 1px rgba(212,43,43,0.35);}

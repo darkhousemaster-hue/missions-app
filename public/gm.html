@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS&#8203; — Spielleiter</title>
-<link rel="stylesheet" href="/css/app.css?v=2.0.1">
+<link rel="stylesheet" href="/css/app.css?v=2.4.27">
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
@@ -1254,7 +1254,7 @@ function inlineIcon(name, sizeCls){
   return sizeCls ? svg.replace('class="icon ICN"', `class="icon ${sizeCls} ICN"`) : svg;
 }
 const GMT={
-  de:{'ms-drag-hint':'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Modus „Nicht zufällig“ ist.','mode-norand-label':'Reihenfolge','mode-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.','mode-norand-pill':'Nicht zufällig',
+  de:{'ms-drag-hint':'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Standort „Nicht zufällig“ ist.','mode-norand-label':'Reihenfolge','mode-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.','mode-norand-pill':'Nicht zufällig','loc-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Missionsliste ziehen zum Sortieren). Aus: zufällig wie bisher.','cl-label':'Eigene Sprachen','cl-hint':'Zusätzliche Sprachen für Spieler an diesem Standort. Missions-Text wird darin eingegeben; App-Beschriftungen nutzen die Basissprache.','cl-name-ph':'z. B. Schwiizerdütsch','cl-base':'Basis','cl-add':'Sprache','cl-empty':'Noch keine eigenen Sprachen.','cl-name-req':'Bitte einen Sprachnamen eingeben','cl-dup':'Diese Sprache gibt es schon','mm-cust-title':'Eigene Sprachen (Standort)','mm-cust-hint':'Inhalt für die eigenen Sprachen dieses Standorts.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'Rail Adventure nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein Rail Adventure Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine Rail Adventure Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
   // CR mission modal labels
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (Meter)','cr-m-points':'Punkte',
@@ -1382,7 +1382,7 @@ const GMT={
   'manuals-blurb':'Lade die aktuellen PDF-Handbücher herunter. Bei grossen Änderungen wird die Datei vom Maintainer aktualisiert.',
   'manuals-gm':'GM-Handbuch','manuals-settings':'Einstellungs-Handbuch',
   'manuals-others':'Andere Sprachen'},
-  en:{'ms-drag-hint':'Drag to reorder. The order only matters when the mode is set to "Do Not Randomize".','mode-norand-label':'Order','mode-norand-hint':'On: missions appear in the arranged order (drag the list to sort). Off: random, as before.','mode-norand-pill':'Do Not Randomize',
+  en:{'ms-drag-hint':'Drag to reorder. The order only matters when the location is set to "Do Not Randomize".','mode-norand-label':'Order','mode-norand-hint':'On: missions appear in the arranged order (drag the list to sort). Off: random, as before.','mode-norand-pill':'Do Not Randomize','loc-norand-hint':'On: missions appear in the arranged order (drag the mission list to sort). Off: random, as before.','cl-label':'Custom languages','cl-hint':'Extra languages for players at this location. You type the mission text in them; the app labels use the base language.','cl-name-ph':'e.g. Swiss German','cl-base':'Base','cl-add':'Language','cl-empty':'No custom languages yet.','cl-name-req':'Enter a language name','cl-dup':'That language already exists','mm-cust-title':'Custom languages (location)','mm-cust-hint':'Content for this location\'s custom languages.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No Rail Adventure mode yet. Click ＋ Mode.','cr-no-missions':'No Rail Adventure missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
@@ -1500,7 +1500,7 @@ const GMT={
   'manuals-blurb':'Download the current PDF manuals. The maintainer updates these files when major changes ship.',
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
   'manuals-others':'Other languages'},
-  fr:{'ms-drag-hint':'Glisser pour réorganiser. L\'ordre ne compte que si le mode est réglé sur « Ne pas mélanger ».','mode-norand-label':'Ordre','mode-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste pour trier). Désactivé : aléatoire, comme avant.','mode-norand-pill':'Ne pas mélanger',
+  fr:{'ms-drag-hint':'Glisser pour réorganiser. L\'ordre ne compte que si le lieu est réglé sur « Ne pas mélanger ».','mode-norand-label':'Ordre','mode-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste pour trier). Désactivé : aléatoire, comme avant.','mode-norand-pill':'Ne pas mélanger','loc-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste des missions pour trier). Désactivé : aléatoire, comme avant.','cl-label':'Langues personnalisées','cl-hint':'Langues supplémentaires pour les joueurs de ce lieu. Vous y saisissez le texte des missions ; les libellés de l\'app utilisent la langue de base.','cl-name-ph':'p. ex. Suisse allemand','cl-base':'Base','cl-add':'Langue','cl-empty':'Aucune langue personnalisée.','cl-name-req':'Saisissez un nom de langue','cl-dup':'Cette langue existe déjà','mm-cust-title':'Langues personnalisées (lieu)','mm-cust-hint':'Contenu pour les langues personnalisées de ce lieu.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modes Rail Adventure','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode Rail Adventure. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission Rail Adventure. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
@@ -1618,7 +1618,7 @@ const GMT={
   'manuals-blurb':'Télécharge les manuels PDF actuels. Le mainteneur met à jour ces fichiers lors de changements majeurs.',
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
   'manuals-others':'Autres langues'},
-  it:{'ms-drag-hint':'Trascina per riordinare. L\'ordine conta solo se la modalità è impostata su «Non mescolare».','mode-norand-label':'Ordine','mode-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista per ordinare). Off: casuale, come prima.','mode-norand-pill':'Non mescolare',
+  it:{'ms-drag-hint':'Trascina per riordinare. L\'ordine conta solo se la sede è impostata su «Non mescolare».','mode-norand-label':'Ordine','mode-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista per ordinare). Off: casuale, come prima.','mode-norand-pill':'Non mescolare','loc-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista missioni per ordinare). Off: casuale, come prima.','cl-label':'Lingue personalizzate','cl-hint':'Lingue extra per i giocatori di questa sede. Ci digiti il testo delle missioni; le etichette dell\'app usano la lingua di base.','cl-name-ph':'es. Svizzero tedesco','cl-base':'Base','cl-add':'Lingua','cl-empty':'Nessuna lingua personalizzata.','cl-name-req':'Inserisci un nome di lingua','cl-dup':'Questa lingua esiste già','mm-cust-title':'Lingue personalizzate (sede)','mm-cust-hint':'Contenuto per le lingue personalizzate di questa sede.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modalità Rail Adventure','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'Rail Adventure usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità Rail Adventure. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione Rail Adventure. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
@@ -1736,7 +1736,7 @@ const GMT={
   'manuals-blurb':'Scarica i manuali PDF attuali. Il maintainer aggiorna questi file con i cambi rilevanti.',
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
   'manuals-others':'Altre lingue'},
-  es:{'ms-drag-hint':'Arrastra para reordenar. El orden solo importa si el modo está en «No aleatorizar».','mode-norand-label':'Orden','mode-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista para ordenar). Desactivado: aleatorio, como antes.','mode-norand-pill':'No aleatorizar',
+  es:{'ms-drag-hint':'Arrastra para reordenar. El orden solo importa si la ubicación está en «No aleatorizar».','mode-norand-label':'Orden','mode-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista para ordenar). Desactivado: aleatorio, como antes.','mode-norand-pill':'No aleatorizar','loc-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista de misiones para ordenar). Desactivado: aleatorio, como antes.','cl-label':'Idiomas personalizados','cl-hint':'Idiomas extra para los jugadores de esta ubicación. Escribes el texto de las misiones en ellos; las etiquetas de la app usan el idioma base.','cl-name-ph':'p. ej. Alemán suizo','cl-base':'Base','cl-add':'Idioma','cl-empty':'Aún no hay idiomas personalizados.','cl-name-req':'Introduce un nombre de idioma','cl-dup':'Ese idioma ya existe','mm-cust-title':'Idiomas personalizados (ubicación)','mm-cust-hint':'Contenido para los idiomas personalizados de esta ubicación.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modos Rail Adventure','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'Rail Adventure usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo Rail Adventure. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones Rail Adventure. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
   'cr-m-name':'Nombre','cr-m-lat':'Latitud','cr-m-lng':'Longitud','cr-m-radius':'Radio (metros)','cr-m-points':'Puntos',
   'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
@@ -4138,11 +4138,6 @@ async function showAddMode(){ exitSelectionModes();
     <div class="field" data-tip="mode-ruleset"><label class="label" data-tip="mode-ruleset">${gmt('ruleset')||'Regelwerk / Ruleset'}</label>
       <select id="mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" id="mode-timer-label" data-tip="mode-timer">Timer (Minuten / Minutes)</label><input id="mode-timer" type="number" class="input" value="60" min="1" data-tip="mode-timer"></div>
-    <div class="field">
-      <label class="label">${gmt('mode-norand-label')||'Reihenfolge'}</label>
-      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('mode-norand-hint')||'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.'}</p>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">${checkPillRow([{id:'new-mode-norand', label:'🔢 '+(gmt('mode-norand-pill')||'Nicht zufällig'), isOn:false}])}</div>
-    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveNewMode()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
@@ -4161,11 +4156,6 @@ async function showEditMode(id){
       <select id="edit-mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" data-tip="mode-timer">Timer (${gmt('min-label')||'Minuten / Minutes'})</label>
       <input id="edit-mode-timer" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="mode-timer"></div>
-    <div class="field">
-      <label class="label">${gmt('mode-norand-label')||'Reihenfolge'}</label>
-      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('mode-norand-hint')||'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.'}</p>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">${checkPillRow([{id:'edit-mode-norand', label:'🔢 '+(gmt('mode-norand-pill')||'Nicht zufällig'), isOn:m.no_randomize===1}])}</div>
-    </div>
     <div class="modal-footer" style="justify-content:space-between;">
       <div>
         ${m.id!==1?`<button class="btn btn-danger btn-sm" onclick="confirmDeleteMode(${m.id});closeModal()">${gmt('delete')||'Löschen'}</button>`:''}
@@ -4182,7 +4172,7 @@ async function saveEditMode(id){
   if(!name){toast(gmt('name-required')||'Name required','error');return;}
   const rulesetId=Number(document.getElementById('edit-mode-ruleset').value);
   const timer=Number(document.getElementById('edit-mode-timer').value)||60;
-  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer,no_randomize:document.getElementById('edit-mode-norand')?.checked?1:0}});
+  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer}});
   if(res.success){closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast(gmt('saved')||'Gespeichert!','success');}
   else toast(res.error,'error');
 }
@@ -4198,7 +4188,7 @@ async function saveNewMode(){
   if(!name){toast(gmt('name-required')||'Name erforderlich','error');return;}
   const rulesetEl=document.getElementById('mode-ruleset');const rulesetId=rulesetEl?Number(rulesetEl.value):1;
   const timerEl=document.getElementById('mode-timer');const modeTimer=timerEl?Number(timerEl.value):60;
-  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer,no_randomize:document.getElementById('new-mode-norand')?.checked?1:0}});
+  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer}});
   if(res.success){closeModal();loadModeTabs();toast(gmt('mode-created')||'Modus erstellt!','success');}
 }
 
@@ -4271,15 +4261,17 @@ function showAddLocation(){
       <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('loc-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler an diesem Standort.'}</p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">${locLangCheckboxes()}</div>
     </div>
+    ${_locExtraFields(null)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveNewLocation()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+  locCustLangInit(null);
 }
 async function saveNewLocation(){
   const name=document.getElementById('loc-name').value.trim();if(!name){toast(gmt('name-required')||'Name fehlt','error');return;}
-  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0,allowed_langs:readLocLangs()}});
+  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0,allowed_langs:readLocLangs(),no_randomize:document.getElementById('loc-norand')?.checked?1:0,custom_langs:JSON.stringify(_locCustLangs)}});
   if(res.success){closeModal();loadLocationsSettings();loadMissionFilter();toast(gmt('created')||'Erstellt!','success');}
 }
 async function editLocation(id){
@@ -4304,6 +4296,7 @@ async function editLocation(id){
       <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('loc-allowed-langs-hint')||'Nur diese Sprachen erscheinen für Spieler an diesem Standort.'}</p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;">${locLangCheckboxes(l.allowed_langs)}</div>
     </div>
+    ${_locExtraFields(l)}
     <div class="field">
       <label class="label">🎨 ${gmt('th-label')||'Farbschema (Spieler)'}</label>
       <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('th-hint-loc')||'Eigenes Aussehen der Spieler-App für diesen Standort. Standard = aktuelles Design.'}</p>
@@ -4314,9 +4307,10 @@ async function editLocation(id){
       <button class="btn btn-primary" onclick="saveEditLocation(${id})">${gmt('save')||(gmLang==='de'?'Speichern':gmLang==='fr'?'Sauvegarder':gmLang==='it'?'Salva':'Save')}</button>
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+  locCustLangInit(l);
 }
 async function saveEditLocation(id){
-  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0,allowed_langs:readLocLangs()}});
+  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0,allowed_langs:readLocLangs(),no_randomize:document.getElementById('loc-norand')?.checked?1:0,custom_langs:JSON.stringify(_locCustLangs)}});
   if(res.success){closeModal();loadLocationsSettings();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteLocation(id){
@@ -4324,6 +4318,53 @@ async function deleteLocation(id){
   await API(`/api/locations/${id}`,{method:'DELETE',body:{password:settingsPassword}});
   loadLocationsSettings();loadMissionFilter();loadMissions();
 }
+// ── Location extras: Do-Not-Randomize toggle + custom-language editor ────────
+// Shared by the add + edit location modals. Custom languages are content
+// languages (players type mission text in them); the app's fixed labels fall
+// back to the base language chosen here.
+let _locCustLangs = [];
+function _locExtraFields(l){
+  return `
+    <div class="field">
+      <label class="label">${gmt('mode-norand-label')||'Reihenfolge'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('loc-norand-hint')||'An: Missionen erscheinen in der angeordneten Reihenfolge (Missionsliste ziehen zum Sortieren). Aus: zufällig wie bisher.'}</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">${checkPillRow([{id:'loc-norand', label:'🔢 '+(gmt('mode-norand-pill')||'Nicht zufällig'), isOn:l&&l.no_randomize===1}])}</div>
+    </div>
+    <div class="field">
+      <label class="label">🌐 ${gmt('cl-label')||'Eigene Sprachen'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('cl-hint')||'Zusätzliche Sprachen für Spieler an diesem Standort. Missions-Text wird darin eingegeben; App-Beschriftungen nutzen die Basissprache.'}</p>
+      <div id="loc-custlang-list"></div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.45rem;">
+        <input id="loc-cl-label" class="input" style="flex:1;min-width:130px;" placeholder="${esc(gmt('cl-name-ph')||'z. B. Schwiizerdütsch')}">
+        <select id="loc-cl-base" class="select" style="width:auto;">${['de','en','fr','it','es'].map(x=>`<option value="${x}">${esc(gmt('cl-base')||'Basis')}: ${x.toUpperCase()}</option>`).join('')}</select>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="locCustLangAdd()">＋ ${esc(gmt('cl-add')||'Sprache')}</button>
+      </div>
+    </div>`;
+}
+function locCustLangInit(l){
+  try { _locCustLangs = l && l.custom_langs ? JSON.parse(l.custom_langs) : []; } catch(e){ _locCustLangs = []; }
+  if(!Array.isArray(_locCustLangs)) _locCustLangs = [];
+  renderLocCustLangs();
+}
+function renderLocCustLangs(){
+  const box=document.getElementById('loc-custlang-list'); if(!box) return;
+  box.innerHTML = _locCustLangs.length ? _locCustLangs.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--hairline);">
+      <span style="flex:1;font-size:.9rem;color:var(--text);">${esc(c.label)}
+        <span style="color:var(--text-muted);font-size:.75rem;">(${esc((c.code||'').toUpperCase())} · ${esc(gmt('cl-base')||'Basis')} ${esc((c.base||'de').toUpperCase())})</span></span>
+      <button type="button" class="btn btn-danger btn-sm" onclick="locCustLangRemove(${i})">✕</button>
+    </div>`).join('') : `<p style="font-size:.8rem;color:var(--text-muted);">${esc(gmt('cl-empty')||'Noch keine eigenen Sprachen.')}</p>`;
+}
+function locCustLangAdd(){
+  const labEl=document.getElementById('loc-cl-label'); const label=(labEl.value||'').trim();
+  if(!label){ toast(gmt('cl-name-req')||'Bitte einen Sprachnamen eingeben','warning'); return; }
+  const base=document.getElementById('loc-cl-base').value||'de';
+  const code=label.toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,12);
+  if(code.length<2){ toast(gmt('cl-name-req')||'Ungültiger Name','warning'); return; }
+  if(['de','en','fr','it','es'].includes(code) || _locCustLangs.some(c=>c.code===code)){ toast(gmt('cl-dup')||'Diese Sprache gibt es schon','warning'); return; }
+  _locCustLangs.push({code,label,base}); labEl.value=''; renderLocCustLangs();
+}
+function locCustLangRemove(i){ _locCustLangs.splice(i,1); renderLocCustLangs(); }
 
 // Missions
 async function loadMissionFilter(){
@@ -4351,7 +4392,7 @@ async function loadMissions(){
     <button class="btn btn-ghost btn-sm" onclick="copySelectedMissions()" id="btn-ms-copy" style="display:none;">${gmt('copy-to-mode-btn')||'⎘ Kopieren nach Modus…'}</button>
     <button class="btn btn-ghost btn-sm" onclick="downloadSelectedMissions()" id="btn-ms-download" style="display:none;">${gmt('export-btn')||'⬇ Export'}</button>
   </div>
-  <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .5rem;">${gmt('ms-drag-hint')||'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Modus „Nicht zufällig“ ist.'}</p>`;
+  <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .5rem;">${gmt('ms-drag-hint')||'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Standort „Nicht zufällig“ ist.'}</p>`;
   list.innerHTML = toolbar + missions.map((m,i)=>`
     <div class="card mb-1" id="mcard-s-${m.id}" draggable="true"
       ondragstart="msDragStart(event,${i})" ondragover="msDragOver(event,${i})" ondrop="msDrop(event,${i})" ondragend="msDragEnd()">
@@ -4501,11 +4542,65 @@ function missionModal(m,locs){
       <div class="cme-shead"><span class="cme-step">4</span><span class="cme-stitle">${gmt('mm-assign')||'Zuordnung'}</span></div>
       <div class="grid-2">
         <div class="field" style="margin:0;"><label class="label">${gmt('loc-label')||'Standort'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Zu welchem Ort die Mission gehört.</strong> „Pool" = ohne Zuordnung, für jedes Spiel wählbar.</span></i></label>
-          <select id="m-loc" class="select"><option value="" ${sel(!_selLoc)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
+          <select id="m-loc" class="select" onchange="renderMissionCustomLangs()"><option value="" ${sel(!_selLoc)}>${gmt('pool')||'Pool'}</option>${locOpts}</select></div>
         <div class="field" style="margin:0;"><label class="label">${gmt('mode-label-modal')||'Modus'}<i class="cme-info" tabindex="0">i<span class="cme-tip">In welchem Spielmodus / Regelwerk die Mission erscheint.</span></i></label>
           <select id="m-mode" class="select"><option value="${currentModeId}">${esc(currentModeName)}</option></select></div>
       </div>
-    </div>`;
+    </div>
+
+    <!-- 5 · CUSTOM LANGUAGES (only when the chosen location defines some) -->
+    <div id="m-custlang-wrap" style="display:none;"></div>`;
+}
+// Custom (GM-defined) language content for the selected location. Fields are
+// rendered on demand from the location's custom_langs; typed content survives a
+// location switch by being harvested into _msCustI18n before every re-render.
+let _msCustI18n = {};   // { code: { name, description, task } }
+let _missionLocs = [];  // locations available while the mission modal is open
+function _harvestMsCustLangs(){
+  document.querySelectorAll('#m-custlang-wrap [data-cl-code]').forEach(el=>{
+    const code=el.getAttribute('data-cl-code'), field=el.getAttribute('data-cl-field');
+    if(!_msCustI18n[code]) _msCustI18n[code]={};
+    _msCustI18n[code][field]=el.value;
+  });
+}
+function renderMissionCustomLangs(){
+  _harvestMsCustLangs();
+  const wrap=document.getElementById('m-custlang-wrap');
+  if(!wrap) return;
+  const locId=document.getElementById('m-loc')?.value;
+  const loc=_missionLocs.find(l=>String(l.id)===String(locId));
+  let cls=[];
+  if(loc&&loc.custom_langs){ try{cls=JSON.parse(loc.custom_langs)||[];}catch{cls=[];} }
+  if(!Array.isArray(cls)||!cls.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='';
+  wrap.innerHTML=`<div class="cme-sec">
+    <div class="cme-shead"><span class="cme-step">＋</span><span class="cme-stitle">${gmt('mm-cust-title')||'Eigene Sprachen (Standort)'}</span></div>
+    <small style="display:block;color:var(--text-muted);margin:-.2rem 0 .6rem;">${gmt('mm-cust-hint')||'Inhalt für die eigenen Sprachen dieses Standorts.'}</small>
+    ${cls.map(cl=>{
+      const c=_msCustI18n[cl.code]||{};
+      return `<div style="border:1px solid var(--border);border-radius:8px;padding:.6rem;margin-bottom:.6rem;">
+        <div style="font-weight:700;margin-bottom:.45rem;">🗣️ ${esc(cl.label||cl.code)} <span style="font-weight:400;color:var(--text-muted);font-size:.72rem;">${gmt('cl-base')||'Basis'}: ${esc((cl.base||'de').toUpperCase())}</span></div>
+        <label class="label" style="font-size:.7rem;margin:0 0 .15rem;">${gmt('mission-name-label')||'Name'}</label>
+        <input class="input" data-cl-code="${esc(cl.code)}" data-cl-field="name" value="${esc(c.name||'')}">
+        <label class="label" style="font-size:.7rem;margin:.45rem 0 .15rem;">${gmt('desc-label')||'Beschreibung'}</label>
+        <textarea class="textarea" rows="2" data-cl-code="${esc(cl.code)}" data-cl-field="description">${esc(c.description||'')}</textarea>
+        <label class="label" style="font-size:.7rem;margin:.45rem 0 .15rem;">${gmt('task-label')||'Aufgabe'}</label>
+        <textarea class="textarea" rows="2" data-cl-code="${esc(cl.code)}" data-cl-field="task">${esc(c.task||'')}</textarea>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+// Collect the currently-shown custom-language fields into a JSON string for save.
+function collectMsCustI18n(){
+  _harvestMsCustLangs();
+  const out={};
+  Object.keys(_msCustI18n).forEach(code=>{
+    const c=_msCustI18n[code]||{};
+    if((c.name&&c.name.trim())||(c.description&&c.description.trim())||(c.task&&c.task.trim())){
+      out[code]={name:c.name||'',description:c.description||'',task:c.task||''};
+    }
+  });
+  return JSON.stringify(out);
 }
 function mSelectType(t){
   const inp=document.getElementById('m-type'); if(inp) inp.value=t;
@@ -4671,7 +4766,9 @@ async function autoTranslate(section){
 
 async function showAddMission(){ exitSelectionModes();
   _msTaskFile=null; _msTaskCleared=false;
+  _msCustI18n={};
   const locs=await API('/api/locations');
+  _missionLocs=locs;
   const modes=await API('/api/modes');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('add-mission')||'MiSSiON hinzufügen / Add MiSSiON'}</h3>
@@ -4683,18 +4780,22 @@ async function showAddMission(){ exitSelectionModes();
   // update mode select
   const msel=document.getElementById('m-mode');
   if(msel){msel.innerHTML=modes.map(m=>`<option value="${m.id}" ${sel(m.id===currentModeId)}>${esc(m.name)}</option>`).join('');}
+  renderMissionCustomLangs();
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveNewMission(){
-  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||''}});
+  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n()}});
   if(res.success){if(res.id) await uploadMsTaskImage(res.id);closeModal();loadMissions();toast(gmt('mission-created')||'MiSSiON erstellt!','success');}else toast(res.error,'error');
 }
 async function editMission(id){
   _msTaskFile=null; _msTaskCleared=false;
   const locs=await API('/api/locations');
+  _missionLocs=locs;
   const modes=await API('/api/modes');
   const m=await fetch(`/api/missions?mode_id=&location_id=`).then(r=>r.json()).then(arr=>arr.find(x=>x.id===id));
   if(!m)return;
+  _msCustI18n={};
+  if(m.custom_i18n){ try{ _msCustI18n=JSON.parse(m.custom_i18n)||{}; }catch{ _msCustI18n={}; } }
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('edit-mission')||'MiSSiON bearbeiten / Edit MiSSiON'}</h3>
     ${missionModal(m,locs)}
@@ -4704,10 +4805,11 @@ async function editMission(id){
     </div>`;
   const msel=document.getElementById('m-mode');
   if(msel){msel.innerHTML=modes.map(mo=>`<option value="${mo.id}" ${sel(mo.id===(m.mode_id||1))}>${esc(mo.name)}</option>`).join('');}
+  renderMissionCustomLangs();
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveEditMission(id){
-  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||''}});
+  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n()}});
   if(res.success){await uploadMsTaskImage(id);closeModal();loadMissions();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteMission(id){

@@ -709,14 +709,19 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   // Either way, fall back to all five supported languages if unset.
   const game = db.getGame(req.params.gameId);
   let allowed_langs = 'de,en,fr,it,es';
+  // Custom (GM-defined) languages live on the MiSSiONS location. Surface them
+  // so the player's language cycler can offer them and fall content back to
+  // each one's chosen base language for the app's fixed labels.
+  let custom_langs = [];
   if (game && game.location_id) {
     const loc = db.getLocation(game.location_id);
     if (loc && loc.allowed_langs) allowed_langs = loc.allowed_langs;
+    if (loc && loc.custom_langs) { try { custom_langs = JSON.parse(loc.custom_langs) || []; } catch { custom_langs = []; } }
   } else if (game) {
     const crMode = db.getGameCrMode(game.id);
     if (crMode && crMode.allowed_langs) allowed_langs = crMode.allowed_langs;
   }
-  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs});
+  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs});
 });
 app.delete('/api/games/:gameId/teams/:teamId', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
