@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.27">
-<script src="/js/theme.js?v=2"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.28">
+<script src="/js/theme.js?v=3"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -43,10 +43,13 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .score-pill svg{width:11px;height:11px;color:var(--orange);stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
 
 /* Player icon-btn — 36px chip same as the GM topbar pattern. */
-.icon-btn{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--hairline);color:var(--text);cursor:pointer;font:700 11px/1 var(--body);letter-spacing:.06em;transition:color .12s,background .12s,border-color .12s;padding:0;position:relative;}
+/* Nav chips (language / chat / rules). Their symbol colour follows a dedicated
+   --nav theme role, defaulting to the text colour (so the default look is
+   unchanged) — this is the "Navigation" colour setting in the theme designer. */
+.icon-btn{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--hairline);color:var(--nav,var(--text));cursor:pointer;font:700 11px/1 var(--body);letter-spacing:.06em;transition:color .12s,background .12s,border-color .12s;padding:0;position:relative;}
 .icon-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18);}
 .icon-btn .icon{width:18px;height:18px;display:block;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;fill:none;}
-.icon-btn.active{border-color:var(--orange);color:var(--orange);}
+.icon-btn.active{border-color:var(--nav,var(--orange));color:var(--nav,var(--orange));}
 
 /* Legacy class names kept so JS-driven views (chat / rules / lightbox)
    that still query .topbar-btn don't break. */

@@ -108,6 +108,7 @@
       if (el.closest('.mcard__title, .mcard__task, .cr-tile .name')) return 'tile-text';
       if (el.closest('.p-mission-card, .cr-tile, .mission-card, .cr-mission-card')) return 'tile';
       if (el.closest('input, textarea, select, [contenteditable]')) return 'input';
+      if (el.closest('.icon-btn, .cr-icon-btn')) return 'nav';
       if (el.closest('.wordmark, .play-wordmark, .theme-logo')) return 'logo';
       if (el.closest('.join-header, .play-topbar, .cr-topbar')) return 'header';
       return 'bg';

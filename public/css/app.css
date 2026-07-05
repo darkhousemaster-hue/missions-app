@@ -64,13 +64,20 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
 /* Primary CTA = orange in v1.3.0 per the redesign mockups. The brand-red
    accent is still used for destructive actions (.btn-danger) and for
    structural brand bits like the divider and bracket corners. */
-.btn-primary{background:var(--btn-bg,var(--orange));color:var(--btn-text,#fff);box-shadow:inset 0 0 0 1px var(--orange-dim);}
-.btn-primary:hover{background:#ff7438;box-shadow:var(--glow-orange);}
-.btn-secondary{background:var(--input-bg,var(--surface2));color:var(--btn-text,var(--text));box-shadow:inset 0 0 0 1px var(--hairline);}
+/* Both action buttons are driven by ONE theme colour, --btn-bg (the "Buttons"
+   role). The fallback is the concrete brand orange, NOT var(--orange), so
+   editing the Accent colour no longer drags the buttons with it — buttons and
+   accent are independent settings. */
+.btn-primary{background:var(--btn-bg,#E85F1E);color:var(--btn-text,#fff);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
+.btn-primary:hover{background:var(--btn-bg,#E85F1E);filter:brightness(1.08);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
+/* Secondary (e.g. the Gallery button) shares the SAME --btn-bg fill as primary
+   so a theme moves both together; default stays neutral (surface2). --input-bg
+   is reserved for real text fields now, not buttons. */
+.btn-secondary{background:var(--btn-bg,var(--surface2));color:var(--btn-text,var(--text));box-shadow:inset 0 0 0 1px var(--hairline);}
 /* Hover brightens the ring only — it must NOT swap to var(--surface), which a
    theme may set to the tile/background colour (looked like the button vanished
    into the app background). */
-.btn-secondary:hover{background:var(--input-bg,var(--surface2));box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);}
+.btn-secondary:hover{background:var(--btn-bg,var(--surface2));box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);}
 .btn-ghost{background:transparent;color:var(--text-dim);box-shadow:inset 0 0 0 1px transparent;}
 .btn-ghost:hover{color:var(--text);box-shadow:inset 0 0 0 1px var(--hairline);}
 .btn-danger{background:rgba(212,43,43,0.14);color:var(--red-light);box-shadow:inset 0 0 0 1px rgba(212,43,43,0.35);}

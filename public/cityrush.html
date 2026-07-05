@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.27">
-<script src="/js/theme.js?v=2"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.28">
+<script src="/js/theme.js?v=3"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -37,10 +37,10 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .score-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--hairline);font:700 12px/1 var(--mono);color:var(--text);letter-spacing:.02em;white-space:nowrap;}
 .score-pill svg{width:11px;height:11px;color:var(--orange);stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
 .score-pill .pt{color:var(--text-dim);}
-.cr-icon-btn{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--hairline);color:var(--text);cursor:pointer;font:700 11px/1 var(--body);letter-spacing:.06em;padding:0;position:relative;transition:color .12s,background .12s,border-color .12s;}
+.cr-icon-btn{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--hairline);color:var(--nav,var(--text));cursor:pointer;font:700 11px/1 var(--body);letter-spacing:.06em;padding:0;position:relative;transition:color .12s,background .12s,border-color .12s;}
 .cr-icon-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);}
 .cr-icon-btn .icon{width:18px;height:18px;display:block;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
-.cr-icon-btn.active{border-color:var(--orange);color:var(--orange);}
+.cr-icon-btn.active{border-color:var(--nav,var(--orange));color:var(--nav,var(--orange));}
 /* Legacy class kept so chat / rules back-buttons (which still use it) work. */
 .topbar-btn { background:var(--surface); border:1px solid var(--hairline); color:var(--text-dim);
   border-radius:var(--radius); padding:.4rem .65rem; cursor:pointer; font-size:.75rem;
