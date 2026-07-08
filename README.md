@@ -24,7 +24,7 @@ http://localhost:3001/gm.html
 
 ## Default Password
 
-The settings password is: **`admin1898`**
+The settings password is: **`REDACTED`**
 
 Change it immediately in **Settings → Security** after first login.
 
