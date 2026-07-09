@@ -30,7 +30,12 @@
     const d = {};
     const t = vars['--text'], o = vars['--orange'], g = vars['--green'], r = vars['--red'];
     if (t) d['--hairline'] = alpha(t, .08);
-    if (o) { d['--orange-soft']=alpha(o,.14); d['--orange-dim']=alpha(o,.55); d['--glow-orange']=`0 0 16px ${alpha(o,.45)}`; d['--team-color']=o; }
+    if (o) {
+      d['--orange-soft']=alpha(o,.14); d['--orange-dim']=alpha(o,.55); d['--glow-orange']=`0 0 16px ${alpha(o,.45)}`; d['--team-color']=o;
+      // The Accent colour also drives the action buttons (one "Akzente" control),
+      // unless a theme explicitly set its own button fill.
+      if (!vars['--btn-bg']) d['--btn-bg']=o;
+    }
     if (g) { d['--green-soft']=alpha(g,.14); d['--green-dim']=alpha(g,.55); }
     if (r) { d['--red-light']=mix(r,'#ffffff',.28); d['--red-dim']=mix(r,'#000000',.35); d['--glow-red']=`0 0 12px ${alpha(r,.5)}`; }
     return d;
@@ -104,9 +109,14 @@
     // must not navigate or open the camera when the GM mouses over it).
     const roleOf = el => {
       if (!el || !el.closest) return 'bg';
-      if (el.closest('.btn-primary, .selfie-square')) return 'button';
-      if (el.closest('.mcard__title, .mcard__task, .cr-tile .name')) return 'tile-text';
-      if (el.closest('.p-mission-card, .cr-tile, .mission-card, .cr-mission-card')) return 'tile';
+      // Buttons + points pills follow the Accent colour.
+      if (el.closest('.btn-primary, .btn-secondary, .md-btn, .mcard__points, #md-points')) return 'accent';
+      // Task callout + teamname field use the field-fill colour.
+      if (el.closest('.md-task, .name-field')) return 'input';
+      // Selfie capture square uses the tile-surface colour.
+      if (el.closest('.selfie-square')) return 'tile';
+      if (el.closest('.mcard__title, .mcard__task, .cr-tile .name, .md-title')) return 'tile-text';
+      if (el.closest('.p-mission-card, .cr-tile, .mission-card, .cr-mission-card, .md-card')) return 'tile';
       if (el.closest('input, textarea, select, [contenteditable]')) return 'input';
       if (el.closest('.icon-btn, .cr-icon-btn')) return 'nav';
       if (el.closest('.wordmark, .play-wordmark, .theme-logo')) return 'logo';

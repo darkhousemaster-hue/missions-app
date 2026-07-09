@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS&#8203; — Spielleiter</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.28">
+<link rel="stylesheet" href="/css/app.css?v=2.4.29">
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
@@ -7574,9 +7574,6 @@ const THEME_GROUPS = () => [
   { lbl: gmt('th-g-tile')||'Kacheln', vars: [
     ['--surface',   gmt('th-v-tile')||'Kachel-Füllung','tile'],
     ['--tile-text', gmt('th-v-tile-text')||'Kachel-Text','tile-text'] ]},
-  { lbl: gmt('th-g-button')||'Buttons', vars: [
-    ['--btn-bg',    gmt('th-v-btn-bg')||'Button-Füllung','button'],
-    ['--btn-text',  gmt('th-v-btn-text')||'Button-Text','button'] ]},
   { lbl: gmt('th-g-nav')||'Navigation', vars: [
     ['--nav',       gmt('th-v-nav')||'Symbole (Sprache/Chat/Regeln)','nav'] ]},
   { lbl: gmt('th-g-input')||'Eingabefelder', vars: [
@@ -7587,8 +7584,9 @@ const THEME_GROUPS = () => [
     ['--text-muted',gmt('th-v-text-muted')||'Text gedämpft','text'] ]},
   { lbl: gmt('th-g-border')||'Rahmen', border:true, vars: [
     ['--card-border', gmt('th-v-border')||'Rahmenfarbe','border'] ]},
-  { lbl: gmt('th-g-accent')||'Akzente & Logo', vars: [
-    ['--orange',    gmt('th-v-orange')||'Akzent','accent'],
+  { lbl: gmt('th-g-accent')||'Akzente & Buttons', vars: [
+    ['--orange',    gmt('th-v-orange')||'Akzent & Buttons','accent'],
+    ['--btn-text',  gmt('th-v-btn-text')||'Button-Text','accent'],
     ['--green',     gmt('th-v-green')||'Erfolg','accent'],
     ['--logo-color',gmt('th-v-logo')||'Logo & Wortmarke','logo'] ]},
 ];
