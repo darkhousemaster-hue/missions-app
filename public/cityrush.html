@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.29">
-<script src="/js/theme.js?v=4"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.30">
+<script src="/js/theme.js?v=5"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -723,7 +723,7 @@ const T = {
         no_gps_signal:'GPS nicht verfügbar',
         capture_team_msg:'Foto gesendet! +5 Punkte möglich',
         upload_pending_review:'Hochgeladen — wird vom Spielleiter geprüft…',
-        right_answer:'✓ Richtig!',
+        right_answer:'✓ Richtig!', not_started:'Die Zeit hat noch nicht begonnen. Bitte warten.',
         // Selfie overlay
         selfie_title:'Team-Selfie',
         selfie_help:'Bevor das Spiel startet: Bitte ein Gruppenfoto eures Teams machen. Der Spielleiter sieht dieses Foto, um euch zu erkennen.',
@@ -774,7 +774,7 @@ const T = {
         no_gps_signal:'GPS unavailable',
         capture_team_msg:'Photo sent! +5 points possible',
         upload_pending_review:'Uploaded — awaiting Gamemaster review…',
-        right_answer:'✓ Correct!',
+        right_answer:'✓ Correct!', not_started:'The time hasn’t started yet. Please wait.',
         selfie_title:'Team selfie',
         selfie_help:'Before the game starts: please take a group photo of your team. The Gamemaster sees this photo to identify you.',
         selfie_shoot:'Take photo', selfie_retake:'Retake',
@@ -825,6 +825,7 @@ const T = {
         capture_team_msg:'Photo envoyée ! +5 points possibles',
         upload_pending_review:'Envoyé — en attente de validation du Gamemaster…',
         right_answer:'✓ Correct !',
+        not_started:'Le temps n’a pas encore commencé. Merci de patienter.',
         selfie_title:'Selfie d\'équipe',
         selfie_help:'Avant le début : prenez une photo de groupe de votre équipe. Le Gamemaster s\'en sert pour vous reconnaître.',
         selfie_shoot:'Prendre photo', selfie_retake:'Reprendre',
@@ -874,7 +875,7 @@ const T = {
         no_gps_signal:'GPS non disponibile',
         capture_team_msg:'Foto inviata! +5 punti possibili',
         upload_pending_review:'Caricato — in attesa della revisione del Gamemaster…',
-        right_answer:'✓ Corretto!',
+        right_answer:'✓ Corretto!', not_started:'Il tempo non è ancora iniziato. Attendi.',
         selfie_title:'Selfie della squadra',
         selfie_help:'Prima dell\'inizio: scattate una foto di gruppo della vostra squadra. Il Gamemaster la usa per riconoscervi.',
         selfie_shoot:'Scatta foto', selfie_retake:'Riprendi',
@@ -924,7 +925,7 @@ const T = {
         no_gps_signal:'GPS no disponible',
         capture_team_msg:'¡Foto enviada! +5 puntos posibles',
         upload_pending_review:'Subido — a la espera de la revisión del Gamemaster…',
-        right_answer:'✓ ¡Correcto!',
+        right_answer:'✓ ¡Correcto!', not_started:'El tiempo aún no ha comenzado. Espera, por favor.',
         selfie_title:'Selfie del equipo',
         selfie_help:'Antes de empezar: haced una foto de grupo de vuestro equipo. El Gamemaster la usa para reconoceros.',
         selfie_shoot:'Hacer foto', selfie_retake:'Repetir',
@@ -2077,6 +2078,7 @@ async function submitSpecialAnswer(m){
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, missionId:m.id, answer}),
   }).then(r=>r.json());
+  if(res.error === 'not_started'){ toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.','info'); return; }
   if(res.correct){
     if(err) err.textContent='';
     toast(t('right_answer')||'✓ Richtig!','success');
@@ -2093,6 +2095,7 @@ async function completeSpecialMission(m, mediaPath){
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, missionId:m.id, mediaPath:mediaPath||null, playerKey: getCrPlayerKey()}),
   }).then(r=>r.json()).catch(()=>({error:'network'}));
+  if(res.error === 'not_started'){ toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.','info'); return; }
   if(res.code === 'submission_conflict'){
     toast(t('teammate_pending') || 'Teammate already submitted.', 'warning');
     return;
@@ -3035,6 +3038,7 @@ async function submitAnswer(){
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({teamId, missionId:m.id, answer})
   }).then(r=>r.json());
+  if(res.error === 'not_started'){ toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.','info'); return; }
   if(res.correct){
     if(err) err.textContent='';
     toast(t('right_answer')||'✓ Richtig!','success');
@@ -3201,6 +3205,7 @@ async function handleScanResult(m, payload, detected, isSpecial, setStatus, frag
     res=await fetch(`/api/games/${gameId}/cr/scan`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({teamId, missionId:m.id, payload, detected})}).then(r=>r.json());
   }catch(e){ setStatus(t('error_generic')||'Fehler', true); return true; }
+  if(res && res.error==='not_started'){ toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.','info'); closeScanOverlay(); return false; }
   if(!res || res.correct===false){ setStatus(t('scan_no_match')||'Nicht erkannt — weiter versuchen.', true); return true; }
   const mode=scanModeOf(m);
   if(mode==='reveal' && res.revealed){
@@ -3417,6 +3422,11 @@ async function completeMission(mediaPath){
     body: JSON.stringify({teamId, missionId: mid, mediaPath:mediaPath||null, playerKey: getCrPlayerKey()}),
   }).then(r=>r.json()).catch(()=>({}));
   _crUploadMissionId = null;
+  if(res.error === 'not_started'){
+    if(btn){ btn.disabled=false; btn.textContent = t('complete'); }
+    toast(t('not_started') || 'Die Zeit hat noch nicht begonnen. Bitte warten.', 'info');
+    return;
+  }
   if(res.code === 'submission_conflict'){
     if(btn){ btn.disabled=false; btn.textContent = t('complete'); }
     toast(t('teammate_pending') || 'Teammate already submitted.', 'warning');
@@ -3937,6 +3947,7 @@ async function _crSendMedia(form){
   try {
     const r = await fetch(`/api/games/${gameId}/media/upload`, {method:'POST', body:form});
     if(r.status === 413){ const f=form.get('media'); crTooLargeToast(f && f.size); return null; }
+    if(r.status === 403){ toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.','info'); return null; }
     if(!r.ok){
       let msg = `Upload fehlgeschlagen (${r.status})`;
       try { const j = await r.json(); if(j && j.error) msg = `${msg}: ${j.error}`; } catch(e){}
@@ -3963,6 +3974,7 @@ async function crUploadBlob(blob){
     form.append('targetTeamId', captureTargetTeamId);
     const res=await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json()).catch(()=>null);
     if(res && res.success) toast(t('capture_team_msg')||'Foto gesendet! +5 Punkte möglich','success');
+    else if(res && res.error==='not_started') toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.','info');
     else toast(t('upload_failed')||'Upload fehlgeschlagen','error');
   } else if(captureMode==='special' && _specialMissionForUpload){
     // Special-mission upload → goes through cr/special/complete (with GM review).
@@ -3988,6 +4000,7 @@ async function crUpload(){
     form.append('targetTeamId', captureTargetTeamId);
     const res = await fetch(`/api/games/${gameId}/cr/capture`,{method:'POST',body:form}).then(r=>r.json()).catch(()=>null);
     if(res && res.success) toast(t('capture_team_msg')||'Foto gesendet! +5 Punkte möglich','success');
+    else if(res && res.error==='not_started') toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.','info');
     else toast(t('upload_failed')||'Upload fehlgeschlagen','error');
   } else if(captureMode==='special' && _specialMissionForUpload){
     const upRes = await _crSendMedia(form);

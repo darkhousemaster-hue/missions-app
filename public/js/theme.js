@@ -30,12 +30,7 @@
     const d = {};
     const t = vars['--text'], o = vars['--orange'], g = vars['--green'], r = vars['--red'];
     if (t) d['--hairline'] = alpha(t, .08);
-    if (o) {
-      d['--orange-soft']=alpha(o,.14); d['--orange-dim']=alpha(o,.55); d['--glow-orange']=`0 0 16px ${alpha(o,.45)}`; d['--team-color']=o;
-      // The Accent colour also drives the action buttons (one "Akzente" control),
-      // unless a theme explicitly set its own button fill.
-      if (!vars['--btn-bg']) d['--btn-bg']=o;
-    }
+    if (o) { d['--orange-soft']=alpha(o,.14); d['--orange-dim']=alpha(o,.55); d['--glow-orange']=`0 0 16px ${alpha(o,.45)}`; d['--team-color']=o; }
     if (g) { d['--green-soft']=alpha(g,.14); d['--green-dim']=alpha(g,.55); }
     if (r) { d['--red-light']=mix(r,'#ffffff',.28); d['--red-dim']=mix(r,'#000000',.35); d['--glow-red']=`0 0 12px ${alpha(r,.5)}`; }
     return d;
@@ -109,8 +104,11 @@
     // must not navigate or open the camera when the GM mouses over it).
     const roleOf = el => {
       if (!el || !el.closest) return 'bg';
-      // Buttons + points pills follow the Accent colour.
-      if (el.closest('.btn-primary, .btn-secondary, .md-btn, .mcard__points, #md-points')) return 'accent';
+      // Action buttons have their own Button-fill colour.
+      if (el.closest('.btn-primary, .btn-secondary, .md-btn')) return 'button';
+      // Status notices (e.g. "photo uploaded / waiting for review") + player chat bubbles.
+      if (el.closest('.md-state-note')) return 'notice';
+      if (el.closest('.chat-bubble')) return 'chat';
       // Task callout + teamname field use the field-fill colour.
       if (el.closest('.md-task, .name-field')) return 'input';
       // Selfie capture square uses the tile-surface colour.
