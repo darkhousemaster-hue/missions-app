@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.30">
-<script src="/js/theme.js?v=5"></script>
+<script src="/js/theme.js?v=6"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -134,7 +134,10 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
    body (title + desc + task), points pill on the right. Whole card is
    tappable to open the detail modal. State variants: card--done (green
    check overlay), card--pending (orange tint), card--rejected (red dim). */
-.p-mission-card{position:relative;display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:start;padding:14px;background:var(--tile-bg,var(--surface));border:var(--border-width,1px) solid var(--card-border,var(--hairline));border-radius:12px;cursor:pointer;transition:border-color .12s,background .12s;}
+.p-mission-card{position:relative;display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding:14px;background:var(--tile-bg,var(--surface));border:var(--border-width,1px) solid var(--card-border,var(--hairline));border-radius:12px;cursor:pointer;transition:border-color .12s,background .12s;}
+/* Status/points sit on a header row NEXT to the title so the description + task
+   get the card's full width instead of a narrow strip beside a wide status pill. */
+.mcard__head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
 /* The tapped/hovered mission tile has its own themeable fill (--tile-active),
    defaulting to the current surface2 so nothing changes until it's set. */
 .p-mission-card:hover{border-color:rgba(255,255,255,.18);background:var(--tile-active,var(--surface2));}
@@ -150,7 +153,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .mcard__desc{font:400 12px/1.35 var(--body);color:var(--text-dim);margin-bottom:6px;}
 .mcard__task{font:500 12px/1.35 var(--body);color:var(--tile-text,var(--text));display:flex;align-items:flex-start;gap:6px;}
 .mcard__task .arrow{color:var(--orange);font-weight:700;flex-shrink:0;}
-.mcard__points{align-self:start;font:700 11px/1 var(--mono);color:var(--text);background:rgba(255,255,255,.05);border:1px solid var(--hairline);padding:5px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap;}
+.mcard__points{align-self:start;font:700 11px/1 var(--mono);color:var(--points,var(--text));background:rgba(255,255,255,.05);border:1px solid var(--hairline);padding:5px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap;}
+/* Points pill inside the mission detail window follows the same --points role. */
+#md-points{color:var(--points,var(--text-dim));}
 .mcard__check{align-self:start;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--green);margin-top:6px;}
 .mcard__check svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;fill:none;}
 .mcard__pending-tag{align-self:start;font:700 9px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--orange);padding:5px 9px;border-radius:999px;background:rgba(232,95,30,.14);border:1px solid rgba(232,95,30,.3);white-space:nowrap;}
@@ -188,9 +193,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 /* Status notices (waiting-for-review / accepted / rejected). --notice-bg lets a
    theme recolour their fill; unset keeps each one's semantic tint. */
 .md-state-note{margin-top:14px;padding:12px 14px;border-radius:10px;font:500 13px/1.5 var(--body);}
-.md-state-note.pending{background:var(--notice-bg,rgba(232,95,30,.1));border:1px solid rgba(232,95,30,.3);color:var(--orange);}
-.md-state-note.accepted{background:var(--notice-bg,rgba(74,222,128,.1));border:1px solid rgba(74,222,128,.3);color:var(--green);}
-.md-state-note.rejected{background:var(--notice-bg,rgba(212,43,43,.12));border:1px solid rgba(212,43,43,.3);color:var(--red-light);}
+.md-state-note.pending{background:var(--notice-bg,rgba(232,95,30,.1));border:1px solid rgba(232,95,30,.3);color:var(--notice-text,var(--orange));}
+.md-state-note.accepted{background:var(--notice-bg,rgba(74,222,128,.1));border:1px solid rgba(74,222,128,.3);color:var(--notice-text,var(--green));}
+.md-state-note.rejected{background:var(--notice-bg,rgba(212,43,43,.12));border:1px solid rgba(212,43,43,.3);color:var(--notice-text,var(--red-light));}
 .md-thumb{margin-top:14px;border-radius:10px;border:1px solid var(--hairline);overflow:hidden;}
 .md-thumb img,.md-thumb video{width:100%;display:block;max-height:240px;object-fit:cover;}
 
@@ -256,12 +261,18 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   display:none; align-items:center; justify-content:center; padding:1.5rem;
 }
 .msg-popup-box {
-  background:var(--bg3); border:2px solid var(--red); border-radius:var(--radius);
+  background:var(--notice-bg,var(--bg3)); border:2px solid var(--red); border-radius:var(--radius);
   padding:1.5rem; max-width:400px; width:100%; text-align:center;
   box-shadow:0 0 40px rgba(212,43,43,.4);
 }
 .msg-popup-box h3 { color:var(--red-light); margin-bottom:.75rem; font-size:1.4rem; }
-.msg-popup-box p  { color:var(--text); margin-bottom:1.25rem; line-height:1.6; }
+.msg-popup-box p  { color:var(--notice-text,var(--text)); margin-bottom:1.25rem; line-height:1.6; }
+
+/* Centered transient notice (e.g. "the time hasn't started yet") — centered on
+   screen, not a corner toast, and themeable via --notice-bg / --notice-text. */
+#center-notice { position:fixed; inset:0; z-index:2100; display:none; align-items:center; justify-content:center; padding:1.5rem; pointer-events:none; }
+#center-notice.show { display:flex; }
+#center-notice .cn-box { background:var(--notice-bg,var(--surface2)); color:var(--notice-text,var(--text)); border:1px solid var(--card-border,var(--hairline)); border-radius:14px; padding:16px 20px; font:600 15px/1.45 var(--body); text-align:center; max-width:320px; box-shadow:0 12px 44px rgba(0,0,0,.5); }
 
 /* ── Rejection overlay ── */
 #rejection-overlay {
@@ -424,6 +435,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   <video id="lb-vid" src="" controls style="display:none;"></video>
 </div>
 
+<!-- Centered transient notice (time-not-started etc.) -->
+<div id="center-notice"><div class="cn-box" id="center-notice-text"></div></div>
+
 <!-- ── GM MESSAGE POPUP ── -->
 <div id="msg-popup">
   <div class="msg-popup-box">
@@ -504,7 +518,7 @@ const T = {
     uploading_review:'Hochgeladen! Wird geprüft…',
     upload_failed:'Upload fehlgeschlagen',
     already_solved:'Diese Mission wurde bereits von deinem Team gelöst!',
-    not_started:'Die Zeit hat noch nicht begonnen. Bitte warten.',
+    not_started:'Die Zeit hat noch nicht begonnen. Bitte warten.', pending_note:'Warten auf Bewertung durch den Spielleiter.', accepted_note:'Angenommen!',
     file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.',
     broadcast:'Rundruf',
     flip:'🔄 Flip', you:'Du', no_missions:'Keine Missionen gefunden.', no_rules:'Keine Regeln vorhanden.',
@@ -527,7 +541,7 @@ const T = {
     capture_failed:'Recording failed:',
     uploading_review:'Uploaded! Awaiting review…',
     upload_failed:'Upload failed',
-    already_solved:'This mission was already solved by your team!', not_started:'The time hasn’t started yet. Please wait.',
+    already_solved:'This mission was already solved by your team!', not_started:'The time hasn’t started yet. Please wait.', pending_note:'Waiting for the Gamemaster to review.', accepted_note:'Accepted!',
     file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.',
     broadcast:'Broadcast',
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
@@ -550,7 +564,7 @@ const T = {
     uploading_review:'Envoyé ! En attente de validation…',
     upload_failed:'Échec de l\'envoi',
     already_solved:'Cette mission a déjà été résolue par votre équipe !',
-    not_started:'Le temps n’a pas encore commencé. Merci de patienter.',
+    not_started:'Le temps n’a pas encore commencé. Merci de patienter.', pending_note:'En attente de validation par le Gamemaster.', accepted_note:'Accepté !',
     file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.',
     broadcast:'Annonce',
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
@@ -573,7 +587,7 @@ const T = {
     uploading_review:'Caricato! In attesa di revisione…',
     upload_failed:'Caricamento fallito',
     already_solved:'Questa missione è già stata completata dalla tua squadra!',
-    not_started:'Il tempo non è ancora iniziato. Attendi.',
+    not_started:'Il tempo non è ancora iniziato. Attendi.', pending_note:'In attesa di revisione del Gamemaster.', accepted_note:'Accettato!',
     file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.',
     broadcast:'Annuncio',
     flip:'🔄 Ribalta', you:'Io', no_missions:'Nessuna missione trovata.', no_rules:'Nessuna regola.',
@@ -597,7 +611,7 @@ const T = {
     uploading_review:'¡Subido! Pendiente de revisión…',
     upload_failed:'Subida fallida',
     already_solved:'¡Esta misión ya fue resuelta por tu equipo!',
-    not_started:'El tiempo aún no ha comenzado. Espera, por favor.',
+    not_started:'El tiempo aún no ha comenzado. Espera, por favor.', pending_note:'Esperando la revisión del Gamemaster.', accepted_note:'¡Aceptado!',
     file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.',
     broadcast:'Anuncio',
     flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
@@ -914,11 +928,13 @@ function missionCard(m) {
   return `<div class="p-mission-card ${stateClass}" id="mc-${m.mission_id}" onclick="openMissionDetail(${m.mission_id})" role="button" tabindex="0">
     <div class="mcard__type">${icon}</div>
     <div class="mcard__body">
-      <div class="mcard__title">${esc(name)}${indoor}</div>
+      <div class="mcard__head">
+        <div class="mcard__title">${esc(name)}${indoor}</div>
+        ${rightSlot}
+      </div>
       ${desc ? `<div class="mcard__desc">${esc(desc)}</div>` : ''}
       ${task ? `<div class="mcard__task"><span class="arrow">→</span><span>${esc(task)}</span></div>` : ''}
     </div>
-    ${rightSlot}
     <div class="upload-bar" id="ub-${m.mission_id}" style="grid-column:1/-1;"><div class="upload-fill" id="uf-${m.mission_id}"></div></div>
   </div>`;
 }
@@ -1238,7 +1254,7 @@ async function doUpload() {
       // the accept handler.
       loadMissions();
     } else if (xhr.status === 403) {
-      toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.', 'info');
+      showCenterNotice(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.');
     } else if (xhr.status === 409) {
       // A teammate already got this mission accepted while we were taking the photo.
       toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
@@ -1424,7 +1440,7 @@ async function uploadFromGallery(event, missionId, mediaType) {
       // Repaint from server truth rather than the old dead-`mf-` footer patch.
       loadMissions();
     } else if(xhr.status === 403){
-      toast(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.', 'info');
+      showCenterNotice(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.');
     } else if(xhr.status === 409){
       toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
       loadMissions();
@@ -1503,6 +1519,17 @@ function toast(msg, type='info') {
   el.textContent = msg;
   document.getElementById('toast-container').appendChild(el);
   setTimeout(() => el.remove(), 3500);
+}
+// Centered transient notice (screen-centered, not a corner toast) — used for the
+// "time hasn't started yet" message so it reads as an important, central prompt.
+let _cnTimer = null;
+function showCenterNotice(msg) {
+  const el = document.getElementById('center-notice');
+  if (!el) { toast(msg, 'info'); return; }
+  document.getElementById('center-notice-text').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_cnTimer);
+  _cnTimer = setTimeout(() => el.classList.remove('show'), 3200);
 }
 </script>
 </body>

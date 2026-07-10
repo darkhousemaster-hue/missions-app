@@ -106,8 +106,11 @@
       if (!el || !el.closest) return 'bg';
       // Action buttons have their own Button-fill colour.
       if (el.closest('.btn-primary, .btn-secondary, .md-btn')) return 'button';
-      // Status notices (e.g. "photo uploaded / waiting for review") + player chat bubbles.
-      if (el.closest('.md-state-note')) return 'notice';
+      // Points pills (mission card + detail window) have their own colour.
+      if (el.closest('.mcard__points, #md-points')) return 'points';
+      // Status notices (e.g. "photo uploaded / waiting for review") + centered
+      // "time hasn't started" notice + player chat bubbles.
+      if (el.closest('.md-state-note, .cn-box')) return 'notice';
       if (el.closest('.chat-bubble')) return 'chat';
       // Task callout + teamname field use the field-fill colour.
       if (el.closest('.md-task, .name-field')) return 'input';
