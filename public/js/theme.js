@@ -94,10 +94,30 @@
   window.ArTheme = { preview, apply };
 
   if (preview){
+    // Reverse hover: the designer asks us to outline the element(s) a hovered
+    // setting recolours. Inverse of roleOf below.
+    const SEL_BY_ROLE = {
+      header:'.play-topbar, .join-header, .cr-topbar',
+      tile:'.p-mission-card, .cr-tile', 'tile-active':'.p-mission-card, .cr-tile',
+      'tile-text':'.mcard__title, .mcard__task, .cr-tile .name, .md-title',
+      button:'.btn-primary, .btn-secondary, .md-btn', nav:'.icon-btn, .cr-icon-btn',
+      input:'.md-task, .name-field, .input', notice:'.md-state-note, .cn-box, .msg-popup-box',
+      chat:'.chat-bubble', points:'.mcard__points, #md-points',
+      text:'.mcard__desc, .md-desc', accent:'.mcard__task .arrow, .score-pill svg',
+      logo:'.play-wordmark, .wordmark, .theme-logo', border:'.p-mission-card, .cr-tile',
+    };
+    let _hlEls = [];
+    function clearRoleHighlight(){ _hlEls.forEach(el => { el.style.outline=''; el.style.outlineOffset=''; }); _hlEls = []; }
+    function highlightRole(role){
+      clearRoleHighlight();
+      const sel = role && SEL_BY_ROLE[role]; if(!sel) return;
+      document.querySelectorAll(sel).forEach(el => { el.style.outline='2px solid #4da3ff'; el.style.outlineOffset='1px'; _hlEls.push(el); });
+    }
     window.addEventListener('message', e => {
       if (e.origin !== location.origin) return;
       const d = e.data;
       if (d && d.type === 'ar-theme') apply(d.theme || null);
+      if (d && d.type === 'ar-theme-highlight') highlightRole(d.role);
     });
     // Hover-to-highlight: report which themable role the pointer is over so the
     // designer can flag the matching field. Clicks are swallowed (the preview

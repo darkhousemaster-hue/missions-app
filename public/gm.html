@@ -7625,12 +7625,12 @@ function _tdHtml(){
     <div class="td-group"><div class="td-glbl">${esc(g.lbl)}</div>
       ${g.vars.map(([k,lbl,role]) => {
         const cur = t.vars[k] || THEME_DEFAULTS[k];
-        return `<div class="td-row" data-role="${role||''}"><span class="td-name">${esc(lbl)}</span>
+        return `<div class="td-row" data-role="${role||''}" onmouseenter="_tdHoverRole('${role||''}')" onmouseleave="_tdHoverRole('')"><span class="td-name">${esc(lbl)}</span>
           <input type="color" value="${esc(cur)}" data-var="${k}" oninput="tdVarInput(this)">
           <code class="td-hex" id="td-hex-${k.replace(/-/g,'')}">${esc(cur)}</code>
           <button class="td-reset" title="${esc(gmt('th-reset')||'Standard')}" onclick="tdVarReset('${k}')">↺</button></div>`;
       }).join('')}
-      ${g.border ? `<div class="td-row" data-role="border"><span class="td-name">${esc(gmt('th-border-width')||'Rahmenstärke')}</span>
+      ${g.border ? `<div class="td-row" data-role="border" onmouseenter="_tdHoverRole('border')" onmouseleave="_tdHoverRole('')"><span class="td-name">${esc(gmt('th-border-width')||'Rahmenstärke')}</span>
         <input type="number" min="0" max="8" step="1" value="${bw}" style="width:54px;flex:none;" oninput="tdBorderWidth(this.value)">
         <code class="td-hex">px</code>
         <button class="td-reset" title="${esc(gmt('th-reset')||'Standard')}" onclick="tdBwReset()">↺</button></div>` : ''}
@@ -7702,6 +7702,13 @@ function _tdHighlightRole(role){
   const rows=[...document.querySelectorAll(`#theme-designer .td-row[data-role="${role}"]`)];
   rows.forEach(r=>r.classList.add('hl'));
   if(rows[0]) rows[0].scrollIntoView({block:'nearest'});
+}
+// Reverse hover: when the GM hovers a setting row, ask both preview iframes to
+// outline the element(s) that setting recolours.
+function _tdHoverRole(role){
+  document.querySelectorAll('#theme-designer iframe').forEach(f => {
+    try { f.contentWindow.postMessage({type:'ar-theme-highlight', role:role||null}, location.origin); } catch(e){}
+  });
 }
 function tdVarInput(el){
   const k = el.dataset.var, v = String(el.value).toLowerCase();
