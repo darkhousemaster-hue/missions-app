@@ -104,7 +104,7 @@
       input:'.md-task, .name-field, .input',
       // notice covers the detail status note, the card's post-upload "awaiting
       // review" tag, the centered notice, and the rejection popup.
-      notice:'.md-state-note, .mcard__pending-tag, .toast, .cn-box, .msg-popup-box',
+      notice:'.md-state-note, .mcard__pending-tag, .toast, #rej-reason, .cn-box, .msg-popup-box',
       chat:'.chat-bubble', points:'.mcard__points, #md-points',
       // Each Text setting points at what it actually recolours (primary title,
       // secondary body, muted labels) — not all at the same element.
@@ -143,7 +143,7 @@
       if (el.closest('.mcard__points, #md-points')) return 'points';
       // Status notices (e.g. "photo uploaded / waiting for review") + centered
       // "time hasn't started" notice + player chat bubbles.
-      if (el.closest('.md-state-note, .mcard__pending-tag, .toast, .cn-box')) return 'notice';
+      if (el.closest('.md-state-note, .mcard__pending-tag, .toast, #rej-reason, .cn-box')) return 'notice';
       if (el.closest('.chat-bubble')) return 'chat';
       // Task callout + teamname field use the field-fill colour.
       if (el.closest('.md-task, .name-field')) return 'input';

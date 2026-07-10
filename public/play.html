@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.36">
-<script src="/js/theme.js?v=10"></script>
+<script src="/js/theme.js?v=11"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -283,7 +283,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
   text-align:center; padding:2rem;
 }
 #rejection-overlay h2 { color:var(--red-light); font-size:2rem; margin-bottom:1rem; }
-#rejection-overlay p  { color:var(--text); max-width:380px; margin:0 auto 1.5rem; line-height:1.6; }
+#rejection-overlay p  { color:var(--notice-text,var(--text)); max-width:380px; margin:0 auto 1.5rem; line-height:1.6; }
 
 /* ── Game over ── */
 #gameover-overlay {
@@ -778,11 +778,13 @@ function enterPlayPreview(){
     return;
   }
   if (pv === 'reject') {
+    // The real rejection screen the player sees (#rejection-overlay), NOT the
+    // GM new-message popup.
     list.innerHTML = mock.map(m => missionCard(m)).join('');
-    const tx = document.getElementById('msg-popup-text');
-    if (tx) tx.textContent = 'Bitte näher an das Motiv — das Foto ist zu unscharf.';
-    const pop = document.getElementById('msg-popup');
-    if (pop) pop.style.display = 'flex';
+    const rr = document.getElementById('rej-reason');
+    if (rr) rr.textContent = 'Bitte näher an das Motiv — das Foto ist zu unscharf.';
+    const ro = document.getElementById('rejection-overlay');
+    if (ro) ro.style.display = 'flex';
     return;
   }
   // default: the mission list
