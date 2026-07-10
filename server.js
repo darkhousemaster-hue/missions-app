@@ -59,11 +59,12 @@ app.use('/uploads', express.static(UPLOAD_DIR, {
 
 function getTimerState(game) {
   const now = Date.now();
+  const started = !!game.timer_started_at;   // false until the GM starts the timer
   // Ended games show 0
-  if (game.status === 'ended') return { remaining: 0, running: false, total: game.timer_duration };
+  if (game.status === 'ended') return { remaining: 0, running: false, total: game.timer_duration, started };
   const elapsed = game.timer_running && game.timer_started_at
     ? now - game.timer_started_at : (game.timer_paused_elapsed||0);
-  return { remaining: Math.max(0,Math.floor((game.timer_duration*1000 - elapsed)/1000)), running:!!game.timer_running, total:game.timer_duration };
+  return { remaining: Math.max(0,Math.floor((game.timer_duration*1000 - elapsed)/1000)), running:!!game.timer_running, total:game.timer_duration, started };
 }
 
 // Play actions (submissions, completes, captures, scans, answers) are blocked
@@ -729,7 +730,7 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
     const crMode = db.getGameCrMode(game.id);
     if (crMode && crMode.allowed_langs) allowed_langs = crMode.allowed_langs;
   }
-  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs});
+  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, timer: game ? getTimerState(game) : null});
 });
 app.delete('/api/games/:gameId/teams/:teamId', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});

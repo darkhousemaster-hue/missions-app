@@ -7695,11 +7695,22 @@ function _tdPost(){
 }
 // Preview iframes announce readiness (theme.js posts ar-theme-ready) so the
 // initial draft lands even though the iframes load after the designer opens.
+// Clicking an element in a preview LOCKS its setting highlighted, so accidental
+// hovers elsewhere don't jump the list. Released by: hovering a setting row,
+// clicking a different preview element (re-locks), or clicking outside a phone.
+let _tdHoverLock = null;
 window.addEventListener('message', e => {
   if(e.origin !== location.origin) return;
   const d = e.data; if(!d) return;
   if(d.type === 'ar-theme-ready' && _td) _tdPost();
-  if(d.type === 'ar-theme-hover' && _td) _tdHighlightRole(d.role);
+  if(d.type === 'ar-theme-hover' && _td && _tdHoverLock === null) _tdHighlightRole(d.role);
+  if(d.type === 'ar-theme-lock'  && _td){ _tdHoverLock = d.role || null; _tdHighlightRole(d.role); }
+});
+// A click anywhere outside a preview phone releases the lock.
+document.addEventListener('click', e => {
+  if(_td && _tdHoverLock !== null && !(e.target.closest && e.target.closest('.td-bezel'))){
+    _tdHoverLock = null; _tdHighlightRole(null);
+  }
 });
 // Highlight the field(s) that change whatever the GM is hovering in a preview.
 function _tdHighlightRole(role){
@@ -7712,6 +7723,7 @@ function _tdHighlightRole(role){
 // Reverse hover: when the GM hovers a setting row, ask both preview iframes to
 // outline the element(s) that setting recolours.
 function _tdHoverRole(role){
+  if(role) _tdHoverLock = null;   // hovering a setting releases a locked preview highlight
   document.querySelectorAll('#theme-designer iframe').forEach(f => {
     try { f.contentWindow.postMessage({type:'ar-theme-highlight', role:role||null}, location.origin); } catch(e){}
   });

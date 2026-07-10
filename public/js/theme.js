@@ -101,7 +101,10 @@
       tile:'.p-mission-card, .cr-tile', 'tile-active':'.p-mission-card, .cr-tile',
       'tile-text':'.mcard__title, .mcard__task, .cr-tile .name',
       button:'.btn-primary, .btn-secondary, .md-btn', nav:'.icon-btn, .cr-icon-btn',
-      input:'.md-task, .name-field, .input', notice:'.md-state-note, .cn-box, .msg-popup-box',
+      input:'.md-task, .name-field, .input',
+      // notice covers the detail status note, the card's post-upload "awaiting
+      // review" tag, the centered notice, and the rejection popup.
+      notice:'.md-state-note, .mcard__pending-tag, .cn-box, .msg-popup-box',
       chat:'.chat-bubble', points:'.mcard__points, #md-points',
       // Each Text setting points at what it actually recolours (primary title,
       // secondary body, muted labels) — not all at the same element.
@@ -140,7 +143,7 @@
       if (el.closest('.mcard__points, #md-points')) return 'points';
       // Status notices (e.g. "photo uploaded / waiting for review") + centered
       // "time hasn't started" notice + player chat bubbles.
-      if (el.closest('.md-state-note, .cn-box')) return 'notice';
+      if (el.closest('.md-state-note, .mcard__pending-tag, .cn-box')) return 'notice';
       if (el.closest('.chat-bubble')) return 'chat';
       // Task callout + teamname field use the field-fill colour.
       if (el.closest('.md-task, .name-field')) return 'input';
@@ -164,7 +167,12 @@
       if (r !== _lastRole) { _lastRole = r; try { parent.postMessage({ type:'ar-theme-hover', role:r }, location.origin); } catch(e){} }
     }, { passive:true });
     document.addEventListener('mouseleave', () => { _lastRole = null; try { parent.postMessage({ type:'ar-theme-hover', role:null }, location.origin); } catch(e){} });
-    document.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); }, true);
+    // Clicks are swallowed (no navigation), but first tell the designer to LOCK
+    // the highlight for whatever was clicked so it stops following the cursor.
+    document.addEventListener('click', e => {
+      try { parent.postMessage({ type:'ar-theme-lock', role: roleOf(e.target) }, location.origin); } catch(err){}
+      e.preventDefault(); e.stopPropagation();
+    }, true);
     document.addEventListener('submit', e => { e.preventDefault(); }, true);
     // Tell the opener we're ready to receive the current draft.
     document.addEventListener('DOMContentLoaded', () => {

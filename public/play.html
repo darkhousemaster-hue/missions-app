@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.30">
-<script src="/js/theme.js?v=8"></script>
+<script src="/js/theme.js?v=9"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -158,7 +158,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 #md-points{color:var(--points,var(--text-dim));background:var(--points-bg,var(--surface2));}
 .mcard__check{align-self:start;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--green);margin-top:6px;}
 .mcard__check svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;fill:none;}
-.mcard__pending-tag{align-self:start;font:700 9px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--orange);padding:5px 9px;border-radius:999px;background:rgba(232,95,30,.14);border:1px solid rgba(232,95,30,.3);white-space:nowrap;}
+/* The "awaiting review" tag shown on a card after upload follows the Notice
+   colours (same as the detail-window status note) so it's themeable + readable. */
+.mcard__pending-tag{align-self:start;font:700 9px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--notice-text,var(--orange));padding:5px 9px;border-radius:999px;background:var(--notice-bg,rgba(232,95,30,.14));border:1px solid rgba(232,95,30,.3);white-space:nowrap;}
 .mcard__rejected-msg{grid-column:1/-1;margin-top:8px;padding:8px 10px;background:rgba(212,43,43,.12);border-radius:6px;font:500 12px/1.4 var(--body);color:var(--red-light);}
 
 /* ── Mission detail modal — opened when a player taps a mission card.
@@ -861,12 +863,24 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
-function updateTimer({ remaining, running }) {
+// Whether the GM has started the timer. Actions (take photo / upload) are blocked
+// until then — checked on the button press so we never open the camera or the
+// gallery picker just to reject the result afterwards. Optimistic default so a
+// slow socket never wrongly blocks a running game; the server always enforces.
+let _timerStarted = true;
+function updateTimer({ remaining, running, started }) {
+  if (started !== undefined) _timerStarted = !!started;
   const el = document.getElementById('player-timer');
   const m  = Math.floor(remaining/60).toString().padStart(2,'0');
   const s  = (remaining%60).toString().padStart(2,'0');
   el.textContent = `${m}:${s}`;
   el.className = 'play-timer' + (remaining<=60&&running?' urgent' : !running?' paused':'');
+}
+// Show the centered "time hasn't started" notice and return false when blocked.
+function ensureTimerStarted() {
+  if (_timerStarted) return true;
+  showCenterNotice(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.');
+  return false;
 }
 
 // ── Missions ──────────────────────────────────────────────────────────────────
@@ -878,6 +892,7 @@ async function loadMissions() {
   // Custom (GM-defined) languages for this location. Set before setAllowedLangs
   // so the cycler includes them.
   customLangs = Array.isArray(data.custom_langs) ? data.custom_langs : [];
+  if (data.timer) _timerStarted = !!data.timer.started;   // gate submissions until the timer starts
   // Apply the location's allowed-language restriction. Safe to call on every
   // loadMissions (no-op when nothing changes); the GM can edit the allow-list
   // mid-game and the player picks it up on next refresh without reload.
@@ -1001,11 +1016,11 @@ function openMissionDetail(missionId) {
     const accept = m.media_type === 'video' ? 'video/*' : 'image/*';
     const galleryLbl = t('gallery_upload') || 'Aus Galerie hochladen';
     actions.innerHTML = `
-      <button type="button" class="md-btn md-btn--primary" onclick="closeMissionDetail();openCamera(${m.mission_id},'${m.media_type}')">
+      <button type="button" class="md-btn md-btn--primary" onclick="if(ensureTimerStarted()){closeMissionDetail();openCamera(${m.mission_id},'${m.media_type}');}">
         ${captureIcon}
         ${esc(captureLbl)}
       </button>
-      <label class="md-btn md-btn--secondary" style="cursor:pointer;">
+      <label class="md-btn md-btn--secondary" style="cursor:pointer;" onclick="if(!ensureTimerStarted()){event.preventDefault();return false;}">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         ${esc(galleryLbl)}
         <input type="file" accept="${accept}" style="display:none;" onchange="uploadFromGallery(event,${m.mission_id},'${m.media_type}');closeMissionDetail();">
@@ -1060,6 +1075,8 @@ function closeRejection() {
 
 // ── Camera ────────────────────────────────────────────────────────────────────
 async function openCamera(missionId, type) {
+  // Block before the timer starts (covers any caller, not just the button).
+  if (!ensureTimerStarted()) return;
   // Block if game has ended
   const gameState = await fetch(`/api/games/${gameId}`).then(r=>r.json()).catch(()=>null);
   if (gameState && gameState.status === 'ended') {
@@ -1437,6 +1454,7 @@ async function resyncChat(){
 async function uploadFromGallery(event, missionId, mediaType) {
   const file = event.target.files?.[0];
   if(!file) return;
+  if(!ensureTimerStarted()){ event.target.value=''; return; }
   if(file.size > MAX_UPLOAD_BYTES){ tooLargeToast(file.size); event.target.value=''; return; }
   currentMissionId = missionId;
   const ub   = document.getElementById(`ub-${missionId}`);
