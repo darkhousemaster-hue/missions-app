@@ -143,8 +143,10 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #theme-designer.open{display:flex;}
 .td-top{display:flex;align-items:center;gap:.6rem;padding:.75rem 1.1rem;border-bottom:1px solid var(--hairline);flex-wrap:wrap;flex-shrink:0;}
 .td-top h3{font-family:var(--display);font-weight:800;font-size:1.15rem;letter-spacing:.05em;margin:0;flex:1;min-width:180px;text-transform:uppercase;}
-.td-main{flex:1;display:flex;gap:1.4rem;min-height:0;padding:1rem 1.1rem 1.4rem;overflow:auto;flex-wrap:wrap;align-content:flex-start;}
-.td-fields{flex:1 1 320px;max-width:470px;display:flex;flex-direction:column;gap:.85rem;}
+/* Fields and previews are INDEPENDENT scroll columns (not one shared scroller),
+   so auto-scrolling a hovered setting into view never drags the previews away. */
+.td-main{flex:1;display:flex;gap:1.4rem;min-height:0;padding:1rem 1.1rem 1.4rem;overflow:hidden;flex-wrap:nowrap;align-content:flex-start;}
+.td-fields{flex:1 1 320px;max-width:470px;display:flex;flex-direction:column;gap:.85rem;overflow-y:auto;min-height:0;}
 .td-group{border:1px solid var(--hairline);border-radius:var(--radius);padding:.7rem .85rem;}
 .td-group .td-glbl{font:700 .68rem/1 var(--body);letter-spacing:.13em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.45rem;}
 .td-row{display:flex;align-items:center;gap:.6rem;padding:.28rem 0;}
@@ -155,17 +157,16 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .td-row .td-reset:hover{color:var(--text);}
 .td-row input[type=text]{flex:1;min-width:0;}
 .td-row.hl{outline:2px solid var(--orange);outline-offset:1px;border-radius:6px;background:var(--orange-soft);}
-/* Sticky: the phones pin to the top of the designer's scroll area so they stay
-   visible while the GM scrolls through the lower field groups. align-self keeps
-   the box at its own height (a stretched flex item can't stick). */
-.td-preview{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start;justify-content:center;flex:2 1 560px;position:sticky;top:0;align-self:flex-start;}
+/* The preview column scrolls on its own so scrolling the fields (or auto-
+   scrolling a hovered setting into view) never moves the phones. */
+.td-preview{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start;justify-content:center;align-content:flex-start;flex:2 1 560px;overflow-y:auto;min-height:0;align-self:stretch;}
 .td-phone{display:flex;flex-direction:column;align-items:center;gap:.55rem;}
 .td-phone .td-lbl{font:700 .66rem/1 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--text-muted);}
 .td-bezel{width:262px;height:546px;border-radius:32px;border:9px solid #050505;background:#050505;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.55);}
 /* pointer-events ON so hovering the preview can report which role is under the
    cursor; the preview page (theme.js) blocks clicks so nothing navigates. */
 .td-bezel iframe{width:375px;height:812px;border:0;transform:scale(.6507);transform-origin:0 0;display:block;}
-@media(max-width:768px){ .td-preview{flex:1 1 100%;position:static;} .td-bezel{width:224px;height:468px;} .td-bezel iframe{transform:scale(.5493);} }
+@media(max-width:768px){ .td-main{overflow:auto;flex-wrap:wrap;} .td-fields{overflow:visible;min-height:auto;} .td-preview{flex:1 1 100%;overflow:visible;min-height:auto;align-self:auto;} .td-bezel{width:224px;height:468px;} .td-bezel iframe{transform:scale(.5493);} }
 /* ── Play statistics tables ── */
 .stats-table{width:100%;border-collapse:collapse;font:400 .85rem/1.4 var(--body);}
 .stats-table th{font:700 .66rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:.3rem .5rem;border-bottom:1px solid var(--hairline);}
