@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.36">
-<script src="/js/theme.js?v=11"></script>
+<script src="/js/theme.js?v=12"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -278,7 +278,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 /* ── Rejection overlay ── */
 #rejection-overlay {
-  position:fixed; inset:0; background:rgba(0,0,0,.95); z-index:1500;
+  /* Full-screen "rejected" moment. Background follows the Notice fill so it's
+     themeable; default stays the near-black scrim. */
+  position:fixed; inset:0; background:var(--notice-bg,rgba(0,0,0,.95)); z-index:1500;
   display:none; flex-direction:column; align-items:center; justify-content:center;
   text-align:center; padding:2rem;
 }
