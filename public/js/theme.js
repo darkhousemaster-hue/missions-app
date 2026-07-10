@@ -99,19 +99,29 @@
     const SEL_BY_ROLE = {
       header:'.play-topbar, .join-header, .cr-topbar',
       tile:'.p-mission-card, .cr-tile', 'tile-active':'.p-mission-card, .cr-tile',
-      'tile-text':'.mcard__title, .mcard__task, .cr-tile .name, .md-title',
+      'tile-text':'.mcard__title, .mcard__task, .cr-tile .name',
       button:'.btn-primary, .btn-secondary, .md-btn', nav:'.icon-btn, .cr-icon-btn',
       input:'.md-task, .name-field, .input', notice:'.md-state-note, .cn-box, .msg-popup-box',
       chat:'.chat-bubble', points:'.mcard__points, #md-points',
-      text:'.mcard__desc, .md-desc', accent:'.mcard__task .arrow, .score-pill svg',
+      // Each Text setting points at what it actually recolours (primary title,
+      // secondary body, muted labels) — not all at the same element.
+      text:'.md-title', 'text-dim':'.mcard__desc, .md-desc', 'text-muted':'.md-label',
+      accent:'.mcard__task .arrow, .score-pill svg',
       logo:'.play-wordmark, .wordmark, .theme-logo', border:'.p-mission-card, .cr-tile',
     };
     let _hlEls = [];
-    function clearRoleHighlight(){ _hlEls.forEach(el => { el.style.outline=''; el.style.outlineOffset=''; }); _hlEls = []; }
+    function clearRoleHighlight(){ _hlEls.forEach(el => { el.style.outline=''; el.style.outlineOffset=''; el.style.boxShadow=''; }); _hlEls = []; }
+    // Bold, high-contrast double ring (white + blue + glow) so the highlight is
+    // obvious on ANY themed background, including light/yellow ones.
     function highlightRole(role){
       clearRoleHighlight();
       const sel = role && SEL_BY_ROLE[role]; if(!sel) return;
-      document.querySelectorAll(sel).forEach(el => { el.style.outline='2px solid #4da3ff'; el.style.outlineOffset='1px'; _hlEls.push(el); });
+      document.querySelectorAll(sel).forEach(el => {
+        el.style.outline='3px solid #2ea3ff';
+        el.style.outlineOffset='2px';
+        el.style.boxShadow='0 0 0 3px #fff, 0 0 0 6px #2ea3ff, 0 0 20px 4px rgba(46,163,255,.95)';
+        _hlEls.push(el);
+      });
     }
     window.addEventListener('message', e => {
       if (e.origin !== location.origin) return;
@@ -136,7 +146,11 @@
       if (el.closest('.md-task, .name-field')) return 'input';
       // Selfie capture square uses the tile-surface colour.
       if (el.closest('.selfie-square')) return 'tile';
-      if (el.closest('.mcard__title, .mcard__task, .cr-tile .name, .md-title')) return 'tile-text';
+      // Text variants: muted labels, secondary body, primary title.
+      if (el.closest('.md-label')) return 'text-muted';
+      if (el.closest('.mcard__desc, .md-desc')) return 'text-dim';
+      if (el.closest('.md-title')) return 'text';
+      if (el.closest('.mcard__title, .mcard__task, .cr-tile .name')) return 'tile-text';
       if (el.closest('.p-mission-card, .cr-tile, .mission-card, .cr-mission-card, .md-card')) return 'tile';
       if (el.closest('input, textarea, select, [contenteditable]')) return 'input';
       if (el.closest('.icon-btn, .cr-icon-btn')) return 'nav';
