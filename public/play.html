@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.30">
-<script src="/js/theme.js?v=9"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.36">
+<script src="/js/theme.js?v=10"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -771,6 +771,10 @@ function enterPlayPreview(){
         <span class="md-btn md-btn--secondary">${esc(t('gallery_upload')||'Aus Galerie')}</span>
       </div>
     </div>`;
+    // Demo "uploaded — awaiting review" toast so the popup that appears after
+    // submitting is visible + themeable in the preview.
+    const tc = document.getElementById('toast-container');
+    if (tc) tc.innerHTML = `<div class="toast success">${esc(t('uploading_review')||'Hochgeladen! Wird geprüft…')}</div>`;
     return;
   }
   if (pv === 'reject') {
