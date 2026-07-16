@@ -683,6 +683,10 @@ const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(
 // so the theme designer (which only knows about the theme) uses these instead.
 const setLocationTheme = (id, t) => db.prepare('UPDATE locations SET theme=? WHERE id=?').run(normTheme(t), id);
 const setCrModeTheme   = (id, t) => db.prepare('UPDATE cr_modes SET theme=? WHERE id=?').run(normTheme(t), id);
+// Global GM dashboard theme (app-wide, independent of the per-location player
+// themes). Stored as a sanitized JSON string in settings; null = default look.
+const getGmTheme = () => { const v = getSetting('gm_theme'); return v || null; };
+const setGmTheme = (t) => setSetting('gm_theme', normTheme(t) || '');
 
 // ── Missions ──────────────────────────────────────────────────────────────────
 const getMissions = (modeId, locationId) => {
@@ -1392,6 +1396,7 @@ module.exports = {
   // else; reach for `_db` only when adding a new helper would be overkill.
   _db: db,
   getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
+  getGmTheme,setGmTheme,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,reorderMissions,getGameRules,

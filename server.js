@@ -433,6 +433,18 @@ app.put('/api/locations/:id/theme', (req,res) => {
   db.setLocationTheme(Number(req.params.id), req.body.theme ?? null);
   res.json({success:true});
 });
+// Global GM dashboard theme (app-wide). Read is public (gm.html applies it on
+// load); write requires GM auth.
+app.get('/api/gm-theme', (req,res) => {
+  const t = db.getGmTheme();
+  let theme = null; if(t){ try{ theme = JSON.parse(t); }catch{ theme = null; } }
+  res.json({ theme });
+});
+app.put('/api/gm-theme', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.setGmTheme(req.body.theme ?? null);
+  res.json({success:true});
+});
 app.put('/api/cr/modes/:id/theme', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.setCrModeTheme(Number(req.params.id), req.body.theme ?? null);
