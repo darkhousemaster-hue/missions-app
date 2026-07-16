@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS — Join</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.36">
-<script src="/js/theme.js?v=12"></script>
+<script src="/js/theme.js?v=13"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. The
    team-name placeholder keeps a (lighter) grey, see .name-field below. */
@@ -524,6 +524,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   // no redirects. theme.js applies postMessage'd themes live on top.
   if (window.ArTheme && ArTheme.preview) {
     document.getElementById('game-id-display').textContent = 'GAME · DEMO';
+    // Prefill the teamname so its typed text colour (the "Text" setting) is
+    // visible + themeable in the preview, not just the grey placeholder.
+    const tn = document.getElementById('team-name'); if (tn) tn.value = 'Demo Team';
     show('create');
     return;
   }

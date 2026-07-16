@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.36">
-<script src="/js/theme.js?v=12"></script>
+<script src="/js/theme.js?v=13"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -260,10 +260,10 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 #cr-arrived-overlay { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:1000;
   display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem; }
 #cr-arrived-overlay h2 { font-size:2.5rem; color:var(--green); margin-bottom:.75rem; }
-#cr-rejection-overlay { position:fixed; inset:0; background:rgba(0,0,0,.95); z-index:1600;
+#cr-rejection-overlay { position:fixed; inset:0; background:var(--notice-bg,rgba(0,0,0,.95)); z-index:1600;
   display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:1.5rem; }
 #cr-rejection-overlay h2 { color:var(--red-light); font-size:clamp(1.8rem,9vw,3rem); margin-bottom:1rem; max-width:100%; overflow-wrap:anywhere; }
-#cr-rejection-overlay p { color:var(--text); max-width:380px; margin:0 auto 1.5rem; line-height:1.6; font-size:1.05rem; }
+#cr-rejection-overlay p { color:var(--notice-text,var(--text)); max-width:380px; margin:0 auto 1.5rem; line-height:1.6; font-size:1.05rem; }
 #cr-rej-btn { max-width:380px; white-space:normal; line-height:1.25; }
 
 @keyframes pulse-red { 0%,100%{opacity:1}50%{opacity:.5} }
@@ -698,7 +698,7 @@ const T = {
         time_left:'Zeit übrig', no_rules:'Keine Regeln vorhanden.',
         pending_review:'Wird vom Spielleiter geprüft…',
         rejected_retry:'Abgelehnt — bitte erneut versuchen.',
-        accepted:'Angenommen!', rejected:'Abgelehnt',
+        accepted:'Angenommen!', rejected:'Abgelehnt', rej_title:'❌ Abgelehnt', rej_btn:'OK — Erneut versuchen',
         skip_mission:'Mission überspringen', skip_confirm:'Mission überspringen? Es gibt keine Punkte dafür.', skipped:'Übersprungen',
         special:'Spezial', special_missions:'Spezial-Missionen', special_choose:'Welche Mission möchtest du spielen?', available:'Verfügbar', cooldown_wait:'Bitte warten:',
         rush_row:'Missionen', rush_gps_tile:'Checkpoints', rush_gps_locked:'Erst eine Mission abschließen', rush_block_rush:'Erst einen Checkpoint abschließen', rush_gps_open:'Antippen zum Öffnen', rush_locked_msg:'Schließe zuerst eine Mission ab, bevor du einen Checkpoint machst.', rush_block_rush_msg:'Schließe zuerst einen Checkpoint ab, bevor du die nächste Mission machst.', rush_wait_accept:'Warte, bis der Spielleiter die vorige Mission freigibt.',
@@ -750,7 +750,7 @@ const T = {
         time_left:'Time left', no_rules:'No rules set.',
         pending_review:'Awaiting Gamemaster review…',
         rejected_retry:'Rejected — please try again.',
-        accepted:'Accepted!', rejected:'Rejected',
+        accepted:'Accepted!', rejected:'Rejected', rej_title:'❌ Rejected', rej_btn:'OK — Try Again',
         skip_mission:'Skip mission', skip_confirm:'Skip this mission? You will not get any points.', skipped:'Skipped',
         special:'Special', special_missions:'Special missions', special_choose:'Which mission do you want to play?', available:'Available', cooldown_wait:'Please wait:',
         rush_row:'Missions', rush_gps_tile:'Checkpoints', rush_gps_locked:'Finish a mission first', rush_block_rush:'Finish a checkpoint first', rush_gps_open:'Tap to open', rush_locked_msg:'Finish a mission first before a checkpoint.', rush_block_rush_msg:'Finish a checkpoint before the next mission.', rush_wait_accept:'Wait for the Gamemaster to accept your previous mission.',
@@ -800,7 +800,7 @@ const T = {
         time_left:'Temps restant', no_rules:'Aucune règle.',
         pending_review:'En attente de validation du Gamemaster…',
         rejected_retry:'Refusé — veuillez réessayer.',
-        accepted:'Accepté!', rejected:'Refusé',
+        accepted:'Accepté!', rejected:'Refusé', rej_title:'❌ Refusé', rej_btn:'OK — Réessayer',
         skip_mission:'Passer la mission', skip_confirm:'Passer cette mission ? Vous n\'aurez aucun point.', skipped:'Passée',
         special:'Spécial', special_missions:'Missions spéciales', special_choose:'Quelle mission veux-tu jouer ?', available:'Disponible', cooldown_wait:'Veuillez attendre :',
         rush_row:'Missions', rush_gps_tile:'Checkpoints', rush_gps_locked:'Termine d\'abord une mission', rush_block_rush:'Termine d\'abord un checkpoint', rush_gps_open:'Touchez pour ouvrir', rush_locked_msg:'Termine d\'abord une mission avant un checkpoint.', rush_block_rush_msg:'Termine un checkpoint avant la prochaine mission.', rush_wait_accept:'Attends que le Gamemaster valide ta mission précédente.',
@@ -851,7 +851,7 @@ const T = {
         time_left:'Tempo rimanente', no_rules:'Nessuna regola.',
         pending_review:'In attesa della revisione del Gamemaster…',
         rejected_retry:'Rifiutato — riprova.',
-        accepted:'Accettato!', rejected:'Rifiutato',
+        accepted:'Accettato!', rejected:'Rifiutato', rej_title:'❌ Rifiutato', rej_btn:'OK — Riprova',
         skip_mission:'Salta missione', skip_confirm:'Saltare la missione? Non riceverai punti.', skipped:'Saltata',
         special:'Speciale', special_missions:'Missioni speciali', special_choose:'Quale missione vuoi giocare?', available:'Disponibile', cooldown_wait:'Attendi:',
         rush_row:'Missioni', rush_gps_tile:'Checkpoint', rush_gps_locked:'Completa prima una missione', rush_block_rush:'Completa prima un checkpoint', rush_gps_open:'Tocca per aprire', rush_locked_msg:'Completa prima una missione prima di un checkpoint.', rush_block_rush_msg:'Completa un checkpoint prima della prossima missione.', rush_wait_accept:'Attendi che il Gamemaster approvi la missione precedente.',
@@ -901,7 +901,7 @@ const T = {
         time_left:'Tiempo restante', no_rules:'No hay reglas.',
         pending_review:'A la espera de la revisión del Gamemaster…',
         rejected_retry:'Rechazado — vuelve a intentarlo.',
-        accepted:'¡Aceptado!', rejected:'Rechazado',
+        accepted:'¡Aceptado!', rejected:'Rechazado', rej_title:'❌ Rechazado', rej_btn:'OK — Reintentar',
         skip_mission:'Saltar misión', skip_confirm:'¿Saltar la misión? No recibirás puntos.', skipped:'Saltada',
         special:'Especial', special_missions:'Misiones especiales', special_choose:'¿Qué misión quieres jugar?', available:'Disponible', cooldown_wait:'Espera:',
         rush_row:'Misiones', rush_gps_tile:'Checkpoints', rush_gps_locked:'Completa primero una misión', rush_block_rush:'Completa primero un checkpoint', rush_gps_open:'Toca para abrir', rush_locked_msg:'Completa primero una misión antes de un checkpoint.', rush_block_rush_msg:'Completa un checkpoint antes de la siguiente misión.', rush_wait_accept:'Espera a que el Gamemaster acepte tu misión anterior.',
@@ -2232,6 +2232,12 @@ function closeMissionPopup(){
 function showCrRejection(message){
   const reason = document.getElementById('cr-rej-reason');
   const overlay = document.getElementById('cr-rejection-overlay');
+  // Title + button were hardcoded German; set them from i18n so the rejection
+  // screen shows in the player's language.
+  const title = document.getElementById('cr-rej-title');
+  const btn = document.getElementById('cr-rej-btn');
+  if(title) title.textContent = t('rej_title')||'❌ Abgelehnt';
+  if(btn) btn.textContent = t('rej_btn')||'OK — Erneut versuchen';
   if(reason) reason.textContent = message || '';
   if(overlay) overlay.style.display = 'flex';
 }

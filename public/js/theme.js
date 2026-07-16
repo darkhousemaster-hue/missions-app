@@ -108,7 +108,7 @@
       chat:'.chat-bubble', points:'.mcard__points, #md-points',
       // Each Text setting points at what it actually recolours (primary title,
       // secondary body, muted labels) — not all at the same element.
-      text:'.md-title', 'text-dim':'.mcard__desc, .md-desc', 'text-muted':'.md-label',
+      text:'.md-title, .name-field input, .join-body .lead', 'text-dim':'.mcard__desc, .md-desc', 'text-muted':'.md-label',
       accent:'.mcard__task .arrow, .score-pill svg',
       logo:'.play-wordmark, .wordmark, .theme-logo', border:'.p-mission-card, .cr-tile',
     };
