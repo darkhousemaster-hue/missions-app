@@ -162,6 +162,9 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .td-side{background:transparent;border:0;color:var(--text-dim);font:700 .72rem/1 var(--body);letter-spacing:.04em;text-transform:uppercase;padding:.4rem .85rem;border-radius:999px;cursor:pointer;}
 .td-side.active{background:var(--orange);color:#fff;}
 .td-gm-note{max-width:340px;color:var(--text-dim);font:500 .86rem/1.5 var(--body);text-align:center;padding:.9rem 1.2rem;border:1px dashed var(--hairline);border-radius:14px;align-self:center;}
+/* Live, view-only clone of the real #screen-dashboard, scaled to fit. */
+.td-gmwrap{width:100%;align-self:flex-start;border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.55);background:var(--bg);}
+.td-gmscale{transform-origin:0 0;}
 /* Full-screen live preview of the GM dashboard (re-colours via the same :root vars). */
 .td-gmprev{width:100%;max-width:840px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.55);align-self:flex-start;display:flex;flex-direction:column;background:var(--bg);}
 .td-gmprev .gp-bar{background:var(--bg3);border-bottom:1px solid var(--hairline);padding:.7rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;}
@@ -7641,21 +7644,21 @@ const GM_DEFAULTS = {
 };
 const GM_GROUPS = () => [
   { lbl: gmt('th-g-bg')||'Hintergrund', vars:[
-    ['--bg',        gmt('th-v-bg')||'App-Hintergrund'],
-    ['--bg2',       gmt('th-v-bg2')||'Leisten (dunkel)'],
-    ['--bg3',       gmt('th-v-bg3')||'Kopfzeile'] ]},
+    ['--bg',        gmt('th-v-bg')||'App-Hintergrund','bg'],
+    ['--bg2',       gmt('th-v-bg2')||'Leisten (dunkel)','bg2'],
+    ['--bg3',       gmt('th-v-bg3')||'Kopfzeile','bg3'] ]},
   { lbl: gmt('th-g-surface')||'Flächen', vars:[
-    ['--surface',   gmt('th-v-surface')||'Karten'],
-    ['--surface2',  gmt('th-v-surface2')||'Eingaben & Buttons'],
-    ['--border',    gmt('th-v-border')||'Rahmenlinien'] ]},
+    ['--surface',   gmt('th-v-surface')||'Karten','surface'],
+    ['--surface2',  gmt('th-v-surface2')||'Eingaben & Buttons','surface2'],
+    ['--border',    gmt('th-v-border')||'Rahmenlinien','border'] ]},
   { lbl: gmt('th-g-text')||'Text', vars:[
-    ['--text',      gmt('th-v-text')||'Text'],
-    ['--text-dim',  gmt('th-v-text-dim')||'Text sekundär'],
-    ['--text-muted',gmt('th-v-text-muted')||'Text gedämpft'] ]},
+    ['--text',      gmt('th-v-text')||'Text','text'],
+    ['--text-dim',  gmt('th-v-text-dim')||'Text sekundär','text-dim'],
+    ['--text-muted',gmt('th-v-text-muted')||'Text gedämpft','text-muted'] ]},
   { lbl: gmt('th-g-accent')||'Akzente', vars:[
-    ['--orange',    gmt('gm-v-accent')||'Akzent (Aktionen)'],
-    ['--green',     gmt('th-v-green')||'Erfolg'],
-    ['--red',       gmt('gm-v-danger')||'Gefahr / Löschen'] ]},
+    ['--orange',    gmt('gm-v-accent')||'Akzent (Aktionen)','accent'],
+    ['--green',     gmt('th-v-green')||'Erfolg','green'],
+    ['--red',       gmt('gm-v-danger')||'Gefahr / Löschen','red'] ]},
 ];
 let _gmTheme = { vars:{} };        // editable draft while the designer is open
 let _gmThemeSaved = { vars:{} };   // the persisted theme currently on the dashboard
@@ -7676,14 +7679,84 @@ function applyGmTheme(theme){
   if(g){ set('--green-soft',_gmAlpha(g,.14)); set('--green-dim',_gmAlpha(g,.55)); }
   if(r){ set('--red-light',_gmAlpha(r,.85)); set('--glow-red',`0 0 12px ${_gmAlpha(r,.5)}`); }
 }
+// Swap the dashboard wordmark: stamp (Adventurerooms) + wordmark (MiSSiONS), or
+// a logo image replacing both. Operates on a given .dt-wordmark node.
+function _setWordmark(wm, stamp, word, logo){
+  if(!wm) return;
+  wm.querySelectorAll('.gm-theme-logo').forEach(e=>e.remove());
+  const ar = wm.querySelector('.ar');
+  if(logo){
+    if(ar) ar.style.display='none';
+    [...wm.childNodes].forEach(n=>{ if(n.nodeType===3) n.textContent=''; });
+    const img=document.createElement('img'); img.className='gm-theme-logo'; img.src='/uploads/'+logo;
+    img.style.cssText='height:24px;max-width:190px;object-fit:contain;vertical-align:middle;';
+    wm.appendChild(img);
+  } else {
+    if(ar){ ar.style.display=''; ar.textContent = stamp || 'Adventurerooms'; }
+    let set=false;
+    [...wm.childNodes].forEach(n=>{ if(n.nodeType===3){ n.textContent = set ? '' : (word || 'MiSSiONS'); set=true; } });
+    if(!set) wm.appendChild(document.createTextNode(word || 'MiSSiONS'));
+  }
+}
+function applyGmBranding(theme){ _setWordmark(document.querySelector('#screen-dashboard .dt-wordmark'), theme&&theme.stamp, theme&&theme.wordmark, theme&&theme.logo); }
 async function loadGmTheme(){
   try{
     const j = await fetch('/api/gm-theme').then(r=>r.json());
-    _gmThemeSaved = (j && j.theme) ? { vars: Object.assign({}, j.theme.vars||{}) } : { vars:{} };
+    const th = (j && j.theme) || {};
+    _gmThemeSaved = { vars: Object.assign({}, th.vars||{}), stamp: th.stamp||'', wordmark: th.wordmark||'', logo: th.logo||null };
   }catch(e){ _gmThemeSaved = { vars:{} }; }
   applyGmTheme(_gmThemeSaved);
+  applyGmBranding(_gmThemeSaved);
 }
 loadGmTheme();
+// The GM-side preview is a live, view-only clone of the REAL dashboard
+// (#screen-dashboard). It keeps the real markup + IDs so its CSS layout is
+// identical, and re-colours automatically via the shared :root variables.
+function renderGmPreview(){
+  const wrap = document.querySelector('#theme-designer .td-gmwrap');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  const src = document.getElementById('screen-dashboard');
+  if(!src) return;
+  const clone = src.cloneNode(true);
+  clone.style.display = 'grid';
+  clone.style.width = '1280px';
+  clone.style.height = '760px';
+  clone.style.pointerEvents = 'none';   // view-only
+  const scaler = document.createElement('div');
+  scaler.className = 'td-gmscale';
+  scaler.appendChild(clone);
+  wrap.appendChild(scaler);
+  _gmFitPreview();
+}
+function _gmFitPreview(){
+  const wrap = document.querySelector('#theme-designer .td-gmwrap');
+  const scaler = wrap && wrap.querySelector('.td-gmscale');
+  if(!wrap || !scaler) return;
+  const s = Math.min(1, (wrap.clientWidth||600) / 1280);
+  scaler.style.transform = `scale(${s})`;
+  wrap.style.height = (760 * s) + 'px';
+}
+window.addEventListener('resize', ()=>{ if(_td && _td.side==='gm') _gmFitPreview(); });
+// Reverse hover on the GM side: outline the dashboard element(s) a setting recolours.
+const GM_SEL = {
+  bg:'#screen-dashboard', bg2:'#dash-teams, #dash-panel', bg3:'#dash-topbar',
+  surface:'.icon-btn, .dt-topbar__back', surface2:'#gm-chat-input',
+  border:'#dash-panel', text:'.dt-wordmark, .timer-display',
+  'text-dim':'#db-select-team', 'text-muted':'#db-teams, #db-games, .dt-topbar__gameid',
+  accent:'.tab.active, .chat-send', green:'#btn-timer-start', red:'#btn-delete-team',
+};
+let _gmHlEls = [];
+function _gmHighlight(role){
+  _gmHlEls.forEach(el=>{ el.style.outline=''; el.style.outlineOffset=''; el.style.boxShadow=''; }); _gmHlEls=[];
+  const wrap = document.querySelector('#theme-designer .td-gmwrap'); const sel = role && GM_SEL[role];
+  if(!wrap || !sel) return;
+  wrap.querySelectorAll(sel).forEach(el=>{
+    el.style.outline='3px solid #2ea3ff'; el.style.outlineOffset='2px';
+    el.style.boxShadow='0 0 0 3px #fff, 0 0 0 6px #2ea3ff, 0 0 20px 4px rgba(46,163,255,.95)';
+    _gmHlEls.push(el);
+  });
+}
 
 let _td = null;   // { kind:'location'|'crmode', id, name, side, theme:{vars,logo,stamp,wordmark} }
 
@@ -7701,7 +7774,7 @@ async function openThemeDesigner(kind, id){
   // Refresh the GM-side draft from the saved dashboard theme so the GM tab edits
   // the latest persisted colours.
   await loadGmTheme();
-  _gmTheme = { vars: Object.assign({}, _gmThemeSaved.vars||{}) };
+  _gmTheme = { vars: Object.assign({}, _gmThemeSaved.vars||{}), stamp:_gmThemeSaved.stamp||'', wordmark:_gmThemeSaved.wordmark||'', logo:_gmThemeSaved.logo||null };
   let el = document.getElementById('theme-designer');
   if(!el){ el = document.createElement('div'); el.id = 'theme-designer'; document.body.appendChild(el); }
   el.innerHTML = _tdHtml();
@@ -7776,7 +7849,7 @@ function _tdHtml(){
         </div>
       </div>`;
   const preview = isGm
-    ? `<div class="td-preview">${gmPrev}<div class="td-gm-note">${esc(gmt('th-gm-note')||'Änderungen erscheinen sofort hier im Dashboard.')}</div></div>`
+    ? `<div class="td-preview"><div class="td-gmwrap"></div><div class="td-gm-note">${esc(gmt('th-gm-note')||'Live-Vorschau des echten Dashboards. Speichern übernimmt Farben & Logo überall.')}</div></div>`
     : `<div class="td-preview">${prevPages.map(([src,lbl]) => `<div class="td-phone"><span class="td-lbl">${esc(lbl)}</span><div class="td-bezel"><iframe src="${src}"></iframe></div></div>`).join('')}</div>`;
   return `
     <div class="td-top">
@@ -7791,7 +7864,7 @@ function _tdHtml(){
     </div>
     <div class="td-main">
       <div class="td-fields">
-        ${isGm ? '' : brand}
+        ${brand}
         ${rows}
       </div>
       ${preview}
@@ -7803,13 +7876,19 @@ function switchTdSide(side){
   _td.side = side;
   const el = document.getElementById('theme-designer');
   if(el) el.innerHTML = _tdHtml();
-  if(side==='gm') applyGmTheme(_gmTheme); else { applyGmTheme(_gmThemeSaved); _tdPost(); }
+  if(side==='gm'){ applyGmTheme(_gmTheme); applyGmBranding(_gmTheme); renderGmPreview(); }
+  else { applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); _tdPost(); }
 }
 // Strip GM vars that equal the default so only real overrides are stored.
 function _gmTdTheme(){
   const vars = {};
   for(const [k,v] of Object.entries(_gmTheme.vars||{})){ if(v && v.toLowerCase() !== GM_DEFAULTS[k]) vars[k] = v; }
-  return Object.keys(vars).length ? { vars } : null;
+  const out = {};
+  if(Object.keys(vars).length) out.vars = vars;
+  if(_gmTheme.stamp && _gmTheme.stamp.trim()) out.stamp = _gmTheme.stamp.trim();
+  if(_gmTheme.wordmark && _gmTheme.wordmark.trim()) out.wordmark = _gmTheme.wordmark.trim();
+  if(_gmTheme.logo) out.logo = _gmTheme.logo;
+  return Object.keys(out).length ? out : null;
 }
 // Current draft as a storable object, or null when everything is default.
 function _tdTheme(){
@@ -7863,6 +7942,7 @@ function _tdHighlightRole(role){
 // outline the element(s) that setting recolours.
 function _tdHoverRole(role){
   if(role) _tdHoverLock = null;   // hovering a setting releases a locked preview highlight
+  if(_td && _td.side==='gm'){ _gmHighlight(role||null); return; }   // GM side: outline the dashboard clone
   document.querySelectorAll('#theme-designer iframe').forEach(f => {
     try { f.contentWindow.postMessage({type:'ar-theme-highlight', role:role||null}, location.origin); } catch(e){}
   });
@@ -7894,7 +7974,9 @@ function tdVarReset(k){
   if(hex) hex.textContent = D[k];
   if(isGm) applyGmTheme(_gmTheme); else _tdPost();
 }
-function tdText(field, val){ _td.theme[field] = val; _tdPost(); }
+// Live effect after a branding (stamp/wordmark/logo) change on the active side.
+function _tdBrandLive(){ if(_td.side==='gm'){ applyGmBranding(_gmTheme); renderGmPreview(); } else _tdPost(); }
+function tdText(field, val){ (_td.side==='gm'?_gmTheme:_td.theme)[field] = val; _tdBrandLive(); }
 async function tdUploadLogo(input){
   const file = input.files && input.files[0];
   if(!file) return;
@@ -7905,31 +7987,32 @@ async function tdUploadLogo(input){
   try {
     const r = await fetch('/api/theme-logo', {method:'POST', headers, body:form}).then(r=>r.json());
     if(r && r.path){
-      _td.theme.logo = r.path;
+      (_td.side==='gm'?_gmTheme:_td.theme).logo = r.path;
       const st = document.getElementById('td-logo-state'); if(st) st.textContent = '✓';
       const rm = document.getElementById('td-logo-rm'); if(rm) rm.style.display = '';
-      _tdPost();
+      _tdBrandLive();
     } else toast((r&&r.error)||'Upload fehlgeschlagen','error');
   } catch(e){ toast('Upload fehlgeschlagen','error'); }
 }
 function tdRemoveLogo(){
-  _td.theme.logo = null;
+  (_td.side==='gm'?_gmTheme:_td.theme).logo = null;
   const st = document.getElementById('td-logo-state'); if(st) st.textContent = '–';
   const rm = document.getElementById('td-logo-rm'); if(rm) rm.style.display = 'none';
-  _tdPost();
+  _tdBrandLive();
 }
 function tdResetAll(){
   if(!confirm(gmt('th-reset-confirm')||'Alle Farben, Texte und das Logo auf den Standard zurücksetzen?')) return;
-  if(_td.side==='gm'){ _gmTheme = { vars:{} }; applyGmTheme(_gmTheme); }
+  if(_td.side==='gm'){ _gmTheme = { vars:{}, stamp:'', wordmark:'', logo:null }; applyGmTheme(_gmTheme); applyGmBranding(_gmTheme); }
   else { _td.theme = { vars:{}, logo:null, stamp:'', wordmark:'', borderWidth:null }; _tdPost(); }
   const el = document.getElementById('theme-designer');
   if(el){ el.innerHTML = _tdHtml(); }
+  if(_td.side==='gm') renderGmPreview();
 }
 async function tdSave(){
   if(_td.side==='gm'){
     const theme = _gmTdTheme();
     const res = await API('/api/gm-theme', {method:'PUT', body:{ theme: theme ? JSON.stringify(theme) : null }});
-    if(res && res.success){ _gmThemeSaved = { vars: Object.assign({}, _gmTheme.vars||{}) }; applyGmTheme(_gmThemeSaved); toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose(); }
+    if(res && res.success){ _gmThemeSaved = { vars: Object.assign({}, _gmTheme.vars||{}), stamp:_gmTheme.stamp||'', wordmark:_gmTheme.wordmark||'', logo:_gmTheme.logo||null }; applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose(); }
     else toast((res&&res.error)||'Fehler','error');
     return;
   }
@@ -7945,6 +8028,7 @@ function tdClose(){
   _td = null;
   // Revert any unsaved live GM-theme edits back to the persisted dashboard look.
   applyGmTheme(_gmThemeSaved);
+  applyGmBranding(_gmThemeSaved);
 }
 
 const _TUT = {
