@@ -108,6 +108,9 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   grid-template-columns:minmax(0,1fr) 380px;
   grid-template-areas:"topbar topbar" "teams teams" "main panel";
   overflow:hidden;
+  /* Paint its own background so a scoped GM theme colours the dashboard without
+     leaking to the rest of the GM app. */
+  background:var(--bg);
 }
 @media(max-width:1280px){
   #screen-dashboard{grid-template-columns:minmax(0,1fr) 320px;}
@@ -7662,22 +7665,26 @@ const GM_GROUPS = () => [
 ];
 let _gmTheme = { vars:{} };        // editable draft while the designer is open
 let _gmThemeSaved = { vars:{} };   // the persisted theme currently on the dashboard
-let _gmApplied = [];
 function _gmAlpha(hex,a){ hex=String(hex).replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex.slice(0,6),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 function applyGmTheme(theme){
-  const root = document.documentElement;
-  _gmApplied.forEach(k => root.style.removeProperty(k)); _gmApplied = [];
+  // Scope the GM theme to the dashboard ONLY (the real #screen-dashboard AND the
+  // preview clone) via a <style> rule, so it never repaints the rest of the GM
+  // app — settings, editors, or the colour designer itself.
   const vars = (theme && theme.vars) || {};
-  const set = (k,v) => { root.style.setProperty(k,v); _gmApplied.push(k); };
+  const decl = [];
+  const add = (k,v) => decl.push(`${k}:${v};`);
   for(const [k,v] of Object.entries(vars)){
-    if(/^--[a-z0-9-]+$/i.test(k) && /^#[0-9a-f]{3,8}$/i.test(v)) set(k,v);
+    if(/^--[a-z0-9-]+$/i.test(k) && /^#[0-9a-f]{3,8}$/i.test(v)) add(k,v);
   }
   // Keep the derived tints/hairline consistent with the chosen base colours.
   const t=vars['--text'], o=vars['--orange'], g=vars['--green'], r=vars['--red'];
-  if(t) set('--hairline', _gmAlpha(t,.08));
-  if(o){ set('--orange-soft',_gmAlpha(o,.14)); set('--orange-dim',_gmAlpha(o,.55)); set('--glow-orange',`0 0 16px ${_gmAlpha(o,.45)}`); set('--btn-bg',o); }
-  if(g){ set('--green-soft',_gmAlpha(g,.14)); set('--green-dim',_gmAlpha(g,.55)); }
-  if(r){ set('--red-light',_gmAlpha(r,.85)); set('--glow-red',`0 0 12px ${_gmAlpha(r,.5)}`); }
+  if(t) add('--hairline', _gmAlpha(t,.08));
+  if(o){ add('--orange-soft',_gmAlpha(o,.14)); add('--orange-dim',_gmAlpha(o,.55)); add('--glow-orange',`0 0 16px ${_gmAlpha(o,.45)}`); add('--btn-bg',o); }
+  if(g){ add('--green-soft',_gmAlpha(g,.14)); add('--green-dim',_gmAlpha(g,.55)); }
+  if(r){ add('--red-light',_gmAlpha(r,.85)); add('--glow-red',`0 0 12px ${_gmAlpha(r,.5)}`); }
+  let st = document.getElementById('gm-theme-style');
+  if(!st){ st = document.createElement('style'); st.id='gm-theme-style'; document.head.appendChild(st); }
+  st.textContent = decl.length ? `#screen-dashboard{${decl.join('')}}` : '';
 }
 // Swap the dashboard wordmark: stamp (Adventurerooms) + wordmark (MiSSiONS), or
 // a logo image replacing both. Operates on a given .dt-wordmark node.
