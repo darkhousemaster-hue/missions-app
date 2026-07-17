@@ -162,19 +162,30 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .td-side{background:transparent;border:0;color:var(--text-dim);font:700 .72rem/1 var(--body);letter-spacing:.04em;text-transform:uppercase;padding:.4rem .85rem;border-radius:999px;cursor:pointer;}
 .td-side.active{background:var(--orange);color:#fff;}
 .td-gm-note{max-width:340px;color:var(--text-dim);font:500 .86rem/1.5 var(--body);text-align:center;padding:.9rem 1.2rem;border:1px dashed var(--hairline);border-radius:14px;align-self:center;}
-/* Representative live preview of the GM dashboard (re-colours via the same :root vars). */
-.td-gmprev{width:min(360px,100%);border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 20px 50px rgba(0,0,0,.5);align-self:center;}
-.td-gmprev .gp-bar{background:var(--bg3);border-bottom:1px solid var(--hairline);padding:.7rem .95rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
-.td-gmprev .gp-brand{font:800 15px/1 var(--display);letter-spacing:.05em;color:var(--text);}
+/* Full-screen live preview of the GM dashboard (re-colours via the same :root vars). */
+.td-gmprev{width:100%;max-width:840px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.55);align-self:flex-start;display:flex;flex-direction:column;background:var(--bg);}
+.td-gmprev .gp-bar{background:var(--bg3);border-bottom:1px solid var(--hairline);padding:.7rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;}
+.td-gmprev .gp-brand{font:800 17px/1 var(--display);letter-spacing:.05em;color:var(--text);}
+.td-gmprev .gp-timer{font:700 15px/1 var(--mono);color:var(--text);background:var(--surface2);border:1px solid var(--hairline);padding:.3rem .6rem;border-radius:8px;}
 .td-gmprev .gp-chip{width:26px;height:26px;border-radius:8px;background:var(--surface2);border:1px solid var(--hairline);display:inline-block;}
-.td-gmprev .gp-body{background:var(--bg);padding:.9rem;display:flex;flex-direction:column;gap:.7rem;}
-.td-gmprev .gp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.8rem;}
+.td-gmprev .gp-cols{display:flex;gap:.8rem;padding:.9rem;flex-wrap:wrap;}
+.td-gmprev .gp-side{flex:1 1 190px;min-width:0;display:flex;flex-direction:column;gap:.55rem;}
+.td-gmprev .gp-main{flex:2 1 300px;min-width:0;display:flex;flex-direction:column;gap:.7rem;}
+.td-gmprev .gp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem .85rem;}
+.td-gmprev .gp-card.sel{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange) inset;}
 .td-gmprev .gp-t1{color:var(--text);font:700 14px/1.2 var(--body);}
 .td-gmprev .gp-t2{color:var(--text-dim);font:500 12px/1.4 var(--body);margin-top:.2rem;}
 .td-gmprev .gp-t3{color:var(--text-muted);font:500 11px/1.3 var(--body);margin-top:.15rem;}
-.td-gmprev .gp-btns{display:flex;gap:.4rem;margin-top:.65rem;flex-wrap:wrap;}
+.td-gmprev .gp-btns{display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap;}
 .td-gmprev .gp-btns .btn{padding:.4rem .7rem;font-size:.72rem;}
 .td-gmprev .gp-pill{display:inline-block;font:700 10px/1 var(--body);letter-spacing:.04em;padding:.28rem .5rem;border-radius:999px;background:var(--green-soft);color:var(--green);border:1px solid var(--green-dim);}
+.td-gmprev .gp-pill.warn{background:var(--orange-soft);color:var(--orange);border-color:var(--orange-dim);}
+.td-gmprev .gp-chat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem;display:flex;flex-direction:column;gap:.4rem;}
+.td-gmprev .gp-bub{max-width:82%;padding:.5rem .65rem;border-radius:10px;font:500 12px/1.35 var(--body);}
+.td-gmprev .gp-bub.gm{align-self:flex-end;background:var(--green-soft);border:1px solid var(--green-dim);color:var(--text);}
+.td-gmprev .gp-bub.pl{align-self:flex-start;background:var(--surface2);border:1px solid var(--hairline);color:var(--text);}
+.td-gmprev .gp-inrow{display:flex;gap:.4rem;margin-top:.3rem;}
+.td-gmprev .gp-in{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.5rem .6rem;color:var(--text-muted);font:500 12px/1 var(--body);}
 /* The preview column scrolls on its own so scrolling the fields (or auto-
    scrolling a hovered setting into view) never moves the phones. */
 .td-preview{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start;justify-content:center;align-content:flex-start;flex:2 1 560px;overflow-y:auto;min-height:0;align-self:stretch;}
@@ -7735,19 +7746,33 @@ function _tdHtml(){
           <p style="font-size:.74rem;color:var(--text-muted);margin:.35rem 0 0;">${esc(gmt('th-hint')||'Leere Felder behalten den Standard. Änderungen erscheinen sofort in der Vorschau.')}</p>
         </div>`;
   const gmPrev = `<div class="td-gmprev">
-        <div class="gp-bar"><span class="gp-brand">${esc(_gmTheme.wordmark||'MiSSiONS')}</span><span><span class="gp-chip"></span> <span class="gp-chip"></span> <span class="gp-chip"></span></span></div>
-        <div class="gp-body">
-          <div class="gp-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;"><span class="gp-t1">Team Alpha</span><span class="gp-pill">${esc(gmt('accepted')||'Angenommen')}</span></div>
-            <div class="gp-t2">3 / 8 ${esc(gmt('missions')||'Missionen')} · 12:04</div>
-            <div class="gp-t3">${esc(gmt('th-gm-prev-active')||'Zuletzt aktiv vor 2 Min')}</div>
-            <div class="gp-btns">
-              <button type="button" class="btn btn-primary">${esc(gmt('accept')||'Annehmen')}</button>
-              <button type="button" class="btn btn-secondary">Chat</button>
-              <button type="button" class="btn btn-danger">${esc(gmt('delete')||'Löschen')}</button>
+        <div class="gp-bar">
+          <span class="gp-brand">${esc(_gmTheme.wordmark||'MiSSiONS')}</span>
+          <span class="gp-timer">42:15</span>
+          <span><span class="gp-chip"></span> <span class="gp-chip"></span> <span class="gp-chip"></span></span>
+        </div>
+        <div class="gp-cols">
+          <div class="gp-side">
+            <div class="gp-card sel"><div class="gp-t1">Team Alpha</div><div class="gp-t2">3 / 8 ${esc(gmt('missions')||'Missionen')}</div></div>
+            <div class="gp-card"><div class="gp-t1">Team Beta</div><div class="gp-t2">8 / 8 · <span class="gp-pill">${esc(gmt('th-gm-prev-done')||'Fertig')}</span></div></div>
+            <div class="gp-card"><div class="gp-t1">Team Gamma</div><div class="gp-t2">1 / 8 · <span class="gp-pill warn">${esc(gmt('pending')||'Prüfen')}</span></div></div>
+          </div>
+          <div class="gp-main">
+            <div class="gp-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;"><span class="gp-t1">Team Alpha — Brunnen-Foto</span><span class="gp-pill warn">${esc(gmt('pending')||'Prüfen')}</span></div>
+              <div class="gp-t3">${esc(gmt('th-gm-prev-active')||'Eingereicht vor 1 Min')}</div>
+              <div class="gp-btns">
+                <button type="button" class="btn btn-success">${esc(gmt('accept')||'Annehmen')}</button>
+                <button type="button" class="btn btn-danger">${esc(gmt('reject')||'Ablehnen')}</button>
+                <button type="button" class="btn btn-secondary">Chat</button>
+              </div>
+            </div>
+            <div class="gp-chat">
+              <div class="gp-bub pl">${esc('Wo ist der Brunnen?')}</div>
+              <div class="gp-bub gm">${esc('Beim Marktplatz — viel Erfolg!')}</div>
+              <div class="gp-inrow"><div class="gp-in">${esc(gmt('chat_ph')||'Nachricht…')}</div><button type="button" class="btn btn-primary">${esc(gmt('send')||'Senden')}</button></div>
             </div>
           </div>
-          <div class="gp-card"><span class="gp-t1">Team Beta</span><div class="gp-t2">8 / 8 · ${esc(gmt('th-gm-prev-done')||'Fertig')}</div></div>
         </div>
       </div>`;
   const preview = isGm
