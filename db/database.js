@@ -353,6 +353,11 @@ try { db.exec("ALTER TABLE cr_modes ADD COLUMN theme TEXT"); } catch(e) {}
 // order instead of shuffling.
 try { db.exec("ALTER TABLE missions ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN no_randomize INTEGER DEFAULT 0"); } catch(e) {}
+// Optional per-mode location restriction. NULL = available at every location
+// (the default); a set id means the mode only appears in that location's
+// new-game mode picker. Prevents picking a mode whose missions belong to
+// another location and getting an empty game.
+try { db.exec("ALTER TABLE modes ADD COLUMN location_id INTEGER"); } catch(e) {}
 // "Do Not Randomize" lives on the LOCATION (a location's mission set is what
 // gets shuffled). The modes column above is legacy/unused now.
 try { db.exec("ALTER TABLE locations ADD COLUMN no_randomize INTEGER DEFAULT 0"); } catch(e) {}
@@ -550,16 +555,21 @@ const verifyGmToken = tok => {
 const rotateGmToken = () => { setSetting('gm_token_secret', crypto.randomBytes(32).toString('hex')); };
 
 // ── Modes ─────────────────────────────────────────────────────────────────────
-const getModes   = () => db.prepare('SELECT m.*, r.name as ruleset_name FROM modes m LEFT JOIN rulesets r ON r.id=m.ruleset_id ORDER BY m.order_index, m.name').all();
+const getModes   = () => db.prepare('SELECT m.*, r.name as ruleset_name, l.name as location_name FROM modes m LEFT JOIN rulesets r ON r.id=m.ruleset_id LEFT JOIN locations l ON l.id=m.location_id ORDER BY m.order_index, m.name').all();
 const getMode    = id => db.prepare('SELECT * FROM modes WHERE id=?').get(id);
-const createMode = (name, ruleset_id=1, timer_default=60) => num(db.prepare('INSERT INTO modes(name,ruleset_id,timer_default) VALUES(?,?,?)').run(name, ruleset_id||1, timer_default||60).lastInsertRowid);
+// A blank/0 location_id means "all locations" — store it as NULL.
+const normModeLoc = v => (v === '' || v === null || v === undefined || Number(v) <= 0) ? null : Number(v);
+const createMode = (name, ruleset_id=1, timer_default=60, location_id=null) => num(db.prepare('INSERT INTO modes(name,ruleset_id,timer_default,location_id) VALUES(?,?,?,?)').run(name, ruleset_id||1, timer_default||60, normModeLoc(location_id)).lastInsertRowid);
 const setModeNoRandomize = (id, v) => db.prepare('UPDATE modes SET no_randomize=? WHERE id=?').run(v?1:0, id);
 const reorderMissions = orderedIds => {
   const stmt = db.prepare('UPDATE missions SET order_index=? WHERE id=?');
   runTx(() => orderedIds.forEach((id, i) => stmt.run(i + 1, Number(id))));
 };
-const updateMode = (id, {name, ruleset_id, timer_default}) =>
-  db.prepare('UPDATE modes SET name=?,ruleset_id=?,timer_default=? WHERE id=?').run(name, ruleset_id||1, timer_default||60, id);
+const updateMode = (id, {name, ruleset_id, timer_default, location_id}) => {
+  // Preserve the existing restriction when the caller doesn't send one.
+  const loc = location_id === undefined ? (getMode(id)?.location_id ?? null) : normModeLoc(location_id);
+  db.prepare('UPDATE modes SET name=?,ruleset_id=?,timer_default=?,location_id=? WHERE id=?').run(name, ruleset_id||1, timer_default||60, loc, id);
+};
 const deleteMode = id => { if(Number(id)===1) throw new Error("Cannot delete default mode"); db.prepare('DELETE FROM modes WHERE id=?').run(id); };
 const reorderModes = (orderedIds=[]) => {
   const stmt = db.prepare('UPDATE modes SET order_index=? WHERE id=?');

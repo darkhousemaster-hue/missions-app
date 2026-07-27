@@ -351,7 +351,7 @@ app.get('/api/update/check', async (req, res) => {
 app.get('/api/modes', (req,res) => res.json(db.getModes()));
 app.post('/api/modes', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60);
+  const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60, req.body.location_id);
   if(req.body.no_randomize !== undefined) db.setModeNoRandomize(id, req.body.no_randomize);
   res.json({id,success:true});
 });

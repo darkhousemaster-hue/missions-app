@@ -1310,6 +1310,9 @@ const GMT={
   'tip-mode-name':'Anzeigename des Spielmodus.',
   'tip-mode-ruleset':'Welche Regeln für Spiele in diesem Modus gelten.',
   'tip-mode-timer':'Standard-Spieldauer in Minuten beim Erstellen eines neuen Spiels in diesem Modus.',
+  'tip-mode-location':'Wo dieser Modus auswählbar ist. „Alle Standorte" zeigt ihn überall; ein Standort beschränkt ihn auf genau diesen.',
+  'mode-location-label':'Verfügbar an',
+  'mode-location-all':'Alle Standorte',
   'tip-mission-name':'Anzeigename der MiSSiON in allen vier Sprachen.',
   'tip-mission-loc':'Standort dieser MiSSiON. "Pool" = an jedem Standort möglich.',
   'tip-mission-mode':'Zu welchem Spielmodus die MiSSiON gehört.',
@@ -1437,6 +1440,9 @@ const GMT={
   'tip-mode-name':'Display name of the game mode.',
   'tip-mode-ruleset':'Which rules apply to games run in this mode.',
   'tip-mode-timer':'Default game length in minutes when creating a new game in this mode.',
+  'tip-mode-location':'Where this mode can be picked. "All locations" shows it everywhere; choosing a location limits it to just that one.',
+  'mode-location-label':'Available at',
+  'mode-location-all':'All locations',
   'tip-mission-name':'Display name in all four languages.',
   'tip-mission-loc':'Location of this mission. "Pool" = available at any location.',
   'tip-mission-mode':'Which game mode this mission belongs to.',
@@ -1555,6 +1561,9 @@ const GMT={
   'tip-mode-name':'Nom d\'affichage du mode de jeu.',
   'tip-mode-ruleset':'Quel jeu de règles s\'applique aux parties dans ce mode.',
   'tip-mode-timer':'Durée par défaut (minutes) à la création d\'une partie.',
+  'tip-mode-location':'Où ce mode peut être choisi. « Tous les sites » l\'affiche partout ; choisir un site le limite à celui-ci.',
+  'mode-location-label':'Disponible à',
+  'mode-location-all':'Tous les sites',
   'tip-mission-name':'Nom d\'affichage dans les quatre langues.',
   'tip-mission-loc':'Lieu de cette mission. "Pool" = disponible partout.',
   'tip-mission-mode':'Le mode de jeu auquel appartient la mission.',
@@ -1673,6 +1682,9 @@ const GMT={
   'tip-mode-name':'Nome visualizzato della modalità.',
   'tip-mode-ruleset':'Quale set di regole si applica alle partite in questa modalità.',
   'tip-mode-timer':'Durata predefinita (minuti) creando una nuova partita.',
+  'tip-mode-location':'Dove questa modalità è selezionabile. "Tutte le sedi" la mostra ovunque; scegliere una sede la limita solo a quella.',
+  'mode-location-label':'Disponibile a',
+  'mode-location-all':'Tutte le sedi',
   'tip-mission-name':'Nome visualizzato nelle quattro lingue.',
   'tip-mission-loc':'Luogo di questa missione. "Pool" = disponibile ovunque.',
   'tip-mission-mode':'A quale modalità appartiene la missione.',
@@ -1791,6 +1803,9 @@ const GMT={
   'tip-mode-name':'Nombre visible del modo de juego.',
   'tip-mode-ruleset':'Qué conjunto de reglas se aplica a las partidas de este modo.',
   'tip-mode-timer':'Duración por defecto (minutos) al crear una nueva partida en este modo.',
+  'tip-mode-location':'Dónde se puede elegir este modo. "Todas las ubicaciones" lo muestra en todas; elegir una ubicación lo limita solo a esa.',
+  'mode-location-label':'Disponible en',
+  'mode-location-all':'Todas las ubicaciones',
   'tip-mission-name':'Nombre visible en los cinco idiomas.',
   'tip-mission-loc':'Lugar de esta misión. "Pool" = disponible en cualquier lugar.',
   'tip-mission-mode':'A qué modo de juego pertenece la misión.',
@@ -2119,8 +2134,10 @@ async function selectLocation(id,name){
   document.getElementById('mode-select-wrap').style.display='block';
   document.getElementById('cr-mode-select-wrap').style.display='none';
   _setNewGameLabel(gmt('gs-new')||'Neues Spiel');
-  // Load modes into selector
-  const modes=await API('/api/modes');
+  // Load modes into selector — hide modes pinned to a DIFFERENT location so you
+  // can't pick one whose missions belong elsewhere (→ empty game). Modes with no
+  // location restriction (location_id null) always show.
+  const modes=(await API('/api/modes')).filter(m=>!m.location_id||Number(m.location_id)===Number(id));
   const sel=document.getElementById('mode-select');
   sel.innerHTML=modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   sel.value=currentModeId;
@@ -4169,12 +4186,16 @@ async function selectMode(id,name,el){
 async function showAddMode(){ exitSelectionModes();
   const rulesets=await API('/api/rulesets');
   const rsOpts=rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  const locations=await API('/api/locations');
+  const locOpts=`<option value="">${esc(gmt('mode-location-all')||'Alle Standorte')}</option>`+locations.map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('add-mode')||'Modus / Mode'}</h3>
     <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="mode-name" class="input" placeholder="${gmt('mode-placeholder')||'z.B. ADVANCED'}" data-tip="mode-name"></div>
     <div class="field" data-tip="mode-ruleset"><label class="label" data-tip="mode-ruleset">${gmt('ruleset')||'Regelwerk / Ruleset'}</label>
       <select id="mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" id="mode-timer-label" data-tip="mode-timer">Timer (Minuten / Minutes)</label><input id="mode-timer" type="number" class="input" value="60" min="1" data-tip="mode-timer"></div>
+    <div class="field" data-tip="mode-location"><label class="label" data-tip="mode-location">${gmt('mode-location-label')||'Verfügbar an'}</label>
+      <select id="mode-location" class="select" data-tip="mode-location">${locOpts}</select></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveNewMode()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
@@ -4186,6 +4207,8 @@ async function showEditMode(id){
   const rulesets=await API('/api/rulesets');
   const m=modes.find(x=>x.id===id);if(!m)return;
   const rsOpts=rulesets.map(r=>`<option value="${r.id}" ${sel(r.id===m.ruleset_id)}>${esc(r.name)}</option>`).join('');
+  const locations=await API('/api/locations');
+  const locOpts=`<option value="">${esc(gmt('mode-location-all')||'Alle Standorte')}</option>`+locations.map(l=>`<option value="${l.id}" ${sel(Number(l.id)===Number(m.location_id))}>${esc(l.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('edit-mode')||'Modus bearbeiten / Edit Mode'}</h3>
     <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="edit-mode-name" class="input" value="${esc(m.name)}" data-tip="mode-name"></div>
@@ -4193,6 +4216,8 @@ async function showEditMode(id){
       <select id="edit-mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" data-tip="mode-timer">Timer (${gmt('min-label')||'Minuten / Minutes'})</label>
       <input id="edit-mode-timer" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="mode-timer"></div>
+    <div class="field" data-tip="mode-location"><label class="label" data-tip="mode-location">${gmt('mode-location-label')||'Verfügbar an'}</label>
+      <select id="edit-mode-location" class="select" data-tip="mode-location">${locOpts}</select></div>
     <div class="modal-footer" style="justify-content:space-between;">
       <div>
         ${m.id!==1?`<button class="btn btn-danger btn-sm" onclick="confirmDeleteMode(${m.id});closeModal()">${gmt('delete')||'Löschen'}</button>`:''}
@@ -4209,7 +4234,8 @@ async function saveEditMode(id){
   if(!name){toast(gmt('name-required')||'Name required','error');return;}
   const rulesetId=Number(document.getElementById('edit-mode-ruleset').value);
   const timer=Number(document.getElementById('edit-mode-timer').value)||60;
-  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer}});
+  const locEl=document.getElementById('edit-mode-location');const locId=locEl&&locEl.value?Number(locEl.value):null;
+  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer,location_id:locId}});
   if(res.success){closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast(gmt('saved')||'Gespeichert!','success');}
   else toast(res.error,'error');
 }
@@ -4225,7 +4251,8 @@ async function saveNewMode(){
   if(!name){toast(gmt('name-required')||'Name erforderlich','error');return;}
   const rulesetEl=document.getElementById('mode-ruleset');const rulesetId=rulesetEl?Number(rulesetEl.value):1;
   const timerEl=document.getElementById('mode-timer');const modeTimer=timerEl?Number(timerEl.value):60;
-  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer}});
+  const locEl=document.getElementById('mode-location');const locId=locEl&&locEl.value?Number(locEl.value):null;
+  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer,location_id:locId}});
   if(res.success){closeModal();loadModeTabs();toast(gmt('mode-created')||'Modus erstellt!','success');}
 }
 
