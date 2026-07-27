@@ -3236,7 +3236,7 @@ async function handleScanResult(m, payload, detected, isSpecial, setStatus, frag
 function _finishScanMission(m, res, isSpecial){
   closeScanOverlay();
   if(isSpecial){
-    if(typeof res.score==='number') toast(`+${res.score} ${t('points')||'Punkte'}!`,'success');
+    if(typeof res.score==='number' && res.score>0) toast(`+${res.score} ${t('points')||'Punkte'}!`,'success');
     specialProgress[m.id]={...(specialProgress[m.id]||{}), last_attempt:Date.now(), completed_count:(specialProgress[m.id]?.completed_count||0)+1};
     if(typeof refreshScore==='function') refreshScore();
     if(typeof renderSpecialTiles==='function') renderSpecialTiles();

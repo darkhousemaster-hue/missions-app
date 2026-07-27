@@ -1141,12 +1141,24 @@ app.post('/api/games/:gameId/cr/scan', (req,res) => {
     return res.json({correct:true, revealed:true});
   }
 
-  // solve → award
+  // solve → award. Mirror the one-shot / cooldown guards from
+  // /cr/special/complete so re-scanning the same code can't farm points.
   if(mission.is_special){
+    const sp = db.getCrSpecialProgress(gameId, teamId, mission.id) || {};
+    const now = Date.now();
+    const alreadyOneShot = !mission.is_repeatable && (sp.completed_count||0) > 0;
+    let onCooldown = false;
+    if(mission.is_repeatable && sp.last_attempt && mission.repeat_minutes > 0){
+      onCooldown = (now - sp.last_attempt) < mission.repeat_minutes*60*1000;
+    }
+    // The scan matched, but the team isn't eligible to score again — acknowledge
+    // completion (so the client stops the camera) without awarding a second time.
+    if(alreadyOneShot || onCooldown){
+      return res.json({correct:true, complete:true, score:0, alreadyCompleted:true});
+    }
     const score = mission.points || 0;
     if(score > 0) db.addTeamScore(teamId, score);
-    const sp = db.getCrSpecialProgress(gameId, teamId, mission.id) || {};
-    db.upsertCrSpecialProgress(gameId, teamId, mission.id, { completed_count:(sp.completed_count||0)+1, last_attempt:Date.now() });
+    db.upsertCrSpecialProgress(gameId, teamId, mission.id, { completed_count:(sp.completed_count||0)+1, last_attempt:now });
     io.to(`gm_${gameId}`).emit('rankings_update', db.getRankings(gameId));
     return res.json({correct:true, complete:true, score});
   }
@@ -1567,11 +1579,17 @@ function completeCrTeamMission(gameId, teamId, mission, score, opts={}) {
 // "accept" action and by Draw missions whose approval is turned off (which
 // auto-award on submit). Mirrors the special-vs-linear award split.
 function acceptCrSubmissionAndAward(sub, mission) {
+  // Idempotent: never award the same submission twice (GM double-click / retry).
+  if (sub.status === 'accepted') return { score: 0, alreadyAccepted: true };
   db.acceptCrSubmission(sub.id);
   if (mission.is_special) {
+    const prog = db.getCrSpecialProgress(sub.game_id, sub.team_id, mission.id) || {};
+    // One-shot specials award only once, even across multiple accepted submissions.
+    if (!mission.is_repeatable && (prog.completed_count || 0) > 0) {
+      return { score: 0, alreadyCompleted: true };
+    }
     const score = mission.points || 0;
     if (score > 0) db.addTeamScore(sub.team_id, score);
-    const prog = db.getCrSpecialProgress(sub.game_id, sub.team_id, mission.id) || {};
     db.upsertCrSpecialProgress(sub.game_id, sub.team_id, mission.id, {
       completed_count: (prog.completed_count || 0) + 1,
     });
@@ -1696,6 +1714,8 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
   const mission = missions[idx];
 
   if(action === 'accept') {
+    // Already reviewed — don't re-award or re-notify (GM double-click / retry).
+    if(sub.status === 'accepted') return res.json({success:true, alreadyAccepted:true});
     acceptCrSubmissionAndAward(sub, mission);
     io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:true});
   } else {

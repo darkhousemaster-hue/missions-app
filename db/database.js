@@ -1346,10 +1346,12 @@ const createCrCapture = (gameId, teamId, targetTeamId, mediaPath) =>
     .run(gameId, teamId, targetTeamId, mediaPath).lastInsertRowid);
 const getCrCaptures   = gameId => db.prepare('SELECT * FROM cr_team_captures WHERE game_id=?').all(gameId);
 const reviewCrCapture = (id, accept, bonusPoints) => {
+  const cap = db.prepare('SELECT * FROM cr_team_captures WHERE id=?').get(id);
+  if (!cap) return;
   if (accept) {
+    if (cap.status === 'accepted') return;   // idempotent: never award the bonus twice
     db.prepare('UPDATE cr_team_captures SET status=? WHERE id=?').run('accepted', id);
-    const cap = db.prepare('SELECT * FROM cr_team_captures WHERE id=?').get(id);
-    if (cap) db.prepare('UPDATE teams SET score=score+?, last_score_at=? WHERE id=?').run(bonusPoints||5, Date.now(), cap.team_id);
+    db.prepare('UPDATE teams SET score=score+?, last_score_at=? WHERE id=?').run(bonusPoints||5, Date.now(), cap.team_id);
   } else {
     db.prepare('UPDATE cr_team_captures SET status=? WHERE id=?').run('rejected', id);
   }
