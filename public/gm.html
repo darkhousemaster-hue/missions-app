@@ -303,6 +303,14 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .mode-pill .pill-grip{display:inline-flex;color:var(--text-muted);}
 .mode-pill .pill-edit{display:inline-flex;color:var(--text-muted);cursor:pointer;}
 .mode-pill .pill-edit:hover{color:var(--orange);}
+/* Accepted-answer chips (quiz missions). Case is preserved verbatim — with
+   "case sensitive" on, "Fuchs" and "fuchs" are two distinct entries. */
+.ans-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.ans-chips:not(:empty){margin-bottom:.5rem;}
+.ans-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 6px 5px 11px;border-radius:999px;background:var(--orange-soft);border:1px solid var(--orange-dim);color:var(--text);font:600 12px/1.2 var(--body);word-break:break-word;}
+.ans-chip-x{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:17px;height:17px;border:0;border-radius:999px;background:rgba(0,0,0,.22);color:var(--text-dim);font:700 13px/1 var(--body);cursor:pointer;padding:0;transition:background .15s,color .15s;}
+.ans-chip-x:hover{background:var(--red,#d42b2b);color:#fff;}
+.ans-chip-x:focus-visible{outline:2px solid var(--orange);outline-offset:1px;}
 .mode-add{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:transparent;border:1px dashed var(--border);color:var(--text-dim);font:700 12px/1 var(--body);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:color .15s,border-color .15s;}
 .mode-add:hover{color:var(--text);border-color:var(--orange-dim);}
 .mm-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:.5rem;}
@@ -1297,7 +1305,11 @@ const GMT={
   'cr-m-gps':'📍 GPS-Trigger','cr-m-map':'🗺️ Karte anzeigen','cr-m-timed':'⏱ Zeitlimit',
   'cr-m-gps-hint':'Hinweis für Spieler (GPS-Trigger)','cr-m-time-secs':'Zeit (Sekunden)','cr-m-pen-int':'Penalty alle X Sek.','cr-m-pen-pts':'Penalty (Punkte)',
   'cr-m-media':'Medientyp','cr-m-media-none':'— Keine —','cr-m-has-answer':'❓ Frage mit Antwort (Spieler müssen die korrekte Antwort tippen)',
-  'cr-m-answer-label':'Korrekte Antwort (mind. eine Sprache)','cr-m-hints-label':'💡 Hinweise (optional)','cr-m-add-hint':'＋ Hinweis','cr-m-no-hints':'Noch keine Hinweise.',
+  'cr-m-answer-label':'Akzeptierte Lösungen (mind. eine Sprache)',
+  'cr-m-answer-add':'Lösung hinzufügen…','cr-m-answer-max':'Maximal 40 Lösungen',
+  'cr-m-answer-case':'Groß-/Kleinschreibung beachten','cr-m-answer-case-sub':'Aus = Groß-/Kleinschreibung egal.',
+  'cr-m-answer-case-tip':'Aus (Standard): „fuchs" und „Fuchs" gelten beide. An: die Schreibweise muss exakt stimmen — dann kannst du Varianten einzeln auflisten.',
+  'cr-m-hints-label':'💡 Hinweise (optional)','cr-m-add-hint':'＋ Hinweis','cr-m-no-hints':'Noch keine Hinweise.',
   'cr-m-tab-desc':'📖 Beschreibung','cr-m-tab-task':'🎯 Aufgabe','cr-m-add-title':'Rail Adventure Mission hinzufügen','cr-m-edit-title':'Rail Adventure Mission bearbeiten','cr-m-create':'Erstellen','cr-m-save':'Speichern','cr-m-cancel':'Abbrechen','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Aufgabe & Beschreibung erst nach Ankunft anzeigen',
   'cr-m-hide-tip':'Spieler sehen nur den Hinweis, bis sie am GPS-Ziel ankommen. Erst danach werden Beschreibung und Aufgabe sichtbar.',
@@ -1427,7 +1439,11 @@ const GMT={
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
   'cr-m-gps-hint':'Hint for players (GPS trigger)','cr-m-time-secs':'Time (seconds)','cr-m-pen-int':'Penalty every X sec.','cr-m-pen-pts':'Penalty (points)',
   'cr-m-media':'Media type','cr-m-media-none':'— None —','cr-m-has-answer':'❓ Question with answer (players must type the correct answer)',
-  'cr-m-answer-label':'Correct answer (at least one language)','cr-m-hints-label':'💡 Hints (optional)','cr-m-add-hint':'＋ Hint','cr-m-no-hints':'No hints yet.',
+  'cr-m-answer-label':'Accepted answers (at least one language)',
+  'cr-m-answer-add':'Add an answer…','cr-m-answer-max':'Maximum 40 answers',
+  'cr-m-answer-case':'Match upper/lower case','cr-m-answer-case-sub':'Off = capitalisation is ignored.',
+  'cr-m-answer-case-tip':'Off (default): "fox" and "Fox" both count. On: the spelling must match exactly — then you can list each variant separately.',
+  'cr-m-hints-label':'💡 Hints (optional)','cr-m-add-hint':'＋ Hint','cr-m-no-hints':'No hints yet.',
   'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Task','cr-m-add-title':'Add Rail Adventure Mission','cr-m-edit-title':'Edit Rail Adventure Mission','cr-m-create':'Create','cr-m-save':'Save','cr-m-cancel':'Cancel','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Hide task & description until arrival',
   'cr-m-hide-tip':'Players see only the hint until they reach the GPS target. The description and task are revealed on arrival.',
@@ -1548,7 +1564,11 @@ const GMT={
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
   'cr-m-gps-hint':'Indice pour les joueurs (GPS)','cr-m-time-secs':'Temps (secondes)','cr-m-pen-int':'Pénalité toutes les X sec.','cr-m-pen-pts':'Pénalité (points)',
   'cr-m-media':'Type de média','cr-m-media-none':'— Aucun —','cr-m-has-answer':'❓ Question avec réponse (les joueurs doivent saisir la bonne réponse)',
-  'cr-m-answer-label':'Bonne réponse (au moins une langue)','cr-m-hints-label':'💡 Indices (optionnel)','cr-m-add-hint':'＋ Indice','cr-m-no-hints':'Aucun indice.',
+  'cr-m-answer-label':'Réponses acceptées (au moins une langue)',
+  'cr-m-answer-add':'Ajouter une réponse…','cr-m-answer-max':'40 réponses maximum',
+  'cr-m-answer-case':'Respecter les majuscules','cr-m-answer-case-sub':'Désactivé = la casse est ignorée.',
+  'cr-m-answer-case-tip':'Désactivé (par défaut) : « renard » et « Renard » comptent tous les deux. Activé : l\'orthographe doit être exacte — listez alors chaque variante.',
+  'cr-m-hints-label':'💡 Indices (optionnel)','cr-m-add-hint':'＋ Indice','cr-m-no-hints':'Aucun indice.',
   'cr-m-tab-desc':'📖 Description','cr-m-tab-task':'🎯 Tâche','cr-m-add-title':'Ajouter une mission Rail Adventure','cr-m-edit-title':'Modifier la mission Rail Adventure','cr-m-create':'Créer','cr-m-save':'Sauvegarder','cr-m-cancel':'Annuler','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Cacher la tâche & description avant l\'arrivée',
   'cr-m-hide-tip':'Les joueurs ne voient que l\'indice jusqu\'à leur arrivée à la cible GPS. La description et la tâche apparaissent ensuite.',
@@ -1669,7 +1689,11 @@ const GMT={
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
   'cr-m-gps-hint':'Suggerimento per i giocatori (GPS)','cr-m-time-secs':'Tempo (secondi)','cr-m-pen-int':'Penalità ogni X sec.','cr-m-pen-pts':'Penalità (punti)',
   'cr-m-media':'Tipo di media','cr-m-media-none':'— Nessuno —','cr-m-has-answer':'❓ Domanda con risposta (i giocatori devono inserire la risposta corretta)',
-  'cr-m-answer-label':'Risposta corretta (almeno una lingua)','cr-m-hints-label':'💡 Suggerimenti (opzionale)','cr-m-add-hint':'＋ Suggerimento','cr-m-no-hints':'Nessun suggerimento.',
+  'cr-m-answer-label':'Risposte accettate (almeno una lingua)',
+  'cr-m-answer-add':'Aggiungi una risposta…','cr-m-answer-max':'Massimo 40 risposte',
+  'cr-m-answer-case':'Distingui maiuscole/minuscole','cr-m-answer-case-sub':'Off = maiuscole/minuscole ignorate.',
+  'cr-m-answer-case-tip':'Off (predefinito): "volpe" e "Volpe" valgono entrambe. On: la grafia deve essere esatta — elenca quindi ogni variante.',
+  'cr-m-hints-label':'💡 Suggerimenti (opzionale)','cr-m-add-hint':'＋ Suggerimento','cr-m-no-hints':'Nessun suggerimento.',
   'cr-m-tab-desc':'📖 Descrizione','cr-m-tab-task':'🎯 Compito','cr-m-add-title':'Aggiungi missione Rail Adventure','cr-m-edit-title':'Modifica missione Rail Adventure','cr-m-create':'Crea','cr-m-save':'Salva','cr-m-cancel':'Annulla','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Nascondi compito e descrizione fino all\'arrivo',
   'cr-m-hide-tip':'I giocatori vedono solo il suggerimento finché non arrivano al punto GPS. Solo allora vengono mostrati descrizione e compito.',
@@ -1790,7 +1814,11 @@ const GMT={
   'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
   'cr-m-gps-hint':'Pista para los jugadores (GPS)','cr-m-time-secs':'Tiempo (segundos)','cr-m-pen-int':'Penalización cada X seg.','cr-m-pen-pts':'Penalización (puntos)',
   'cr-m-media':'Tipo de medio','cr-m-media-none':'— Ninguno —','cr-m-has-answer':'❓ Pregunta con respuesta (los jugadores deben escribir la respuesta correcta)',
-  'cr-m-answer-label':'Respuesta correcta (al menos un idioma)','cr-m-hints-label':'💡 Pistas (opcional)','cr-m-add-hint':'＋ Pista','cr-m-no-hints':'Aún no hay pistas.',
+  'cr-m-answer-label':'Respuestas aceptadas (al menos un idioma)',
+  'cr-m-answer-add':'Añadir una respuesta…','cr-m-answer-max':'Máximo 40 respuestas',
+  'cr-m-answer-case':'Distinguir mayúsculas/minúsculas','cr-m-answer-case-sub':'Desactivado = no importan las mayúsculas.',
+  'cr-m-answer-case-tip':'Desactivado (por defecto): "zorro" y "Zorro" cuentan ambas. Activado: la escritura debe coincidir exactamente — entonces enumera cada variante.',
+  'cr-m-hints-label':'💡 Pistas (opcional)','cr-m-add-hint':'＋ Pista','cr-m-no-hints':'Aún no hay pistas.',
   'cr-m-tab-desc':'📖 Descripción','cr-m-tab-task':'🎯 Tarea','cr-m-add-title':'Añadir misión Rail Adventure','cr-m-edit-title':'Editar misión Rail Adventure','cr-m-create':'Crear','cr-m-save':'Guardar','cr-m-cancel':'Cancelar','cr-m-auto':'🌐 Auto',
   'cr-m-hide-until-arrival':'🔒 Ocultar tarea y descripción hasta la llegada',
   'cr-m-hide-tip':'Los jugadores solo ven la pista hasta llegar al punto GPS. Después se muestran la descripción y la tarea.',
@@ -4740,6 +4768,73 @@ function langTabFields(prefix, type, values, initial='de', rows=4){
   return `<div class="lang-strip" data-prefix="${prefix}">${tabs}</div><div class="lang-panels" data-prefix="${prefix}">${panels}</div>`;
 }
 
+// ── Multi-answer chip fields ────────────────────────────────────────────────
+// Same language strip as langTabFields, but each panel holds a LIST of accepted
+// answers instead of one string. The list is mirrored into a hidden input
+// (`${prefix}-${lang}`) as JSON so the existing save/auto-translate/tick-mark
+// code keeps reading `.value` unchanged. Empty list → '' so the ✓ logic works.
+let _chipVals = {};   // { prefix: { de:[...], en:[...], … } }
+function _parseChipList(v){
+  if (Array.isArray(v)) return v.map(x=>String(x??'').trim()).filter(Boolean);
+  const s = String(v==null?'':v).trim();
+  if (!s) return [];
+  if (s.startsWith('[')) { try { const p = JSON.parse(s); if (Array.isArray(p)) return p.map(x=>String(x??'').trim()).filter(Boolean); } catch(e){} }
+  return [s];   // legacy single answer
+}
+function langChipFields(prefix, values, initial='de'){
+  const all = ['de','en','fr','it','es'];
+  _chipVals[prefix] = {};
+  all.forEach(l => { _chipVals[prefix][l] = _parseChipList(values && values[l]); });
+  const tabs = all.map(l => `
+    <button type="button" class="lang-tab ${l===initial?'is-active':''}" data-lang="${l}"
+            onclick="switchLangPanel('${prefix}','${l}',this)">
+      <span class="tick" style="display:${_chipVals[prefix][l].length?'inline':'none'};">✓</span>${l.toUpperCase()}
+    </button>`).join('');
+  const panels = all.map(l => `
+    <div class="lang-panel ${l===initial?'is-active':''}" data-lang="${l}">
+      <div class="ans-chips" id="${prefix}-chips-${l}"></div>
+      <input class="input" id="${prefix}-add-${l}" placeholder="${esc(gmt('cr-m-answer-add')||'Lösung hinzufügen…')}"
+             autocomplete="off" onkeydown="chipFieldKey(event,'${prefix}','${l}')" onblur="chipFieldAdd('${prefix}','${l}')">
+      <input type="hidden" id="${prefix}-${l}">
+    </div>`).join('');
+  // Panels are rendered as a string, so paint the chips right after insertion.
+  setTimeout(()=>all.forEach(l=>renderChipField(prefix,l)),0);
+  return `<div class="lang-strip" data-prefix="${prefix}">${tabs}</div><div class="lang-panels" data-prefix="${prefix}">${panels}</div>`;
+}
+function renderChipField(prefix, lang){
+  const list = (_chipVals[prefix] && _chipVals[prefix][lang]) || [];
+  const box = document.getElementById(`${prefix}-chips-${lang}`);
+  if(box) box.innerHTML = list.map((a,i)=>`
+    <span class="ans-chip">${esc(a)}<button type="button" class="ans-chip-x" title="${esc(gmt('delete')||'Löschen')}"
+      aria-label="${esc(gmt('delete')||'Löschen')}: ${esc(a)}" onclick="chipFieldRemove('${prefix}','${lang}',${i})">×</button></span>`).join('');
+  const hidden = document.getElementById(`${prefix}-${lang}`);
+  if(hidden) hidden.value = list.length ? JSON.stringify(list) : '';
+  markLangTabFilled(prefix, lang, list.length > 0);
+}
+function chipFieldAdd(prefix, lang, raw){
+  const inp = document.getElementById(`${prefix}-add-${lang}`);
+  const val = String(raw!==undefined ? raw : (inp?inp.value:'')).trim().replace(/\s+/g,' ');
+  if(inp) inp.value='';
+  if(!val) return;
+  const list = _chipVals[prefix][lang];
+  if(list.includes(val)) return;         // exact dupe — case variants stay distinct
+  if(list.length >= 40){ toast(gmt('cr-m-answer-max')||'Maximal 40 Lösungen','warning'); return; }
+  list.push(val);
+  renderChipField(prefix, lang);
+}
+function chipFieldRemove(prefix, lang, i){
+  _chipVals[prefix][lang].splice(i,1);
+  renderChipField(prefix, lang);
+}
+// Enter or comma commits the entry; both are natural for a list like this.
+function chipFieldKey(e, prefix, lang){
+  if(e.key==='Enter' || e.key===','){ e.preventDefault(); chipFieldAdd(prefix, lang); }
+  else if(e.key==='Backspace' && !e.target.value){
+    const list=_chipVals[prefix][lang];
+    if(list.length){ e.preventDefault(); list.pop(); renderChipField(prefix, lang); }
+  }
+}
+
 function switchLangPanel(prefix, lang, btn){
   document.querySelectorAll(`.lang-strip[data-prefix="${prefix}"] .lang-tab`).forEach(t => t.classList.remove('is-active'));
   if(btn) btn.classList.add('is-active');
@@ -5635,14 +5730,19 @@ function crMissionModal(m){
 
       <div class="cme-panel" id="cr-panel-quiz" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
-          <label class="label" style="margin:0;">${gmt('cr-m-answer-label')||'Korrekte Antwort (mind. eine Sprache)'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Was Spieler tippen müssen.</strong> Eine Sprache genügt; 🌐 Auto übersetzt sie.</span></i></label>
+          <label class="label" style="margin:0;">${gmt('cr-m-answer-label')||'Akzeptierte Lösungen (mind. eine Sprache)'}<i class="cme-info" tabindex="0">i<span class="cme-tip"><strong>Was Spieler tippen müssen.</strong> Enter fügt eine Lösung hinzu — liste ruhig mehrere Schreibweisen auf, jede davon gilt. Die Eingabe muss komplett übereinstimmen (Leerzeichen egal). Eine Sprache genügt; 🌐 Auto übersetzt sie.</span></i></label>
           <button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.1rem .35rem;" onclick="autoTranslateCrField('answer')">${gmt('cr-m-auto')||'🌐 Auto'}</button>
         </div>
         <div id="cr-answer-section">
-        ${langTabFields('cr-answer', 'input', {
+        ${langChipFields('cr-answer', {
           de: vr('answer_de'), en: vr('answer_en'),
           fr: vr('answer_fr'), it: vr('answer_it'), es: vr('answer_es')
         })}
+        <div class="toggle-row" style="margin-top:.7rem;" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-answer-case')">
+          <div><div class="toggle-row-text">🔠 ${gmt('cr-m-answer-case')||'Groß-/Kleinschreibung beachten'}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('cr-m-answer-case-tip')||'Aus (Standard): „fuchs" und „Fuchs" gelten beide. An: die Schreibweise muss exakt stimmen — dann kannst du Varianten einzeln auflisten.'}</span></i></div><div class="toggle-row-sub">${gmt('cr-m-answer-case-sub')||'Aus = Groß-/Kleinschreibung egal.'}</div></div>
+          <div class="toggle ${m&&m.answer_case_sensitive?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'cr-answer-case')"></div>
+        </div>
+        <input type="checkbox" id="cr-answer-case" ${chk('answer_case_sensitive')} style="display:none;">
         </div>
       </div>
 
@@ -6392,6 +6492,7 @@ function getCrMissionData(){
     is_repeatable: document.getElementById('cr-is-repeatable')?.checked?1:0,
     repeat_minutes: Math.max(0, parseInt(document.getElementById('cr-repeat-minutes')?.value)||0),
     has_answer: hasAnswer,
+    answer_case_sensitive: document.getElementById('cr-answer-case')?.checked?1:0,
     answer_de: document.getElementById('cr-answer-de')?.value||'',
     answer_en: document.getElementById('cr-answer-en')?.value||'',
     answer_fr: document.getElementById('cr-answer-fr')?.value||'',
@@ -6752,6 +6853,7 @@ function _crExportShape(m, hints){
     scan_code: m.scan_code||'', scan_fragments: m.scan_fragments||'[]', scan_image: m.scan_image||null, scan_target: m.scan_target||null,
     hint_de:m.hint_de||'', hint_en:m.hint_en||'', hint_fr:m.hint_fr||'', hint_it:m.hint_it||'', hint_es:m.hint_es||'',
     has_answer: !!m.has_answer,
+    answer_case_sensitive: m.answer_case_sensitive?1:0,
     answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
     description_de:m.description_de||'', description_en:m.description_en||'',
     description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
@@ -6839,6 +6941,7 @@ async function importCrMissions(file){
       use_scan: m.use_scan?1:0, scan_type: m.scan_type||'qr', scan_mode: m.scan_mode||'solve',
       scan_code: m.scan_code||'', scan_fragments: m.scan_fragments||'[]', scan_image: m.scan_image||null, scan_target: m.scan_target||null,
       has_answer: m.has_answer?1:0,
+      answer_case_sensitive: m.answer_case_sensitive?1:0,
       answer_de:m.answer_de||'', answer_en:m.answer_en||'',
       answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
     };
@@ -7000,7 +7103,12 @@ async function autoTranslateCrField(field){
   // "Bitte Text eingeben" when the field is actually populated.
   const FIELD_ID_ALIASES = { description: 'desc' };
   const idPrefix = FIELD_ID_ALIASES[field] || field;
-  const texts=Object.fromEntries(langs.map(l=>[l,document.getElementById(`cr-${idPrefix}-${l}`)?.value||'']));
+  // Answers are a chip LIST, not a single input — translate the first accepted
+  // spelling of the filled language and add the result as a chip elsewhere.
+  const isChips = field === 'answer';
+  const texts=Object.fromEntries(langs.map(l=>[l,
+    isChips ? ((_chipVals['cr-answer']?.[l]||[])[0]||'')
+            : (document.getElementById(`cr-${idPrefix}-${l}`)?.value||'')]));
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben','warning');return;}
   const [fromLang,text]=filled;
@@ -7008,8 +7116,12 @@ async function autoTranslateCrField(field){
   if(!empty.length){toast(gmt('all-filled')||'Alle Felder ausgefüllt','warning');return;}
   toast(gmt('translating')||'Übersetze…');
   const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
-  empty.forEach(l=>{const el=document.getElementById(`cr-${idPrefix}-${l}`);if(el&&res[l])el.value=res[l];});
-  refreshLangTickMarks(`cr-${idPrefix}`);
+  empty.forEach(l=>{
+    if(!res[l]) return;
+    if(isChips){ chipFieldAdd('cr-answer', l, res[l]); return; }
+    const el=document.getElementById(`cr-${idPrefix}-${l}`); if(el) el.value=res[l];
+  });
+  if(!isChips) refreshLangTickMarks(`cr-${idPrefix}`);
   toast(gmt('translated')||'Übersetzt!','success');
 }
 

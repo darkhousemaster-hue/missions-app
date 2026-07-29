@@ -1081,13 +1081,18 @@ app.post('/api/games/:gameId/cr/answer', (req,res) => {
   const {teamId, missionId, answer} = req.body;
   const mission = db.getCrMission(missionId);
   if(!mission) return res.status(404).json({error:'Not found'});
-  // Case-insensitive, whitespace-tolerant, but a FULL match — not a substring.
-  // The old substring test accepted any fragment of the answer (a single correct
-  // letter passed, and "eiter" matched "Heitere Fahne"). Collapse internal
-  // whitespace so "Heitere  Fahne" still equals "heitere fahne".
-  const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g, ' ');
+  // Whitespace-tolerant FULL match against every accepted spelling the GM
+  // listed, in any language. Never a substring: the old test accepted any
+  // fragment (a single correct letter passed, "eiter" matched "Heitere Fahne").
+  // Case is ignored unless the mission opts into answer_case_sensitive.
+  const caseSensitive = !!mission.answer_case_sensitive;
+  const norm = s => {
+    const t = String(s == null ? '' : s).trim().replace(/\s+/g, ' ');
+    return caseSensitive ? t : t.toLowerCase();
+  };
   const correctAnswers = ['answer_de','answer_en','answer_fr','answer_it','answer_es']
-    .map(f => norm(mission[f]))
+    .flatMap(f => db.parseAnswerList(mission[f]))
+    .map(norm)
     .filter(Boolean);
   const userAnswer = norm(answer);
   const correct = !!userAnswer && correctAnswers.some(a => a === userAnswer);
@@ -1523,6 +1528,10 @@ function sanitizeCrMissionForPlayer(m){
   out.scan_fragment_count = fragCount;
   delete out.scan_code;
   delete out.scan_fragments;
+  // Quiz solutions must never reach the player device — answers are checked
+  // server-side (/cr/answer), so the client has no use for them. has_answer
+  // stays so the UI still renders the answer input.
+  ['answer_de','answer_en','answer_fr','answer_it','answer_es'].forEach(f => delete out[f]);
   return out;
 }
 

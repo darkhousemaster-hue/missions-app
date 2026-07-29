@@ -314,6 +314,10 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_code TEXT"); } catch(e) {
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_fragments TEXT DEFAULT '[]'"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_image TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN scan_target TEXT"); } catch(e) {}
+// Quiz answers: each answer_* column now holds a JSON array of accepted
+// spellings (legacy plain strings still read fine — see parseAnswerList).
+// answer_case_sensitive=0 (default) compares case-insensitively.
+try { db.exec("ALTER TABLE cr_missions ADD COLUMN answer_case_sensitive INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_mission_progress ADD COLUMN scan_collected TEXT DEFAULT '[]'"); } catch(e) {}
 try { db.exec("ALTER TABLE teams ADD COLUMN gps_anchor_key TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_submissions ADD COLUMN player_key TEXT"); } catch(e) {}
@@ -1053,7 +1057,7 @@ const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','nam
   'task_de','task_en','task_fr','task_it','task_es','hint_de','hint_en','hint_fr','hint_it','hint_es',
   'points','lat','lng','radius_meters','use_map','use_gps',
   'is_timed','timer_seconds','penalty_interval','penalty_points','media_required',
-  'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es',
+  'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es','answer_case_sensitive',
   'hide_until_arrival',
   'is_special','repeat_minutes','is_repeatable','is_rush','skippable',
   'use_puzzle','puzzle_image','puzzle_grid',
@@ -1072,12 +1076,34 @@ const toPositiveInt = (v, fallback) => {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : fallback;
 };
 const toFlag = v => (v === true || v === 1 || v === '1') ? 1 : 0;
+// A quiz answer field holds a JSON array of accepted spellings. Legacy rows
+// hold a single plain string, so accept both and always return an array.
+// Dedupe is EXACT (not case-folded) so a case-sensitive quiz can accept both
+// "Fuchs" and "fuchs" as separate entries.
+const parseAnswerList = v => {
+  if (Array.isArray(v)) v = JSON.stringify(v);
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return [];
+  let arr = null;
+  if (s.startsWith('[')) { try { const p = JSON.parse(s); if (Array.isArray(p)) arr = p; } catch {} }
+  if (!arr) arr = [s];                       // legacy single answer
+  const out = [];
+  arr.forEach(x => {
+    const t = String(x == null ? '' : x).trim().replace(/\s+/g, ' ');
+    if (t && !out.includes(t)) out.push(t);
+  });
+  return out.slice(0, 40);
+};
 const normalizeCrMissionData = (data = {}) => {
   const out = {...data};
   if (out.lat !== undefined) out.lat = toNullableNumber(out.lat);
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
-  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','skippable','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime','use_draw','draw_needs_approval','draw_collaborative','use_scan'].forEach(f => {
+  // Each answer field → a clean JSON array of accepted spellings.
+  ['answer_de','answer_en','answer_fr','answer_it','answer_es'].forEach(f => {
+    if (out[f] !== undefined && out[f] !== null) out[f] = JSON.stringify(parseAnswerList(out[f]));
+  });
+  ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','skippable','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime','use_draw','draw_needs_approval','draw_collaborative','use_scan','answer_case_sensitive'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = toFlag(out[f]);
   });
   // puzzle_peeks: accept an array or a JSON string; store a clean JSON string
@@ -1423,7 +1449,7 @@ module.exports = {
   getAutoMessages,createAutoMessage,updateAutoMessage,deleteAutoMessage,
   recordGameStat,bumpGameStatTeams,markGameStatStarted,markGameStatEnded,dropGameStat,getStatsSummary,
   getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,reorderCrModes,
-  getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,
+  getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,parseAnswerList,
   linkCrMode,getGameCrMode,isCrGame,
   getCrHints,getCrHint,createCrHint,updateCrHint,deleteCrHint,reorderCrHints,getTeamHintsUsed,incrementTeamHints,
   getCrProgress,getAllCrProgress,initCrProgress,updateCrProgress,
