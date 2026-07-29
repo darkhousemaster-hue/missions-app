@@ -176,6 +176,16 @@ let role = qs.get('role') || 'member';            // solo | master | member
 let lang = (qs.get('lang')||'de').toLowerCase(); if(!DICT[lang]) lang='de';
 const t = k => (DICT[lang] && DICT[lang][k]) || DICT.en[k] || k;
 document.documentElement.lang = lang;
+// The static markup carries German defaults for the first paint; repaint them
+// from DICT so the whole page follows ?lang= (they used to stay German).
+const STATIC_LABELS={'opt-title':'opt_title','lbl-tool':'tool','t-pencil':'pencil',
+  't-brush':'brush','t-eraser':'eraser','lbl-size':'size','lbl-color':'color',
+  't-custom':'custom','t-undo':'undo','t-clear':'clear','t-done':'done',
+  'task-title':'task_title','t-close':'close','inv-title':'inv_title',
+  'inv-help':'inv_help','t-start':'start'};
+Object.entries(STATIC_LABELS).forEach(([id,k])=>{
+  const el=document.getElementById(id); if(el) el.textContent=t(k);
+});
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const clientId = Math.random().toString(36).slice(2,10);

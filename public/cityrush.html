@@ -366,7 +366,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
          any callers still toggling it. Per user direction, capture
          lives inside a special mission now. -->
     <div id="cr-capture-section" style="margin-top:1rem;display:none;">
-      <div class="cr-section-label">Team fotografieren (+5 Punkte)</div>
+      <div class="cr-section-label" id="cr-lbl-capture">Team fotografieren (+5 Punkte)</div>
       <div class="cr-teams-grid" id="cr-capture-teams"></div>
     </div>
   </div>
@@ -595,9 +595,9 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 
 <!-- GPS ARRIVED OVERLAY -->
 <div id="cr-arrived-overlay">
-  <h2>✅ Angekommen!</h2>
+  <h2 id="cr-arrived-title">✅ Angekommen!</h2>
   <p id="cr-arrived-text" style="color:var(--text-dim);max-width:320px;margin:0 auto 1.5rem;"></p>
-  <button class="btn btn-primary btn-lg" onclick="dismissArrived()">Mission starten →</button>
+  <button class="btn btn-primary btn-lg" onclick="dismissArrived()"><span id="cr-arrived-start">Mission starten →</span></button>
 </div>
 
 <!-- GM REJECTION OVERLAY -->
@@ -683,7 +683,7 @@ let lastDistance  = null;                // last computed distance to current mi
 let arrivalCheckInFlight = false;
 
 const T = {
-  de: { desc:'Beschreibung', task:'Aufgabe', hint:'Hinweis', mission:'Mission',
+  de: { hints_title:'Hinweise', hints_left:'übrig', start_mission:'Mission starten →', special_btn:'Spezial-Mission', desc:'Beschreibung', task:'Aufgabe', hint:'Hinweis', mission:'Mission',
         searching:'GPS wird gesucht…', near:'In der Nähe…', arrived:'Angekommen!',
         penalty:'Strafpunkt', penalties:'Strafpunkte', overtime:'Overtime',
         complete:'Mission abschliessen', photo:'📷 Foto aufnehmen', video:'🎬 Video aufnehmen',
@@ -735,7 +735,7 @@ const T = {
         broadcast:'Rundruf',
         error_generic:'Fehler',
         teammate_pending:'Ein Teammitglied hat bereits eingereicht — bitte auf den Spielleiter warten.' },
-  en: { desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
+  en: { hints_title:'Hints', hints_left:'left', start_mission:'Start mission →', special_btn:'Special mission', desc:'Description', task:'Task', hint:'Hint', mission:'Mission',
         searching:'Searching GPS…', near:'Getting close…', arrived:'Arrived!',
         penalty:'Penalty', penalties:'Penalties', overtime:'Overtime',
         complete:'Complete mission', photo:'📷 Take photo', video:'🎬 Record video',
@@ -785,7 +785,7 @@ const T = {
         broadcast:'Broadcast',
         error_generic:'Error',
         teammate_pending:'A teammate already submitted — waiting for GM review.' },
-  fr: { desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
+  fr: { hints_title:'Indices', hints_left:'restants', start_mission:'Démarrer la mission →', special_btn:'Mission spéciale', desc:'Description', task:'Tâche', hint:'Indice', mission:'Mission',
         searching:'Recherche GPS…', near:'Vous approchez…', arrived:'Arrivé!',
         penalty:'Pénalité', penalties:'Pénalités', overtime:'Dépassement',
         complete:'Terminer la mission', photo:'📷 Prendre photo', video:'🎬 Enregistrer',
@@ -836,7 +836,7 @@ const T = {
         broadcast:'Annonce',
         error_generic:'Erreur',
         teammate_pending:'Un coéquipier a déjà envoyé — en attente du maître du jeu.' },
-  it: { desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
+  it: { hints_title:'Suggerimenti', hints_left:'rimanenti', start_mission:'Inizia la missione →', special_btn:'Missione speciale', desc:'Descrizione', task:'Compito', hint:'Suggerimento', mission:'Missione',
         searching:'Ricerca GPS…', near:'Ci sei quasi…', arrived:'Arrivato!',
         penalty:'Penalità', penalties:'Penalità', overtime:'Tempo extra',
         complete:'Completa missione', photo:'📷 Scatta foto', video:'🎬 Registra',
@@ -886,7 +886,7 @@ const T = {
         broadcast:'Annuncio',
         error_generic:'Errore',
         teammate_pending:'Un compagno ha già inviato — in attesa del Gamemaster.' },
-  es: { desc:'Descripción', task:'Tarea', hint:'Pista', mission:'Misión',
+  es: { hints_title:'Pistas', hints_left:'restantes', start_mission:'Iniciar la misión →', special_btn:'Misión especial', desc:'Descripción', task:'Tarea', hint:'Pista', mission:'Misión',
         searching:'Buscando GPS…', near:'Estás cerca…', arrived:'¡Has llegado!',
         penalty:'Penalización', penalties:'Penalizaciones', overtime:'Tiempo extra',
         complete:'Completar misión', photo:'📷 Hacer foto', video:'🎬 Grabar vídeo',
@@ -1157,6 +1157,17 @@ function applyCrTranslations(){
   const cs = document.getElementById('cr-chat-send');
   if(cs) cs.textContent = t('chat_send');
   // Update just the cr-chat-back label so the SVG arrow span stays intact.
+  // Static labels that previously kept their German markup defaults.
+  set('cr-lbl-special', '⭐ ' + t('special_missions'));
+  set('cr-hints-title', t('hints_title'));
+  set('cr-hints-count', '– ' + t('hints_left'));
+  set('cr-lbl-capture', t('capture_team') + ' (+5 ' + t('points') + ')');
+  set('cr-arrived-title', '✅ ' + t('arrived'));
+  set('cr-arrived-start', t('start_mission'));
+  set('cr-frozen-sub',  t('caught_sub'));
+  set('cr-frozen-hint', t('caught_hint'));
+  const sbtn = document.getElementById('cr-special-btn');
+  if(sbtn){ sbtn.title = t('special_btn'); sbtn.setAttribute('aria-label', t('special_btn')); }
   const cbl = document.getElementById('cr-chat-back-label');
   if(cbl) cbl.textContent = (t('chat_back')||t('back')||'Zurück').replace(/^←\s*/,'');
 }
@@ -1193,6 +1204,9 @@ function enterCrPreview(){
   completedMissionIds.add(9001);
   currentMission = rushMissions[1];
   try { renderTiles(); } catch(e){}
+  // The preview returns before the normal init, which is what localises the
+  // static labels — do it here too, or the designer preview is always German.
+  try { applyCrTranslations(); } catch(e){}
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1948,7 +1962,7 @@ function renderCurrentHintsCard(){
   const revealed = (revealedHints[m.use_gps ? 'gps' : 'answer'] || {})[m.id] || [];
   const remaining = Math.max(0, hintList.length - revealed.length);
   card.style.display = 'block';
-  if(count) count.textContent = `${remaining} ${t('hints_left')||'übrig'}`;
+  if(count) count.textContent = `${remaining} ${t('hints_left')}`;
   if(pills){
     pills.innerHTML = remaining > 0
       ? `<span class="ht-pill" onclick="openMissionPopup(${m.id})">
