@@ -1081,12 +1081,16 @@ app.post('/api/games/:gameId/cr/answer', (req,res) => {
   const {teamId, missionId, answer} = req.body;
   const mission = db.getCrMission(missionId);
   if(!mission) return res.status(404).json({error:'Not found'});
-  // Flexible matching: case-insensitive, trim whitespace
+  // Case-insensitive, whitespace-tolerant, but a FULL match — not a substring.
+  // The old substring test accepted any fragment of the answer (a single correct
+  // letter passed, and "eiter" matched "Heitere Fahne"). Collapse internal
+  // whitespace so "Heitere  Fahne" still equals "heitere fahne".
+  const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g, ' ');
   const correctAnswers = ['answer_de','answer_en','answer_fr','answer_it','answer_es']
-    .map(f => (mission[f]||'').trim().toLowerCase())
+    .map(f => norm(mission[f]))
     .filter(Boolean);
-  const userAnswer = (answer||'').trim().toLowerCase();
-  const correct = correctAnswers.some(a => a === userAnswer || a.includes(userAnswer) || userAnswer.includes(a));
+  const userAnswer = norm(answer);
+  const correct = !!userAnswer && correctAnswers.some(a => a === userAnswer);
   res.json({correct, message: correct ? 'Richtig!' : 'Leider falsch. Versuche es erneut!'});
 });
 

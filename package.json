@@ -1,6 +1,6 @@
 {
   "name": "missions-app",
-  "version": "2.4.46",
+  "version": "2.4.47",
   "description": "AdventureRooms MISSIONS outdoor game webapp",
   "main": "server.js",
   "scripts": {
