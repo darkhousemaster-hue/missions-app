@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.36">
+<link rel="stylesheet" href="/css/app.css?v=2.4.56">
 <script src="/js/theme.js?v=14"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -244,8 +244,11 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 /* Checkpoint pins (state-coded, no numbers). */
 .cr-pin { line-height:0; filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
 .cr-pin svg { display:block; }
-/* The current target gets a soft pulse so it stands out among the others. */
-.cr-pin--current { animation:cr-pin-pulse 1.8s ease-in-out infinite; transform-origin:50% 100%; }
+/* Open and current share the brand colour, so the current target is set apart
+   by a white halo + pulse instead of hue — that still reads when a theme logo
+   has replaced the glyph inside the pin. */
+.cr-pin--current { animation:cr-pin-pulse 1.8s ease-in-out infinite; transform-origin:50% 100%;
+  filter:drop-shadow(0 0 3px rgba(255,255,255,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
 @keyframes cr-pin-pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.12);} }
 .cr-pin--done { opacity:.85; }
 @media (prefers-reduced-motion:reduce){ .cr-pin--current{ animation:none; } }
@@ -1300,6 +1303,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Hydrate the frozen overlay if we reloaded while a freeze is active,
   // and apply the location's allowed-language list to the cycler.
   fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json()).then(d => {
+    if(d && d.timer) _crTimerStarted = !!d.timer.started;   // gate actions until the clock runs
     if(d && d.allowed_langs) setCrAllowedLangs(d.allowed_langs);
     if(d && d.freeze && d.freeze.until_ms && d.freeze.until_ms > Date.now()){
       crShowFrozen(d.freeze.until_ms);
@@ -1460,8 +1464,12 @@ function crOnChatMessage(msg){
   }
   // When the player isn't already in the chat view, surface the message as
   // an overlay popup (same UX as the missions app) plus the orange dot.
+  // Rejections are the exception: they already get their own rejection screen,
+  // so popping a second overlay for the same event just doubles the dismissing.
+  // The transcript entry above (and the unread dot) still happen.
   _crGmCount++;
   if(crActiveView==='chat') _crSeenGm = _crGmCount;
+  if(msg.rejection){ if(crActiveView!=='chat') startCrChatFlash(); return; }
   if(crActiveView !== 'chat'){
     startCrChatFlash();
     const popupTxt = document.getElementById('cr-msg-popup-text');
@@ -1644,7 +1652,20 @@ async function crSendChat(){
 }
 
 // ── Game timer ────────────────────────────────────────────────────────────────
-function updateGameTimer({remaining, running}){
+// Whether the GM has started the clock. Actions that open something heavy —
+// the camera, the gallery picker, the scanner, a drawing session — are blocked
+// until then, checked on the button press. Teams used to be able to record a
+// whole video and only find out it was refused after the upload. Optimistic
+// default so a slow socket never wrongly blocks a running game; the server
+// enforces it regardless (403 not_started).
+let _crTimerStarted = true;
+function crEnsureTimerStarted(){
+  if(_crTimerStarted) return true;
+  toast(t('not_started'), 'info');
+  return false;
+}
+function updateGameTimer({remaining, running, started}){
+  if(started !== undefined) _crTimerStarted = !!started;
   const el = document.getElementById('cr-game-timer');
   const m = Math.floor(remaining/60).toString().padStart(2,'0');
   const s = (remaining%60).toString().padStart(2,'0');
@@ -2074,6 +2095,8 @@ function renderActionsForSpecial(m){
     const galleryIcon = m.media_required==='video' ? '🎞️' : '🖼️';
     const accept = m.media_required==='video' ? 'video/*' : 'image/*';
     lbl.innerHTML=`${galleryIcon} ${t('gallery_upload')}<input type="file" accept="${accept}" style="display:none;">`;
+    // Block the picker itself before it opens — same reason as the camera.
+    lbl.addEventListener('click', e=>{ if(!crEnsureTimerStarted()) e.preventDefault(); });
     lbl.querySelector('input').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f)return;
       _specialMissionForUpload = m;
@@ -2928,6 +2951,8 @@ function renderActions(m){
     lbl.className='btn btn-secondary btn-full';
     lbl.style.cursor='pointer';
     lbl.innerHTML=`${galleryIcon} ${t('gallery_upload')}<input type="file" accept="${accept}" style="display:none;">`;
+    // Block the picker itself before it opens — same reason as the camera.
+    lbl.addEventListener('click', e=>{ if(!crEnsureTimerStarted()) e.preventDefault(); });
     lbl.querySelector('input').addEventListener('change', e=>{
       const f=e.target.files?.[0]; if(!f)return;
       _crUploadMissionId = m.id;
@@ -2949,6 +2974,7 @@ function renderActions(m){
 // collaborative draw (shows the invite QR + realtime), solo otherwise. Returning
 // from draw.html (history.back / its own redirect) restores the game view.
 async function startDrawMission(m){
+  if(!crEnsureTimerStarted()) return;
   try{
     const r = await fetch(`/api/games/${gameId}/draw/session`, {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -3144,6 +3170,7 @@ function renderScanActions(m, actEl, isSpecial){
 }
 
 async function openScanOverlay(m, isSpecial){
+  if(!crEnsureTimerStarted()) return;
   if(crIsFrozen && crIsFrozen()){ toast(t('frozen_wait')||'Eingefroren','warning'); return; }
   closeScanOverlay();
   const mode=scanModeOf(m), isImage=m.scan_type==='image';
@@ -3792,10 +3819,12 @@ const CR_PIN_GLYPH = {
   // plain dot: available
   open:`<circle cx="14" cy="14" r="4.6" fill="#fff"/>`,
 };
-// Done/pending/current follow the theme. "Open" deliberately doesn't: it used
-// to inherit --text-muted, which is near-white and disappeared against light
-// map tiles. A mid slate reads on both light and dark basemaps.
-const CR_PIN_FILL = {done:'var(--green)', pending:'var(--orange)', current:'var(--red)', open:'#5b6470'};
+// All four follow the theme. "Open" is the brand colour rather than a neutral
+// grey — most pins are open for most of the game, so this is what gives the map
+// its identity. Open and current share the colour; the current one is told
+// apart by its white halo + pulse (see .cr-pin--current), which keeps working
+// when a theme logo replaces the glyph.
+const CR_PIN_FILL = {done:'var(--green)', pending:'var(--orange)', current:'var(--red)', open:'var(--red)'};
 function crMissionPin(state){
   const fill = CR_PIN_FILL[state] || CR_PIN_FILL.open;
   // When the game has a theme logo, the pin carries that instead of the state
@@ -3898,6 +3927,7 @@ async function fetchAllTeams(){
 
 // ── Camera ────────────────────────────────────────────────────────────────────
 async function openCrCamera(mode, targetTeamId){
+  if(!crEnsureTimerStarted()) return;
   closeMissionPopup();
   captureMode = mode; captureTargetTeamId = targetTeamId||null;
   if(mode === 'mission' && currentMission) _crUploadMissionId = currentMission.id;

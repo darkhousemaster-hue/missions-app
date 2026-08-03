@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS&#8203; — Spielleiter</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.36">
+<link rel="stylesheet" href="/css/app.css?v=2.4.56">
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
@@ -303,6 +303,10 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .mode-pill .pill-grip{display:inline-flex;color:var(--text-muted);}
 .mode-pill .pill-edit{display:inline-flex;color:var(--text-muted);cursor:pointer;}
 .mode-pill .pill-edit:hover{color:var(--orange);}
+/* Dashboard map checkpoint pins — mirrors .cr-pin on the player map. */
+.gm-pin{line-height:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45));}
+.gm-pin svg{display:block;}
+.gm-pin--done{opacity:.85;}
 /* Accepted-answer chips (quiz missions). Case is preserved verbatim — with
    "case sensitive" on, "Fuchs" and "fuchs" are two distinct entries. */
 .ans-chips{display:flex;flex-wrap:wrap;gap:6px;}
@@ -3959,6 +3963,36 @@ function gmIsFiniteCoord(v){
 function gmHasMissionCoords(m){
   return !!m && gmIsFiniteCoord(m.lat) && gmIsFiniteCoord(m.lng);
 }
+// Checkpoint pin for the dashboard map — same shape and states as the player
+// map (public/cityrush.html) so both sides read identically. The number that
+// used to sit in the circle was only the display index, and "open" was a
+// generic grey; it's the brand colour now, with the state kept legible via the
+// pin body. Uses the dashboard theme's logo when one is set.
+const GM_PIN_GLYPH = {
+  done:`<path d="M9.5 14.2l3 3 6-6.4" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  pending:`<circle cx="9.6" cy="14" r="1.7" fill="#fff"/><circle cx="14" cy="14" r="1.7" fill="#fff"/><circle cx="18.4" cy="14" r="1.7" fill="#fff"/>`,
+  open:`<circle cx="14" cy="14" r="4.6" fill="#fff"/>`,
+};
+const GM_PIN_FILL = {done:'var(--green)', pending:'var(--orange)', open:'var(--red)'};
+function gmMissionPin(state){
+  const fill = GM_PIN_FILL[state] || GM_PIN_FILL.open;
+  const logo = (_gmThemeSaved && _gmThemeSaved.logo) ? '/uploads/' + _gmThemeSaved.logo : null;
+  const inner = logo
+    ? `<circle cx="14" cy="14" r="8.4" fill="#fff"/>
+       <image href="${esc(logo)}" x="7.2" y="7.2" width="13.6" height="13.6"
+              clip-path="url(#gm-pin-clip)" preserveAspectRatio="xMidYMid meet"/>`
+    : (GM_PIN_GLYPH[state] || GM_PIN_GLYPH.open);
+  const html =
+    `<div class="gm-pin gm-pin--${state}">
+       <svg width="28" height="38" viewBox="0 0 28 38" aria-hidden="true">
+         <defs><clipPath id="gm-pin-clip"><circle cx="14" cy="14" r="6.8"/></clipPath></defs>
+         <path d="M14 .9C6.8.9.9 6.8.9 14c0 9.2 11.5 21.5 12 22a1.6 1.6 0 0 0 2.2 0c.5-.5 12-12.8 12-22C27.1 6.8 21.2.9 14 .9z"
+               style="fill:${fill}" stroke="#fff" stroke-width="1.8"/>
+         ${inner}
+       </svg>
+     </div>`;
+  return L.divIcon({ className:'', html, iconSize:[28,38], iconAnchor:[14,37], popupAnchor:[0,-32] });
+}
 function renderGmCrMissionMarkers(){
   if(!gmCrMap) return;
   if(!gmCrMissionsCache.length) return;
@@ -3980,13 +4014,8 @@ function renderGmCrMissionMarkers(){
     const p = progressByMission[m.id];
     const isDone    = p && (p.status === 'completed' || p.status === 'skipped');
     const isPending = p && p.status === 'pending';
-    const bg = isDone ? 'var(--green)' : isPending ? 'var(--orange)' : 'var(--text-muted)';
-    const stroke = isDone ? '#1f9d55' : isPending ? '#ff8a1c' : '#888';
-    const icon = L.divIcon({
-      className:'',
-      html:`<div style="background:${bg};color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5);">${dispIdx}</div>`,
-      iconSize:[32,32], iconAnchor:[16,16]
-    });
+    const stroke = isDone ? '#1f9d55' : isPending ? '#ff8a1c' : '#d42b2b';
+    const icon = gmMissionPin(isDone ? 'done' : isPending ? 'pending' : 'open');
     const name = m['name_'+gmLang] || m.name_de || `Mission ${dispIdx}`;
     const mk = L.marker([m.lat, m.lng], {icon}).addTo(gmCrMissionLayer);
     const r = gmMissionRadiusMeters(m);

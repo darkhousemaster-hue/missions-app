@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.36">
+<link rel="stylesheet" href="/css/app.css?v=2.4.56">
 <script src="/js/theme.js?v=14"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
@@ -1435,6 +1435,10 @@ function onChatMessage(msg) {
   scrollChat();
 
   _gmCount++;
+  // A rejection already shows its own rejection screen, so don't stack a second
+  // "new message" popup on top for the same event — the transcript entry and
+  // the unread flash still happen.
+  if (msg.rejection) { if (currentView !== 'chat') startChatFlash(); else _seenGm = _gmCount; return; }
   if (currentView !== 'chat') {
     startChatFlash();
     document.getElementById('msg-popup-text').textContent = text;
