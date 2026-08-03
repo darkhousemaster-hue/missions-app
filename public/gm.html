@@ -2233,7 +2233,7 @@ async function loadGames(locationId){
       <div class="game-card-date">${new Date(g.created_at).toLocaleString(locale, dateOpts)}</div>
       <div class="game-card-meta">
         <span class="badge ${cls}">${esc(statusLabel(g))}</span>
-        ${g.mode_name?`<span class="badge badge-grey">${esc(g.mode_name)}</span>`:''}
+        ${(g.cr_mode_name||g.mode_name)?`<span class="badge badge-grey">${esc(g.cr_mode_name||g.mode_name)}</span>`:''}
       </div>
       <div class="game-card-actions">
         <button class="btn btn-primary btn-sm" onclick="openDashboard('${esc(g.id)}')" title="${esc(lblOpen)}">

@@ -731,9 +731,19 @@ const getRunningGames = () => db.prepare('SELECT * FROM games WHERE timer_runnin
 // Used to gate self-updates: the app may only update when every game is ended.
 const getActiveGames  = () => db.prepare("SELECT * FROM games WHERE status <> 'ended'").all();
 const getOldGames     = cutoff => db.prepare('SELECT * FROM games WHERE created_at < ?').all(cutoff);
+// cr_mode_name comes along so a Rail Adventure game can be labelled with the RA
+// mode it actually runs. RA games are created with mode_id=1 (the default
+// MiSSiONS mode) purely to satisfy the column, so mode_name alone made every RA
+// game look like a MiSSiONS one in the games list.
+const GAMES_SELECT = `SELECT g.*, l.name as location_name, m.name as mode_name, cm.name as cr_mode_name
+  FROM games g
+  LEFT JOIN locations l ON l.id=g.location_id
+  LEFT JOIN modes m ON m.id=g.mode_id
+  LEFT JOIN cr_game_links cgl ON cgl.game_id=g.id
+  LEFT JOIN cr_modes cm ON cm.id=cgl.cr_mode_id`;
 const getGames        = locationId => locationId
-  ? db.prepare('SELECT g.*,l.name as location_name,m.name as mode_name FROM games g LEFT JOIN locations l ON l.id=g.location_id LEFT JOIN modes m ON m.id=g.mode_id WHERE g.location_id=? ORDER BY g.created_at DESC').all(locationId)
-  : db.prepare('SELECT g.*,l.name as location_name,m.name as mode_name FROM games g LEFT JOIN locations l ON l.id=g.location_id LEFT JOIN modes m ON m.id=g.mode_id ORDER BY g.created_at DESC').all();
+  ? db.prepare(`${GAMES_SELECT} WHERE g.location_id=? ORDER BY g.created_at DESC`).all(locationId)
+  : db.prepare(`${GAMES_SELECT} ORDER BY g.created_at DESC`).all();
 
 const createGame = ({id, location_id, mode_id=1, timer_duration, missions}) => {
   runTx(()=>{
