@@ -54,6 +54,16 @@ app.use('/uploads', express.static(UPLOAD_DIR, {
     if (!/\.(jpe?g|png|gif|webp|mp4|webm|mov|m4v)$/i.test(filePath)) {
       res.setHeader('Content-Disposition', 'attachment');
     }
+    // Team media is written once under a UUID filename and never rewritten, so
+    // it can be cached hard. This is what makes the GM-side prefetch pay off:
+    // a clip pulled in when it arrives is served from disk on review instead of
+    // being re-fetched (a 200 MB video over a slow uplink took ages otherwise).
+    // Rotation is stored as metadata and applied via CSS, so the bytes really
+    // are immutable. Deliberately scoped to UUID names — themes/templates and
+    // regenerated files keep the default revalidate-every-time behaviour.
+    if (/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpe?g|png|gif|webp|mp4|webm|mov|m4v)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    }
   },
 }));
 
