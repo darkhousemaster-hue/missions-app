@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.36">
-<script src="/js/theme.js?v=13"></script>
+<script src="/js/theme.js?v=14"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -3771,6 +3771,11 @@ function renderAllMissionMarkers(){
     }).addTo(mapMissionLayer);
   });
 }
+// A theme swap changes the pin graphic itself, which CSS vars can't reach
+// (Leaflet builds the SVG once) — redraw the markers when one lands.
+document.addEventListener('ar-theme-applied', () => {
+  try { if(crMap && allMissions.length) renderAllMissionMarkers(); } catch(e){}
+});
 // Checkpoint pin. Numbered circles used to sit here, but the number was just
 // the array index — with Rush Mode the order isn't fixed, so it told players
 // nothing and read like a sequence they had to follow. The pin now carries its
@@ -3793,13 +3798,24 @@ const CR_PIN_GLYPH = {
 const CR_PIN_FILL = {done:'var(--green)', pending:'var(--orange)', current:'var(--red)', open:'#5b6470'};
 function crMissionPin(state){
   const fill = CR_PIN_FILL[state] || CR_PIN_FILL.open;
+  // When the game has a theme logo, the pin carries that instead of the state
+  // glyph — the branding sits on the map, and the pin body keeps the state
+  // colour so done/current/review are still distinguishable at a glance.
+  // "meet" (not "slice") so a wide wordmark is letterboxed rather than cropped.
+  const logo = (window.ArTheme && ArTheme.logoUrl && ArTheme.logoUrl()) || null;
+  const inner = logo
+    ? `<circle cx="14" cy="14" r="8.4" fill="#fff"/>
+       <image href="${esc(logo)}" x="7.2" y="7.2" width="13.6" height="13.6"
+              clip-path="url(#cr-pin-clip)" preserveAspectRatio="xMidYMid meet"/>`
+    : (CR_PIN_GLYPH[state] || CR_PIN_GLYPH.open);
   // var() isn't allowed in a presentation attribute — set it via style.
   const html =
     `<div class="cr-pin cr-pin--${state}">
        <svg width="28" height="38" viewBox="0 0 28 38" aria-hidden="true">
+         <defs><clipPath id="cr-pin-clip"><circle cx="14" cy="14" r="6.8"/></clipPath></defs>
          <path d="M14 .9C6.8.9.9 6.8.9 14c0 9.2 11.5 21.5 12 22a1.6 1.6 0 0 0 2.2 0c.5-.5 12-12.8 12-22C27.1 6.8 21.2.9 14 .9z"
                style="fill:${fill}" stroke="#fff" stroke-width="1.8"/>
-         ${CR_PIN_GLYPH[state] || CR_PIN_GLYPH.open}
+         ${inner}
        </svg>
      </div>`;
   return L.divIcon({ className:'', html, iconSize:[28,38], iconAnchor:[14,37], popupAnchor:[0,-32] });

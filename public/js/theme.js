@@ -80,8 +80,14 @@
     }
   }
 
+  // The theme currently in force. Kept so features that need the branding
+  // itself — not just its colours — can read it (e.g. the RA map pin graphic).
+  let current = {};
+  function logoUrl(){ return current && current.logo ? '/uploads/' + current.logo : null; }
+
   function apply(theme){
     theme = theme || {};
+    current = theme;
     applyVars(theme.vars || null);
     // Border thickness is numeric, so it lives outside `vars` (which is hex-only).
     const root = document.documentElement;
@@ -89,9 +95,12 @@
     else root.style.removeProperty('--border-width');
     if (document.body) applyBranding(theme);
     else document.addEventListener('DOMContentLoaded', () => applyBranding(theme), { once:true });
+    // Anything drawn outside the DOM flow (the RA map pins are SVG built by
+    // Leaflet) can't be restyled by CSS vars alone — let it re-render itself.
+    try { document.dispatchEvent(new CustomEvent('ar-theme-applied', { detail: theme })); } catch(e){}
   }
 
-  window.ArTheme = { preview, apply };
+  window.ArTheme = { preview, apply, logoUrl };
 
   if (preview){
     // Reverse hover: the designer asks us to outline the element(s) a hovered
