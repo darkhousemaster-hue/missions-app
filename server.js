@@ -914,6 +914,7 @@ app.post('/api/submissions/:id/review', (req,res) => {
     const fp=path.join(UPLOAD_DIR,sub.media_path||'');
     if(sub.media_path && fs.existsSync(fp)) fs.unlinkSync(fp);
     io.to(`team_${sub.team_id}`).emit('mission_rejected',{missionId:sub.mission_id,message});
+    postRejectionToChat(gameId, sub.team_id, db.getMission(sub.mission_id), message);
   }
   io.to(`gm_${gameId}`).emit('submission_reviewed',{submissionId:sub.id,action,teamId:sub.team_id,missionId:sub.mission_id});
   io.to(`gm_${gameId}`).emit('rankings_update',db.getRankings(gameId));
@@ -954,6 +955,28 @@ app.get('/api/games/:id/rules', (req,res) => {
   const rules = db.getGameRules(req.params.id);
   res.json(rules);
 });
+
+// A rejection also lands in the team's chat, tagged with the mission it was
+// about. The popup is easy to dismiss and then the reason is gone; in chat it
+// stays readable next to everything else the GM said. Stored with a per-language
+// copy so each device renders the label and mission name in its own language
+// (the GM's typed reason is passed through as written).
+const REJECT_LABEL = {de:'Abgelehnt', en:'Rejected', fr:'Refusé', it:'Rifiutato', es:'Rechazado'};
+function postRejectionToChat(gameId, teamId, mission, message){
+  if(!gameId || !teamId) return;
+  const reason = String(message||'').trim();
+  const nameIn = l => String((mission && (mission['name_'+l] || mission.name_de || mission.name_en || mission.name)) || '').trim();
+  const langMsgs = {};
+  ['de','en','fr','it','es'].forEach(l => {
+    const name = nameIn(l);
+    langMsgs[l] = `❌ ${REJECT_LABEL[l]}${name ? ': ' + name : ''}` + (reason ? `\n${reason}` : '');
+  });
+  const content = langMsgs.de;
+  const msgId = db.saveMessage({gameId, teamId, content, fromGm:1, contentLangs:langMsgs});
+  const msg = {id:msgId, content, messages:langMsgs, fromGm:1, teamId, gameId, timestamp:Date.now(), rejection:true};
+  io.to(`team_${teamId}`).emit('chat_message', msg);
+  io.to(`gm_${gameId}`).emit('chat_message', msg);
+}
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 app.post('/api/games/:gameId/chat', (req,res) => {
@@ -1761,6 +1784,7 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
       io.to(`team_${sub.team_id}`).emit('cr_progress_updated', crProgressPayload(sub.game_id, sub.team_id, linear, state));
     }
     io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:false, message});
+    postRejectionToChat(sub.game_id, sub.team_id, mission, message);
   }
   io.to(`gm_${sub.game_id}`).emit('cr_submission_reviewed', {submissionId: sub.id, teamId: sub.team_id, action});
   res.json({success:true});

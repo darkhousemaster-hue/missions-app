@@ -3452,12 +3452,20 @@ async function loadGmChat(teamId){
   box.innerHTML=msgs.map(m=>gmBubble(m)).join('');
   box.scrollTop=box.scrollHeight;
 }
+// Server-posted messages (rejections, automated broadcasts) carry a copy per
+// language — live payloads as `messages`, stored rows as `content_langs` — so
+// the dashboard reads them in the GM's language, not the stored base text.
+function gmMsgText(m){
+  let langs = m.messages;
+  if(!langs && m.content_langs){ try{ langs = JSON.parse(m.content_langs); }catch(e){ langs = null; } }
+  return (langs && langs[gmLang]) || m.content || '';
+}
 function gmBubble(m){
   // Mockup 07: player msgs show a small uppercase team-name label above
   // the content; GM msgs are bare green-tinted bubbles (no label, no
   // timestamp inline — saves vertical space + reads cleaner).
   const fromGm = m.from_gm===1 || m.from_gm===true;
-  if(fromGm) return `<div class="chat-bubble from-gm">${esc(m.content)}</div>`;
+  if(fromGm) return `<div class="chat-bubble from-gm">${esc(gmMsgText(m))}</div>`;
   return `<div class="chat-bubble from-player"><div class="chat-team-label">${esc(m.team_name||'Team')}</div>${esc(m.content)}</div>`;
 }
 function onChatMessage(msg){
@@ -3472,6 +3480,18 @@ function onChatMessage(msg){
     if(box){
       box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-gm">${esc(msg.content)}</div>`);
       box.scrollTop=box.scrollHeight;
+    }
+    return;
+  }
+  // Rejections are posted by the server rather than typed here, so there's no
+  // optimistic copy to skip — render them live in the open transcript.
+  if(fromGm && msg.rejection){
+    if(msg.teamId===selectedTeamId){
+      const box=document.getElementById('gm-chat-messages');
+      if(box){
+        box.insertAdjacentHTML('beforeend',`<div class="chat-bubble from-gm">${esc(gmMsgText(msg))}</div>`);
+        box.scrollTop=box.scrollHeight;
+      }
     }
     return;
   }
