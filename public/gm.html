@@ -1269,6 +1269,12 @@ body.sel-cr #crms-toolbar{display:flex !important;}
     <h3 class="modal-title" id="upd-title">⬆ Update</h3>
     <p id="upd-desc" style="color:var(--text-muted);font-size:.9rem;margin:.4rem 0 1rem;white-space:pre-line;"></p>
     <div id="upd-blocked" style="display:none;background:rgba(212,43,43,.12);border-left:3px solid var(--red);padding:.7rem .9rem;border-radius:0 var(--radius) var(--radius) 0;font-size:.88rem;margin-bottom:1rem;"></div>
+    <!-- Changelog: collapsed by default so the dialog stays small; the count in
+         the summary tells you at a glance how much is coming. -->
+    <details id="upd-changes" style="display:none;margin-bottom:1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);">
+      <summary id="upd-changes-sum" style="cursor:pointer;padding:.55rem .75rem;font-size:.85rem;font-weight:600;color:var(--text-dim);list-style:none;"></summary>
+      <div id="upd-changes-body" style="padding:0 .75rem .6rem;max-height:220px;overflow-y:auto;"></div>
+    </details>
     <div id="upd-pwwrap" style="margin-bottom:1rem;">
       <label class="label" id="upd-pw-label" style="display:block;margin-bottom:.35rem;font-size:.85rem;">GM-Passwort</label>
       <input id="upd-pw" type="password" class="input" autocomplete="current-password" placeholder="••••••••"
@@ -7674,31 +7680,36 @@ const UPD_I18N = {
        pwLabel:'GM-Passwort', cancel:'Abbrechen', go:'Jetzt aktualisieren',
        blocked:n=>`Aktualisierung nicht möglich: ${n} Spiel(e) laufen noch oder warten. Bitte zuerst alle Spiele beenden.`,
        needpw:'Bitte GM-Passwort eingeben.', wrongpw:'Falsches Passwort.',
-       updating:'Aktualisiere… Die App startet neu.', failed:'Aktualisierung fehlgeschlagen.', uptodate:'Bereits aktuell.' },
+       updating:'Aktualisiere… Die App startet neu.', failed:'Aktualisierung fehlgeschlagen.', uptodate:'Bereits aktuell.',
+       chTitle:"Was ist neu in", chAdded:"Neu", chChanged:"Geändert", chFixed:"Behoben" },
   en:{ none:'No updates found', title:'⬆ Update available',
        desc:(c,n)=>`A new version is available.\nCurrent: ${c}  →  New: ${n}`,
        pwLabel:'GM password', cancel:'Cancel', go:'Update now',
        blocked:n=>`Update not possible: ${n} game(s) still running or waiting. Please finish all games first.`,
        needpw:'Please enter the GM password.', wrongpw:'Wrong password.',
-       updating:'Updating… the app will restart.', failed:'Update failed.', uptodate:'Already up to date.' },
+       updating:'Updating… the app will restart.', failed:'Update failed.', uptodate:'Already up to date.',
+       chTitle:"What's new in", chAdded:"Added", chChanged:"Changed", chFixed:"Fixed" },
   fr:{ none:'Aucune mise à jour', title:'⬆ Mise à jour disponible',
        desc:(c,n)=>`Une nouvelle version est disponible.\nActuelle : ${c}  →  Nouvelle : ${n}`,
        pwLabel:'Mot de passe MJ', cancel:'Annuler', go:'Mettre à jour',
        blocked:n=>`Mise à jour impossible : ${n} partie(s) en cours ou en attente. Terminez d'abord toutes les parties.`,
        needpw:'Veuillez saisir le mot de passe MJ.', wrongpw:'Mot de passe incorrect.',
-       updating:"Mise à jour… l'application redémarre.", failed:'Échec de la mise à jour.', uptodate:'Déjà à jour.' },
+       updating:"Mise à jour… l'application redémarre.", failed:'Échec de la mise à jour.', uptodate:'Déjà à jour.',
+       chTitle:"Nouveautés de", chAdded:"Ajouté", chChanged:"Modifié", chFixed:"Corrigé" },
   it:{ none:'Nessun aggiornamento', title:'⬆ Aggiornamento disponibile',
        desc:(c,n)=>`È disponibile una nuova versione.\nAttuale: ${c}  →  Nuova: ${n}`,
        pwLabel:'Password GM', cancel:'Annulla', go:'Aggiorna ora',
        blocked:n=>`Aggiornamento non possibile: ${n} partita/e ancora in corso o in attesa. Termina prima tutte le partite.`,
        needpw:'Inserisci la password GM.', wrongpw:'Password errata.',
-       updating:"Aggiornamento… l'app si riavvia.", failed:'Aggiornamento non riuscito.', uptodate:'Già aggiornato.' },
+       updating:"Aggiornamento… l'app si riavvia.", failed:'Aggiornamento non riuscito.', uptodate:'Già aggiornato.',
+       chTitle:"Novità di", chAdded:"Aggiunto", chChanged:"Modificato", chFixed:"Corretto" },
   es:{ none:'No hay actualizaciones', title:'⬆ Actualización disponible',
        desc:(c,n)=>`Hay una nueva versión disponible.\nActual: ${c}  →  Nueva: ${n}`,
        pwLabel:'Contraseña GM', cancel:'Cancelar', go:'Actualizar ahora',
        blocked:n=>`No se puede actualizar: ${n} partida(s) en curso o en espera. Termina primero todas las partidas.`,
        needpw:'Introduce la contraseña GM.', wrongpw:'Contraseña incorrecta.',
-       updating:'Actualizando… la app se reiniciará.', failed:'Error al actualizar.', uptodate:'Ya está actualizado.' },
+       updating:'Actualizando… la app se reiniciará.', failed:'Error al actualizar.', uptodate:'Ya está actualizado.',
+       chTitle:"Novedades de", chAdded:"Añadido", chChanged:"Cambiado", chFixed:"Corregido" },
 };
 function updL(){ return UPD_I18N[gmLang] || UPD_I18N.en; }
 
@@ -7743,6 +7754,7 @@ function openUpdateModal(r){
   document.getElementById('upd-err').textContent = '';
   document.getElementById('upd-pw').value = '';
   const logEl = document.getElementById('upd-log'); logEl.style.display='none'; logEl.textContent='';
+  renderUpdateChanges(r.changes, r.newVersion);
   const blocked = document.getElementById('upd-blocked');
   const pwwrap  = document.getElementById('upd-pwwrap');
   const go      = document.getElementById('upd-go');
@@ -7757,6 +7769,43 @@ function openUpdateModal(r){
   if(r.activeGames <= 0) setTimeout(()=>document.getElementById('upd-pw').focus(), 60);
 }
 function closeUpdateModal(){ document.getElementById('update-modal').style.display='none'; }
+
+// ── Update changelog ────────────────────────────────────────────────────────
+// The server hands back the commit subjects between the installed version and
+// the incoming one. Sort them into Added / Changed / Fixed by their leading
+// verb so the dialog reads like a release note instead of a git log. Anything
+// that doesn't clearly add or fix counts as a change.
+function renderUpdateChanges(changes, newVersion){
+  const box = document.getElementById('upd-changes');
+  const sum = document.getElementById('upd-changes-sum');
+  const body= document.getElementById('upd-changes-body');
+  if(!box) return;
+  const list = Array.isArray(changes) ? changes.filter(Boolean) : [];
+  if(!list.length){ box.style.display='none'; body.innerHTML=''; return; }
+  const L = updL();
+  const groups = { added:[], fixed:[], changed:[] };
+  list.forEach(raw => {
+    // Strip a leading "area: " prefix and the trailing "(v2.4.x)" marker so the
+    // line reads as a sentence.
+    const line = String(raw).replace(/\s*\(v?\d+\.\d+\.\d+\)\s*$/,'').trim();
+    if(/^(add|added|new|introduce)\b/i.test(line))        groups.added.push(line);
+    else if(/^(fix|fixed|repair|correct)\b/i.test(line))  groups.fixed.push(line);
+    else                                                  groups.changed.push(line);
+  });
+  const section = (title, items) => items.length ? `
+    <div style="margin-top:.55rem;">
+      <div style="font:700 .7rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.3rem;">${esc(title)}</div>
+      <ul style="margin:0;padding-left:1.1rem;font-size:.82rem;line-height:1.45;color:var(--text-dim);">
+        ${items.map(i=>`<li style="margin-bottom:.18rem;">${esc(i)}</li>`).join('')}
+      </ul>
+    </div>` : '';
+  body.innerHTML = section(L.chAdded, groups.added)
+                 + section(L.chChanged, groups.changed)
+                 + section(L.chFixed, groups.fixed);
+  sum.textContent = (newVersion ? `${L.chTitle} ${newVersion} ` : `${L.chTitle} `) + `(${list.length})`;
+  box.open = false;
+  box.style.display='block';
+}
 
 async function confirmUpdate(){
   const L = updL();

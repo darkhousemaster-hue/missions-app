@@ -347,9 +347,32 @@ app.get('/api/update/check', async (req, res) => {
   const remoteSha = remote.out.split(/\s+/)[0] || '';
   let version = '';
   try { version = 'v' + (JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || ''); } catch(e) {}
+  const updateAvailable = !!(remoteSha && head && remoteSha !== head);
+  // Changelog: the commit subjects between what's installed and what's on the
+  // remote — i.e. exactly what this update would bring. Needs a fetch first;
+  // ls-remote above only hands back the SHA. Cached with the rest of the
+  // response (60 s), so this runs at most once a minute.
+  let changes = [], newVersion = '';
+  if (updateAvailable) {
+    const fetched = await run('git', ['fetch', '--quiet', 'origin', 'main']);
+    if (fetched.ok) {
+      const log = await run('git', ['log', 'HEAD..FETCH_HEAD', '--no-merges', '--format=%s']);
+      if (log.ok && log.out) {
+        changes = log.out.split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 60);
+      }
+      // The version the update would land on, read straight from the incoming
+      // package.json rather than guessed from the commit subjects.
+      const pkg = await run('git', ['show', 'FETCH_HEAD:package.json']);
+      if (pkg.ok && pkg.out) {
+        try { newVersion = 'v' + (JSON.parse(pkg.out).version || ''); } catch(e) {}
+      }
+    }
+  }
   const data = {
-    updateAvailable: !!(remoteSha && head && remoteSha !== head),
+    updateAvailable,
     currentVersion: version,
+    newVersion,
+    changes,
     currentCommit: head.slice(0,7),
     remoteCommit: remoteSha.slice(0,7),
   };
