@@ -112,6 +112,55 @@ et **Supprimer le modèle** vide le téléversement. Quand un GM
 crée une nouvelle partie, le QR est rendu sur ce modèle à la
 position que tu as définie.
 
+# Statistiques
+
+L'onglet **Statistiques** répond à la question « qu'a-t-on réellement
+joué, et à quelle fréquence » : parties terminées par lieu, par mode
+et par parcours Rail Adventure. Vous voyez ainsi quels contenus valent
+la peine et lesquels ne sont jamais choisis.
+
+Une partie compte lorsqu'elle a vraiment été jouée. Les parties que
+vous supprimez de la liste alors qu'elles étaient inachevées sortent
+des chiffres — une partie de test mal saisie ne fausse donc rien.
+
+# Messages automatiques
+
+Plutôt que d'écrire à chaque groupe au bon moment, vous préparez ici
+des **diffusions programmées**. Chaque entrée a un moment (minutes
+après le début, ou minutes avant la fin) et un texte. Quand une partie
+atteint ce point, le message part tout seul vers toutes les équipes.
+
+Rédigez le texte **dans toutes les langues que vous utilisez** :
+chaque appareil reçoit la version correspondant à la langue choisie
+par le joueur. Usages typiques : un rappel à mi-parcours, un « plus
+que quinze minutes, rentrez » ou le point de rendez-vous final.
+
+# Jeux de couleurs
+
+Sous **Jeu de couleurs**, vous redessinez toute l'app joueur : fond,
+cartes, boutons, accents, textes et notifications, plus votre propre
+logo. Les réglages valent **par lieu** et **par parcours Rail
+Adventure** — deux lieux peuvent donc être totalement différents.
+
+Deux choses rendent cela praticable plutôt que laborieux :
+
+- **Aperçu en direct.** Des aperçus de téléphone accompagnent les
+  réglages et se mettent à jour immédiatement. Des aperçus distincts
+  couvrent la liste des missions, une mission ouverte, le chat et un
+  refus — vous vérifiez donc les états que les joueurs voient vraiment.
+- **Montrer plutôt que chercher.** Survolez un réglage et l'aperçu
+  encadre l'élément qu'il colore ; survolez l'aperçu et il vous dit
+  quel réglage en est responsable. Un clic fige la mise en évidence.
+
+Un second onglet bascule sur le **tableau de bord du Gamemaster**, qui
+a son propre jeu de couleurs. Il n'affecte **que** le tableau de bord —
+le reste de l'administration garde volontairement son apparence
+normale, pour que les deux ne se dérèglent pas mutuellement.
+
+> Ne changez que ce que vous voulez changer. Chaque valeur a une
+> réinitialisation, et il en existe une pour l'ensemble du jeu de
+> couleurs : vous pouvez toujours revenir au réglage d'origine.
+
 ::part:2:Configuration MiSSiONS
 
 # Emplacements
@@ -221,6 +270,34 @@ pour réordonner ; le bouton 🌐 sur une règle l’auto-traduit ; le
 bouton ⎘ copie une règle vers un autre jeu de règles. Appuie sur
 **Sauvegarder** quand fini ; les modifications non sauvegardées
 sont mises en évidence.
+
+# Langues personnalisées par lieu
+
+Au-delà des cinq langues intégrées, un lieu peut proposer **ses propres
+langues** — un dialecte, ou une langue parlée par vos hôtes que l'app
+ne fournit pas. Ajoutez-la au lieu, donnez-lui un nom et une **langue
+de base**, et elle apparaît comme une pastille supplémentaire dans les
+barres de langue de l'éditeur de missions.
+
+Vous rédigez alors vous-même le texte des missions dans cette langue.
+Les libellés de l'app (boutons, notifications) retombent sur la langue
+de base, car ils ne sont pas traduits automatiquement.
+
+# Limiter un mode à un seul lieu
+
+Par défaut, chaque mode apparaît dans la liste déroulante de chaque
+lieu. Dès que chaque lieu a ses propres modes, cela devient confus — et
+choisir le mauvais mode produit une partie vide, car les missions
+appartiennent à un autre lieu.
+
+Chaque mode dispose donc du réglage **Disponible à** :
+
+- **Tous les sites** (par défaut) — comportement inchangé.
+- **Un site précis** — le mode n'apparaît plus que dans la liste de ce
+  lieu.
+
+Le mode par défaut reste sans restriction, afin que chaque lieu ait
+toujours au moins un mode disponible.
 
 ::part:3:Configuration Rail Adventure
 
@@ -339,3 +416,54 @@ pousse-les avant le lancement.
   effacement de base.
 - **Ne mets pas à jour en pleine session.** Ça marche, mais tu
   perdras la face devant ceux qui jouent.
+
+# Missions Scan (QR et image)
+
+Une mission **Scan** se résout avec la caméra plutôt qu'au clavier.
+Choisissez **QR** (un code que vous imprimez et placez) ou **Image**
+(un visuel imprimé que la caméra reconnaît), puis ce que le scan
+déclenche :
+
+- **Résoudre** — le scan termine la mission.
+- **Révéler** — le scan dévoile la vraie tâche, cachée jusque-là.
+  Idéal pour une énigme dont le texte ne doit pas être lisible avant.
+- **Fragments** — plusieurs codes vont ensemble ; la mission est
+  terminée quand l'équipe les a tous collectés.
+
+Pour le QR, l'éditeur affiche immédiatement le code imprimable :
+imprimer, plastifier, placer. En secours, les joueurs peuvent aussi
+saisir le code à la main si une caméra refuse de fonctionner.
+
+> Un code provenant d'une autre partie n'est pas accepté. Si une
+> équipe dit que son scan ne fait rien, vérifiez d'abord que
+> l'impression correspond au parcours joué.
+
+# Réponses de quiz : plusieurs orthographes et la casse
+
+Une mission à réponse accepte **une liste de réponses, pas une seule**.
+Tapez une orthographe, appuyez sur Entrée ou **＋ Ajouter**, et elle
+devient une pastille. Chaque pastille compte comme correcte : vous
+pouvez accepter « Zum grauen Fuchs », « grauer Fuchs » et « Fuchs ».
+
+Un texte resté dans le champ sans avoir été ajouté est marqué en
+**rouge** et n'est pas enregistré — validez-le avec Entrée ou ＋, ou
+videz le champ.
+
+La saisie doit correspondre **entièrement**. Un fragment ne suffit
+pas ; c'est voulu, car une vérification trop indulgente laissait
+autrefois passer une seule lettre correcte.
+
+La **casse** a son propre interrupteur :
+
+- **Désactivé** (par défaut) — « fuchs » et « Fuchs » comptent tous
+  les deux.
+- **Activé** — l'orthographe doit correspondre exactement ; c'est
+  pourquoi vous pouvez lister séparément des variantes de casse.
+
+Les espaces n'ont jamais d'importance, ceux du début et de la fin sont
+ignorés. En revanche, les accents et la ponctuation sont comparés tels
+quels : si vos hôtes risquent d'écrire « Zurich » pour « Zürich »,
+ajoutez cette orthographe comme pastille distincte.
+
+🌐 **Auto** ne traduit que la **première** réponse dans les langues
+vides. Les variantes supplémentaires y sont à votre charge.

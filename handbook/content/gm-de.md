@@ -19,10 +19,13 @@ unterschiedliche Spieltypen unterstützt:
   ein Spiel an einem physischen Standort, Spieler treten bei,
   arbeiten eine kuratierte Liste von Foto/Video-Missionen ab, und du
   prüfst ihre Uploads.
-- **Teil 2, Rail Adventure Spiele.** Ein GPS-basierter Modus, bei dem
-  Spieler physisch zu Karten-Markern laufen, am Ziel ankommen und
-  dort die Aufgabe lösen. Das Dashboard sieht ähnlich aus, hat aber
-  eine Karte, GPS-Ankunfts-Signale und Sondermissionen.
+- **Teil 2, Rail Adventure Spiele.** Ein Modus mit zwei Arten von
+  Aufgaben: **Missionen** (überall lösbar, ohne GPS) und
+  **Checkpoints** (GPS-Ziele, zu denen Spieler physisch laufen).
+  Spieler wechseln immer ab — eine Mission, dann ein Checkpoint, dann
+  eine Mission … — und jede muss vom GM angenommen werden, bevor die
+  nächste gemacht werden kann. Das Dashboard sieht ähnlich aus, hat
+  aber eine Karte, GPS-Ankunfts-Signale und Sondermissionen.
 
 Wenn du immer nur einen der beiden Typen verwendest, kannst du den
 anderen Teil überspringen, sie überlappen nicht und jedes Spiel
@@ -211,14 +214,82 @@ Wenn dir eine Mission mit falschen Infos oder eine zu ändernde Regel
 auffällt, notier sie und gib sie an die Person weiter, die eure
 Installation betreut.
 
+# Nichts zählt vor dem Start
+
+Solange die Uhr nicht läuft, können Teams zwar alles ansehen, aber
+**nichts abgeben**. Fotos, Videos, Antworten, Scans und Zeichnungen
+werden mit dem Hinweis „Die Zeit hat noch nicht begonnen" abgelehnt.
+
+Wenn ein Team meldet, sein Upload gehe nicht durch: zuerst die Uhr
+prüfen. Das ist fast immer der Grund.
+
+# Ablehnungen landen im Team-Chat
+
+Deine Begründung erscheint zusätzlich **im Chat des Teams**, versehen
+mit der Mission, um die es geht. Das ist im Betrieb wichtig: Die
+Einblendung verschwindet nach ein paar Sekunden, und ein Team, das
+gerade läuft oder filmt, verpasst sie oft. Im Chat bleibt sie lesbar —
+und weil der Missionsname dabeisteht, weiss auch ein Team mit mehreren
+Ablehnungen, welche gemeint war. Du musst dich nicht zusätzlich im
+Chat wiederholen.
+
+# Geführte Touren (🎓)
+
+Der **🎓**-Knopf sitzt auf dem Startbildschirm und nochmals oben im
+Dashboard. Er öffnet kurze geführte Touren, die dich Schritt für
+Schritt durch die Oberfläche führen: Das erklärte Element wird
+hervorgehoben, dazu ein kurzer Text.
+
+Nutze sie, wenn du neu bist oder die GM-Rolle mitten in der Saison
+übernimmst. Die Touren sind reine Rundgänge — du kannst jederzeit mit
+**Schliessen** aussteigen, und nichts darin verändert ein echtes Spiel.
+
+Eine Tour erklärt das Innere eines laufenden Spiels. Weil sie dafür ein
+Team braucht, legt sie still ein **Demo-Team** an und **löscht es am
+Ende wieder**. Brichst du mittendrin ab, kann das Demo-Team
+zurückbleiben — es heisst „Demo" und lässt sich wie jedes andere mit
+🗑 löschen.
+
+Für die Touren brauchst du kein Einstellungs-Passwort.
+
+# Der Update-Hinweis: was eine neue Version bringt
+
+Gibt es eine neuere Version, begrüsst dich die App mit **⬆ Update
+verfügbar**. Neben den Versionsnummern steht ein aufklappbarer Block
+**Was ist neu in …**, der auflistet, was das Update enthält — sortiert
+nach **Neu**, **Geändert** und **Behoben**, mit der Anzahl im Titel.
+
+Klapp ihn auf, bevor du entscheidest. Das ist der Unterschied zwischen
+„irgendein Update" und „das behebt genau das, was am Samstag genervt
+hat". Das Einspielen selbst braucht das GM-Passwort, und die App
+verweigert es, solange noch ein Spiel läuft oder wartet.
+
 ::part:2:Rail Adventure Spiele leiten
 
-Rail Adventure ist der GPS-Spieltyp. Statt Missionen an einem einzelnen
-Standort zu lösen, laufen die Spieler physisch zwischen Zielen auf
-einer Karte, kommen innerhalb eines gesetzten Radius an und lösen
-dann die Aufgabe. Alles, was du von MiSSiONS kennst, gilt weiterhin
-Dashboard, Team-Chips, Chat, Broadcast, Freeze, Lightbox, aber
-das Spiel startet anders und es gibt einen extra **Karten**-Tab.
+Rail Adventure teilt die Aufgaben eines Teams in zwei Arten:
+
+- **Missionen** — überall lösbar, kein GPS nötig. Spieler sehen diese
+  zuerst.
+- **Checkpoints** — GPS-Ziele. Das Team läuft physisch hin und löst
+  die Aufgabe innerhalb eines gesetzten Radius.
+
+Spieler wechseln **immer ab**: eine Mission, dann ein Checkpoint, dann
+eine Mission und so weiter. Wichtig: **Jede Aufgabe muss von dir
+angenommen werden, bevor die nächste gemacht werden kann** — reicht
+ein Team ein Foto für eine Mission ein, kann es den nächsten
+Checkpoint zwar lesen, aber erst lösen, wenn du diese Mission
+angenommen (oder abgelehnt) hast. Checkpoints bleiben gesperrt, bis
+das Team eine Mission abgeschlossen hat, und umgekehrt.
+
+Alles, was du von MiSSiONS kennst, gilt weiterhin — Dashboard,
+Team-Chips, Chat, Broadcast, Freeze, Lightbox — aber das Spiel startet
+anders und es gibt einen extra **Karten**-Tab.
+
+> "Rail Adventure" ist beim Anlegen eines neuen Modus jetzt
+> **standardmässig aktiv** (ein Schalter im Modus-Editor auf der
+> Einstellungs-Seite). Ein Modus mit ausgeschaltetem Rail Adventure
+> verhält sich wie eine einfache geordnete Liste ohne
+> Missionen/Checkpoints-Aufteilung.
 
 # Ein Rail Adventure Spiel starten
 
@@ -438,3 +509,35 @@ im GM-Dashboard.
 lassen?**
 Ja, jedes Dashboard ist unabhängig. Achte nur darauf, dass jedes
 Team die richtige Spiel-ID joint.
+
+# Karten, die dich nie erreichen
+
+Manche Missionstypen entscheidet die App selbst — sie werden auf der
+Karte einfach grün, ohne Prüfschritt:
+
+- **Quiz** — das Team tippt eine Antwort. Die App vergleicht sie mit
+  allen hinterlegten Schreibweisen in jeder Sprache und vergibt die
+  Punkte selbst.
+- **📷 Scan** — das Team hält die Kamera auf einen QR-Code oder ein
+  gedrucktes Bild. Ein Scan kann die Mission abschliessen, eine
+  versteckte Aufgabe aufdecken oder eines von mehreren Fragmenten
+  einsammeln.
+- **🧩 Puzzle** — Lösen schliesst die Mission ab.
+
+Dass hier nichts zu prüfen ist, ist gewollt: Es gibt keinen Upload zu
+beurteilen. Besteht ein Team darauf, gelöst zu haben, ohne dass sich
+die Karte bewegt, liegt es meist an der Uhr — oder bei einem Scan an
+einem beschädigten Code oder einem aus einem anderen Spiel.
+
+# Was die Karte zeigt
+
+Die Marker sind **nach Zustand eingefärbt** statt nummeriert: grün für
+erledigt, orange für „wartet auf deine Freigabe", neutral für offen.
+So liest du die Lage auf einen Blick.
+
+Nummern gibt es bewusst nicht mehr. Durch den Wechsel zwischen
+Missionen und Checkpoints laufen Teams keine feste Reihenfolge — eine
+Nummer hätte eine Ordnung suggeriert, die es nicht gibt.
+
+Ein eingefrorenes Team trägt einen **❄-Marker**, du siehst also ohne
+Kartenklick, wer gerade aussetzt.

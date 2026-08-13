@@ -144,6 +144,25 @@ el GM — los otros equipos no lo ven.
 Escribid, **Enviar**, listo. Tocad **Atrás** en la barra para
 volver a las misiones.
 
+# Antes de que empiece la partida
+
+Antes de que arranque el cronómetro todo es visible, pero **aún no se
+puede entregar nada**. Fotos, vídeos, respuestas, escaneos y dibujos se
+rechazan con un breve « El tiempo aún no ha comenzado, espera ».
+
+No es un fallo: evita que un equipo acumule ventaja antes de la salida
+oficial. Leed las misiones, planificad la ruta y esperad al Gamemaster.
+
+# Cuando algo se rechaza
+
+Si el Gamemaster rechaza un envío recibís un aviso 👎, la foto se
+elimina y la misión vuelve a estar disponible.
+
+El motivo aparece además **en vuestro chat**, con el nombre de la
+misión correspondiente. Así que si el aviso desapareció mientras
+caminabais, o tenéis varios rechazos: abrid el chat. Ahí pone qué
+misión era y por qué. Corregid ese punto y volved a subirlo.
+
 ::part:2:Jugar partidas Rail Adventure
 
 Rail Adventure es el modo guiado por GPS. En lugar de recorrer una lista
@@ -306,3 +325,36 @@ iOS Safari pide conceder cámara en Ajustes → Safari → Cámara en
 La precisión GPS puede ser pobre. Salid al aire libre, lejos de
 edificios, y esperad 5–10 segundos. Si sigue sin desbloquearse, el
 GM puede marcar la llegada manualmente desde su panel.
+
+# Misiones de escaneo (📷)
+
+Algunas misiones se resuelven apuntando la cámara a algo: un **código
+QR** o una **imagen impresa** en algún punto de la ruta.
+
+Tocad la misión, luego el botón **📷 Escanear**, y mantened la cámara
+sobre el código. Lo que ocurre después depende de la misión:
+
+- se completa de inmediato, o
+- **revela la tarea real**, oculta hasta ese momento, o
+- cuenta como **uno de varios fragmentos** — la pantalla os indica
+  cuántos lleváis.
+
+Si la cámara no funciona en vuestro móvil, existe la alternativa
+**teclear el código**: introducid a mano los caracteres impresos en él.
+
+Los códigos de otra partida no se aceptan: no perdáis tiempo con
+códigos encontrados por casualidad.
+
+# Qué muestra el mapa
+
+Los marcadores de checkpoint están **coloreados según su estado**, no
+numerados: verde para completado, naranja para « esperando al
+Gamemaster », neutro para abierto.
+
+No hay numeración a propósito, ni en el mapa ni en las tarjetas de
+misión. Vosotros elegís el orden; nada os obliga a hacerlas en una
+secuencia fija. Merece la pena planificar una ruta a pie sensata en
+lugar de seguir una lista.
+
+La barra de progreso sobre el mapa se llena según lo que hayáis
+completado de verdad.

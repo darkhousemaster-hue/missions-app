@@ -143,6 +143,27 @@ orange dot — so you won't miss a message while you're looking at the
 map. Type, tap **Send**, and you're done. Tap **Back** in the topbar
 to get back to your missions.
 
+# Before the game starts
+
+Everything is visible before the Gamemaster starts the clock, but
+**nothing can be handed in yet**. Photos, videos, answers, scans and
+drawings are all refused with a short "the time hasn't started yet,
+please wait" notice.
+
+That's not a fault — it stops a team from banking work before the
+official start. Read the missions, plan your route, and wait for the
+Gamemaster.
+
+# When something is rejected
+
+If the Gamemaster rejects an upload you get a 👎 notice, the photo is
+deleted, and the mission is available again.
+
+The reason **also appears in your chat**, labelled with the mission it
+belongs to. So if the notice disappeared while you were walking, or
+you have more than one rejection, open the chat: it says which mission
+was meant and why. Fix that point and upload again.
+
 ::part:2:Playing Rail Adventure games
 
 Rail Adventure has two kinds of task:
@@ -343,3 +364,35 @@ specific mission. If you truly can't do one, message the GM in chat.
 That's the alternation rule. You can always **read** ahead, but you
 can only **submit** the task whose turn it is — and only once the GM
 has accepted your previous one.
+
+# Scan missions (📷)
+
+Some missions are solved by pointing your camera at something —
+a **QR code** or a **printed picture** somewhere on the route.
+
+Tap the mission, then the **📷 Scan** button, and hold the camera on
+the code. What happens next depends on the mission:
+
+- It completes straight away, or
+- it **reveals** the real task, which was hidden until now, or
+- it counts as **one of several fragments** — the display shows how
+  many you've collected.
+
+If the camera won't work on your phone, there's a **type the code**
+fallback: enter the characters printed on the code by hand.
+
+Codes belonging to a different game won't be accepted, so don't waste
+time on codes you find by chance.
+
+# What the map shows
+
+Checkpoint markers are **coloured by state**, not numbered: green for
+done, orange for waiting on the Gamemaster, neutral for still open.
+
+There's deliberately no numbering, on the map or on the mission tiles.
+You choose the order yourself — nothing forces you to work through
+them in a fixed sequence, so it's worth planning a sensible walking
+route rather than following a list.
+
+The progress bar above the map fills according to how much you've
+finished.

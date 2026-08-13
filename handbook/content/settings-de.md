@@ -98,6 +98,58 @@ Code landen soll. Wähle vorher das Papierformat (Default A4).
 entfernt das Upload. Wenn ein GM ein neues Spiel anlegt, wird der
 QR-Code an der gespeicherten Position in die Vorlage gerendert.
 
+# Statistiken
+
+Der Reiter **Statistiken** beantwortet, was tatsächlich gespielt wurde
+und wie oft: abgeschlossene Spiele pro Standort, pro Modus und pro
+Rail-Adventure-Route. So siehst du, welche Inhalte sich lohnen und
+welche nie gewählt werden.
+
+Gezählt wird ein Spiel, wenn es wirklich gespielt wurde. Spiele, die du
+unfertig aus der Liste löschst, fallen wieder heraus — ein vertipptes
+Testspiel verzerrt das Bild also nicht.
+
+# Automatische Nachrichten
+
+Statt jeder Gruppe im richtigen Moment von Hand zu schreiben, kannst du
+hier **zeitgesteuerte Rundnachrichten** vorbereiten. Jeder Eintrag hat
+einen Zeitpunkt (Minuten nach Spielstart oder Minuten vor Schluss) und
+den Text. Erreicht ein Spiel diesen Punkt, geht die Nachricht von
+selbst an alle Teams.
+
+Schreibe den Text **in allen Sprachen, in denen ihr spielt** — jedes
+Gerät bekommt die Fassung seiner gewählten Sprache. Typisch: eine
+Halbzeit-Erinnerung, ein „noch 15 Minuten, macht euch auf den Rückweg"
+oder der Treffpunkt zum Schluss.
+
+# Farbschemata
+
+Unter **Farbschema** gestaltest du die Spieler-App komplett um:
+Hintergrund, Karten, Buttons, Akzente, Texte und Hinweise, dazu ein
+eigenes Logo. Die Einstellungen gelten **pro Standort** und **pro
+Rail-Adventure-Route** — zwei Standorte dürfen also völlig
+verschieden aussehen.
+
+Zwei Dinge machen das praktikabel statt frickelig:
+
+- **Live-Vorschau.** Neben den Feldern stehen Handy-Vorschauen, die
+  sich sofort mitverändern. Eigene Vorschauen gibt es für die
+  Missionsliste, eine geöffnete Mission, den Chat und eine Ablehnung —
+  du prüfst also die Zustände, die Spieler wirklich sehen.
+- **Zeigen statt suchen.** Fährst du über eine Einstellung, umrandet
+  die Vorschau das Element, das sie einfärbt; fährst du über die
+  Vorschau, nennt sie die zuständige Einstellung. Ein Klick hält die
+  Markierung fest.
+
+Ein zweiter Reiter schaltet auf das **Gamemaster-Dashboard**, das ein
+eigenes Schema hat. Es betrifft **nur** das Dashboard — der Rest der
+Verwaltung behält bewusst sein normales Aussehen, damit sich beide
+nicht gegenseitig verstellen.
+
+> Ändere nur, was du ändern willst. Jeder Wert hat ein
+> „Zurücksetzen", und es gibt eines für das ganze Schema — du kommst
+> also immer zum Standard zurück.
+
 ::part:2:MiSSiONS-Konfiguration
 
 # Standorte
@@ -187,6 +239,34 @@ In den Regel-Zeilen kannst du die Platzhalter `[photo]`, `[video]`,
 Zieh Regeln hoch/runter zum Sortieren; 🌐 übersetzt automatisch; ⎘
 kopiert eine Regel in ein anderes Regelwerk. **Speichern** nicht
 vergessen, ungespeicherte Änderungen werden hervorgehoben.
+
+# Eigene Sprachen pro Standort
+
+Über die fünf eingebauten Sprachen hinaus kann ein Standort **eigene
+Sprachen** anbieten — einen Dialekt oder eine Sprache eurer Gäste, die
+die App nicht mitbringt. Am Standort hinzufügen, Name und
+**Basissprache** vergeben, und sie erscheint als weitere Pille in den
+Sprachleisten des Missions-Editors.
+
+Den Missionstext schreibst du dann selbst in dieser Sprache. Die
+Beschriftungen der App (Knöpfe, Hinweise) greifen auf die Basissprache
+zurück, denn die werden nicht automatisch übersetzt.
+
+# Einen Modus auf einen Standort beschränken
+
+Standardmässig erscheint jeder Modus im Auswahlfeld jedes Standorts.
+Sobald jeder Standort eigene Modi hat, wird das unübersichtlich — und
+der falsche Modus erzeugt ein leeres Spiel, weil die Missionen zu
+einem anderen Standort gehören.
+
+Jeder Modus hat deshalb die Einstellung **Verfügbar an**:
+
+- **Alle Standorte** (Standard) — verhält sich wie bisher.
+- **Ein bestimmter Standort** — der Modus erscheint nur noch im
+  Auswahlfeld dieses Standorts.
+
+Der Standardmodus bleibt unbeschränkt, damit jeder Standort immer
+mindestens einen Modus zur Auswahl hat.
 
 ::part:3:Rail Adventure Konfiguration
 
@@ -292,3 +372,54 @@ vorher ausrollen.
 - **Exportiere** Missionen ab und zu als Backup. Klein,
   menschenlesbar, nach DB-Wipe einfach re-importieren.
 - **Nie während einer Session updaten.** Funktioniert, aber peinlich.
+
+# Scan-Missionen (QR und Bild)
+
+Eine **Scan**-Mission wird mit der Kamera gelöst statt mit der
+Tastatur. Wähle **QR** (ein Code, den du ausdruckst und platzierst)
+oder **Bild** (ein gedrucktes Motiv, das die Kamera erkennt), und dann,
+was der Scan bewirkt:
+
+- **Lösen** — der Scan schliesst die Mission ab.
+- **Aufdecken** — der Scan enthüllt die eigentliche Aufgabe, die bis
+  dahin verborgen bleibt. Gut für ein Rätsel, dessen Text vorher nicht
+  lesbar sein soll.
+- **Fragmente** — mehrere Codes gehören zusammen; die Mission ist
+  fertig, wenn das Team alle gesammelt hat.
+
+Bei QR zeigt der Editor den druckbaren Code sofort an — drucken,
+laminieren, platzieren. Als Rückfalloption können Spieler den Code auch
+eintippen, falls eine Kamera streikt.
+
+> Ein Code aus einem anderen Spiel wird nicht angenommen. Meldet ein
+> Team, sein Scan bewirke nichts, prüfe zuerst, ob der Ausdruck zur
+> gespielten Route gehört.
+
+# Quiz-Lösungen: mehrere Schreibweisen und Gross-/Kleinschreibung
+
+Eine Antwort-Mission akzeptiert **eine Liste von Lösungen, nicht nur
+eine**. Schreibweise eintippen, Enter oder **＋ Hinzufügen** drücken —
+fertig ist eine Pille. Jede Pille gilt als richtig, du kannst also
+„Zum grauen Fuchs", „grauer Fuchs" und „Fuchs" alle drei akzeptieren.
+
+Text, der noch im Eingabefeld steht und nicht hinzugefügt wurde, ist
+**rot markiert** und wird nicht gespeichert — mit Enter oder ＋
+übernehmen oder leeren.
+
+Die Eingabe muss **vollständig** übereinstimmen. Ein Bruchstück gilt
+nicht; das ist Absicht, denn früher liess eine zu grosszügige Prüfung
+schon einen einzelnen richtigen Buchstaben durch.
+
+Für die **Gross-/Kleinschreibung** gibt es einen eigenen Schalter:
+
+- **Aus** (Standard) — „fuchs" und „Fuchs" gelten beide.
+- **An** — die Schreibweise muss exakt stimmen; deshalb kannst du
+  unterschiedlich geschriebene Varianten einzeln auflisten.
+
+Leerzeichen spielen nie eine Rolle, führende und schliessende werden
+ignoriert. Akzente und Satzzeichen werden dagegen so verglichen, wie
+sie eingegeben wurden: Wenn Gäste „Zurich" statt „Zürich" schreiben
+könnten, nimm diese Schreibweise als eigene Pille auf.
+
+🌐 **Auto** übersetzt nur die **erste** Lösung in die leeren Sprachen.
+Weitere Varianten dort fügst du selbst hinzu.

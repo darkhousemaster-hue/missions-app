@@ -143,6 +143,26 @@ Utile per:
 Scrivete, **Invia**, fatto. Toccate **Indietro** nella barra in
 alto per tornare alle missioni.
 
+# Prima che la partita inizi
+
+Prima che il cronometro parta è tutto visibile, ma **non si può ancora
+consegnare nulla**. Foto, video, risposte, scansioni e disegni vengono
+rifiutati con un breve « Il tempo non è ancora iniziato, attendi ».
+
+Non è un guasto: impedisce a una squadra di accumulare vantaggio prima
+del via ufficiale. Leggete le missioni, pianificate il percorso e
+aspettate il Gamemaster.
+
+# Quando qualcosa viene rifiutato
+
+Se il Gamemaster rifiuta un invio ricevete un avviso 👎, la foto viene
+eliminata e la missione torna disponibile.
+
+La motivazione compare anche **nella vostra chat**, con il nome della
+missione a cui si riferisce. Se l'avviso è sparito mentre camminavate,
+o se avete più rifiuti: aprite la chat. Lì c'è scritto quale missione
+era e perché. Correggete quel punto e caricate di nuovo.
+
 ::part:2:Giocare partite Rail Adventure
 
 Rail Adventure è la modalità guidata da GPS. Invece di percorrere una
@@ -305,3 +325,38 @@ Impostazioni → Safari → Fotocamera impostato su «Chiedi» o
 La precisione GPS potrebbe essere scarsa. Uscite all’aperto, lontano
 dagli edifici, e aspettate 5–10 secondi. Se non si sblocca, il GM
 può segnare l’arrivo manualmente dal suo dashboard.
+
+# Missioni Scansione (📷)
+
+Alcune missioni si risolvono puntando la fotocamera su qualcosa: un
+**codice QR** o un'**immagine stampata** da qualche parte lungo il
+percorso.
+
+Toccate la missione, poi il pulsante **📷 Scansiona**, e tenete la
+fotocamera sul codice. Cosa succede dopo dipende dalla missione:
+
+- si conclude subito, oppure
+- **rivela il compito vero**, fino ad allora nascosto, oppure
+- conta come **uno di più frammenti** — il display indica quanti ne
+  avete già.
+
+Se la fotocamera non funziona sul vostro telefono, c'è il ripiego
+**digitare il codice**: inserite a mano i caratteri stampati sul
+codice.
+
+I codici di un'altra partita non vengono accettati: non perdete tempo
+con codici trovati per caso.
+
+# Cosa mostra la mappa
+
+I segnaposto dei checkpoint sono **colorati in base allo stato**, non
+numerati: verde per completato, arancione per « in attesa del
+Gamemaster », neutro per aperto.
+
+Non c'è volutamente alcuna numerazione, né sulla mappa né sulle
+caselle delle missioni. L'ordine lo scegliete voi; nulla vi obbliga a
+seguirle in sequenza. Conviene quindi pianificare un percorso a piedi
+sensato invece di seguire un elenco.
+
+La barra di avanzamento sopra la mappa si riempie in base a quanto
+avete effettivamente completato.

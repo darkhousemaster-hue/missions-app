@@ -119,6 +119,57 @@ box where you can add your own banned terms (one per line), merged
 with the built-in list. Turn the filter off only for a closed, trusted
 group.
 
+# Statistics
+
+The **Statistics** tab answers "what did we actually play, and how
+often". It counts finished games per location, per mode and per Rail
+Adventure route, so you can see which content earns its keep and which
+never gets picked.
+
+A game counts once it has really been played. Games you delete from
+the list while they were still unfinished are dropped from the numbers
+again, so a mistyped test game doesn't skew the picture.
+
+# Automated messages
+
+Instead of remembering to warn every group at the same moment, you can
+prepare **timed broadcasts** here. Each entry has a moment (minutes
+after the game starts, or minutes before it ends) and the text to send.
+When a game reaches that point, the message goes out to all teams by
+itself.
+
+Write the text **in every language you run games in** — each device
+receives the version matching the language that player picked. Typical
+uses: a halfway reminder, a "fifteen minutes left, start heading back"
+warning, or the meeting point for the end.
+
+# Colour schemes
+
+Under **Colour scheme** you can restyle the whole player app: the
+background, cards, buttons, accents, text and notices, plus your own
+logo. Settings are stored **per location** and **per Rail Adventure
+route**, so two locations can look completely different.
+
+Two things make this practical rather than fiddly:
+
+- **Live preview.** Phone previews sit next to the settings and update
+  as you change a value. Separate previews cover the mission list, an
+  open mission, the chat and a rejection, so you can check the states
+  a player actually sees.
+- **Hover to locate.** Point at a setting and the preview outlines the
+  element it recolours; point at something in the preview and it tells
+  you which setting owns it. Click to lock the highlight while you
+  work.
+
+A second tab switches to the **Gamemaster dashboard**, which has its
+own scheme. It only affects the dashboard — the rest of the admin
+interface deliberately keeps its normal look, so the two can't drift
+into each other.
+
+> Only change what you mean to change. Every value has a "reset"
+> next to it, and there's a reset for the whole scheme, so you can
+> always get back to the default look.
+
 ::part:2:MiSSiONS configuration
 
 # Locations
@@ -215,6 +266,34 @@ For each rule line you can use the placeholders `[photo]`, `[video]`,
 rules up and down to reorder; the 🌐 button on a rule auto-translates
 it; the ⎘ button copies a rule to another ruleset. Press **Save**
 when done, unsaved edits are highlighted.
+
+# Custom languages per location
+
+Beyond the five built-in languages, a location can offer **its own
+languages** — a dialect, or a language your guests speak that the app
+doesn't ship with. Add it to the location, give it a name and a **base
+language**, and it appears as another pill in the language strips of
+the mission editor.
+
+You then write the mission text in that language yourself. The app's
+own labels (buttons, notices) fall back to the base language, since
+those aren't translated automatically.
+
+# Restricting a mode to one location
+
+By default every mode appears in the mode dropdown of every location.
+That gets confusing once each location has its own, and picking the
+wrong one produces an empty game — the missions belong to a different
+location.
+
+Each mode therefore has an **Available at** setting:
+
+- **All locations** (default) — behaves exactly as before.
+- **A specific location** — the mode only shows up in that location's
+  new-game dropdown.
+
+The default mode stays unrestricted, so every location always has at
+least one mode to choose.
 
 ::part:3:Rail Adventure configuration
 
@@ -367,3 +446,51 @@ placement rules above still apply.
   wipe.
 - **Don't update mid-session.** It works, but you'll lose face with
   whoever's playing.
+
+# Scan missions (QR and image)
+
+A **Scan** mission is solved with the camera instead of the keyboard.
+Pick **QR** (a code you print and place) or **Image** (a printed
+picture recognised by the camera), then choose what scanning does:
+
+- **Solve** — scanning completes the mission.
+- **Reveal** — scanning uncovers the real task, which stays hidden
+  until then. Good for a riddle whose text shouldn't be readable in
+  advance.
+- **Fragments** — several codes belong together; the mission completes
+  when the team has collected them all.
+
+For QR the editor shows the printable code right away — print it,
+laminate it, place it. Players can also type the code as a fallback if
+a camera refuses to work.
+
+> A code from a different game will not be accepted. If a team says
+> their scan does nothing, check that the printout belongs to the route
+> they're playing.
+
+# Quiz answers: several spellings, and capitalisation
+
+An answer mission accepts **a list of answers, not just one**. Type a
+spelling, press Enter or **＋ Add**, and it becomes a chip. Every chip
+counts as correct, so you can list "Zum grauen Fuchs", "grauer Fuchs"
+and "Fuchs" and accept all three.
+
+Text sitting in the input box that hasn't been added yet is marked
+**red** and is not saved — commit it with Enter or ＋, or clear it.
+
+The input must match an answer **completely**. A fragment is not
+accepted; this is deliberate, because a lenient match used to let a
+single correct letter through.
+
+**Capitalisation** has its own switch:
+
+- **Off** (default) — "fuchs" and "Fuchs" both count.
+- **On** — the spelling must match exactly, which is why you can list
+  differently capitalised variants separately.
+
+Spacing never matters, and leading or trailing blanks are ignored.
+Accents and punctuation, however, are compared as typed: if guests
+might write "Zurich" for "Zürich", add that spelling as its own chip.
+
+🌐 **Auto** only translates the **first** answer into the empty
+languages. Extra variants for those languages are yours to add.

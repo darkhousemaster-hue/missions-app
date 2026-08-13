@@ -220,6 +220,55 @@ Si encuentras una misión con info errónea o una regla que debería
 cambiar, anótalo y pídele a quien gestiona tu instalación que la
 actualice entre sesiones.
 
+# Nada cuenta antes del inicio
+
+Mientras el cronómetro no corra, los equipos lo ven todo pero **no
+pueden entregar nada**. Fotos, vídeos, respuestas, escaneos y dibujos
+se rechazan con el aviso « El tiempo aún no ha comenzado ».
+
+Si un equipo avisa de que su subida no pasa: comprueba primero el
+cronómetro. Casi siempre es ese el motivo.
+
+# Los rechazos llegan al chat del equipo
+
+Tu motivo aparece además **en el chat del equipo**, acompañado de la
+misión a la que corresponde. Esto importa en la práctica: el aviso
+desaparece a los pocos segundos y un equipo que va caminando o
+grabando suele perdérselo. En el chat permanece legible — y como
+figura el nombre de la misión, incluso un equipo con varios rechazos
+sabe de cuál se trataba. No hace falta que te repitas en un mensaje
+aparte.
+
+# Visitas guiadas (🎓)
+
+El botón **🎓** está en la pantalla de inicio y de nuevo arriba en el
+panel. Abre visitas guiadas breves que te llevan paso a paso por la
+interfaz: se resalta el elemento explicado, con un texto corto.
+
+Úsalas si empiezas o si asumes el papel de GM a mitad de temporada.
+Son simples recorridos: puedes salir en cualquier paso con **Cerrar**,
+y nada dentro de ellas modifica una partida real.
+
+Una visita explica el interior de una partida en curso. Como necesita
+un equipo, crea discretamente un **equipo de demostración** y lo
+**elimina al terminar**. Si interrumpes a mitad, el equipo demo puede
+quedarse — se llama « Demo » y se borra con 🗑 como cualquier otro.
+
+Las visitas no requieren la contraseña de ajustes.
+
+# El aviso de actualización: qué trae una versión nueva
+
+Cuando hay una versión más reciente, la app muestra **⬆ Actualización
+disponible**. Junto a los números de versión hay un bloque desplegable
+**Novedades de …** que enumera el contenido de la actualización,
+ordenado en **Añadido**, **Cambiado** y **Corregido**, con el número de
+entradas en el título.
+
+Ábrelo antes de decidir. Es la diferencia entre « una actualización
+cualquiera » y « esta corrige justo lo que nos molestó el sábado ». La
+instalación requiere la contraseña GM, y la app la rechaza mientras
+haya una partida en curso o en espera.
+
 ::part:2:Dirigir partidas Rail Adventure
 
 Rail Adventure es el tipo de partida guiado por GPS. En lugar de hacer
@@ -452,3 +501,34 @@ no en el panel GM.
 **¿Puedo dirigir dos partidas en la misma ubicación a la vez?**
 Sí, el panel de cada una es independiente. Solo asegúrate de
 que cada equipo se une al ID de partida correcto.
+
+# Las tarjetas que nunca te llegan
+
+Algunos tipos de misión los decide la propia app: la tarjeta
+simplemente se pone verde, sin paso de revisión.
+
+- **Cuestionario** — el equipo escribe una respuesta. La app la
+  compara con todas las grafías guardadas, en cualquier idioma, y
+  otorga los puntos por sí misma.
+- **📷 Escaneo** — el equipo apunta la cámara a un código QR o a una
+  imagen impresa. Un escaneo puede completar la misión, revelar una
+  tarea oculta o recoger uno de varios fragmentos.
+- **🧩 Puzle** — resolverlo completa la misión.
+
+Que aquí no haya nada que aprobar es intencionado: no hay envío que
+juzgar. Si un equipo insiste en haberlo resuelto sin que la tarjeta se
+mueva, suele ser el cronómetro — o, en un escaneo, un código dañado o
+de otra partida.
+
+# Qué muestra el mapa
+
+Los marcadores están **coloreados según su estado** en lugar de
+numerados: verde para completado, naranja para « esperando tu
+aprobación », neutro para abierto. Lees la situación de un vistazo.
+
+Los números se quitaron a propósito. Con la alternancia entre Misiones
+y Checkpoints los equipos no siguen un orden fijo — un número habría
+sugerido una secuencia que no existe.
+
+Un equipo congelado lleva un **marcador ❄**, así ves sin abrir su
+ficha quién está fuera de juego en ese momento.

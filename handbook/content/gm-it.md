@@ -217,6 +217,55 @@ Se trovi una missione con info sbagliate o una regola da
 cambiare, prendi nota e chiedi a chi gestisce la tua
 installazione di aggiornarla tra una sessione e l’altra.
 
+# Niente conta prima dell'avvio
+
+Finché il cronometro non parte, le squadre vedono tutto ma **non
+possono consegnare nulla**. Foto, video, risposte, scansioni e disegni
+vengono rifiutati con l'avviso « Il tempo non è ancora iniziato ».
+
+Se una squadra segnala che il caricamento non passa: controlla prima il
+cronometro. È quasi sempre questo il motivo.
+
+# I rifiuti finiscono nella chat della squadra
+
+La tua motivazione compare anche **nella chat della squadra**, con
+indicata la missione a cui si riferisce. È importante nella pratica:
+l'avviso sparisce dopo pochi secondi e una squadra che sta camminando o
+filmando spesso lo perde. In chat resta leggibile — e poiché c'è il
+nome della missione, anche una squadra con più rifiuti sa di quale si
+tratta. Non serve ripeterti in un messaggio separato.
+
+# Tour guidati (🎓)
+
+Il pulsante **🎓** si trova nella schermata iniziale e di nuovo in alto
+nel cruscotto. Apre brevi tour guidati che ti accompagnano passo passo
+nell'interfaccia: l'elemento spiegato viene evidenziato, con un testo
+breve.
+
+Usali se sei alle prime armi o se assumi il ruolo di GM a stagione
+iniziata. Sono semplici percorsi: puoi uscire in qualsiasi momento con
+**Chiudi**, e nulla al loro interno modifica una partita reale.
+
+Un tour spiega l'interno di una partita in corso. Poiché gli serve una
+squadra, crea silenziosamente una **squadra demo** e la **elimina alla
+fine**. Se interrompi a metà, la squadra demo può restare — si chiama
+« Demo » e si elimina con 🗑 come qualsiasi altra.
+
+I tour non richiedono la password delle impostazioni.
+
+# L'avviso di aggiornamento: cosa porta una nuova versione
+
+Quando esiste una versione più recente, l'app mostra **⬆ Aggiornamento
+disponibile**. Accanto ai numeri di versione c'è un blocco espandibile
+**Novità di …** che elenca il contenuto dell'aggiornamento, suddiviso
+in **Aggiunto**, **Modificato** e **Corretto**, con il numero di voci
+nel titolo.
+
+Aprilo prima di decidere. È la differenza tra « un aggiornamento
+qualsiasi » e « questo risolve proprio ciò che sabato ci ha dato
+fastidio ». L'installazione richiede la password GM, e l'app la rifiuta
+finché una partita è in corso o in attesa.
+
 ::part:2:Gestire partite Rail Adventure
 
 Rail Adventure è il tipo di partita guidato da GPS. Invece di fare
@@ -454,3 +503,33 @@ accesso. Se è sbagliata sul suo dispositivo, tocca il pulsante
 contemporaneamente?**
 Sì, il dashboard di ognuna è indipendente. Assicurati solo che
 ogni squadra entri nell’ID partita corretto.
+
+# Le schede che non ti raggiungono mai
+
+Alcuni tipi di missione li decide l'app stessa: la scheda diventa
+semplicemente verde, senza passaggio di revisione.
+
+- **Quiz** — la squadra digita una risposta. L'app la confronta con
+  tutte le grafie registrate, in ogni lingua, e assegna i punti da sé.
+- **📷 Scansione** — la squadra punta la fotocamera su un codice QR o
+  su un'immagine stampata. Una scansione può completare la missione,
+  rivelare un compito nascosto o raccogliere uno di più frammenti.
+- **🧩 Puzzle** — risolverlo completa la missione.
+
+Che qui non ci sia nulla da approvare è voluto: non c'è alcun invio da
+giudicare. Se una squadra insiste di aver risolto senza che la scheda
+si muova, di solito è il cronometro — oppure, per una scansione, un
+codice danneggiato o proveniente da un'altra partita.
+
+# Cosa mostra la mappa
+
+I segnaposto sono **colorati in base allo stato** anziché numerati:
+verde per completato, arancione per « in attesa della tua approvazione
+», neutro per aperto. Leggi la situazione a colpo d'occhio.
+
+I numeri sono stati tolti di proposito. Con l'alternanza tra Missioni e
+Checkpoint le squadre non seguono un ordine fisso — un numero avrebbe
+suggerito una sequenza che non esiste.
+
+Una squadra congelata porta un **segnaposto ❄**, quindi vedi senza
+aprire la sua scheda chi è momentaneamente fermo.

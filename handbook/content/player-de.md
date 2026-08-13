@@ -145,6 +145,28 @@ Nützlich für:
 Tippen, **Senden**, fertig. **Zurück** in der Topbar bringt euch
 wieder zu den Missionen.
 
+# Bevor das Spiel startet
+
+Vor dem Start der Uhr ist alles sichtbar, aber **noch nichts
+abgebbar**. Fotos, Videos, Antworten, Scans und Zeichnungen werden mit
+einem kurzen „Die Zeit hat noch nicht begonnen, bitte warten"
+abgelehnt.
+
+Das ist kein Fehler — es verhindert, dass ein Team vor dem offiziellen
+Start Vorsprung sammelt. Lest die Missionen, plant eure Route, und
+wartet auf den Spielleiter.
+
+# Wenn etwas abgelehnt wird
+
+Lehnt der Spielleiter einen Upload ab, bekommt ihr einen 👎-Hinweis,
+das Foto wird gelöscht, und die Mission ist wieder frei.
+
+Die Begründung steht zusätzlich **in eurem Chat**, mit dem Namen der
+Mission dabei. Ist der Hinweis also verschwunden, während ihr
+unterwegs wart, oder habt ihr mehrere Ablehnungen: Chat öffnen. Dort
+steht, welche Mission gemeint war und warum. Genau das nachbessern und
+neu hochladen.
+
 ::part:2:Rail Adventure Spiele spielen
 
 Rail Adventure ist der GPS-Modus. Statt eine Fotoliste an einem Ort
@@ -309,3 +331,37 @@ Eure GPS-Genauigkeit ist eventuell schlecht. Geht ins Freie, weg
 von Gebäuden, und wartet 5–10 Sekunden. Wenn es immer noch nicht
 freischaltet, kann der GM die Ankunft manuell vom Dashboard aus
 markieren.
+
+# Scan-Missionen (📷)
+
+Manche Missionen löst ihr, indem ihr die Kamera auf etwas haltet — auf
+einen **QR-Code** oder ein **gedrucktes Bild** irgendwo auf der Route.
+
+Mission antippen, dann den Knopf **📷 Scannen**, und die Kamera auf den
+Code halten. Was danach passiert, hängt von der Mission ab:
+
+- Sie ist sofort abgeschlossen, oder
+- sie **deckt die eigentliche Aufgabe auf**, die bis dahin verborgen
+  war, oder
+- sie zählt als **eines von mehreren Fragmenten** — die Anzeige sagt
+  euch, wie viele ihr schon habt.
+
+Streikt die Kamera auf eurem Handy, gibt es die Rückfalloption **Code
+eintippen**: die Zeichen vom Code von Hand eingeben.
+
+Codes aus einem anderen Spiel werden nicht angenommen — verliert also
+keine Zeit mit zufällig gefundenen Codes.
+
+# Was die Karte zeigt
+
+Die Checkpoint-Marker sind **nach Zustand eingefärbt**, nicht
+nummeriert: grün für erledigt, orange für „wartet auf den
+Spielleiter", neutral für offen.
+
+Eine Nummerierung gibt es bewusst nicht — weder auf der Karte noch auf
+den Missionskacheln. Ihr bestimmt die Reihenfolge selbst; nichts zwingt
+euch, sie der Reihe nach abzuarbeiten. Es lohnt sich also, eine
+sinnvolle Laufroute zu planen statt einer Liste zu folgen.
+
+Der Fortschrittsbalken über der Karte füllt sich danach, wie viel ihr
+erledigt habt.

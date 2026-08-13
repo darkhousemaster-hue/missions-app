@@ -144,6 +144,28 @@ Utilisez-le pour :
 Tapez, **Envoyer**, c’est fait. Touchez **Retour** dans la barre
 pour revenir aux missions.
 
+# Avant le début de la partie
+
+Avant que le chrono soit lancé, tout est visible mais **rien n'est
+encore envoyable**. Photos, vidéos, réponses, scans et dessins sont
+refusés avec un bref « Le temps n'a pas encore commencé, merci de
+patienter ».
+
+Ce n'est pas une panne : cela empêche une équipe de prendre de l'avance
+avant le départ officiel. Lisez les missions, planifiez votre parcours,
+et attendez le Gamemaster.
+
+# En cas de refus
+
+Si le Gamemaster refuse un envoi, vous recevez une notification 👎, la
+photo est supprimée et la mission redevient disponible.
+
+Le motif figure aussi **dans votre chat**, avec le nom de la mission
+concernée. Si la notification a disparu pendant que vous marchiez, ou
+si vous avez plusieurs refus : ouvrez le chat. Il indique de quelle
+mission il s'agissait et pourquoi. Corrigez ce point précis et
+renvoyez.
+
 ::part:2:Jouer aux parties Rail Adventure
 
 Rail Adventure est le mode piloté par GPS. Au lieu de parcourir une liste
@@ -307,3 +329,38 @@ La précision GPS est peut-être mauvaise. Sortez en plein air, loin
 des bâtiments, et attendez 5 à 10 secondes. Si ça ne se déverrouille
 toujours pas, le GM peut marquer l’arrivée manuellement depuis son
 tableau.
+
+# Missions Scan (📷)
+
+Certaines missions se résolvent en pointant la caméra sur quelque
+chose : un **QR code** ou une **image imprimée** quelque part sur le
+parcours.
+
+Touchez la mission, puis le bouton **📷 Scanner**, et maintenez la
+caméra sur le code. La suite dépend de la mission :
+
+- elle se termine immédiatement, ou
+- elle **révèle la vraie tâche**, cachée jusque-là, ou
+- elle compte comme **l'un de plusieurs fragments** — l'affichage vous
+  indique combien vous en avez déjà.
+
+Si la caméra refuse de fonctionner sur votre téléphone, il existe une
+solution de secours **saisir le code** : tapez à la main les caractères
+imprimés sur le code.
+
+Les codes appartenant à une autre partie ne sont pas acceptés : ne
+perdez pas de temps avec des codes trouvés par hasard.
+
+# Ce que montre la carte
+
+Les marqueurs de checkpoint sont **colorés selon leur état**, pas
+numérotés : vert pour terminé, orange pour « en attente du
+Gamemaster », neutre pour ouvert.
+
+Il n'y a volontairement aucune numérotation, ni sur la carte ni sur les
+tuiles de mission. Vous choisissez l'ordre vous-même ; rien ne vous
+oblige à les faire dans une séquence fixe. Il vaut donc mieux planifier
+un itinéraire de marche sensé que suivre une liste.
+
+La barre de progression au-dessus de la carte se remplit selon ce que
+vous avez réellement terminé.

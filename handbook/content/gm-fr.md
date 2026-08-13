@@ -222,6 +222,57 @@ Si tu trouves une mission avec des infos fausses ou une règle à
 changer, note-le et demande à la personne qui gère ton
 installation de mettre à jour entre les sessions.
 
+# Rien ne compte avant le départ
+
+Tant que le chrono n'est pas lancé, les équipes voient tout mais ne
+peuvent **rien rendre**. Photos, vidéos, réponses, scans et dessins
+sont refusés avec la mention « Le temps n'a pas encore commencé ».
+
+Si une équipe signale que son envoi ne passe pas : vérifiez d'abord le
+chrono. C'est presque toujours la raison.
+
+# Les refus arrivent dans le chat de l'équipe
+
+Votre motif apparaît aussi **dans le chat de l'équipe**, accompagné de
+la mission concernée. C'est important en pratique : la notification
+disparaît après quelques secondes, et une équipe en train de marcher
+ou de filmer la rate souvent. Dans le chat elle reste lisible — et
+comme le nom de la mission y figure, même une équipe ayant plusieurs
+refus sait de laquelle il s'agit. Inutile de vous répéter dans un
+message séparé.
+
+# Visites guidées (🎓)
+
+Le bouton **🎓** se trouve sur l'écran d'accueil et de nouveau en haut
+du tableau de bord. Il ouvre de courtes visites guidées qui vous font
+parcourir l'interface pas à pas : l'élément expliqué est mis en
+évidence, avec un texte court.
+
+Utilisez-les si vous débutez ou si vous reprenez le rôle de MJ en
+cours de saison. Ce sont de simples parcours : vous pouvez quitter à
+tout moment avec **Fermer**, et rien n'y modifie une partie réelle.
+
+Une visite explique l'intérieur d'une partie en cours. Comme elle a
+besoin d'une équipe, elle crée discrètement une **équipe de démo** et
+la **supprime à la fin**. Si vous interrompez en cours de route,
+l'équipe de démo peut subsister — elle s'appelle « Demo » et se
+supprime avec 🗑 comme n'importe quelle autre.
+
+Les visites ne demandent pas le mot de passe des réglages.
+
+# L'avis de mise à jour : ce qu'apporte une nouvelle version
+
+Lorsqu'une version plus récente existe, l'app affiche **⬆ Mise à jour
+disponible**. À côté des numéros de version se trouve un bloc dépliable
+**Nouveautés de …** qui liste le contenu de la mise à jour, classé en
+**Ajouté**, **Modifié** et **Corrigé**, avec le nombre d'entrées dans
+le titre.
+
+Dépliez-le avant de décider. C'est la différence entre « une mise à
+jour quelconque » et « celle-ci corrige exactement ce qui nous a gênés
+samedi ». L'installation elle-même demande le mot de passe MJ, et
+l'app la refuse tant qu'une partie est en cours ou en attente.
+
 ::part:2:Animer des parties Rail Adventure
 
 Rail Adventure est le type de partie piloté par GPS. Au lieu de faire
@@ -457,3 +508,34 @@ joueur, pas sur le tableau GM.
 **Puis-je lancer deux parties au même emplacement simultanément ?**
 Oui, le tableau de bord de chacune est indépendant. Assure-toi
 juste que chaque équipe rejoint le bon ID de partie.
+
+# Les cartes qui ne vous parviennent jamais
+
+Certains types de mission sont tranchés par l'app elle-même : la carte
+passe simplement au vert, sans étape de validation.
+
+- **Quiz** — l'équipe saisit une réponse. L'app la compare à toutes
+  les orthographes enregistrées, dans toutes les langues, et attribue
+  les points elle-même.
+- **📷 Scan** — l'équipe pointe la caméra sur un QR code ou une image
+  imprimée. Un scan peut terminer la mission, révéler une tâche cachée
+  ou collecter l'un de plusieurs fragments.
+- **🧩 Puzzle** — le résoudre termine la mission.
+
+Qu'il n'y ait rien à valider est voulu : il n'y a aucun envoi à juger.
+Si une équipe affirme avoir résolu sans que la carte bouge, la cause
+est généralement le chrono — ou, pour un scan, un code abîmé ou
+provenant d'une autre partie.
+
+# Ce que montre la carte
+
+Les marqueurs sont **colorés selon leur état** plutôt que numérotés :
+vert pour terminé, orange pour « en attente de votre validation »,
+neutre pour ouvert. Vous lisez la situation d'un coup d'œil.
+
+Les numéros ont été retirés volontairement. Avec l'alternance entre
+Missions et Checkpoints, les équipes ne suivent pas d'ordre fixe — un
+numéro aurait suggéré une séquence qui n'existe pas.
+
+Une équipe gelée porte un **marqueur ❄**, vous voyez donc sans ouvrir
+sa fiche qui est actuellement hors jeu.

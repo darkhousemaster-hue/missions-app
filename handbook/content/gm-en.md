@@ -107,6 +107,13 @@ emergencies only** (server hiccup, lost network, real-world
 incident); do not use it for casual breaks. **Restart** sets the
 timer back to full.
 
+> **Nothing counts until you press Start.** While the clock hasn't
+> been started, teams can look around their app, but every attempt to
+> hand something in is refused with a "the time hasn't started yet,
+> please wait" notice — photos, videos, typed answers, scans and
+> drawings alike. If a team tells you their upload won't go through,
+> check the timer first: that's almost always the reason.
+
 # Reviewing a team's submissions
 
 ::shot:m-04-team-detail
@@ -163,6 +170,14 @@ Press **Reject & notify** to confirm. The team gets a 👎 toast, the
 upload is deleted from storage, and the mission becomes available
 to upload again.
 
+Your reason is also **posted into that team's chat**, tagged with the
+mission it belongs to. That matters in practice: the toast disappears
+after a few seconds, and a team that was walking or filming often
+misses it. In the chat it stays readable, and — because the mission
+name is on it — a team with several rejections can still tell which
+one you meant. You don't have to repeat yourself in a separate chat
+message; it's already there.
+
 If a player accidentally uploaded a selfie or a chat photo instead
 of the mission photo, you'll see it on the mission card too, just
 reject with "wrong upload" and the team can retry.
@@ -209,6 +224,39 @@ When a team writes to you, their chat tab badge lights up with an
 orange dot. Switch to the team that wrote, read the message, reply.
 The dot is per-team, you can have unread messages from one team
 while another team's chat is in front of you.
+
+# Guided tutorials (🎓)
+
+The **🎓** button sits on the landing screen and again in the
+dashboard top bar. It opens a short list of guided tours that walk you
+through the interface with **coach marks** — a highlight around the
+thing being explained, plus a caption, one step at a time.
+
+Use the tours when you're new to the app, or when someone hands the
+GM role over to you mid-season. They're read-only walkthroughs: you
+can leave at any step with **Close**, and nothing you do inside a tour
+changes a real game.
+
+One tour explains the inside of a running game. Because it needs a
+team to point at, it quietly creates a **demo team**, shows you the
+review flow on it, and **deletes that team again** when the tour ends.
+If you abort halfway through, the demo team may stay behind — it's
+named "Demo", and you can remove it with 🗑 Delete like any other.
+
+The tours don't need the settings password.
+
+# The update notice: what a new version brings
+
+When a newer version is available, the app greets you with an
+**⬆ Update available** dialog. Next to the version numbers there's a
+collapsible **What's new in …** block listing what the update
+contains, sorted into **Added**, **Changed** and **Fixed**, with the
+number of entries next to the title.
+
+Open it before you decide. It's the difference between "some update"
+and "this one fixes the thing that annoyed us on Saturday". Installing
+the update itself needs the GM password, and the app refuses while any
+game is still running or waiting — finish your games first.
 
 # Things you can't do without the password
 
@@ -315,14 +363,39 @@ won't have to act on it; it still lands in the gallery and collage.)
 Collaborative drawings come in as a single submission from the team even
 though several players drew on it together.
 
+**Cards that never reach you.** Some mission types are decided by the
+app, not by you, and simply flip to done on the card:
+
+- **Quiz** — the team types an answer. The app compares it against
+  every accepted spelling the mission was given, in any language, and
+  awards the points itself.
+- **📷 Scan** — the team points their camera at a QR code or a printed
+  image. Scanning can complete the mission, reveal a hidden task, or
+  collect one of several fragments.
+- **🧩 Puzzle** — solving it completes the mission.
+
+You'll see these turn green without a review step. That's expected —
+there's no upload to judge. If a team insists they solved one and the
+card didn't move, the usual causes are the clock (see Part 1) or, for
+a Scan, a code that's damaged or from a different game.
+
 # The map panel
 
 ::shot:cr-05-map
 
 Switch the right panel to **🗺️** to see the live map. Markers are
-the mission targets, the order they're walked. Team-position dots
-appear as they move (assuming they granted location permission in
-their player view).
+the Checkpoint targets. Team-position dots appear as they move
+(assuming they granted location permission in their player view).
+
+The markers are **colour-coded by state** rather than numbered, so you
+can read the board at a glance: green for done, orange for waiting on
+your review, and the neutral colour for still open. Numbers were
+dropped on purpose — with the Mission/Checkpoint alternation, teams
+don't walk a fixed order, so a number would have implied a sequence
+that doesn't exist.
+
+A frozen team is marked with an **❄ ice marker**, so you can see who's
+currently sitting out without opening their card.
 
 Special missions don't appear on the map, they have no fixed
 location.

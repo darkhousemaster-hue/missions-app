@@ -111,6 +111,55 @@ modello** azzera il caricamento. Quando un GM crea una nuova
 partita, il QR viene reso su questo modello nella posizione che
 hai impostato.
 
+# Statistiche
+
+La scheda **Statistiche** risponde alla domanda « cosa abbiamo davvero
+giocato, e quanto spesso »: partite concluse per sede, per modalità e
+per percorso Rail Adventure. Vedi così quali contenuti valgono la pena
+e quali non vengono mai scelti.
+
+Una partita conta quando è stata effettivamente giocata. Le partite che
+elimini dall'elenco mentre erano incompiute escono di nuovo dai numeri:
+una partita di prova sbagliata non falsa il quadro.
+
+# Messaggi automatici
+
+Invece di scrivere a ogni gruppo al momento giusto, qui prepari
+**messaggi programmati**. Ogni voce ha un momento (minuti dopo l'inizio
+o minuti prima della fine) e un testo. Quando una partita raggiunge
+quel punto, il messaggio parte da solo verso tutte le squadre.
+
+Scrivi il testo **in tutte le lingue in cui giocate**: ogni dispositivo
+riceve la versione della lingua scelta dal giocatore. Usi tipici: un
+promemoria a metà percorso, un « mancano quindici minuti, rientrate »
+o il punto di ritrovo finale.
+
+# Combinazioni di colori
+
+Sotto **Combinazione di colori** ridisegni l'intera app giocatore:
+sfondo, schede, pulsanti, accenti, testi e avvisi, più il tuo logo. Le
+impostazioni valgono **per sede** e **per percorso Rail Adventure** —
+due sedi possono quindi avere un aspetto completamente diverso.
+
+Due cose lo rendono pratico anziché macchinoso:
+
+- **Anteprima dal vivo.** Accanto ai campi ci sono anteprime su
+  telefono che si aggiornano subito. Anteprime separate coprono
+  l'elenco delle missioni, una missione aperta, la chat e un rifiuto:
+  verifichi quindi gli stati che i giocatori vedono davvero.
+- **Mostrare invece di cercare.** Passa sopra un'impostazione e
+  l'anteprima contorna l'elemento che colora; passa sopra l'anteprima e
+  ti dice quale impostazione lo governa. Un clic fissa l'evidenziazione.
+
+Una seconda scheda passa al **cruscotto del Gamemaster**, che ha una
+combinazione propria. Riguarda **solo** il cruscotto: il resto
+dell'amministrazione mantiene di proposito il suo aspetto normale, così
+i due non si influenzano a vicenda.
+
+> Cambia solo ciò che intendi cambiare. Ogni valore ha un ripristino, e
+> ce n'è uno per l'intera combinazione: puoi sempre tornare all'aspetto
+> predefinito.
+
 ::part:2:Configurazione MiSSiONS
 
 # Posizioni
@@ -221,6 +270,34 @@ vista giocatore. Trascina le regole in su/giù per riordinare; il
 pulsante 🌐 su una regola la auto-traduce; il pulsante ⎘ copia
 una regola in un altro insieme. Premi **Salva** quando finito,
 le modifiche non salvate sono evidenziate.
+
+# Lingue personalizzate per sede
+
+Oltre alle cinque lingue integrate, una sede può offrire **lingue
+proprie** — un dialetto o una lingua dei vostri ospiti che l'app non
+include. Aggiungila alla sede, dalle un nome e una **lingua di base**,
+e comparirà come ulteriore pillola nelle barre lingua dell'editor delle
+missioni.
+
+Il testo delle missioni lo scrivi poi tu in quella lingua. Le
+etichette dell'app (pulsanti, avvisi) ricadono sulla lingua di base,
+perché non vengono tradotte automaticamente.
+
+# Limitare una modalità a una sede
+
+Per impostazione predefinita ogni modalità compare nell'elenco di ogni
+sede. Appena ogni sede ha le proprie modalità la cosa diventa confusa —
+e scegliere quella sbagliata produce una partita vuota, perché le
+missioni appartengono a un'altra sede.
+
+Ogni modalità ha quindi l'impostazione **Disponibile a**:
+
+- **Tutte le sedi** (predefinito) — si comporta come prima.
+- **Una sede specifica** — la modalità compare solo nell'elenco di
+  quella sede.
+
+La modalità predefinita resta senza limiti, così ogni sede ha sempre
+almeno una modalità disponibile.
 
 ::part:3:Configurazione Rail Adventure
 
@@ -335,3 +412,53 @@ spingile prima del lancio.
   database.
 - **Non aggiornare a metà sessione.** Funziona, ma perderai la
   faccia davanti a chi sta giocando.
+
+# Missioni Scansione (QR e immagine)
+
+Una missione **Scansione** si risolve con la fotocamera invece che con
+la tastiera. Scegli **QR** (un codice che stampi e posizioni) o
+**Immagine** (un soggetto stampato riconosciuto dalla fotocamera), poi
+cosa provoca la scansione:
+
+- **Risolvere** — la scansione completa la missione.
+- **Rivelare** — la scansione scopre il compito vero, nascosto fino a
+  quel momento. Ottimo per un enigma il cui testo non deve essere
+  leggibile prima.
+- **Frammenti** — più codici vanno insieme; la missione è conclusa
+  quando la squadra li ha raccolti tutti.
+
+Per il QR l'editor mostra subito il codice stampabile: stampare,
+plastificare, posizionare. Come ripiego i giocatori possono anche
+digitare il codice, se una fotocamera non funziona.
+
+> Un codice di un'altra partita non viene accettato. Se una squadra
+> dice che la scansione non fa nulla, controlla prima che la stampa
+> appartenga al percorso giocato.
+
+# Risposte dei quiz: più grafie e maiuscole/minuscole
+
+Una missione a risposta accetta **un elenco di risposte, non una
+sola**. Digita una grafia, premi Invio o **＋ Aggiungi**, e diventa una
+pillola. Ogni pillola vale come corretta: puoi accettare « Zum grauen
+Fuchs », « grauer Fuchs » e « Fuchs ».
+
+Il testo rimasto nel campo e non ancora aggiunto è segnato in **rosso**
+e non viene salvato — confermalo con Invio o ＋, oppure svuota il campo.
+
+L'inserimento deve corrispondere **per intero**. Un frammento non
+basta; è voluto, perché in passato un controllo troppo permissivo
+lasciava passare anche una sola lettera corretta.
+
+Per **maiuscole e minuscole** c'è un interruttore dedicato:
+
+- **Off** (predefinito) — « fuchs » e « Fuchs » valgono entrambe.
+- **On** — la grafia deve corrispondere esattamente; per questo puoi
+  elencare separatamente le varianti con maiuscole diverse.
+
+Gli spazi non contano mai, quelli iniziali e finali vengono ignorati.
+Accenti e punteggiatura invece sono confrontati così come sono stati
+digitati: se gli ospiti potrebbero scrivere « Zurich » invece di
+« Zürich », aggiungi quella grafia come pillola a sé.
+
+🌐 **Auto** traduce solo la **prima** risposta nelle lingue vuote. Le
+varianti aggiuntive lì le aggiungi tu.
