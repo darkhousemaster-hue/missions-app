@@ -775,7 +775,13 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
     const crMode = db.getGameCrMode(game.id);
     if (crMode && crMode.allowed_langs) allowed_langs = crMode.allowed_langs;
   }
-  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, timer: game ? getTimerState(game) : null});
+  // Max video length, so the player app can refuse an over-long clip BEFORE
+  // uploading it. 0 = no limit. Unset falls back to 25s, which is what the
+  // house rules already told players.
+  const rawMaxVid = db.getSetting('max_video_seconds');
+  const max_video_seconds = rawMaxVid === null || rawMaxVid === undefined || rawMaxVid === ''
+    ? 25 : Math.max(0, parseInt(rawMaxVid, 10) || 0);
+  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, timer: game ? getTimerState(game) : null});
 });
 app.delete('/api/games/:gameId/teams/:teamId', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});

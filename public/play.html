@@ -494,7 +494,7 @@ const ICONS = {
   video: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
   house: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>`,
 };
-let cameraStream = null, mediaRecorder = null, recordedChunks = [];
+let cameraStream = null, mediaRecorder = null, recordedChunks = [], _recCapTimer = null;
 let capturedBlob = null, capturedIsVideo = false, capturedMimeType = 'video/webm';
 let currentMissionId = null, currentMissionType = 'photo';
 let useFront = false;
@@ -523,7 +523,7 @@ const T = {
     upload_failed:'Upload fehlgeschlagen',
     already_solved:'Diese Mission wurde bereits von deinem Team gelöst!',
     not_started:'Die Zeit hat noch nicht begonnen. Bitte warten.', pending_note:'Warten auf Bewertung durch den Spielleiter.', accepted_note:'Angenommen!',
-    file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.',
+    video_too_long:'Video zu lang ({len} s). Maximal {max} s. Bitte kürzer filmen.', video_max_reached:'Maximale Länge erreicht ({max} s) — Aufnahme gestoppt.', file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.',
     broadcast:'Rundruf',
     flip:'🔄 Flip', you:'Du', no_missions:'Keine Missionen gefunden.', no_rules:'Keine Regeln vorhanden.',
   },
@@ -546,7 +546,7 @@ const T = {
     uploading_review:'Uploaded! Awaiting review…',
     upload_failed:'Upload failed',
     already_solved:'This mission was already solved by your team!', not_started:'The time hasn’t started yet. Please wait.', pending_note:'Waiting for the Gamemaster to review.', accepted_note:'Accepted!',
-    file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.',
+    video_too_long:'Video too long ({len} s). Max {max} s. Please film a shorter clip.', video_max_reached:'Maximum length reached ({max} s) — recording stopped.', file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.',
     broadcast:'Broadcast',
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
@@ -569,7 +569,7 @@ const T = {
     upload_failed:'Échec de l\'envoi',
     already_solved:'Cette mission a déjà été résolue par votre équipe !',
     not_started:'Le temps n’a pas encore commencé. Merci de patienter.', pending_note:'En attente de validation par le Gamemaster.', accepted_note:'Accepté !',
-    file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.',
+    video_too_long:'Vidéo trop longue ({len} s). Max {max} s. Filme plus court.', video_max_reached:'Durée maximale atteinte ({max} s) — enregistrement arrêté.', file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.',
     broadcast:'Annonce',
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
@@ -592,7 +592,7 @@ const T = {
     upload_failed:'Caricamento fallito',
     already_solved:'Questa missione è già stata completata dalla tua squadra!',
     not_started:'Il tempo non è ancora iniziato. Attendi.', pending_note:'In attesa di revisione del Gamemaster.', accepted_note:'Accettato!',
-    file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.',
+    video_too_long:'Video troppo lungo ({len} s). Max {max} s. Filma più corto.', video_max_reached:'Durata massima raggiunta ({max} s) — registrazione interrotta.', file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.',
     broadcast:'Annuncio',
     flip:'🔄 Ribalta', you:'Io', no_missions:'Nessuna missione trovata.', no_rules:'Nessuna regola.',
   },
@@ -616,7 +616,7 @@ const T = {
     upload_failed:'Subida fallida',
     already_solved:'¡Esta misión ya fue resuelta por tu equipo!',
     not_started:'El tiempo aún no ha comenzado. Espera, por favor.', pending_note:'Esperando la revisión del Gamemaster.', accepted_note:'¡Aceptado!',
-    file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.',
+    video_too_long:'Vídeo demasiado largo ({len} s). Máx {max} s. Graba más corto.', video_max_reached:'Duración máxima alcanzada ({max} s) — grabación detenida.', file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.',
     broadcast:'Anuncio',
     flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
   }
@@ -901,6 +901,7 @@ async function loadMissions() {
   // so the cycler includes them.
   customLangs = Array.isArray(data.custom_langs) ? data.custom_langs : [];
   if (data.timer) _timerStarted = !!data.timer.started;   // gate submissions until the timer starts
+  if (typeof data.max_video_seconds === 'number') MAX_VIDEO_SECONDS = data.max_video_seconds;
   // Apply the location's allowed-language restriction. Safe to call on every
   // loadMissions (no-op when nothing changes); the GM can edit the allow-list
   // mid-game and the player picks it up on next refresh without reload.
@@ -1193,6 +1194,18 @@ async function doCapture() {
         btn.classList.add('recording');
         document.getElementById('rec-dot').style.display = 'block';
         document.getElementById('shutter-icon').textContent = '⏹';
+        // Stop by itself at the limit, so a clip recorded in the app can never
+        // be too long in the first place — nicer than rejecting it afterwards.
+        if(MAX_VIDEO_SECONDS > 0){
+          clearTimeout(_recCapTimer);
+          _recCapTimer = setTimeout(() => {
+            if(mediaRecorder && mediaRecorder.state === 'recording'){
+              mediaRecorder.stop();
+              toast((t('video_max_reached')||'Maximale Länge erreicht ({max} s) — Aufnahme gestoppt.')
+                .replace('{max}', MAX_VIDEO_SECONDS), 'info');
+            }
+          }, MAX_VIDEO_SECONDS * 1000);
+        }
       } catch(e) {
         toast((t('capture_failed')||'Aufnahme nicht möglich:') + ' ' + e.message, 'error');
       }
@@ -1244,6 +1257,44 @@ const MAX_UPLOAD_MB = 200, MAX_UPLOAD_BYTES = MAX_UPLOAD_MB*1024*1024;
 function tooLargeToast(bytes){
   const mb = Math.max(1, Math.round((bytes||0)/1048576));
   toast((t('file_too_large')||'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.').replace('{size}',mb).replace('{max}',MAX_UPLOAD_MB), 'error');
+}
+
+// ── Video length ────────────────────────────────────────────────────────────
+// The house rules cap clips (25s by default), but nothing enforced it: a
+// two-minute clip picked from the gallery simply failed later with a generic
+// error. Check the duration up front and say so plainly instead.
+// Set from the team fetch; 0 disables the check.
+let MAX_VIDEO_SECONDS = 25;
+function tooLongToast(sec){
+  toast((t('video_too_long')||'Video zu lang ({len} s). Maximal {max} s. Bitte kürzer filmen.')
+    .replace('{len}', Math.round(sec)).replace('{max}', MAX_VIDEO_SECONDS), 'error');
+}
+// Resolves to the clip length in seconds, or null when it can't be read
+// (some browsers report Infinity for a freshly recorded blob) — never block
+// an upload on a number we couldn't determine.
+function videoDuration(fileOrBlob){
+  return new Promise(resolve => {
+    let url = null, done = false;
+    const finish = v => { if(done) return; done = true;
+      if(url) { try{ URL.revokeObjectURL(url); }catch(e){} } resolve(v); };
+    try {
+      const v = document.createElement('video');
+      v.preload = 'metadata'; v.muted = true;
+      v.onloadedmetadata = () => finish(Number.isFinite(v.duration) ? v.duration : null);
+      v.onerror = () => finish(null);
+      setTimeout(() => finish(null), 4000);          // never hang the upload
+      url = URL.createObjectURL(fileOrBlob);
+      v.src = url;
+    } catch(e) { finish(null); }
+  });
+}
+// true = too long (and the player has been told)
+async function videoTooLong(fileOrBlob){
+  if(!(MAX_VIDEO_SECONDS > 0)) return false;
+  const sec = await videoDuration(fileOrBlob);
+  if(sec === null || sec <= MAX_VIDEO_SECONDS + 0.5) return false;   // rounding slack
+  tooLongToast(sec);
+  return true;
 }
 async function doUpload() {
   if (!capturedBlob) return;
@@ -1468,6 +1519,7 @@ async function uploadFromGallery(event, missionId, mediaType) {
   if(!file) return;
   if(!ensureTimerStarted()){ event.target.value=''; return; }
   if(file.size > MAX_UPLOAD_BYTES){ tooLargeToast(file.size); event.target.value=''; return; }
+  if(mediaType === 'video' && await videoTooLong(file)){ event.target.value=''; return; }
   currentMissionId = missionId;
   const ub   = document.getElementById(`ub-${missionId}`);
   const fill = document.getElementById(`uf-${missionId}`);

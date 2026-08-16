@@ -684,7 +684,7 @@ let myScore = 0;                         // team's current score
 // this `let` — it just creates an unrelated window property.
 let _specialBtnWanted = false;
 let mediaRecorder = null;
-let recordedChunks = [];
+let recordedChunks = [], _crRecCapTimer = null;
 let capturedIsVideo = false;
 let capturedMimeType = '';
 let currentCaptureType = 'photo';        // 'photo' or 'video'
@@ -726,7 +726,7 @@ const T = {
         no_camera:'Kamera nicht verfügbar — bitte erlauben',
         no_mic:'Mikrofon nicht verfügbar – kein Ton',
         capture_failed:'Aufnahme nicht möglich:',
-        upload_failed:'Upload fehlgeschlagen', file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.', upload_failed_net:'Upload fehlgeschlagen — Netzwerk/Verbindung',
+        upload_failed:'Upload fehlgeschlagen', video_too_long:'Video zu lang ({len} s). Maximal {max} s. Bitte kürzer filmen.', video_max_reached:'Maximale Länge erreicht ({max} s) — Aufnahme gestoppt.', file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.', upload_failed_net:'Upload fehlgeschlagen — Netzwerk/Verbindung',
         selfie_upload_failed:'Selfie-Upload fehlgeschlagen — bitte erneut versuchen',
         chat_send_failed:'Chat senden fehlgeschlagen',
         no_hints_left:'Keine Hinweise mehr',
@@ -777,7 +777,7 @@ const T = {
         no_camera:'Camera unavailable — please grant permission',
         no_mic:'Microphone unavailable – no audio',
         capture_failed:'Recording failed:',
-        upload_failed:'Upload failed', file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.', upload_failed_net:'Upload failed — network/connection',
+        upload_failed:'Upload failed', video_too_long:'Video too long ({len} s). Max {max} s. Please film a shorter clip.', video_max_reached:'Maximum length reached ({max} s) — recording stopped.', file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.', upload_failed_net:'Upload failed — network/connection',
         selfie_upload_failed:'Selfie upload failed — please try again',
         chat_send_failed:'Couldn\'t send chat',
         no_hints_left:'No more hints',
@@ -827,7 +827,7 @@ const T = {
         no_camera:'Caméra indisponible — autorisez l\'accès',
         no_mic:'Micro indisponible – pas de son',
         capture_failed:'Échec de l\'enregistrement :',
-        upload_failed:'Échec de l\'envoi', file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.', upload_failed_net:'Échec de l\'envoi — réseau/connexion',
+        upload_failed:'Échec de l\'envoi', video_too_long:'Vidéo trop longue ({len} s). Max {max} s. Filme plus court.', video_max_reached:'Durée maximale atteinte ({max} s) — enregistrement arrêté.', file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.', upload_failed_net:'Échec de l\'envoi — réseau/connexion',
         selfie_upload_failed:'Échec du selfie — réessayez',
         chat_send_failed:'Impossible d\'envoyer le message',
         no_hints_left:'Plus d\'indices',
@@ -878,7 +878,7 @@ const T = {
         no_camera:'Fotocamera non disponibile — concedi i permessi',
         no_mic:'Microfono non disponibile – nessun audio',
         capture_failed:'Registrazione non riuscita:',
-        upload_failed:'Caricamento fallito', file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.', upload_failed_net:'Caricamento fallito — rete/connessione',
+        upload_failed:'Caricamento fallito', video_too_long:'Video troppo lungo ({len} s). Max {max} s. Filma più corto.', video_max_reached:'Durata massima raggiunta ({max} s) — registrazione interrotta.', file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.', upload_failed_net:'Caricamento fallito — rete/connessione',
         selfie_upload_failed:'Caricamento selfie non riuscito — riprova',
         chat_send_failed:'Impossibile inviare il messaggio',
         no_hints_left:'Nessun altro suggerimento',
@@ -928,7 +928,7 @@ const T = {
         no_camera:'Cámara no disponible — concede los permisos',
         no_mic:'Micrófono no disponible – sin sonido',
         capture_failed:'Grabación fallida:',
-        upload_failed:'Subida fallida', file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.', upload_failed_net:'Subida fallida — red/conexión',
+        upload_failed:'Subida fallida', video_too_long:'Vídeo demasiado largo ({len} s). Máx {max} s. Graba más corto.', video_max_reached:'Duración máxima alcanzada ({max} s) — grabación detenida.', file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.', upload_failed_net:'Subida fallida — red/conexión',
         selfie_upload_failed:'Subida del selfie fallida — inténtalo de nuevo',
         chat_send_failed:'No se pudo enviar el mensaje',
         no_hints_left:'No quedan más pistas',
@@ -1303,6 +1303,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // and apply the location's allowed-language list to the cycler.
   fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json()).then(d => {
     if(d && d.timer) _crTimerStarted = !!d.timer.started;   // gate actions until the clock runs
+    if(d && typeof d.max_video_seconds === 'number') MAX_VIDEO_SECONDS = d.max_video_seconds;
     if(d && d.allowed_langs) setCrAllowedLangs(d.allowed_langs);
     if(d && d.freeze && d.freeze.until_ms && d.freeze.until_ms > Date.now()){
       crShowFrozen(d.freeze.until_ms);
@@ -3999,6 +4000,17 @@ function crCapture(){
       btn.classList.add('recording');
       document.getElementById('cr-rec-dot').style.display = 'block';
       document.getElementById('cr-shutter-icon').textContent = '⏹';
+      // Stop by itself at the limit, so an in-app clip can never be too long.
+      if(MAX_VIDEO_SECONDS > 0){
+        clearTimeout(_crRecCapTimer);
+        _crRecCapTimer = setTimeout(() => {
+          if(mediaRecorder && mediaRecorder.state === 'recording'){
+            mediaRecorder.stop();
+            toast((t('video_max_reached')||'Maximale Länge erreicht ({max} s) — Aufnahme gestoppt.')
+              .replace('{max}', MAX_VIDEO_SECONDS), 'info');
+          }
+        }, MAX_VIDEO_SECONDS * 1000);
+      }
     } catch(e){ toast((t('capture_failed')||'Aufnahme nicht möglich:')+' '+e.message,'error'); }
     return;
   }
@@ -4043,6 +4055,38 @@ function crTooLargeToast(bytes){
   const mb = Math.max(1, Math.round((bytes||0)/1048576));
   toast((t('file_too_large')||'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.').replace('{size}',mb).replace('{max}',MAX_UPLOAD_MB), 'error');
 }
+
+// ── Video length ────────────────────────────────────────────────────────────
+// The house rules cap clips, but nothing enforced it: an over-long clip picked
+// from the gallery failed later with a generic error. Check it up front.
+// Set from the team fetch; 0 disables the check.
+let MAX_VIDEO_SECONDS = 25;
+function crTooLongToast(sec){
+  toast((t('video_too_long')||'Video zu lang ({len} s). Maximal {max} s. Bitte kürzer filmen.')
+    .replace('{len}', Math.round(sec)).replace('{max}', MAX_VIDEO_SECONDS), 'error');
+}
+function crVideoDuration(fileOrBlob){
+  return new Promise(resolve => {
+    let url=null, done=false;
+    const finish = v => { if(done) return; done=true;
+      if(url){ try{ URL.revokeObjectURL(url); }catch(e){} } resolve(v); };
+    try {
+      const v=document.createElement('video');
+      v.preload='metadata'; v.muted=true;
+      v.onloadedmetadata = () => finish(Number.isFinite(v.duration) ? v.duration : null);
+      v.onerror = () => finish(null);
+      setTimeout(() => finish(null), 4000);
+      url=URL.createObjectURL(fileOrBlob); v.src=url;
+    } catch(e){ finish(null); }
+  });
+}
+async function crVideoTooLong(fileOrBlob){
+  if(!(MAX_VIDEO_SECONDS > 0)) return false;
+  const sec = await crVideoDuration(fileOrBlob);
+  if(sec === null || sec <= MAX_VIDEO_SECONDS + 0.5) return false;
+  crTooLongToast(sec);
+  return true;
+}
 async function _crSendMedia(form){
   try {
     const r = await fetch(`/api/games/${gameId}/media/upload`, {method:'POST', body:form});
@@ -4064,6 +4108,7 @@ async function _crSendMedia(form){
 async function crUploadBlob(blob){
   // Direct upload without camera (gallery selected)
   if(blob && blob.size > MAX_UPLOAD_BYTES){ crTooLargeToast(blob.size); return; }
+  if(blob && blob.type.startsWith('video') && await crVideoTooLong(blob)) return;
   const isVid = blob.type.startsWith('video');
   const ext = isVid ? 'mp4' : 'jpg';
   const filename = blob.name || `capture.${ext}`;
@@ -4089,6 +4134,7 @@ async function crUploadBlob(blob){
 async function crUpload(){
   if(!capturedBlob) return;
   if(capturedBlob.size > MAX_UPLOAD_BYTES){ crTooLargeToast(capturedBlob.size); crCloseCamera(); return; }
+  if(capturedIsVideo && await crVideoTooLong(capturedBlob)){ crCloseCamera(); return; }
   crCloseCamera();
   const isVid = capturedIsVideo;
   const ext = isVid ? (capturedMimeType.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
