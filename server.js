@@ -781,7 +781,15 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   const rawMaxVid = db.getSetting('max_video_seconds');
   const max_video_seconds = rawMaxVid === null || rawMaxVid === undefined || rawMaxVid === ''
     ? 25 : Math.max(0, parseInt(rawMaxVid, 10) || 0);
-  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, timer: game ? getTimerState(game) : null});
+  // Effective upload ceiling. Not the same as multer's hard cap: when the app
+  // is reached through a Cloudflare tunnel, Cloudflare cuts the request body
+  // first (100 MB on Free, 200 MB on Business). Advertising 200 while the path
+  // allows 100 is what made an over-size upload die with a generic network
+  // error instead of a size message.
+  const rawMaxMb = db.getSetting('max_upload_mb');
+  const max_upload_mb = rawMaxMb === null || rawMaxMb === undefined || rawMaxMb === ''
+    ? 100 : Math.max(1, Math.min(MAX_UPLOAD_MB, parseInt(rawMaxMb, 10) || 100));
+  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null});
 });
 app.delete('/api/games/:gameId/teams/:teamId', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});

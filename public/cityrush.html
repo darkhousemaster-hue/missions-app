@@ -1304,6 +1304,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json()).then(d => {
     if(d && d.timer) _crTimerStarted = !!d.timer.started;   // gate actions until the clock runs
     if(d && typeof d.max_video_seconds === 'number') MAX_VIDEO_SECONDS = d.max_video_seconds;
+    if(d && typeof d.max_upload_mb === 'number') setMaxUploadMb(d.max_upload_mb);
     if(d && d.allowed_langs) setCrAllowedLangs(d.allowed_langs);
     if(d && d.freeze && d.freeze.until_ms && d.freeze.until_ms > Date.now()){
       crShowFrozen(d.freeze.until_ms);
@@ -4050,7 +4051,15 @@ function crRetake(){
 // Media uploads are capped server-side at 200 MB (multer). A 45s 4K clip often
 // exceeds that; we pre-check size on the client and translate a server 413 into
 // a clear message instead of a generic "upload failed".
-const MAX_UPLOAD_MB = 200, MAX_UPLOAD_BYTES = MAX_UPLOAD_MB*1024*1024;
+// Effective ceiling, sent by the server. Defaults to 100 MB because the app is
+// normally reached through a Cloudflare tunnel, which cuts the body at 100 MB
+// on the Free plan — advertising the server's 200 MB made an over-size upload
+// die as a generic network error with no size message.
+let MAX_UPLOAD_MB = 100, MAX_UPLOAD_BYTES = MAX_UPLOAD_MB*1024*1024;
+function setMaxUploadMb(mb){
+  if(!(mb > 0)) return;
+  MAX_UPLOAD_MB = mb; MAX_UPLOAD_BYTES = mb*1024*1024;
+}
 function crTooLargeToast(bytes){
   const mb = Math.max(1, Math.round((bytes||0)/1048576));
   toast((t('file_too_large')||'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.').replace('{size}',mb).replace('{max}',MAX_UPLOAD_MB), 'error');

@@ -902,6 +902,7 @@ async function loadMissions() {
   customLangs = Array.isArray(data.custom_langs) ? data.custom_langs : [];
   if (data.timer) _timerStarted = !!data.timer.started;   // gate submissions until the timer starts
   if (typeof data.max_video_seconds === 'number') MAX_VIDEO_SECONDS = data.max_video_seconds;
+  if (typeof data.max_upload_mb === 'number') setMaxUploadMb(data.max_upload_mb);
   // Apply the location's allowed-language restriction. Safe to call on every
   // loadMissions (no-op when nothing changes); the GM can edit the allow-list
   // mid-game and the player picks it up on next refresh without reload.
@@ -1253,7 +1254,15 @@ function retake() {
 // Media uploads are capped server-side at 200 MB (multer). A 45s 4K video often
 // exceeds that, so we pre-check the size and show a clear message instead of
 // letting the player wait through a doomed upload and get a generic failure.
-const MAX_UPLOAD_MB = 200, MAX_UPLOAD_BYTES = MAX_UPLOAD_MB*1024*1024;
+// Effective ceiling, sent by the server. Defaults to 100 MB because the app is
+// normally reached through a Cloudflare tunnel, which cuts the body at 100 MB
+// on the Free plan — advertising the server's 200 MB made an over-size upload
+// die as a generic network error with no size message.
+let MAX_UPLOAD_MB = 100, MAX_UPLOAD_BYTES = MAX_UPLOAD_MB*1024*1024;
+function setMaxUploadMb(mb){
+  if(!(mb > 0)) return;
+  MAX_UPLOAD_MB = mb; MAX_UPLOAD_BYTES = mb*1024*1024;
+}
 function tooLargeToast(bytes){
   const mb = Math.max(1, Math.round((bytes||0)/1048576));
   toast((t('file_too_large')||'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.').replace('{size}',mb).replace('{max}',MAX_UPLOAD_MB), 'error');
