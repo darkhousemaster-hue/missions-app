@@ -232,9 +232,14 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 
 /* ── Camera modal ── */
 #camera-modal { position:fixed; inset:0; background:#000; z-index:500; display:none; flex-direction:column; }
-#cam-preview  { flex:1; width:100%; object-fit:cover; display:block; }
-#cap-img { flex:1; width:100%; object-fit:contain; display:none; background:#000; }
-#cap-vid { flex:1; width:100%; display:none; background:#000; }
+/* min-height:0 is load-bearing: a flex item defaults to min-height:auto and
+   so refuses to shrink below the video's intrinsic size. On a 4:3 tablet the
+   camera stream is taller than the space available, so the preview overflowed
+   and pushed the shutter bar off-screen — the button was gone and untappable.
+   Phones happened to fit, which is why it only showed up on tablets. */
+#cam-preview  { flex:1; min-height:0; width:100%; object-fit:cover; display:block; }
+#cap-img { flex:1; min-height:0; width:100%; object-fit:contain; display:none; background:#000; }
+#cap-vid { flex:1; min-height:0; width:100%; display:none; background:#000; }
 .cam-bar { padding:.75rem 1rem calc(.75rem + env(safe-area-inset-bottom,0px)); background:#111; display:flex; gap:.75rem; align-items:center; justify-content:center; flex-shrink:0; box-sizing:border-box; width:100%; }
 /* Review bar: two text buttons (retake / upload). Long localized labels
    (e.g. German "↺ Neu aufnehmen" + "✓ Hochladen") overflowed the viewport
