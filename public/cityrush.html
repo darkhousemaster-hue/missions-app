@@ -393,10 +393,20 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 
 <!-- SELFIE-AT-START OVERLAY. Blocks the rest of the UI until the team has
      uploaded a selfie so the GM can identify them at a glance. -->
+<!-- inset:0 sized this to the LAYOUT viewport, which on iOS Safari extends
+     under the toolbars — so on a tablet the shutter row sat behind Safari's
+     chrome: invisible and untappable. 100dvh is the visible height, and
+     justify-content:flex-start + overflow-y:auto keeps everything reachable
+     when the content is taller than the screen (centred content that overflows
+     is clipped at BOTH ends and cannot be scrolled to). The inner wrapper's
+     margin:auto 0 restores the centring whenever there is room. -->
 <div id="cr-selfie-overlay"
-  style="position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:1700;
-         display:none;flex-direction:column;align-items:center;justify-content:center;
+  style="position:fixed;top:0;left:0;right:0;height:100vh;height:100dvh;
+         background:rgba(0,0,0,.97);z-index:1700;
+         display:none;flex-direction:column;align-items:center;justify-content:flex-start;
+         overflow-y:auto;-webkit-overflow-scrolling:touch;
          text-align:center;padding:1.25rem;">
+ <div style="margin:auto 0;display:flex;flex-direction:column;align-items:center;width:100%;">
   <h2 id="cr-selfie-title" style="color:var(--red-light);font-size:1.6rem;margin-bottom:.5rem;">📸 Team-Selfie</h2>
   <p id="cr-selfie-help" style="color:var(--text-dim);max-width:340px;line-height:1.5;margin-bottom:1rem;">
     Bevor das Spiel startet: Bitte ein Gruppenfoto eures Teams machen. Der Spielleiter sieht
@@ -414,6 +424,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
     <button class="btn btn-ghost" onclick="crSelfieRetake()">↺ <span id="cr-selfie-retake-lbl">Erneut</span></button>
     <button class="btn btn-success btn-lg" onclick="crSelfieUpload()" id="cr-selfie-upload-btn">✓ <span id="cr-selfie-upload-lbl">Hochladen & weiter</span></button>
   </div>
+ </div>
 </div>
 
 <!-- Single-special-mission button. Kept OUTSIDE #view-mission so that
