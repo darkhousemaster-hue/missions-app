@@ -147,11 +147,20 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 
 /* ── Selfie camera modal — full-screen camera with shutter / flip /
    cancel; review pane with retake / accept. */
+/* Two things keep the shutter row on screen, both learned the hard way on
+   tablets:
+   - height:100dvh instead of inset:0. inset:0 resolves against the LAYOUT
+     viewport, which on iOS Safari reaches under the browser toolbars, so the
+     bar at the end of this flex column ended up behind Safari's own chrome.
+   - min-height:0 on the video. A flex item defaults to min-height:auto and so
+     refuses to shrink below the camera stream's intrinsic height, pushing the
+     bar off the bottom. */
 #selfie-modal {
-  position:fixed; inset:0; background:#000; z-index:900;
+  position:fixed; top:0; left:0; right:0; height:100vh; height:100dvh;
+  background:#000; z-index:900;
   display:none; flex-direction:column;
 }
-#selfie-video, #selfie-shot { flex:1; width:100%; object-fit:cover; display:block; }
+#selfie-video, #selfie-shot { flex:1; min-height:0; width:100%; object-fit:cover; display:block; }
 #selfie-shot { display:none; }
 .sm-bar {
   padding:18px 14px calc(env(safe-area-inset-bottom,0px) + 18px);
