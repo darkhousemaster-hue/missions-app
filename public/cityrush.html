@@ -259,7 +259,11 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 #view-finished h1 { font-size:3rem; color:var(--green); margin-bottom:.5rem; }
 
 /* ── Camera modal (reused from play.html style) ── */
-#cr-camera-modal { position:fixed; inset:0; background:#000; z-index:1500; display:none; flex-direction:column; }
+/* inset:0 sizes to the LAYOUT viewport, which on iOS Safari reaches under the
+   browser toolbars — the bar holding the shutter ended up behind Safari's own
+   chrome, so on tablets there was no visible way to start a recording.
+   100dvh is the actually visible height (100vh kept as the fallback). */
+#cr-camera-modal { position:fixed; top:0; left:0; right:0; height:100vh; height:100dvh; background:#000; z-index:1500; display:none; flex-direction:column; }
 /* min-height:0 — see play.html: without it the preview can't shrink below the
    stream's intrinsic height and pushes the shutter bar off a tablet screen. */
 #cr-cam-preview { flex:1; min-height:0; width:100%; object-fit:cover; display:block; }

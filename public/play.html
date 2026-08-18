@@ -231,7 +231,11 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .rule-entry:last-child { border-bottom:none; }
 
 /* ── Camera modal ── */
-#camera-modal { position:fixed; inset:0; background:#000; z-index:500; display:none; flex-direction:column; }
+/* inset:0 sizes to the LAYOUT viewport, which on iOS Safari reaches under the
+   browser toolbars — the bar holding the shutter ended up behind Safari's own
+   chrome, so on tablets there was no visible way to start a recording.
+   100dvh is the actually visible height (100vh kept as the fallback). */
+#camera-modal { position:fixed; top:0; left:0; right:0; height:100vh; height:100dvh; background:#000; z-index:500; display:none; flex-direction:column; }
 /* min-height:0 is load-bearing: a flex item defaults to min-height:auto and
    so refuses to shrink below the video's intrinsic size. On a 4:3 tablet the
    camera stream is taller than the space available, so the preview overflowed
