@@ -2119,6 +2119,17 @@ cron.schedule('0 * * * *', () => {
     if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
     db.deleteGame(game.id);
   });
+  // Games opened but never started, after 5 h. GMs create these and walk away;
+  // they pile up in the game list and used to be counted as played. The stats
+  // row is dropped too — unlike the 72 h sweep above, which keeps stats
+  // because those games really were played.
+  const staleCutoff = Date.now() - STALE_WAITING_HOURS*60*60*1000;
+  db.getNeverStartedGames(staleCutoff).forEach(game => {
+    const dir=path.join(UPLOAD_DIR,game.id);
+    if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
+    try { db.dropGameStat(game.id); } catch(e){}
+    db.deleteGame(game.id);
+  });
   // Sweep abandoned draw sessions (master never closed) older than 6h.
   const drawCutoff = Date.now()-6*60*60*1000;
   for(const [token,s] of drawSessions){ if(s.createdAt < drawCutoff) drawSessions.delete(token); }
@@ -2134,6 +2145,10 @@ app.get('/draw*',      (req,res)=>res.sendFile(path.join(__dirname,'public','dra
 // the player app can explain ("video too large"), instead of a generic 500 that
 // surfaces as an unhelpful "upload failed". A 45s 4K clip commonly exceeds it.
 const MAX_UPLOAD_MB = 200;
+// How long a game may sit on "waiting" (clock never started) before the hourly
+// sweep removes it. Deliberately far shorter than the 72 h rule for played
+// games: nothing of value is lost, since the game was never run.
+const STALE_WAITING_HOURS = 5;
 app.use((err, req, res, next) => {
   if(err && err.code === 'LIMIT_FILE_SIZE'){
     return res.status(413).json({ error:'File too large', code:'file_too_large', maxMb: MAX_UPLOAD_MB });

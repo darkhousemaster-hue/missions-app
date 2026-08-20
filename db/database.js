@@ -731,6 +731,14 @@ const getRunningGames = () => db.prepare('SELECT * FROM games WHERE timer_runnin
 // Used to gate self-updates: the app may only update when every game is ended.
 const getActiveGames  = () => db.prepare("SELECT * FROM games WHERE status <> 'ended'").all();
 const getOldGames     = cutoff => db.prepare('SELECT * FROM games WHERE created_at < ?').all(cutoff);
+// Games opened but never started: the clock was never run, so nothing was ever
+// played. GMs leave these behind routinely. They're swept much sooner than the
+// 72 h rule so they stop cluttering the game list, and their stats row goes
+// with them. A paused game is NOT included — timer_started_at is set the
+// moment it first runs, so only genuinely untouched games match.
+const getNeverStartedGames = cutoff =>
+  db.prepare('SELECT * FROM games WHERE timer_started_at IS NULL AND status<>? AND created_at < ?')
+    .all('ended', cutoff);
 // cr_mode_name comes along so a Rail Adventure game can be labelled with the RA
 // mode it actually runs. RA games are created with mode_id=1 (the default
 // MiSSiONS mode) purely to satisfy the column, so mode_name alone made every RA
@@ -934,7 +942,11 @@ const markGameStatEnded   = gameId => db.prepare('UPDATE game_stats SET ended_at
 const dropGameStat = gameId => db.prepare('DELETE FROM game_stats WHERE game_id=?').run(gameId);
 const getStatsSummary = (fromMs, toMs) => {
   const f = Number(fromMs) || 0, t = Number(toMs) || (Date.now() + 86400000);
-  const W = 'created_at>=? AND created_at<=?';
+  // started_at IS NOT NULL: only count games that were actually played. GMs
+  // routinely open a game, never start the clock, and walk away — counting
+  // those inflated every figure here. started_at is set when the timer is
+  // first started, so a game that only ever sat on "waiting" is excluded.
+  const W = 'created_at>=? AND created_at<=? AND started_at IS NOT NULL';
   return {
     total:      db.prepare(`SELECT COUNT(*) games, COALESCE(SUM(team_count),0) teams FROM game_stats WHERE ${W}`).get(f,t),
     byKind:     db.prepare(`SELECT kind, COUNT(*) games, COALESCE(SUM(team_count),0) teams FROM game_stats WHERE ${W} GROUP BY kind`).all(f,t),
@@ -1450,7 +1462,7 @@ module.exports = {
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
-  getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,createGame,updateGame,deleteGame,selectMissions,
+  getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
   submitMission,acceptSubmission,rejectSubmission,
