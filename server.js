@@ -1043,10 +1043,13 @@ app.post('/api/games/:gameId/timer', (req,res) => {
   if(!game) return res.status(404).json({error:'Not found'});
   const now=Date.now();
   if(action==='start' && !game.timer_running) {
-    db.updateGame(req.params.gameId,{timer_started_at: now-(game.timer_paused_elapsed||0), timer_running:1, status:'active'});
+    db.updateGame(req.params.gameId,{timer_started_at: now-(game.timer_paused_elapsed||0), timer_running:1, status:'active', paused_at:null});
     try { db.markGameStatStarted(req.params.gameId); } catch(e){}
   } else if(action==='pause' && game.timer_running && game.timer_started_at) {
-    db.updateGame(req.params.gameId,{timer_paused_elapsed: now-game.timer_started_at, timer_running:0});
+    // status:'paused' is its own state — it used to stay 'active', so the game
+    // list showed a paused game as "waiting", indistinguishable from one that
+    // was never started. paused_at drives the idle sweep below.
+    db.updateGame(req.params.gameId,{timer_paused_elapsed: now-game.timer_started_at, timer_running:0, status:'paused', paused_at: now});
   } else if(action==='adjust' && typeof seconds==='number') {
     // Add or subtract seconds from the total duration. getTimerState derives
     // `remaining` live as (timer_duration - elapsed), so changing the duration
@@ -2112,6 +2115,20 @@ setInterval(() => {
 },1000);
 
 // 72h cleanup
+// A paused game can never end by itself: the timer loop only walks games with
+// timer_running=1, so pausing takes a game out of it permanently. Games paused
+// and then abandoned used to sit unfinished forever. Finish them after
+// IDLE_PAUSE_HOURS so they close cleanly and count as ended.
+cron.schedule('*/5 * * * *', () => {
+  const cutoff = Date.now() - IDLE_PAUSE_HOURS*60*60*1000;
+  db.getStalePausedGames(cutoff).forEach(game => {
+    db.updateGame(game.id, { timer_running:0, status:'ended' });
+    try { db.markGameStatEnded(game.id); } catch(e){}
+    io.to(`game_${game.id}`).emit('game_ended', {});
+    io.to(`gm_${game.id}`).emit('game_ended', {});
+  });
+});
+
 cron.schedule('0 * * * *', () => {
   const cutoff=Date.now()-72*60*60*1000;
   db.getOldGames(cutoff).forEach(game => {
@@ -2149,6 +2166,8 @@ const MAX_UPLOAD_MB = 200;
 // sweep removes it. Deliberately far shorter than the 72 h rule for played
 // games: nothing of value is lost, since the game was never run.
 const STALE_WAITING_HOURS = 5;
+// How long a game may stay paused before it is finished automatically.
+const IDLE_PAUSE_HOURS = 2;
 app.use((err, req, res, next) => {
   if(err && err.code === 'LIMIT_FILE_SIZE'){
     return res.status(413).json({ error:'File too large', code:'file_too_large', maxMb: MAX_UPLOAD_MB });

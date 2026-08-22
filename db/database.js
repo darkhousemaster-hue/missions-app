@@ -362,6 +362,20 @@ try { db.exec("ALTER TABLE modes ADD COLUMN no_randomize INTEGER DEFAULT 0"); } 
 // new-game mode picker. Prevents picking a mode whose missions belong to
 // another location and getting an empty game.
 try { db.exec("ALTER TABLE modes ADD COLUMN location_id INTEGER"); } catch(e) {}
+// When a game was paused. A paused game keeps its clock frozen and can never
+// reach 'ended' on its own (the timer loop only walks running games), so this
+// timestamp lets the sweeper finish games that were paused and abandoned.
+try { db.exec("ALTER TABLE games ADD COLUMN paused_at INTEGER"); } catch(e) {}
+// One-time backfill: before 'paused' existed, pausing left status='active' with
+// the clock stopped. Those games are indistinguishable from running ones in the
+// game list (they showed as "waiting") and the idle sweep would never see them.
+// Label them now; paused_at starts at "now" so an already-abandoned game still
+// gets the full grace period rather than being ended the moment this ships.
+try {
+  db.prepare("UPDATE games SET status='paused', paused_at=COALESCE(paused_at,?) "+
+             "WHERE status='active' AND timer_running=0 AND timer_started_at IS NOT NULL")
+    .run(Date.now());
+} catch(e) {}
 // "Do Not Randomize" lives on the LOCATION (a location's mission set is what
 // gets shuffled). The modes column above is legacy/unused now.
 try { db.exec("ALTER TABLE locations ADD COLUMN no_randomize INTEGER DEFAULT 0"); } catch(e) {}
@@ -736,6 +750,10 @@ const getOldGames     = cutoff => db.prepare('SELECT * FROM games WHERE created_
 // 72 h rule so they stop cluttering the game list, and their stats row goes
 // with them. A paused game is NOT included — timer_started_at is set the
 // moment it first runs, so only genuinely untouched games match.
+// Paused and left alone. status='paused' is only ever set by the pause action,
+// so this cannot catch a game that is merely waiting to start.
+const getStalePausedGames = cutoff =>
+  db.prepare("SELECT * FROM games WHERE status='paused' AND paused_at IS NOT NULL AND paused_at < ?").all(cutoff);
 const getNeverStartedGames = cutoff =>
   db.prepare('SELECT * FROM games WHERE timer_started_at IS NULL AND status<>? AND created_at < ?')
     .all('ended', cutoff);
@@ -1462,7 +1480,7 @@ module.exports = {
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
-  getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,createGame,updateGame,deleteGame,selectMissions,
+  getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
   submitMission,acceptSubmission,rejectSubmission,
