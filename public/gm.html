@@ -4729,7 +4729,12 @@ async function autoTranslateMissionName(){
 }
 // Show the two follow-up settings only while multi-image is on.
 function mMultiSync(){
-  const on=document.getElementById('m-multi')?.checked;
+  // Photo only for now: a gallery of clips is a different interaction, so the
+  // whole block is hidden for video missions rather than shown and ignored.
+  const isPhoto = (document.getElementById('m-type')?.value || 'photo') === 'photo';
+  const wrap=document.getElementById('m-multi-wrap');
+  if(wrap) wrap.style.display = isPhoto ? 'block' : 'none';
+  const on=isPhoto && document.getElementById('m-multi')?.checked;
   const box=document.getElementById('m-multi-opts');
   if(box) box.style.display = on ? 'block' : 'none';
 }
@@ -4760,6 +4765,7 @@ function missionModal(m,locs){
       </div>
       <input type="hidden" id="m-type" value="${mt}">
       <!-- Multi-image: off by default, so an existing mission is unchanged. -->
+      <div id="m-multi-wrap">
       <div class="toggle-row" style="margin-top:.7rem;" onclick="toggleSwitch(this.querySelector('.toggle'),'m-multi');mMultiSync()">
         <div><div class="toggle-row-text">🖼️ ${gmt('mm-multi')}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('mm-multi-tip')}</span></i></div>
         <div class="toggle-row-sub">${gmt('mm-multi-sub')}</div></div>
@@ -4781,6 +4787,7 @@ function missionModal(m,locs){
             <div class="stepper"><button type="button" onclick="stepInput('m-multi-count',-1)">−</button><input id="m-multi-count" type="number" min="2" max="20" value="${m&&m.multi_count?m.multi_count:2}"><button type="button" onclick="stepInput('m-multi-count',1)">+</button></div>
           </div>
         </div>
+      </div>
       </div>
     </div>
 
@@ -4919,6 +4926,7 @@ function collectMsCustI18n(){
 function mSelectType(t){
   const inp=document.getElementById('m-type'); if(inp) inp.value=t;
   document.querySelectorAll('#m-type-grid .cme-card').forEach(c=>c.classList.toggle('selected', c.dataset.type===t));
+  mMultiSync();   // video missions hide the multi-image block
 }
 // Task reference image (MiSSiONS) — picked now, uploaded after the mission saves
 // (mirrors the Rail Adventure puzzle-image flow).
@@ -5183,7 +5191,7 @@ async function showAddMission(){ exitSelectionModes();
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveNewMission(){
-  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:document.getElementById('m-multi')?.checked?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
+  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:(document.getElementById('m-type')?.value==='photo' && document.getElementById('m-multi')?.checked)?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
   if(res.success){if(res.id) await uploadMsTaskImage(res.id);closeModal();loadMissions();toast(gmt('mission-created')||'MiSSiON erstellt!','success');}else toast(res.error,'error');
 }
 async function editMission(id){
@@ -5208,7 +5216,7 @@ async function editMission(id){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveEditMission(id){
-  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:document.getElementById('m-multi')?.checked?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
+  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:(document.getElementById('m-type')?.value==='photo' && document.getElementById('m-multi')?.checked)?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
   if(res.success){await uploadMsTaskImage(id);closeModal();loadMissions();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteMission(id){
