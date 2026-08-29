@@ -366,6 +366,14 @@ try { db.exec("ALTER TABLE modes ADD COLUMN location_id INTEGER"); } catch(e) {}
 // reach 'ended' on its own (the timer loop only walks running games), so this
 // timestamp lets the sweeper finish games that were paused and abandoned.
 try { db.exec("ALTER TABLE games ADD COLUMN paused_at INTEGER"); } catch(e) {}
+// Multi-image missions. Off by default, so an existing mission keeps taking
+// exactly one photo. multi_mode 'min' = at least N, 'exact' = precisely N.
+try { db.exec("ALTER TABLE missions ADD COLUMN multi_enabled INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE missions ADD COLUMN multi_mode TEXT DEFAULT 'min'"); } catch(e) {}
+try { db.exec("ALTER TABLE missions ADD COLUMN multi_count INTEGER DEFAULT 2"); } catch(e) {}
+// All images of a submission as a JSON array. media_path keeps the FIRST one so
+// every existing reader (thumbnails, ZIP, collage, rotation) still works.
+try { db.exec("ALTER TABLE team_missions ADD COLUMN media_paths TEXT"); } catch(e) {}
 // One-time backfill: before 'paused' existed, pausing left status='active' with
 // the clock stopped. Those games are indistinguishable from running ones in the
 // game list (they showed as "waiting") and the idle sweep would never see them.
@@ -726,12 +734,15 @@ const getMissions = (modeId, locationId) => {
 const getMission = id => db.prepare('SELECT * FROM missions WHERE id=?').get(id);
 // New missions append to the end of their mode's arranged order.
 const _nextMissionOrder = modeId => (Number(db.prepare('SELECT MAX(order_index) mx FROM missions WHERE mode_id=?').get(modeId||1)?.mx) || 0) + 1;
-const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',name_es='',description_de='',description_en='',description_fr='',description_it='',description_es='',task_de='',task_en='',task_fr='',task_it='',task_es='',media_type='photo',points=1,is_indoor=0,custom_i18n=null}) =>
-  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,order_index,custom_i18n) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',media_type,points,is_indoor?1:0,_nextMissionOrder(mode_id),normCustomI18n(custom_i18n)).lastInsertRowid);
-const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,custom_i18n}) => {
+const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',name_es='',description_de='',description_en='',description_fr='',description_it='',description_es='',task_de='',task_en='',task_fr='',task_it='',task_es='',media_type='photo',points=1,is_indoor=0,custom_i18n=null,multi_enabled=0,multi_mode='min',multi_count=2}) =>
+  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,order_index,custom_i18n,multi_enabled,multi_mode,multi_count) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',media_type,points,is_indoor?1:0,_nextMissionOrder(mode_id),normCustomI18n(custom_i18n),multi_enabled?1:0,multi_mode==='exact'?'exact':'min',Math.max(2,parseInt(multi_count,10)||2)).lastInsertRowid);
+const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,custom_i18n,multi_enabled,multi_mode,multi_count}) => {
   const cur = getMission(id) || {};
   const ci = custom_i18n === undefined ? (cur.custom_i18n || null) : normCustomI18n(custom_i18n);
-  return db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,media_type=?,points=?,is_indoor=?,custom_i18n=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',media_type,points,is_indoor?1:0,ci,id);
+  return db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,media_type=?,points=?,is_indoor=?,custom_i18n=?,multi_enabled=?,multi_mode=?,multi_count=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',media_type,points,is_indoor?1:0,ci,
+    (multi_enabled===undefined?(cur.multi_enabled||0):(multi_enabled?1:0)),
+    (multi_mode===undefined?(cur.multi_mode||'min'):(multi_mode==='exact'?'exact':'min')),
+    (multi_count===undefined?(cur.multi_count||2):Math.max(2,parseInt(multi_count,10)||2)), id);
 };
 const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id);
 // Partial setter — task image is uploaded separately, so don't round-trip the
@@ -900,7 +911,8 @@ const getTeamMissions = teamId => db.prepare(`
   SELECT tm.*, m.name as mission_name, m.name_de, m.name_en, m.name_fr, m.name_it, m.name_es,
     m.description_de, m.description_en, m.description_fr, m.description_it, m.description_es,
     m.task_de, m.task_en, m.task_fr, m.task_it, m.task_es,
-    m.media_type, m.points, m.is_indoor, m.task_image, m.custom_i18n
+    m.media_type, m.points, m.is_indoor, m.task_image, m.custom_i18n,
+    m.multi_enabled, m.multi_mode, m.multi_count
   FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
   WHERE tm.team_id=? ORDER BY tm.id`).all(teamId);
 const getSubmission          = (tid,mid) => db.prepare('SELECT * FROM team_missions WHERE team_id=? AND mission_id=?').get(tid,mid);
@@ -914,13 +926,49 @@ const getAcceptedSubmissions = tid => db.prepare(`
   SELECT tm.*, m.media_type FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
   WHERE tm.team_id=? AND tm.status='accepted' AND tm.media_path IS NOT NULL`).all(tid);
 
+// A submission's images. Legacy rows only have media_path; treat that as a
+// one-element list so callers never need to special-case them.
+const mediaListOf = row => {
+  if(!row) return [];
+  if(row.media_paths){ try{ const a=JSON.parse(row.media_paths); if(Array.isArray(a)) return a.filter(Boolean); }catch{} }
+  return row.media_path ? [row.media_path] : [];
+};
+// Add one image to the draft WITHOUT submitting. status stays 'open' so the GM
+// isn't alerted until the player is actually done.
+const addMissionDraftMedia = ({teamId,missionId,mediaPath}) => {
+  const cur = getSubmission(teamId, missionId);
+  if(cur && cur.status==='accepted') return {alreadyAccepted:true};
+  const list = mediaListOf(cur).concat([mediaPath]);
+  db.prepare('UPDATE team_missions SET status=?,media_path=?,media_paths=?,rejection_message=NULL WHERE team_id=? AND mission_id=?')
+    .run('open', list[0], JSON.stringify(list), teamId, missionId);
+  return {ok:true, list};
+};
+const removeMissionDraftMedia = ({teamId,missionId,mediaPath}) => {
+  const cur = getSubmission(teamId, missionId);
+  if(cur && cur.status==='accepted') return {alreadyAccepted:true};
+  const list = mediaListOf(cur).filter(p => p !== mediaPath);
+  db.prepare('UPDATE team_missions SET media_path=?,media_paths=? WHERE team_id=? AND mission_id=?')
+    .run(list[0]||null, JSON.stringify(list), teamId, missionId);
+  return {ok:true, list};
+};
+// Finalise a draft: hand it to the GM.
+const submitMissionDraft = ({teamId,missionId}) => {
+  const cur = getSubmission(teamId, missionId);
+  if(cur && cur.status==='accepted') return {alreadyAccepted:true};
+  const list = mediaListOf(cur);
+  if(!list.length) return {empty:true};
+  db.prepare('UPDATE team_missions SET status=?,submitted_at=? WHERE team_id=? AND mission_id=?')
+    .run('pending', Date.now(), teamId, missionId);
+  return {ok:true, list};
+};
 const submitMission = ({teamId,missionId,mediaPath}) => {
   // Guard against double-scoring: if a teammate already got this mission
   // accepted, do NOT reset it back to pending — otherwise the GM could accept
   // it a second time and the team would earn the point twice.
   const cur = getSubmission(teamId, missionId);
   if(cur && cur.status==='accepted') return {alreadyAccepted:true};
-  db.prepare('UPDATE team_missions SET status=?,media_path=?,submitted_at=? WHERE team_id=? AND mission_id=?').run('pending',mediaPath,Date.now(),teamId,missionId);
+  db.prepare('UPDATE team_missions SET status=?,media_path=?,media_paths=?,submitted_at=? WHERE team_id=? AND mission_id=?')
+    .run('pending',mediaPath,JSON.stringify([mediaPath]),Date.now(),teamId,missionId);
   return {ok:true};
 };
 const acceptSubmission = id => {
@@ -1483,7 +1531,7 @@ module.exports = {
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
-  submitMission,acceptSubmission,rejectSubmission,
+  submitMission,mediaListOf,addMissionDraftMedia,removeMissionDraftMedia,submitMissionDraft,acceptSubmission,rejectSubmission,
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,
   saveMessage,getMessages,
   getAutoMessages,createAutoMessage,updateAutoMessage,deleteAutoMessage,

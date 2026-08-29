@@ -184,6 +184,18 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
    and never stuck at the non-themeable --surface2 (looked black on a light theme). */
 .md-task{font:500 14px/1.5 var(--body);color:var(--text);padding:12px 14px;background:var(--input-bg,var(--surface2));border:1px solid var(--hairline);border-radius:10px;display:flex;gap:8px;align-items:flex-start;}
 .md-task .arrow{color:var(--orange);font-weight:700;flex-shrink:0;}
+/* Multi-image gallery: taken shots plus one dotted "add" tile. The dotted tile
+   is what tells a player another picture is still expected. */
+.mg-head{font:700 12px/1.4 var(--body);letter-spacing:.04em;margin:18px 0 8px;color:var(--text,#fff);}
+.mg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.mg-cell{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surface2,#222);}
+.mg-cell img{width:100%;height:100%;object-fit:cover;display:block;}
+.mg-cell .mg-del{position:absolute;top:4px;right:4px;width:26px;height:26px;border:0;border-radius:50%;
+  background:rgba(0,0,0,.6);color:#fff;font:700 14px/1 var(--body);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mg-add{display:flex;align-items:center;justify-content:center;border:2px dashed var(--hairline,#555);
+  background:transparent;border-radius:10px;aspect-ratio:1;color:var(--text-dim,#999);font-size:30px;cursor:pointer;}
+.mg-add:hover{color:var(--orange,#E85F1E);border-color:var(--orange,#E85F1E);}
+.mg-err{color:var(--red-light,#f08a8a);font:600 12px/1.4 var(--body);margin-top:8px;}
 .md-actions{display:flex;flex-direction:column;gap:10px;margin-top:22px;}
 .md-actions .md-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 16px;border-radius:10px;font:700 13px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:0;width:100%;}
 /* Detail-modal action buttons follow the same button model as .btn-primary/.btn-secondary. */
@@ -420,6 +432,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
     <div class="md-label" id="md-task-label">Aufgabe</div>
     <div class="md-task"><span class="arrow">→</span><span id="md-task"></span></div>
     <div id="md-state-area"></div>
+    <div id="md-gallery"></div>
     <div class="md-actions" id="md-actions"></div>
   </div>
 </div>
@@ -529,7 +542,7 @@ const T = {
     cam_denied:'Kamerazugriff verweigert',
     capture_failed:'Aufnahme nicht möglich:',
     uploading_review:'Hochgeladen! Wird geprüft…',
-    upload_failed:'Upload fehlgeschlagen',
+    multi_need_min:"Nimm mindestens {n} Bilder auf",multi_need_exact:"Nimm genau {n} Bilder auf",multi_err_min:"Du brauchst mindestens {n} Bilder — du hast erst {have}.",multi_err_exact:"Es müssen genau {n} Bilder sein — du hast {have}.",multi_submit:"Alle abgeben",delete:"Löschen",upload_failed:'Upload fehlgeschlagen',
     already_solved:'Diese Mission wurde bereits von deinem Team gelöst!',
     not_started:'Die Zeit hat noch nicht begonnen. Bitte warten.', pending_note:'Warten auf Bewertung durch den Spielleiter.', accepted_note:'Angenommen!',
     video_too_long:'Video zu lang ({len} s). Maximal {max} s. Bitte kürzer filmen.', video_max_reached:'Maximale Länge erreicht ({max} s) — Aufnahme gestoppt.', file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.',
@@ -553,7 +566,7 @@ const T = {
     cam_denied:'Camera access denied',
     capture_failed:'Recording failed:',
     uploading_review:'Uploaded! Awaiting review…',
-    upload_failed:'Upload failed',
+    multi_need_min:"Take at least {n} images",multi_need_exact:"Take exactly {n} images",multi_err_min:"You need at least {n} images — you have {have} so far.",multi_err_exact:"It has to be exactly {n} images — you have {have}.",multi_submit:"Submit all",delete:"Delete",upload_failed:'Upload failed',
     already_solved:'This mission was already solved by your team!', not_started:'The time hasn’t started yet. Please wait.', pending_note:'Waiting for the Gamemaster to review.', accepted_note:'Accepted!',
     video_too_long:'Video too long ({len} s). Max {max} s. Please film a shorter clip.', video_max_reached:'Maximum length reached ({max} s) — recording stopped.', file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.',
     broadcast:'Broadcast',
@@ -575,7 +588,7 @@ const T = {
     cam_denied:'Accès caméra refusé',
     capture_failed:'Échec de l\'enregistrement :',
     uploading_review:'Envoyé ! En attente de validation…',
-    upload_failed:'Échec de l\'envoi',
+    multi_need_min:"Prends au moins {n} images",multi_need_exact:"Prends exactement {n} images",multi_err_min:"Il te faut au moins {n} images — tu n’en as que {have}.",multi_err_exact:"Il faut exactement {n} images — tu en as {have}.",multi_submit:"Tout envoyer",delete:"Supprimer",upload_failed:'Échec de l\'envoi',
     already_solved:'Cette mission a déjà été résolue par votre équipe !',
     not_started:'Le temps n’a pas encore commencé. Merci de patienter.', pending_note:'En attente de validation par le Gamemaster.', accepted_note:'Accepté !',
     video_too_long:'Vidéo trop longue ({len} s). Max {max} s. Filme plus court.', video_max_reached:'Durée maximale atteinte ({max} s) — enregistrement arrêté.', file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.',
@@ -598,7 +611,7 @@ const T = {
     cam_denied:'Accesso fotocamera negato',
     capture_failed:'Registrazione non riuscita:',
     uploading_review:'Caricato! In attesa di revisione…',
-    upload_failed:'Caricamento fallito',
+    multi_need_min:"Scatta almeno {n} immagini",multi_need_exact:"Scatta esattamente {n} immagini",multi_err_min:"Servono almeno {n} immagini — per ora ne hai {have}.",multi_err_exact:"Devono essere esattamente {n} immagini — ne hai {have}.",multi_submit:"Invia tutto",delete:"Elimina",upload_failed:'Caricamento fallito',
     already_solved:'Questa missione è già stata completata dalla tua squadra!',
     not_started:'Il tempo non è ancora iniziato. Attendi.', pending_note:'In attesa di revisione del Gamemaster.', accepted_note:'Accettato!',
     video_too_long:'Video troppo lungo ({len} s). Max {max} s. Filma più corto.', video_max_reached:'Durata massima raggiunta ({max} s) — registrazione interrotta.', file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.',
@@ -622,7 +635,7 @@ const T = {
     cam_denied:'Acceso a la cámara denegado',
     capture_failed:'Grabación fallida:',
     uploading_review:'¡Subido! Pendiente de revisión…',
-    upload_failed:'Subida fallida',
+    multi_need_min:"Haz al menos {n} imágenes",multi_need_exact:"Haz exactamente {n} imágenes",multi_err_min:"Necesitas al menos {n} imágenes — solo tienes {have}.",multi_err_exact:"Tienen que ser exactamente {n} imágenes — tienes {have}.",multi_submit:"Enviar todo",delete:"Eliminar",upload_failed:'Subida fallida',
     already_solved:'¡Esta misión ya fue resuelta por tu equipo!',
     not_started:'El tiempo aún no ha comenzado. Espera, por favor.', pending_note:'Esperando la revisión del Gamemaster.', accepted_note:'¡Aceptado!',
     video_too_long:'Vídeo demasiado largo ({len} s). Máx {max} s. Graba más corto.', video_max_reached:'Duración máxima alcanzada ({max} s) — grabación detenida.', file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.',
@@ -992,6 +1005,72 @@ function missionCard(m) {
 // user direction — keep the opening mechanic for missions, larger view
 // for ease of reading.
 let _openMissionId = null;
+// ── Multi-image missions ────────────────────────────────────────────────────
+// Shots are uploaded as they are taken, so leaving the screen (or a reload, or
+// a teammate on another phone) never loses them. The mission stays "open" until
+// the player submits, so the GM is alerted exactly once.
+function mgList(m){
+  if(!m) return [];
+  if(m.media_paths){ try{ const a=JSON.parse(m.media_paths); if(Array.isArray(a)) return a.filter(Boolean); }catch(e){} }
+  return m.media_path ? [m.media_path] : [];
+}
+function mgNeedText(m){
+  const n = m.multi_count || 2;
+  const key = (m.multi_mode === "exact") ? "multi_need_exact" : "multi_need_min";
+  return (t(key)||"").replace("{n}", n);
+}
+// Draw the gallery into the mission detail. Called on open and after every
+// add/delete so the tile count always matches the server.
+function mgRender(m){
+  const box = document.getElementById("md-gallery");
+  if(!box) return;
+  const list = mgList(m);
+  const done = (m.status === "pending" || m.status === "accepted");
+  const cells = list.map(function(pth,i){
+    const src = "/uploads/" + pth;
+    const del = done ? "" :
+      '<button class="mg-del" title="' + esc(t("delete")||"Delete") + '" onclick="event.stopPropagation();mgDelete(' + m.mission_id + ',\'' + pth + '\')">×</button>';
+    return '<div class="mg-cell"><img src="' + src + '" alt="" onclick="openLightbox(\'' + src + '\',false)">' + del + '</div>';
+  });
+  if(!done) cells.push('<button class="mg-add" onclick="mgAdd(' + m.mission_id + ')">+</button>');
+  box.innerHTML = '<div class="mg-head">' + esc(mgNeedText(m)) + ' (' + list.length + ')</div>' +
+                  '<div class="mg-grid">' + cells.join("") + '</div>' +
+                  '<div class="mg-err" id="mg-err" style="display:none;"></div>';
+}
+function mgAdd(missionId){
+  if(!ensureTimerStarted()) return;
+  const m = _missionMap[missionId];
+  closeMissionDetail();
+  openCamera(missionId, (m && m.media_type) || "photo");
+}
+async function mgDelete(missionId, pth){
+  const m = _missionMap[missionId];
+  if(!m) return;
+  try{
+    const r = await fetch("/api/games/"+gameId+"/teams/"+teamId+"/missions/"+missionId+"/media?path="+encodeURIComponent(pth), {method:"DELETE"}).then(function(x){return x.json();});
+    if(r && r.media){ m.media_paths = JSON.stringify(r.media); m.media_path = r.media[0]||null; mgRender(m); }
+  }catch(e){ toast(t("upload_failed")||"Fehler","error"); }
+}
+// Submit the whole gallery. The server enforces the count as well, so a stale
+// page cannot get past it.
+async function mgSubmit(missionId){
+  if(!ensureTimerStarted()) return;
+  const err = document.getElementById("mg-err");
+  try{
+    const res = await fetch("/api/games/"+gameId+"/teams/"+teamId+"/missions/"+missionId+"/submit", {method:"POST"});
+    const j = await res.json().catch(function(){return {};});
+    if(res.ok){ closeMissionDetail(); toast(t("uploading_review")||"Hochgeladen!","success"); loadMissions(); return; }
+    if(j && j.code === "count_not_met"){
+      const key = j.mode === "exact" ? "multi_err_exact" : "multi_err_min";
+      const msg = (t(key)||"").replace("{n}", j.need).replace("{have}", j.have);
+      if(err){ err.textContent = msg; err.style.display = "block"; }
+      else toast(msg, "error");
+      return;
+    }
+    if(res.status === 403){ showCenterNotice(t("not_started")||"Die Zeit hat noch nicht begonnen."); return; }
+    toast(t("upload_failed")||"Upload fehlgeschlagen","error");
+  }catch(e){ toast(t("upload_failed")||"Upload fehlgeschlagen","error"); }
+}
 function openMissionDetail(missionId) {
   const m = _missionMap[missionId];
   if (!m) return;
@@ -1016,7 +1095,8 @@ function openMissionDetail(missionId) {
   if (status === 'pending')  stateArea.innerHTML = `<div class="md-state-note pending">${esc(t('pending_note')||'Warten auf Bewertung durch den Spielleiter.')}</div>`;
   else if (status === 'accepted') stateArea.innerHTML = `<div class="md-state-note accepted">${esc(t('accepted_note')||'Angenommen!')} +${m.points} PT</div>`;
   else if (status === 'rejected' && m.rejection_message) stateArea.innerHTML = `<div class="md-state-note rejected">${esc(m.rejection_message)}</div>`;
-  if (m.media_path && (status==='pending' || status==='accepted')) {
+  if (m.multi_enabled) { /* gallery below shows every shot */ } else if (m.media_path && (status==='pending' || status==='accepted')) {
+  
     const src = `/uploads/${m.media_path}`;
     const isVid = m.media_type === 'video';
     stateArea.innerHTML += `<div class="md-thumb">${isVid
@@ -1026,8 +1106,19 @@ function openMissionDetail(missionId) {
 
   // Action buttons — open or rejected gets Take photo/video + Upload.
   // Pending or accepted gets nothing (the state note covers it).
+  // Multi-image mission: the gallery replaces the single capture/upload pair.
+  const gal = document.getElementById('md-gallery');
+  if (gal) gal.innerHTML = '';
+  if (m.multi_enabled) mgRender(m);
   const actions = document.getElementById('md-actions');
-  if (status === 'open' || status === 'rejected') {
+  if (m.multi_enabled && (status === 'open' || status === 'rejected')) {
+    // Capture happens from the gallery tiles; the only action here is to hand
+    // the finished set to the GM.
+    actions.innerHTML =
+      '<button type="button" class="md-btn md-btn--primary" onclick="mgSubmit(' + m.mission_id + ')">' +
+      '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
+      esc(t('multi_submit')||'Submit') + '</button>';
+  } else if (status === 'open' || status === 'rejected') {
     const captureLbl = m.media_type === 'video' ? (t('take_video')||'Take video') : (t('take_photo')||'Take photo');
     const captureIcon = m.media_type === 'video'
       ? `<svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`
@@ -1354,6 +1445,14 @@ async function doUpload() {
   xhr.onload = () => {
     if (ub) ub.style.display = 'none';
     if (xhr.status === 200) {
+      // A multi-image upload is only a draft: refresh and drop the player back
+      // into the gallery so they can see the new tile and add the next one.
+      let _r = null; try { _r = JSON.parse(xhr.responseText||'{}'); } catch(e) {}
+      if (_r && _r.draft) {
+        const _mid = currentMissionId;
+        loadMissions().then(function(){ openMissionDetail(_mid); });
+        return;
+      }
       toast(t('uploading_review')||'Hochgeladen! Wird geprüft…', 'success');
       // Repaint from server truth (status is now 'pending'). The old code
       // hand-patched a non-existent `mf-` footer and only flipped the card

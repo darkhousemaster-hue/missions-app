@@ -913,6 +913,40 @@ app.get('/api/games/:gameId/freezes', (req,res) => {
   res.json(db.listFreezesForGame(req.params.gameId));
 });
 
+// ── Multi-image drafts ───────────────────────────────────────────────────────
+// Remove one shot from a draft. A player can leave and re-enter the gallery at
+// will; a picture only disappears when they delete it here.
+app.delete('/api/games/:gameId/teams/:teamId/missions/:missionId/media', (req,res) => {
+  const {gameId,teamId,missionId}=req.params;
+  const mediaPath = String((req.query && req.query.path) || (req.body && req.body.path) || '');
+  if(!mediaPath || !mediaPath.startsWith(gameId+'/')) return res.status(400).json({error:'bad path'});
+  const r = db.removeMissionDraftMedia({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
+  if(r && r.alreadyAccepted) return res.status(409).json({error:'Already completed'});
+  try{ fs.unlinkSync(path.join(UPLOAD_DIR, mediaPath)); }catch(e){}
+  res.json({success:true, media:r.list});
+});
+// Finalise a draft. The rule is enforced here too, so a stale page cannot
+// bypass the required count.
+app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/submit', (req,res) => {
+  const {gameId,teamId,missionId}=req.params;
+  if(timerNotStarted(gameId)) return res.status(403).json({error:'not_started'});
+  if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
+  const m = db.getMission(Number(missionId));
+  const sub = db.getSubmission(Number(teamId), Number(missionId));
+  const have = db.mediaListOf(sub).length;
+  const need = Math.max(2, parseInt(m && m.multi_count,10)||2);
+  const exact = !!(m && m.multi_mode === 'exact');
+  if(m && m.multi_enabled){
+    if(have < need || (exact && have > need)){
+      return res.status(400).json({error:'count', code:'count_not_met', have, need, mode: exact?'exact':'min'});
+    }
+  }
+  const r = db.submitMissionDraft({teamId:Number(teamId),missionId:Number(missionId)});
+  if(r && r.alreadyAccepted) return res.status(409).json({error:'Already completed', code:'already_completed'});
+  if(r && r.empty) return res.status(400).json({error:'empty', code:'count_not_met', have:0, need, mode: exact?'exact':'min'});
+  io.to(`gm_${gameId}`).emit('submission_new',{teamId:Number(teamId),missionId:Number(missionId),mediaPath:r.list[0]});
+  res.json({success:true, media:r.list});
+});
 app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
   upload.single('media'), (req,res) => {
     const {gameId,teamId,missionId}=req.params;
@@ -924,6 +958,20 @@ app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
     }
     if(!req.file) return res.status(400).json({error:'No file'});
     const mediaPath=`${gameId}/${req.file.filename}`;
+    // Multi-image missions collect their shots as a DRAFT first: each upload is
+    // stored but the mission stays 'open', so the GM is alerted once, when the
+    // player finally submits. Uploading straight away (rather than holding the
+    // blobs in the browser) is what lets a shot survive leaving the screen, a
+    // reload, or a teammate picking up on another phone.
+    const _mm = db.getMission(Number(missionId));
+    if(_mm && _mm.multi_enabled){
+      const r = db.addMissionDraftMedia({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
+      if(r && r.alreadyAccepted){
+        try{ fs.unlinkSync(path.join(UPLOAD_DIR, mediaPath)); }catch(e){}
+        return res.status(409).json({error:'Already completed', code:'already_completed'});
+      }
+      return res.json({success:true, draft:true, mediaPath, media:r.list});
+    }
     const result=db.submitMission({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
     if(result && result.alreadyAccepted){
       // A teammate already got this mission accepted — discard this duplicate
