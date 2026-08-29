@@ -3108,7 +3108,11 @@ function renderTeamMissions(missions){
       // Hand the whole set to the viewer so the GM can page through it.
       let _all = null;
       try { const _a = JSON.parse(m.media_paths||"null"); if(Array.isArray(_a) && _a.length>1) _all = _a.map(x=>"/uploads/"+x); } catch(e) {}
-      const _arg = _all ? JSON.stringify(_all) : `'${src}'`;
+      // Single quotes only: this lands inside onclick="...", so JSON.stringify's
+      // double quotes would close the attribute and kill the handler — which is
+      // exactly what stopped a multi-image thumbnail from opening.
+      const _q = v => "'" + String(v).replace(/'/g, "\'") + "'";
+      const _arg = _all ? '[' + _all.map(_q).join(',') + ']' : _q(src);
       const lb = `openLightbox(${_arg},${isVideo},{rotateUrl:'/api/submissions/${m.id}/rotate',rotation:${rot}})`;
       const media = isVideo
         ? `<video src="${src}" muted preload="metadata"${rotStyle} onclick="event.stopPropagation();${lb}" title="${gmt('open-lightbox')||'Enlarge'}"></video>`
