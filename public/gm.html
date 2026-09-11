@@ -2285,7 +2285,12 @@ async function renderModeTiles(locationId){
     const scrim=(hasImg&&showTitle)?'<div class="mode-card-scrim"></div>':'';
     const col=m.tile_title_color?` style="color:${esc(m.tile_title_color)}"`:'';
     const title=showTitle?`<div class="mode-card-title"${col}>${esc(m.name)}</div>`:'';
-    return `<div class="mode-card${hasImg?' mode-card--img':''}" role="button" tabindex="0" title="${esc(m.name)}" aria-label="${esc(m.name)}"
+    // A native tooltip only earns its place when the name is NOT on the tile.
+    // Over a visible title it just repeats it, which reads as a rendering
+    // glitch on hover and fires on long-press on touch. aria-label stays
+    // either way so the tile always has an accessible name.
+    const tip = showTitle ? '' : ` title="${esc(m.name)}"`;
+    return `<div class="mode-card${hasImg?' mode-card--img':''}" role="button" tabindex="0"${tip} aria-label="${esc(m.name)}"
       onclick="selectGameMode(${m.id},'${esc(m.name)}')"
       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGameMode(${m.id},'${esc(m.name)}')}">${img}${scrim}${title}</div>`;
   }).join('');
