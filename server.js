@@ -384,7 +384,7 @@ app.get('/api/update/check', async (req, res) => {
 app.get('/api/modes', (req,res) => res.json(db.getModes()));
 app.post('/api/modes', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60, req.body.location_id);
+  const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60, req.body.location_id, {tile_show_title: req.body.tile_show_title, tile_title_color: req.body.tile_title_color});
   if(req.body.no_randomize !== undefined) db.setModeNoRandomize(id, req.body.no_randomize);
   res.json({id,success:true});
 });
@@ -393,6 +393,45 @@ app.post('/api/modes', (req,res) => {
 app.put('/api/modes/reorder', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.reorderModes(Array.isArray(req.body.order) ? req.body.order : []);
+  res.json({success:true});
+});
+// Tile artwork for the new-game mode picker. Stored under uploads/modes/ and
+// recorded on the mode itself. Replacing or clearing removes the old file so
+// swapped-out artwork doesn't pile up in the uploads folder.
+function _dropModeTile(mode){
+  const old = mode && mode.tile_image;
+  if(!old || String(old).includes('..')) return;
+  try { fs.unlinkSync(path.join(UPLOAD_DIR, old)); } catch(e) {}
+}
+// Raster images only. An uploaded file is served back from this origin, and
+// an SVG opened directly would run its own script there; a tile never needs
+// one, so the whole class is refused rather than sanitised.
+const TILE_TYPES = new Set(['image/png','image/jpeg','image/webp','image/gif']);
+app.post('/api/modes/:id/tile-image', upload.single('image'), (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(!req.file) return res.status(400).json({error:'No file'});
+  if(!TILE_TYPES.has(String(req.file.mimetype||'').toLowerCase())){
+    try{ fs.unlinkSync(req.file.path); }catch(e){}
+    return res.status(400).json({error:'Unsupported image type'});
+  }
+  const mode = db.getMode(Number(req.params.id));
+  if(!mode){ try{ fs.unlinkSync(req.file.path); }catch(e){} return res.status(404).json({error:'Mode not found'}); }
+  const destDir = path.join(UPLOAD_DIR,'modes');
+  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
+  const dest = path.join(destDir, req.file.filename);
+  try { fs.renameSync(req.file.path, dest); }
+  catch(e){ fs.copyFileSync(req.file.path,dest); fs.unlinkSync(req.file.path); }
+  _dropModeTile(mode);
+  const rel = `modes/${req.file.filename}`;
+  db.setModeTileImage(mode.id, rel);
+  res.json({success:true, tile_image: rel});
+});
+app.delete('/api/modes/:id/tile-image', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  const mode = db.getMode(Number(req.params.id));
+  if(!mode) return res.status(404).json({error:'Mode not found'});
+  _dropModeTile(mode);
+  db.setModeTileImage(mode.id, null);
   res.json({success:true});
 });
 app.put('/api/modes/:id', (req,res) => {

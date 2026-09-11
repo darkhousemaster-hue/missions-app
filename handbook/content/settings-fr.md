@@ -285,19 +285,42 @@ de base, car ils ne sont pas traduits automatiquement.
 
 # Limiter un mode à un seul lieu
 
-Par défaut, chaque mode apparaît dans la liste déroulante de chaque
-lieu. Dès que chaque lieu a ses propres modes, cela devient confus — et
+Par défaut, chaque mode apparaît dans le sélecteur de mode de chaque
+lieu. Dès que chaque lieu a ses propres modes, cela devient confus, et
 choisir le mauvais mode produit une partie vide, car les missions
 appartiennent à un autre lieu.
 
 Chaque mode dispose donc du réglage **Disponible à** :
 
-- **Tous les sites** (par défaut) — comportement inchangé.
-- **Un site précis** — le mode n'apparaît plus que dans la liste de ce
-  lieu.
+- **Tous les sites** (par défaut) : comportement inchangé.
+- **Un site précis** : le mode n'apparaît plus que dans le sélecteur de
+  ce lieu.
 
 Le mode par défaut reste sans restriction, afin que chaque lieu ait
 toujours au moins un mode disponible.
+
+# L'apparence de la tuile de mode
+
+::shot:m-06-mode-edit
+
+Dans l'éditeur de mode (✎ sur l'onglet du mode), trois champs pilotent
+l'apparence de la tuile dans le sélecteur. Un aperçu en direct juste
+au-dessus montre exactement ce que verra le maître du jeu.
+
+- **Image de la tuile** : le visuel de cette tuile. Sans image, la
+  tuile reste sobre. L'image choisie n'est appliquée qu'au moment du
+  **Enregistrer** ; **Annuler** ne change donc rien. **Supprimer
+  l'image** remet la tuile en sobre.
+- **Titre sur la tuile** : activé, le nom du mode s'affiche sur la
+  tuile. Désactive-le si le nom fait déjà partie du visuel ; le voile
+  sombre posé sur l'image disparaît alors aussi.
+- **Couleur du titre** : la couleur du nom sur la tuile. **Par défaut**
+  la remet sur la couleur de texte du thème, la tuile suit alors
+  automatiquement le thème actif.
+
+Une image en format paysage d'environ 600 × 380 pixels convient bien.
+Elle est recadrée pour remplir la tuile, garde donc l'essentiel au
+centre.
 
 ::part:3:Configuration Rail Adventure
 

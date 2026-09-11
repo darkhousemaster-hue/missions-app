@@ -43,6 +43,27 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .location-card--cr{background:linear-gradient(160deg,rgba(232,95,30,0.10),rgba(232,95,30,0.02));border-color:rgba(232,95,30,0.32);color:var(--orange);flex-direction:row;min-height:64px;padding:.85rem 1rem;gap:.65rem;}
 .location-card--cr:hover{background:linear-gradient(160deg,rgba(232,95,30,0.14),rgba(232,95,30,0.04));border-color:rgba(232,95,30,0.55);}
 .location-card--cr .ll-icon{color:var(--orange);}
+/* Mode tiles: the new-game mode picker (v2.6.0). A <select> let GMs start
+   a game on whatever mode happened to be first in the list; a tile has to be
+   aimed at, so it is deliberately larger than a location tile and can carry
+   its own artwork. */
+.mode-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.75rem;width:100%;}
+.mode-card{position:relative;overflow:hidden;min-height:148px;padding:1.1rem;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background .15s,transform .15s;display:flex;align-items:center;justify-content:center;text-align:center;}
+.mode-card:hover{border-color:rgba(255,255,255,0.18);background:var(--surface2);transform:translateY(-1px);}
+.mode-card:focus-visible{outline:2px solid var(--orange);outline-offset:2px;}
+.mode-card-img{position:absolute;top:0;right:0;bottom:0;left:0;background-size:cover;background-position:center;}
+/* Scrim: only painted when artwork AND a title share the tile, so a GM who
+   baked the title into the image gets the artwork unmuddied. */
+.mode-card-scrim{position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(180deg,rgba(0,0,0,0.12),rgba(0,0,0,0.58));}
+.mode-card-title{position:relative;font:700 1.05rem/1.25 var(--body);letter-spacing:.05em;text-transform:uppercase;color:var(--text);overflow-wrap:anywhere;}
+.mode-card--img .mode-card-title{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.65);}
+/* Colour swatch in the mode editor. A bare <input type="color"> renders with
+   browser chrome that clashes with the styled inputs around it, so strip the
+   frame and keep only the swatch. */
+#mode-title-color{-webkit-appearance:none;appearance:none;width:52px;height:32px;padding:0;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;}
+#mode-title-color::-webkit-color-swatch-wrapper{padding:3px;}
+#mode-title-color::-webkit-color-swatch{border:none;border-radius:3px;}
+#mode-title-color::-moz-color-swatch{border:none;border-radius:3px;}
 /* Game-select — mid-flow screen between landing and dashboard.
    Two sections: a "start a new game" form card (selects + CTA), and
    a grid of recent games. Cards mirror the landing-tile treatment
@@ -512,6 +533,26 @@ body.sel-cr #crms-toolbar{display:flex !important;}
   <button class="btn btn-ghost btn-sm" onclick="showSettingsGate()">⚙ <span id="ll-settings">Einstellungen</span></button>
 </div>
 
+<!-- MODE SELECT: the picker that replaced the mode dropdown (v2.6.0).
+     Tiles are built by renderModeTiles(); each carries the mode name and,
+     optionally, GM-uploaded artwork. -->
+<div id="screen-mode-select" style="display:none;flex:1;flex-direction:column;overflow-y:auto;">
+  <div class="gs-inner">
+    <div class="gs-header">
+      <div class="gs-header-left">
+        <span class="gs-kicker" id="msel-kicker"></span>
+        <h2 id="msel-location-name"></h2>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-landing')">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        <span id="msel-back">Zurück</span>
+      </button>
+    </div>
+    <div class="ll-section-title" id="msel-pick">Spielmodus wählen</div>
+    <div id="mode-grid" class="mode-grid"></div>
+  </div>
+</div>
+
 <!-- GAME SELECT -->
 <div id="screen-game-select" style="display:none;flex:1;flex-direction:column;overflow-y:auto;">
   <div class="gs-inner">
@@ -520,16 +561,12 @@ body.sel-cr #crms-toolbar{display:flex !important;}
         <span class="gs-kicker" id="gs-kicker">Standort</span>
         <h2 id="gs-location-name"></h2>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-landing')">
+      <button class="btn btn-ghost btn-sm" onclick="gsBack()">
         <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         <span id="gs-back">Zurück</span>
       </button>
     </div>
     <div class="gs-form-card">
-      <div class="field" id="mode-select-wrap">
-        <label class="label" id="gs-mode-label" for="mode-select">Spielmodus</label>
-        <select id="mode-select" class="select"></select>
-      </div>
       <div class="field" id="cr-mode-select-wrap">
         <label class="label" id="gs-cr-mode-label" for="cr-mode-select">Rail Adventure Modus</label>
         <select id="cr-mode-select" class="select">
@@ -538,7 +575,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       </div>
       <button class="btn btn-primary btn-full btn-lg" onclick="createNewGame()" id="btn-new-game">
         <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span id="gs-new">Neues Spiel</span>
+        <span id="gs-new-txt">Neues Spiel</span>
       </button>
     </div>
     <div class="gs-section-head">
@@ -1391,7 +1428,7 @@ const GMT={
   'tip-cr-answer':'Korrekte Antwort(en) — Vergleich ist tolerant gegenüber Groß-/Kleinschreibung und Leerzeichen.',
   'tip-cr-hint':'Optionaler Text, der angezeigt wird, solange die Spieler noch zum Ziel laufen.',
   'tip-cr-hide-until-arrival':'Beschreibung und Aufgabe werden erst nach Ankunft am Ziel angezeigt.',
-  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-pick':'Standort wählen','ll-cr-pick':'Oder eine Rail Adventure Route','ll-tagline':'Adventurerooms · Spielleiter','ll-empty':'Keine Standorte.','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-cr-mode-label':'Rail Adventure Modus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','gs-new-cr':'Rail Adventure starten','gs-kicker-loc':'Standort','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Modus wählen','gs-open':'Öffnen','gs-st-paused':"pausiert",'gs-st-ended':'beendet','gs-st-playing':'läuft','gs-st-waiting':'wartet','gs-none':'Noch keine Spiele.','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-kicker':'Spiel erstellt','ng-title':'Übergib den Code','ng-subtitle':'Spieler treten dem Spiel bei, indem sie den QR-Code scannen oder den Link auf ihrem Handy öffnen. Sie wählen einen Teamnamen und machen ein Selfie — sobald sie drin sind, erscheinen sie im Dashboard.','ng-game-id-label':'Spiel-ID','ng-join-url-label':'Beitrittslink','ng-qr-hint':'Zum Beitreten scannen','ng-qr-dl':'QR','ng-copy-1':'Kopieren','ng-copy-2':'Kopieren','ng-copied':'Kopiert!','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','tab-map-label':'Karte','chat-reply-to':'Antwort an','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemein','s-gen-subtitle':'App-weite Konfiguration. Die meisten Teams ändern diese Einstellungen nur einmal beim Setup.','s-unlocked':'Entsperrt','sg-app':'App','sg-games':'Spiele','s-url-help':'Der Cloudflare-Tunnel, über den Spieler beitreten. „Erkennen" liest tunnel-url.txt.','s-timeout-help':'Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.','s-gh-label':'GitHub-Repo-URL','s-gh-help':'Wird vom In-App-Updater für git pull und das Versions-Badge verwendet.','s-sound-label':'Ton bei Annahme','s-sound-help':'Spielt einen kurzen Ton, wenn der GM eine Einreichung annimmt.','s-sound-on':'Aktiviert','s-sound-perm':'Browser-Berechtigung beim ersten Klick erforderlich.','s-loc-lang-title':'Standardsprache wird <em>pro Standort</em> gesetzt','s-cancel':'Abbrechen','st-manuals':'Handbücher','s-manuals-title':'Handbücher','s-manuals-subtitle':'Lade hier die PDF-Handbücher in deiner Sprache herunter.','s-manuals-lang':'Sprache','s-manuals-lang-help':'Nur Handbücher in dieser Sprache anzeigen.','no-manuals-yet':'Noch keine Handbücher in dieser Sprache verfügbar.','s-update-hint':'Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe Allgemein) und startet den Server neu.','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','updating':'Aktualisiere…','selfie-uploaded':'Selfie hochgeladen','s-collage-title':'Collage-Timing','s-collage-subtitle':'Steuert das Tempo des Foto-Collage-Videos am Spielende.','s-collage-photo-label':'Fotodauer (Sekunden)','s-collage-photo-help':'Wie lange jedes Team-Foto angezeigt wird.','s-collage-cover-label':'Titelbild-Dauer (Sekunden)','s-collage-cover-help':'Wie lange die Team-Titelkarte (Selfie + Name) angezeigt wird.','s-collage-xfade-label':'Überblendung (Sekunden)','s-collage-xfade-help':'Dauer der Überblendung zwischen Bildern. 0 = harte Schnitte.','s-collage-save':'Speichern','st-profanity-label':'Wortfilter','s-prof-title':'Wortfilter für Teamnamen','s-prof-subtitle':'Blockt anstößige Teamnamen. Eine mehrsprachige Standardliste ist eingebaut; eigene Wörter kannst du unten ergänzen.','s-prof-enabled-label':'Filter aktiviert','s-prof-enabled-help':'Wenn deaktiviert, werden Teamnamen nicht geprüft.','s-prof-words-label':'Eigene gesperrte Wörter','s-prof-words-help':'Ein Wort pro Zeile (oder durch Komma getrennt). Groß-/Kleinschreibung, Akzente und Leetspeak werden automatisch erkannt. Ganze Wörter werden gesperrt, nicht Wortteile.','s-prof-save':'Speichern',
+  'tip-cr-hints':'Tipps, die Spieler einzeln aufrufen können, falls sie nicht weiterkommen.','ll-select':'Standort wählen','ll-pick':'Standort wählen','ll-cr-pick':'Oder eine Rail Adventure Route','ll-tagline':'Adventurerooms · Spielleiter','ll-empty':'Keine Standorte.','ll-settings':'Einstellungen','gs-back':'Zurück','gs-mode-label':'Spielmodus','gs-cr-mode-label':'Rail Adventure Modus','gs-recent':'Letzte Spiele','gs-new':'Neues Spiel','gs-new-cr':'Rail Adventure starten','gs-kicker-loc':'Standort','msel-pick':'Spielmodus wählen','msel-back':'Zurück','msel-empty':'Keine Modi für diesen Standort.','gs-start':'Spiel starten','pick-mode':'Bitte einen Modus wählen','mode-tile-label':'Kachelbild','mode-tile-tip':'Bild für die Kachel dieses Modus im Modus-Wähler. Ohne Bild bleibt die Kachel schlicht.','mode-tile-pick':'Bild wählen','mode-tile-replace':'Bild ersetzen','mode-tile-remove':'Bild entfernen','mode-tile-preview':'Vorschau','mode-tile-save-hint':'Das Bild wird beim Speichern übernommen.','mode-title-show':'Titel auf der Kachel','mode-title-show-sub':'Ausschalten, wenn der Name schon Teil des Bildes ist.','mode-title-show-tip':'Zeigt den Modus-Namen über der Kachel. Ausschalten, wenn der Name bereits ins Bild eingebaut ist.','mode-title-color':'Titelfarbe','mode-title-color-tip':'Farbe des Modus-Namens auf der Kachel. „Standard“ folgt dem Theme.','mode-title-color-reset':'Standard','upload-failed':'Upload fehlgeschlagen','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Modus wählen','gs-open':'Öffnen','gs-st-paused':"pausiert",'gs-st-ended':'beendet','gs-st-playing':'läuft','gs-st-waiting':'wartet','gs-none':'Noch keine Spiele.','ng-title':'Neues Spiel erstellt','ng-back':'Zurück','ng-kicker':'Spiel erstellt','ng-title':'Übergib den Code','ng-subtitle':'Spieler treten dem Spiel bei, indem sie den QR-Code scannen oder den Link auf ihrem Handy öffnen. Sie wählen einen Teamnamen und machen ein Selfie — sobald sie drin sind, erscheinen sie im Dashboard.','ng-game-id-label':'Spiel-ID','ng-join-url-label':'Beitrittslink','ng-qr-hint':'Zum Beitreten scannen','ng-qr-dl':'QR','ng-copy-1':'Kopieren','ng-copy-2':'Kopieren','ng-copied':'Kopiert!','ng-template':'Mit Vorlage','ng-open':'Dashboard öffnen','db-games':'Spiele','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Team auswählen','tab-map-label':'Karte','chat-reply-to':'Antwort an','db-broadcast-info':'Nachricht an alle Teams senden.','db-broadcast':'An alle senden','db-rankings':'RANGLISTE','sg-title':'Einstellungen','sg-pw-label':'Passwort','sg-back':'Zurück','sg-unlock':'Entsperren','s-back':'Zurück','s-title':'EINSTELLUNGEN','st-general':'Allgemein','st-locations':'Standorte','st-missions':'MiSSiONS','st-rules':'Regeln','st-template':'QR-Vorlage','st-security':'Sicherheit','st-updates':'Updates','s-gen-title':'Allgemein','s-gen-subtitle':'App-weite Konfiguration. Die meisten Teams ändern diese Einstellungen nur einmal beim Setup.','s-unlocked':'Entsperrt','sg-app':'App','sg-games':'Spiele','s-url-help':'Der Cloudflare-Tunnel, über den Spieler beitreten. „Erkennen" liest tunnel-url.txt.','s-timeout-help':'Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.','s-gh-label':'GitHub-Repo-URL','s-gh-help':'Wird vom In-App-Updater für git pull und das Versions-Badge verwendet.','s-sound-label':'Ton bei Annahme','s-sound-help':'Spielt einen kurzen Ton, wenn der GM eine Einreichung annimmt.','s-sound-on':'Aktiviert','s-sound-perm':'Browser-Berechtigung beim ersten Klick erforderlich.','s-loc-lang-title':'Standardsprache wird <em>pro Standort</em> gesetzt','s-cancel':'Abbrechen','st-manuals':'Handbücher','s-manuals-title':'Handbücher','s-manuals-subtitle':'Lade hier die PDF-Handbücher in deiner Sprache herunter.','s-manuals-lang':'Sprache','s-manuals-lang-help':'Nur Handbücher in dieser Sprache anzeigen.','no-manuals-yet':'Noch keine Handbücher in dieser Sprache verfügbar.','s-update-hint':'Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe Allgemein) und startet den Server neu.','s-url-label':'Öffentliche URL','s-detect':'Erkennen','s-url-hint':'Starte start-tunnel-windows.bat, dann Erkennen.','s-timeout-label':'Timeout-Nachricht','s-save':'Speichern','s-add-loc':'+ Standort','s-mode-label':'Modus:','s-add-mode':'+ Modus','s-add-mission':'+ MiSSiON','s-rules-title':'Regeln','s-add-rule':'+ Regel','s-rules-hint':'Platzhalter: [photo] [video] [indoor]. Ziehen zum Umsortieren.','s-rules-save':'Speichern','s-tpl-title':'QR-Vorlage','s-tpl-size-label':'Papiergröße','s-tpl-upload-label':'Vorlage hochladen','s-tpl-drag-hint':'QR-Platzhalter ziehen.','s-tpl-save':'Position speichern','s-tpl-delete':'Vorlage löschen','s-sec-title':'Passwort ändern','s-sec-old':'Aktuelles Passwort','s-sec-new':'Neues Passwort','s-sec-new2':'Bestätigen','s-sec-save':'Aktualisieren','rej-title':'Abgelehnt','rej-hint':'Medium wird gelöscht.','rej-reason-label':'Begründung','rej-confirm':'Ablehnen','qrm-title':'QR-Code','s-add-rs':'＋ Regelwerk','ruleset-label':'Regelwerk','paper-size':'Papiergröße','update-title':'App aktualisieren','update-btn':'Jetzt aktualisieren','update-log':'Ausgabe','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Spiele','chat-ph-gm':'Nachricht…','qrm-close':'Schließen','ng-qr-download':'⬇ QR','qrm-download':'⬇ QR herunterladen','cancel':'Abbrechen','create':'Erstellen','save':'Speichern','edit':'Bearbeiten','delete':'Löschen','copy':'Kopieren','rule':'Regel','add-mode':'＋ Modus','edit-mode':'Modus bearbeiten','min-label':'Minuten','per-game':'pro Spiel','pool':'Pool (alle Standorte)','mission-name-label':'Name der MiSSiON','loc-label':'Standort','media-label':'Medientyp','indoor-label':'Auch drinnen möglich','desc-label':'Beschreibung','task-label':'Aufgabe','auto-translate':'🌐 Automatisch übersetzen','no-rules':'Noch keine Regeln.','created':'Erstellt!','saved':'Gespeichert!','wrong-pw':'Falsches Passwort.','del':'Löschen','no-missions':'Keine MiSSiONS.','all':'Alle','translating':'Übersetze…','translated':'Übersetzt!','updating':'Aktualisiere…','selfie-uploaded':'Selfie hochgeladen','s-collage-title':'Collage-Timing','s-collage-subtitle':'Steuert das Tempo des Foto-Collage-Videos am Spielende.','s-collage-photo-label':'Fotodauer (Sekunden)','s-collage-photo-help':'Wie lange jedes Team-Foto angezeigt wird.','s-collage-cover-label':'Titelbild-Dauer (Sekunden)','s-collage-cover-help':'Wie lange die Team-Titelkarte (Selfie + Name) angezeigt wird.','s-collage-xfade-label':'Überblendung (Sekunden)','s-collage-xfade-help':'Dauer der Überblendung zwischen Bildern. 0 = harte Schnitte.','s-collage-save':'Speichern','st-profanity-label':'Wortfilter','s-prof-title':'Wortfilter für Teamnamen','s-prof-subtitle':'Blockt anstößige Teamnamen. Eine mehrsprachige Standardliste ist eingebaut; eigene Wörter kannst du unten ergänzen.','s-prof-enabled-label':'Filter aktiviert','s-prof-enabled-help':'Wenn deaktiviert, werden Teamnamen nicht geprüft.','s-prof-words-label':'Eigene gesperrte Wörter','s-prof-words-help':'Ein Wort pro Zeile (oder durch Komma getrennt). Groß-/Kleinschreibung, Akzente und Leetspeak werden automatisch erkannt. Ganze Wörter werden gesperrt, nicht Wortteile.','s-prof-save':'Speichern',
   // ── Settings UI fallbacks ─────────────────────────────────────────────────
   'no-tunnel':'Kein Tunnel gefunden.','mode-placeholder':'z.B. ADVANCED',
   'location-label':'Standort','add-loc':'Standort hinzufügen','edit-loc':'Standort bearbeiten',
@@ -1526,7 +1563,7 @@ const GMT={
   'tip-cr-answer':'The correct answer(s) — matching is case-insensitive and trims whitespace.',
   'tip-cr-hint':'Optional text shown while players are still walking to the target.',
   'tip-cr-hide-until-arrival':'Description and task only appear after the player arrives.',
-  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-pick':'Pick a starting point','ll-cr-pick':'Or pick a Rail Adventure route','ll-tagline':'Adventurerooms · Gamemaster','ll-empty':'No locations yet.','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-cr-mode-label':'Rail Adventure Mode','gs-recent':'Recent Games','gs-new':'New Game','gs-new-cr':'Start Rail Adventure','gs-kicker-loc':'Location','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Pick a mode','gs-open':'Open','gs-st-paused':"paused",'gs-st-ended':'ended','gs-st-playing':'running','gs-st-waiting':'waiting','gs-none':'No games yet.','ng-title':'New Game Created','ng-back':'Back','ng-kicker':'Game created','ng-title':'Hand out the code','ng-subtitle':'Players join by scanning the QR or opening the link on their phones. They pick a team name and take a selfie — you’ll see them appear in the dashboard the moment they’re in.','ng-game-id-label':'Game ID','ng-join-url-label':'Join URL','ng-qr-hint':'Scan to join','ng-qr-dl':'QR','ng-copy-1':'Copy','ng-copy-2':'Copy','ng-copied':'Copied!','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','tab-map-label':'Map','chat-reply-to':'Reply to','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General','s-gen-subtitle':'App-wide configuration. Most teams won’t touch these once set up.','s-unlocked':'Unlocked','sg-app':'App','sg-games':'Games','s-url-help':'The Cloudflare quick-tunnel hostname players reach you on. “Detect” reads tunnel-url.txt.','s-timeout-help':'Shown to players when their game timer hits zero. Per-language.','s-gh-label':'GitHub repo URL','s-gh-help':'Used by the in-app updater for git pull and the version badge.','s-sound-label':'Sound on accept','s-sound-help':'Plays a short chime when the GM accepts a submission.','s-sound-on':'Enabled','s-sound-perm':'Browser permission required on first click.','s-loc-lang-title':'Default language is set <em>per location</em>','s-cancel':'Cancel','st-manuals':'Manuals','s-manuals-title':'Manuals','s-manuals-subtitle':'Download the PDF manuals in your language here.','s-manuals-lang':'Language','s-manuals-lang-help':'Only show manuals in this language.','no-manuals-yet':'No manuals available in this language yet.','s-update-hint':'Pulls the latest version from the configured GitHub repo (see General) and restarts the server.','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','updating':'Updating…','selfie-uploaded':'Selfie uploaded','s-collage-title':'Collage Timing','s-collage-subtitle':'Controls the pace of the end-of-game photo collage video.','s-collage-photo-label':'Photo duration (seconds)','s-collage-photo-help':'How long each team photo is shown.','s-collage-cover-label':'Cover duration (seconds)','s-collage-cover-help':'How long the team title card (selfie + name) is shown.','s-collage-xfade-label':'Crossfade (seconds)','s-collage-xfade-help':'Length of the fade between images. 0 = hard cuts.','s-collage-save':'Save','st-profanity-label':'Word filter','s-prof-title':'Team-name word filter','s-prof-subtitle':'Blocks offensive team names. A multi-language list is built in; add your own words below.','s-prof-enabled-label':'Filter enabled','s-prof-enabled-help':'When off, team names are not checked.','s-prof-words-label':'Custom blocked words','s-prof-words-help':'One word per line (or comma-separated). Case, accents and leetspeak are handled automatically. Whole words are blocked, not substrings.','s-prof-save':'Save',
+  'tip-cr-hints':'Tips players can request one at a time if they get stuck.','ll-select':'Select a location','ll-pick':'Pick a starting point','ll-cr-pick':'Or pick a Rail Adventure route','ll-tagline':'Adventurerooms · Gamemaster','ll-empty':'No locations yet.','ll-settings':'Settings','gs-back':'Back','gs-mode-label':'Game Mode','gs-cr-mode-label':'Rail Adventure Mode','gs-recent':'Recent Games','gs-new':'New Game','gs-new-cr':'Start Rail Adventure','gs-kicker-loc':'Location','msel-pick':'Choose a game mode','msel-back':'Back','msel-empty':'No modes for this location.','gs-start':'Start game','pick-mode':'Please choose a mode','mode-tile-label':'Tile image','mode-tile-tip':'Artwork for this mode\'s tile in the mode picker. Without one the tile stays plain.','mode-tile-pick':'Choose image','mode-tile-replace':'Replace image','mode-tile-remove':'Remove image','mode-tile-preview':'Preview','mode-tile-save-hint':'The image is applied when you save.','mode-title-show':'Title on the tile','mode-title-show-sub':'Turn off when the name is already part of the image.','mode-title-show-tip':'Shows the mode name on top of the tile. Turn it off when the name is already built into the artwork.','mode-title-color':'Title colour','mode-title-color-tip':'Colour of the mode name on the tile. "Default" follows the theme.','mode-title-color-reset':'Default','upload-failed':'Upload failed','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Pick a mode','gs-open':'Open','gs-st-paused':"paused",'gs-st-ended':'ended','gs-st-playing':'running','gs-st-waiting':'waiting','gs-none':'No games yet.','ng-title':'New Game Created','ng-back':'Back','ng-kicker':'Game created','ng-title':'Hand out the code','ng-subtitle':'Players join by scanning the QR or opening the link on their phones. They pick a team name and take a selfie — you’ll see them appear in the dashboard the moment they’re in.','ng-game-id-label':'Game ID','ng-join-url-label':'Join URL','ng-qr-hint':'Scan to join','ng-qr-dl':'QR','ng-copy-1':'Copy','ng-copy-2':'Copy','ng-copied':'Copied!','ng-template':'With Template','ng-open':'Open Dashboard','db-games':'Games','tb-start':'Start','tb-pause':'Pause','db-teams':'TEAMS','db-select-team':'Select a team','tab-map-label':'Map','chat-reply-to':'Reply to','db-broadcast-info':'Send a message to all teams.','db-broadcast':'Send to All','db-rankings':'RANKINGS','sg-title':'Settings','sg-pw-label':'Password','sg-back':'Back','sg-unlock':'Unlock','s-back':'Back','s-title':'SETTINGS','st-general':'General','st-locations':'Locations','st-missions':'MiSSiONS','st-rules':'Rules','st-template':'QR Template','st-security':'Security','st-updates':'Updates','s-gen-title':'General','s-gen-subtitle':'App-wide configuration. Most teams won’t touch these once set up.','s-unlocked':'Unlocked','sg-app':'App','sg-games':'Games','s-url-help':'The Cloudflare quick-tunnel hostname players reach you on. “Detect” reads tunnel-url.txt.','s-timeout-help':'Shown to players when their game timer hits zero. Per-language.','s-gh-label':'GitHub repo URL','s-gh-help':'Used by the in-app updater for git pull and the version badge.','s-sound-label':'Sound on accept','s-sound-help':'Plays a short chime when the GM accepts a submission.','s-sound-on':'Enabled','s-sound-perm':'Browser permission required on first click.','s-loc-lang-title':'Default language is set <em>per location</em>','s-cancel':'Cancel','st-manuals':'Manuals','s-manuals-title':'Manuals','s-manuals-subtitle':'Download the PDF manuals in your language here.','s-manuals-lang':'Language','s-manuals-lang-help':'Only show manuals in this language.','no-manuals-yet':'No manuals available in this language yet.','s-update-hint':'Pulls the latest version from the configured GitHub repo (see General) and restarts the server.','s-url-label':'Public URL','s-detect':'Detect','s-url-hint':'Run start-tunnel-windows.bat, then click Detect.','s-timeout-label':'Timeout Message','s-save':'Save','s-add-loc':'+ Location','s-mode-label':'Mode:','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Rules','s-add-rule':'+ Rule','s-rules-hint':'Placeholders: [photo] [video] [indoor]. Drag to reorder.','s-rules-save':'Save','s-tpl-title':'QR Template','s-tpl-size-label':'Paper Size','s-tpl-upload-label':'Upload Template','s-tpl-drag-hint':'Drag QR placeholder to position.','s-tpl-save':'Save Position','s-tpl-delete':'Delete Template','s-sec-title':'Change Password','s-sec-old':'Current Password','s-sec-new':'New Password','s-sec-new2':'Confirm','s-sec-save':'Update','rej-title':'Reject Submission','rej-hint':'Media will be deleted.','rej-reason-label':'Reason (shown to team)','rej-confirm':'Reject & Notify','qrm-title':'Join QR Code','s-add-rs':'＋ Ruleset','ruleset-label':'Ruleset','paper-size':'Paper size','update-title':'Update App','update-btn':'Update Now','update-log':'Output','github-label':'GitHub Repository URL','version-label':'Version','modes-label':'Games','chat-ph-gm':'Message…','qrm-close':'Close','ng-qr-download':'⬇ QR','qrm-download':'⬇ Download QR','cancel':'Cancel','create':'Create','save':'Save','edit':'Edit','delete':'Delete','copy':'Copy','rule':'Rule','add-mode':'＋ Mode','edit-mode':'Edit Mode','min-label':'Minutes','per-game':'per game','pool':'Pool (all locations)','mission-name-label':'Mission Name','loc-label':'Location','media-label':'Media Type','indoor-label':'Can be done indoors','desc-label':'Description','task-label':'Task','auto-translate':'🌐 Auto-translate','no-rules':'No rules yet.','created':'Created!','saved':'Saved!','wrong-pw':'Incorrect password.','del':'Delete','no-missions':'No missions.','all':'All','translating':'Translating…','translated':'Translated!','updating':'Updating…','selfie-uploaded':'Selfie uploaded','s-collage-title':'Collage Timing','s-collage-subtitle':'Controls the pace of the end-of-game photo collage video.','s-collage-photo-label':'Photo duration (seconds)','s-collage-photo-help':'How long each team photo is shown.','s-collage-cover-label':'Cover duration (seconds)','s-collage-cover-help':'How long the team title card (selfie + name) is shown.','s-collage-xfade-label':'Crossfade (seconds)','s-collage-xfade-help':'Length of the fade between images. 0 = hard cuts.','s-collage-save':'Save','st-profanity-label':'Word filter','s-prof-title':'Team-name word filter','s-prof-subtitle':'Blocks offensive team names. A multi-language list is built in; add your own words below.','s-prof-enabled-label':'Filter enabled','s-prof-enabled-help':'When off, team names are not checked.','s-prof-words-label':'Custom blocked words','s-prof-words-help':'One word per line (or comma-separated). Case, accents and leetspeak are handled automatically. Whole words are blocked, not substrings.','s-prof-save':'Save',
   'no-tunnel':'No tunnel found.','mode-placeholder':'e.g. ADVANCED',
   'location-label':'Location','add-loc':'Add Location','edit-loc':'Edit Location',
   'loc-spec':'location-specific MiSSiONS','add-mission':'Add MiSSiON','edit-mission':'Edit MiSSiON',
@@ -1652,7 +1689,7 @@ const GMT={
   'tip-cr-answer':'La/les bonne(s) réponse(s) — comparaison insensible à la casse et aux espaces.',
   'tip-cr-hint':'Texte optionnel affiché pendant que les joueurs marchent vers la cible.',
   'tip-cr-hide-until-arrival':'Description et tâche n\'apparaissent qu\'après l\'arrivée.',
-  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-pick':'Choisir un lieu','ll-cr-pick':'Ou un parcours Rail Adventure','ll-tagline':'Adventurerooms · Maître du jeu','ll-empty':'Pas encore de lieux.','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-cr-mode-label':'Mode Rail Adventure','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','gs-new-cr':'Démarrer Rail Adventure','gs-kicker-loc':'Lieu','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Choisir un mode','gs-open':'Ouvrir','gs-st-paused':"en pause",'gs-st-ended':'terminé','gs-st-playing':'en cours','gs-st-waiting':'en attente','gs-none':'Pas encore de parties.','ng-title':'Partie créée','ng-back':'Retour','ng-kicker':'Partie créée','ng-title':'Distribue le code','ng-subtitle':'Les joueurs rejoignent la partie en scannant le QR ou en ouvrant le lien sur leur téléphone. Ils choisissent un nom d’équipe et prennent un selfie — tu les verras apparaître dans le tableau de bord.','ng-game-id-label':'ID de partie','ng-join-url-label':'Lien d’accès','ng-qr-hint':'Scanner pour rejoindre','ng-qr-dl':'QR','ng-copy-1':'Copier','ng-copy-2':'Copier','ng-copied':'Copié !','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','tab-map-label':'Carte','chat-reply-to':'Répondre à','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Général','s-gen-subtitle':'Configuration globale de l’app. La plupart des équipes ne touchent à cela qu’à l’installation.','s-unlocked':'Déverrouillé','sg-app':'App','sg-games':'Parties','s-url-help':'Le tunnel Cloudflare via lequel les joueurs rejoignent. « Détecter » lit tunnel-url.txt.','s-timeout-help':'Affiché aux joueurs lorsque le minuteur arrive à zéro. Par langue.','s-gh-label':'URL du dépôt GitHub','s-gh-help':'Utilisé par la mise à jour intégrée pour git pull et le badge de version.','s-sound-label':'Son à l’acceptation','s-sound-help':'Joue un court signal quand le GM accepte une soumission.','s-sound-on':'Activé','s-sound-perm':'Autorisation du navigateur requise au premier clic.','s-loc-lang-title':'La langue par défaut est définie <em>par lieu</em>','s-cancel':'Annuler','st-manuals':'Manuels','s-manuals-title':'Manuels','s-manuals-subtitle':'Téléchargez ici les manuels PDF dans votre langue.','s-manuals-lang':'Langue','s-manuals-lang-help':'Afficher uniquement les manuels dans cette langue.','no-manuals-yet':'Aucun manuel disponible dans cette langue pour l’instant.','s-update-hint':'Tire la dernière version du dépôt GitHub configuré (voir Général) et redémarre le serveur.','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','updating':'Mise à jour…','selfie-uploaded':'Selfie envoyé','s-collage-title':'Minutage du collage','s-collage-subtitle':'Contrôle le rythme de la vidéo-collage de fin de partie.','s-collage-photo-label':'Durée par photo (secondes)','s-collage-photo-help':'Combien de temps chaque photo d’équipe est affichée.','s-collage-cover-label':'Durée de la couverture (secondes)','s-collage-cover-help':'Combien de temps la carte titre (selfie + nom) est affichée.','s-collage-xfade-label':'Fondu (secondes)','s-collage-xfade-help':'Durée du fondu entre les images. 0 = coupes franches.','s-collage-save':'Sauvegarder','st-profanity-label':'Filtre de mots','s-prof-title':'Filtre de mots pour les noms d’équipe','s-prof-subtitle':'Bloque les noms d’équipe offensants. Une liste multilingue est intégrée ; ajoute tes propres mots ci-dessous.','s-prof-enabled-label':'Filtre activé','s-prof-enabled-help':'Désactivé, les noms d’équipe ne sont pas vérifiés.','s-prof-words-label':'Mots bloqués personnalisés','s-prof-words-help':'Un mot par ligne (ou séparés par des virgules). La casse, les accents et le leetspeak sont gérés automatiquement. Les mots entiers sont bloqués, pas les fragments.','s-prof-save':'Sauvegarder',
+  'tip-cr-hints':'Indices que les joueurs peuvent demander un par un en cas de blocage.','ll-select':'Choisir un lieu','ll-pick':'Choisir un lieu','ll-cr-pick':'Ou un parcours Rail Adventure','ll-tagline':'Adventurerooms · Maître du jeu','ll-empty':'Pas encore de lieux.','ll-settings':'Paramètres','gs-back':'Retour','gs-mode-label':'Mode de jeu','gs-cr-mode-label':'Mode Rail Adventure','gs-recent':'Parties récentes','gs-new':'Nouvelle partie','gs-new-cr':'Démarrer Rail Adventure','gs-kicker-loc':'Lieu','msel-pick':'Choisir un mode de jeu','msel-back':'Retour','msel-empty':'Aucun mode pour ce lieu.','gs-start':'Lancer la partie','pick-mode':'Choisis un mode','mode-tile-label':'Image de la tuile','mode-tile-tip':'Visuel de la tuile de ce mode dans le sélecteur. Sans image, la tuile reste sobre.','mode-tile-pick':'Choisir une image','mode-tile-replace':'Remplacer l\'image','mode-tile-remove':'Supprimer l\'image','mode-tile-preview':'Aperçu','mode-tile-save-hint':'L\'image est appliquée à l\'enregistrement.','mode-title-show':'Titre sur la tuile','mode-title-show-sub':'Désactive si le nom fait déjà partie de l\'image.','mode-title-show-tip':'Affiche le nom du mode sur la tuile. Désactive-le si le nom est déjà intégré au visuel.','mode-title-color':'Couleur du titre','mode-title-color-tip':'Couleur du nom du mode sur la tuile. « Par défaut » suit le thème.','mode-title-color-reset':'Par défaut','upload-failed':'Échec de l’envoi','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Choisir un mode','gs-open':'Ouvrir','gs-st-paused':"en pause",'gs-st-ended':'terminé','gs-st-playing':'en cours','gs-st-waiting':'en attente','gs-none':'Pas encore de parties.','ng-title':'Partie créée','ng-back':'Retour','ng-kicker':'Partie créée','ng-title':'Distribue le code','ng-subtitle':'Les joueurs rejoignent la partie en scannant le QR ou en ouvrant le lien sur leur téléphone. Ils choisissent un nom d’équipe et prennent un selfie — tu les verras apparaître dans le tableau de bord.','ng-game-id-label':'ID de partie','ng-join-url-label':'Lien d’accès','ng-qr-hint':'Scanner pour rejoindre','ng-qr-dl':'QR','ng-copy-1':'Copier','ng-copy-2':'Copier','ng-copied':'Copié !','ng-template':'Avec modèle','ng-open':'Ouvrir le tableau','db-games':'Parties','tb-start':'Démarrer','tb-pause':'Pause','db-teams':'ÉQUIPES','db-select-team':'Sélectionner une équipe','tab-map-label':'Carte','chat-reply-to':'Répondre à','db-broadcast-info':'Envoyer un message à toutes les équipes.','db-broadcast':'Envoyer à tous','db-rankings':'CLASSEMENT','sg-title':'Paramètres','sg-pw-label':'Mot de passe','sg-back':'Retour','sg-unlock':'Déverrouiller','s-back':'Retour','s-title':'PARAMÈTRES','st-general':'Général','st-locations':'Lieux','st-missions':'MiSSiONS','st-rules':'Règles','st-template':'Modèle QR','st-security':'Sécurité','st-updates':'Mises à jour','s-gen-title':'Général','s-gen-subtitle':'Configuration globale de l’app. La plupart des équipes ne touchent à cela qu’à l’installation.','s-unlocked':'Déverrouillé','sg-app':'App','sg-games':'Parties','s-url-help':'Le tunnel Cloudflare via lequel les joueurs rejoignent. « Détecter » lit tunnel-url.txt.','s-timeout-help':'Affiché aux joueurs lorsque le minuteur arrive à zéro. Par langue.','s-gh-label':'URL du dépôt GitHub','s-gh-help':'Utilisé par la mise à jour intégrée pour git pull et le badge de version.','s-sound-label':'Son à l’acceptation','s-sound-help':'Joue un court signal quand le GM accepte une soumission.','s-sound-on':'Activé','s-sound-perm':'Autorisation du navigateur requise au premier clic.','s-loc-lang-title':'La langue par défaut est définie <em>par lieu</em>','s-cancel':'Annuler','st-manuals':'Manuels','s-manuals-title':'Manuels','s-manuals-subtitle':'Téléchargez ici les manuels PDF dans votre langue.','s-manuals-lang':'Langue','s-manuals-lang-help':'Afficher uniquement les manuels dans cette langue.','no-manuals-yet':'Aucun manuel disponible dans cette langue pour l’instant.','s-update-hint':'Tire la dernière version du dépôt GitHub configuré (voir Général) et redémarre le serveur.','s-url-label':'URL publique','s-detect':'Détecter','s-url-hint':'Lancez start-tunnel-windows.bat, puis Détecter.','s-timeout-label':'Message de fin','s-save':'Sauvegarder','s-add-loc':'+ Lieu','s-mode-label':'Mode :','s-add-mode':'+ Mode','s-add-mission':'+ MiSSiON','s-rules-title':'Règles','s-add-rule':'+ Règle','s-rules-hint':'Balises : [photo] [video] [indoor]. Glisser pour réordonner.','s-rules-save':'Sauvegarder','s-tpl-title':'Modèle QR','s-tpl-size-label':'Format de papier','s-tpl-upload-label':'Téléverser modèle','s-tpl-drag-hint':'Déplacer le QR.','s-tpl-save':'Enregistrer position','s-tpl-delete':'Supprimer modèle','s-sec-title':'Changer le mot de passe','s-sec-old':'Mot de passe actuel','s-sec-new':'Nouveau mot de passe','s-sec-new2':'Confirmer','s-sec-save':'Mettre à jour','rej-title':'Refuser la soumission','rej-hint':'Le média sera supprimé.','rej-reason-label':'Raison (affichée à l\'équipe)','rej-confirm':'Refuser & notifier','qrm-title':'QR Code de jonction','s-add-rs':'＋ Jeu de règles','ruleset-label':'Jeu de règles','paper-size':'Format de papier','update-title':'Mettre à jour','update-btn':'Mettre à jour maintenant','update-log':'Sortie','github-label':'URL GitHub','version-label':'Version','modes-label':'Parties','chat-ph-gm':'Message…','qrm-close':'Fermer','ng-qr-download':'⬇ QR','qrm-download':'⬇ Télécharger QR','cancel':'Annuler','create':'Créer','save':'Sauvegarder','edit':'Modifier','delete':'Supprimer','copy':'Copier','rule':'Règle','add-mode':'＋ Mode','edit-mode':'Modifier le mode','min-label':'Minutes','per-game':'par partie','pool':'Pool (tous les lieux)','mission-name-label':'Nom de la MiSSiON','loc-label':'Lieu','media-label':'Type de média','indoor-label':'Possible en intérieur','desc-label':'Description','task-label':'Tâche','auto-translate':'🌐 Traduction auto','no-rules':'Aucune règle.','created':'Créé!','saved':'Sauvegardé!','wrong-pw':'Mot de passe incorrect.','del':'Supprimer','no-missions':'Aucune mission.','all':'Toutes','translating':'Traduction…','translated':'Traduit!','updating':'Mise à jour…','selfie-uploaded':'Selfie envoyé','s-collage-title':'Minutage du collage','s-collage-subtitle':'Contrôle le rythme de la vidéo-collage de fin de partie.','s-collage-photo-label':'Durée par photo (secondes)','s-collage-photo-help':'Combien de temps chaque photo d’équipe est affichée.','s-collage-cover-label':'Durée de la couverture (secondes)','s-collage-cover-help':'Combien de temps la carte titre (selfie + nom) est affichée.','s-collage-xfade-label':'Fondu (secondes)','s-collage-xfade-help':'Durée du fondu entre les images. 0 = coupes franches.','s-collage-save':'Sauvegarder','st-profanity-label':'Filtre de mots','s-prof-title':'Filtre de mots pour les noms d’équipe','s-prof-subtitle':'Bloque les noms d’équipe offensants. Une liste multilingue est intégrée ; ajoute tes propres mots ci-dessous.','s-prof-enabled-label':'Filtre activé','s-prof-enabled-help':'Désactivé, les noms d’équipe ne sont pas vérifiés.','s-prof-words-label':'Mots bloqués personnalisés','s-prof-words-help':'Un mot par ligne (ou séparés par des virgules). La casse, les accents et le leetspeak sont gérés automatiquement. Les mots entiers sont bloqués, pas les fragments.','s-prof-save':'Sauvegarder',
   'no-tunnel':'Aucun tunnel trouvé.','mode-placeholder':'p. ex. ADVANCED',
   'location-label':'Lieu','add-loc':'Ajouter un lieu','edit-loc':'Modifier le lieu',
   'loc-spec':'MiSSiONS spécifiques au lieu','add-mission':'Ajouter une MiSSiON','edit-mission':'Modifier la MiSSiON',
@@ -1778,7 +1815,7 @@ const GMT={
   'tip-cr-answer':'Le risposte corrette — confronto case-insensitive e con spazi normalizzati.',
   'tip-cr-hint':'Testo opzionale mostrato mentre i giocatori camminano verso il target.',
   'tip-cr-hide-until-arrival':'Descrizione e compito appaiono solo dopo l\'arrivo.',
-  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-pick':'Scegli un luogo','ll-cr-pick':'O un percorso Rail Adventure','ll-tagline':'Adventurerooms · Game master','ll-empty':'Nessuna sede.','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-cr-mode-label':'Modalità Rail Adventure','gs-recent':'Partite recenti','gs-new':'Nuova partita','gs-new-cr':'Avvia Rail Adventure','gs-kicker-loc':'Sede','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Scegli una modalità','gs-open':'Apri','gs-st-paused':"in pausa",'gs-st-ended':'finita','gs-st-playing':'in corso','gs-st-waiting':'in attesa','gs-none':'Ancora nessuna partita.','ng-title':'Partita creata','ng-back':'Indietro','ng-kicker':'Partita creata','ng-title':'Distribuisci il codice','ng-subtitle':'I giocatori entrano scansionando il QR o aprendo il link sul telefono. Scelgono un nome di squadra e fanno un selfie — appariranno nella dashboard appena entrano.','ng-game-id-label':'ID partita','ng-join-url-label':'Link di accesso','ng-qr-hint':'Scansiona per entrare','ng-qr-dl':'QR','ng-copy-1':'Copia','ng-copy-2':'Copia','ng-copied':'Copiato!','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','tab-map-label':'Mappa','chat-reply-to':'Rispondi a','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Generale','s-gen-subtitle':'Configurazione globale dell’app. La maggior parte dei team la imposta una sola volta.','s-unlocked':'Sbloccato','sg-app':'App','sg-games':'Partite','s-url-help':'Il tunnel Cloudflare con cui i giocatori entrano. „Rileva" legge tunnel-url.txt.','s-timeout-help':'Mostrato ai giocatori al termine del timer. Per lingua.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usato dall’aggiornatore interno per git pull e il badge versione.','s-sound-label':'Suono all’accettazione','s-sound-help':'Riproduce un breve suono quando il GM accetta un invio.','s-sound-on':'Attivo','s-sound-perm':'Autorizzazione del browser richiesta al primo clic.','s-loc-lang-title':'La lingua predefinita è impostata <em>per sede</em>','s-cancel':'Annulla','st-manuals':'Manuali','s-manuals-title':'Manuali','s-manuals-subtitle':'Scarica qui i manuali PDF nella tua lingua.','s-manuals-lang':'Lingua','s-manuals-lang-help':'Mostra solo i manuali in questa lingua.','no-manuals-yet':'Nessun manuale disponibile in questa lingua per ora.','s-update-hint':'Scarica l’ultima versione dal repo GitHub configurato (vedi Generale) e riavvia il server.','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','updating':'Aggiornamento…','selfie-uploaded':'Selfie caricato','s-collage-title':'Tempi del collage','s-collage-subtitle':'Controlla il ritmo del video-collage di fine partita.','s-collage-photo-label':'Durata foto (secondi)','s-collage-photo-help':'Per quanto tempo viene mostrata ogni foto della squadra.','s-collage-cover-label':'Durata copertina (secondi)','s-collage-cover-help':'Per quanto tempo viene mostrata la card titolo (selfie + nome).','s-collage-xfade-label':'Dissolvenza (secondi)','s-collage-xfade-help':'Durata della dissolvenza tra le immagini. 0 = tagli netti.','s-collage-save':'Salva','st-profanity-label':'Filtro parole','s-prof-title':'Filtro parole per i nomi squadra','s-prof-subtitle':'Blocca i nomi squadra offensivi. È inclusa una lista multilingue; aggiungi le tue parole qui sotto.','s-prof-enabled-label':'Filtro attivo','s-prof-enabled-help':'Se disattivato, i nomi squadra non vengono controllati.','s-prof-words-label':'Parole bloccate personalizzate','s-prof-words-help':'Una parola per riga (o separate da virgole). Maiuscole, accenti e leetspeak sono gestiti automaticamente. Vengono bloccate parole intere, non frammenti.','s-prof-save':'Salva',
+  'tip-cr-hints':'Suggerimenti che i giocatori possono richiedere uno alla volta in caso di blocco.','ll-select':'Scegli un luogo','ll-pick':'Scegli un luogo','ll-cr-pick':'O un percorso Rail Adventure','ll-tagline':'Adventurerooms · Game master','ll-empty':'Nessuna sede.','ll-settings':'Impostazioni','gs-back':'Indietro','gs-mode-label':'Modalità di gioco','gs-cr-mode-label':'Modalità Rail Adventure','gs-recent':'Partite recenti','gs-new':'Nuova partita','gs-new-cr':'Avvia Rail Adventure','gs-kicker-loc':'Sede','msel-pick':'Scegli una modalità di gioco','msel-back':'Indietro','msel-empty':'Nessuna modalità per questa sede.','gs-start':'Avvia la partita','pick-mode':'Scegli una modalità','mode-tile-label':'Immagine del riquadro','mode-tile-tip':'Immagine del riquadro di questa modalità nel selettore. Senza immagine il riquadro resta semplice.','mode-tile-pick':'Scegli immagine','mode-tile-replace':'Sostituisci immagine','mode-tile-remove':'Rimuovi immagine','mode-tile-preview':'Anteprima','mode-tile-save-hint':'L\'immagine viene applicata al salvataggio.','mode-title-show':'Titolo sul riquadro','mode-title-show-sub':'Disattiva se il nome fa già parte dell\'immagine.','mode-title-show-tip':'Mostra il nome della modalità sul riquadro. Disattivalo se il nome è già integrato nell\'immagine.','mode-title-color':'Colore del titolo','mode-title-color-tip':'Colore del nome della modalità sul riquadro. "Predefinito" segue il tema.','mode-title-color-reset':'Predefinito','upload-failed':'Caricamento non riuscito','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Scegli una modalità','gs-open':'Apri','gs-st-paused':"in pausa",'gs-st-ended':'finita','gs-st-playing':'in corso','gs-st-waiting':'in attesa','gs-none':'Ancora nessuna partita.','ng-title':'Partita creata','ng-back':'Indietro','ng-kicker':'Partita creata','ng-title':'Distribuisci il codice','ng-subtitle':'I giocatori entrano scansionando il QR o aprendo il link sul telefono. Scelgono un nome di squadra e fanno un selfie — appariranno nella dashboard appena entrano.','ng-game-id-label':'ID partita','ng-join-url-label':'Link di accesso','ng-qr-hint':'Scansiona per entrare','ng-qr-dl':'QR','ng-copy-1':'Copia','ng-copy-2':'Copia','ng-copied':'Copiato!','ng-template':'Con modello','ng-open':'Apri dashboard','db-games':'Partite','tb-start':'Avvia','tb-pause':'Pausa','db-teams':'SQUADRE','db-select-team':'Seleziona squadra','tab-map-label':'Mappa','chat-reply-to':'Rispondi a','db-broadcast-info':'Invia un messaggio a tutte le squadre.','db-broadcast':'Invia a tutti','db-rankings':'CLASSIFICA','sg-title':'Impostazioni','sg-pw-label':'Password','sg-back':'Indietro','sg-unlock':'Sblocca','s-back':'Indietro','s-title':'IMPOSTAZIONI','st-general':'Generale','st-locations':'Luoghi','st-missions':'MiSSiONS','st-rules':'Regole','st-template':'Modello QR','st-security':'Sicurezza','st-updates':'Aggiornamenti','s-gen-title':'Generale','s-gen-subtitle':'Configurazione globale dell’app. La maggior parte dei team la imposta una sola volta.','s-unlocked':'Sbloccato','sg-app':'App','sg-games':'Partite','s-url-help':'Il tunnel Cloudflare con cui i giocatori entrano. „Rileva" legge tunnel-url.txt.','s-timeout-help':'Mostrato ai giocatori al termine del timer. Per lingua.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usato dall’aggiornatore interno per git pull e il badge versione.','s-sound-label':'Suono all’accettazione','s-sound-help':'Riproduce un breve suono quando il GM accetta un invio.','s-sound-on':'Attivo','s-sound-perm':'Autorizzazione del browser richiesta al primo clic.','s-loc-lang-title':'La lingua predefinita è impostata <em>per sede</em>','s-cancel':'Annulla','st-manuals':'Manuali','s-manuals-title':'Manuali','s-manuals-subtitle':'Scarica qui i manuali PDF nella tua lingua.','s-manuals-lang':'Lingua','s-manuals-lang-help':'Mostra solo i manuali in questa lingua.','no-manuals-yet':'Nessun manuale disponibile in questa lingua per ora.','s-update-hint':'Scarica l’ultima versione dal repo GitHub configurato (vedi Generale) e riavvia il server.','s-url-label':'URL pubblico','s-detect':'Rileva','s-url-hint':'Avvia start-tunnel-windows.bat, poi Rileva.','s-timeout-label':'Messaggio di fine','s-save':'Salva','s-add-loc':'+ Luogo','s-mode-label':'Modalità:','s-add-mode':'+ Modalità','s-add-mission':'+ MiSSiON','s-rules-title':'Regole','s-add-rule':'+ Regola','s-rules-hint':'Segnaposto: [photo] [video] [indoor]. Trascina per riordinare.','s-rules-save':'Salva','s-tpl-title':'Modello QR','s-tpl-size-label':'Formato carta','s-tpl-upload-label':'Carica modello','s-tpl-drag-hint':'Sposta il segnaposto QR.','s-tpl-save':'Salva posizione','s-tpl-delete':'Elimina modello','s-sec-title':'Cambia password','s-sec-old':'Password attuale','s-sec-new':'Nuova password','s-sec-new2':'Conferma','s-sec-save':'Aggiorna','rej-title':'Rifiuta invio','rej-hint':'Il media sarà eliminato.','rej-reason-label':'Motivo (mostrato alla squadra)','rej-confirm':'Rifiuta e notifica','qrm-title':'Codice QR di accesso','s-add-rs':'＋ Set di regole','ruleset-label':'Set di regole','paper-size':'Formato carta','update-title':'Aggiorna app','update-btn':'Aggiorna ora','update-log':'Output','github-label':'URL GitHub','version-label':'Versione','modes-label':'Partite','chat-ph-gm':'Messaggio…','qrm-close':'Chiudi','ng-qr-download':'⬇ QR','qrm-download':'⬇ Scarica QR','cancel':'Annulla','create':'Crea','save':'Salva','edit':'Modifica','delete':'Elimina','copy':'Copia','rule':'Regola','add-mode':'＋ Modalità','edit-mode':'Modifica modalità','min-label':'Minuti','per-game':'per partita','pool':'Pool (tutti i luoghi)','mission-name-label':'Nome della MiSSiON','loc-label':'Luogo','media-label':'Tipo di media','indoor-label':'Possibile anche al chiuso','desc-label':'Descrizione','task-label':'Compito','auto-translate':'🌐 Traduzione auto','no-rules':'Nessuna regola.','created':'Creato!','saved':'Salvato!','wrong-pw':'Password errata.','del':'Elimina','no-missions':'Nessuna missione.','all':'Tutte','translating':'Traduzione…','translated':'Tradotto!','updating':'Aggiornamento…','selfie-uploaded':'Selfie caricato','s-collage-title':'Tempi del collage','s-collage-subtitle':'Controlla il ritmo del video-collage di fine partita.','s-collage-photo-label':'Durata foto (secondi)','s-collage-photo-help':'Per quanto tempo viene mostrata ogni foto della squadra.','s-collage-cover-label':'Durata copertina (secondi)','s-collage-cover-help':'Per quanto tempo viene mostrata la card titolo (selfie + nome).','s-collage-xfade-label':'Dissolvenza (secondi)','s-collage-xfade-help':'Durata della dissolvenza tra le immagini. 0 = tagli netti.','s-collage-save':'Salva','st-profanity-label':'Filtro parole','s-prof-title':'Filtro parole per i nomi squadra','s-prof-subtitle':'Blocca i nomi squadra offensivi. È inclusa una lista multilingue; aggiungi le tue parole qui sotto.','s-prof-enabled-label':'Filtro attivo','s-prof-enabled-help':'Se disattivato, i nomi squadra non vengono controllati.','s-prof-words-label':'Parole bloccate personalizzate','s-prof-words-help':'Una parola per riga (o separate da virgole). Maiuscole, accenti e leetspeak sono gestiti automaticamente. Vengono bloccate parole intere, non frammenti.','s-prof-save':'Salva',
   'no-tunnel':'Nessun tunnel trovato.','mode-placeholder':'es. ADVANCED',
   'location-label':'Luogo','add-loc':'Aggiungi luogo','edit-loc':'Modifica luogo',
   'loc-spec':'MiSSiONS specifiche del luogo','add-mission':'Aggiungi MiSSiON','edit-mission':'Modifica MiSSiON',
@@ -1904,7 +1941,7 @@ const GMT={
   'tip-cr-answer':'La/s respuesta/s correcta/s — la comparación ignora mayúsculas y espacios.',
   'tip-cr-hint':'Texto opcional que se muestra mientras los jugadores caminan hacia el objetivo.',
   'tip-cr-hide-until-arrival':'La descripción y la tarea solo aparecen tras la llegada del jugador.',
-  'tip-cr-hints':'Pistas que los jugadores pueden pedir una a una si se atascan.','ll-select':'Elige un lugar','ll-pick':'Elige un lugar','ll-cr-pick':'O una ruta Rail Adventure','ll-tagline':'Adventurerooms · Maestro de juego','ll-empty':'Aún no hay ubicaciones.','ll-settings':'Ajustes','gs-back':'Atrás','gs-mode-label':'Modo de juego','gs-cr-mode-label':'Modo Rail Adventure','gs-recent':'Partidas recientes','gs-new':'Nueva partida','gs-new-cr':'Iniciar Rail Adventure','gs-kicker-loc':'Ubicación','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Elegir un modo','gs-open':'Abrir','gs-st-paused':"en pausa",'gs-st-ended':'terminado','gs-st-playing':'en curso','gs-st-waiting':'esperando','gs-none':'Aún no hay partidas.','ng-title':'Partida creada','ng-back':'Atrás','ng-kicker':'Partida creada','ng-title':'Reparte el código','ng-subtitle':'Los jugadores entran escaneando el QR o abriendo el enlace en su móvil. Eligen un nombre de equipo y se hacen un selfie — los verás aparecer en el panel en cuanto entren.','ng-game-id-label':'ID de partida','ng-join-url-label':'Enlace de acceso','ng-qr-hint':'Escanear para entrar','ng-qr-dl':'QR','ng-copy-1':'Copiar','ng-copy-2':'Copiar','ng-copied':'¡Copiado!','ng-template':'Con plantilla','ng-open':'Abrir panel','db-games':'Partidas','tb-start':'Iniciar','tb-pause':'Pausa','db-teams':'EQUIPOS','db-select-team':'Selecciona un equipo','tab-map-label':'Mapa','chat-reply-to':'Responder a','db-broadcast-info':'Enviar un mensaje a todos los equipos.','db-broadcast':'Enviar a todos','db-rankings':'CLASIFICACIÓN','sg-title':'Ajustes','sg-pw-label':'Contraseña','sg-back':'Atrás','sg-unlock':'Desbloquear','s-back':'Atrás','s-title':'AJUSTES','st-general':'General','st-locations':'Lugares','st-missions':'MiSSiONS','st-rules':'Reglas','st-template':'Plantilla QR','st-security':'Seguridad','st-updates':'Actualizaciones','s-gen-title':'General','s-gen-subtitle':'Configuración global de la app. La mayoría de equipos no la tocan después del setup.','s-unlocked':'Desbloqueado','sg-app':'App','sg-games':'Partidas','s-url-help':'El túnel Cloudflare por donde entran los jugadores. „Detectar" lee tunnel-url.txt.','s-timeout-help':'Se muestra a los jugadores cuando el temporizador llega a cero. Por idioma.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usado por el actualizador interno para git pull y la insignia de versión.','s-sound-label':'Sonido al aceptar','s-sound-help':'Reproduce un breve sonido cuando el GM acepta un envío.','s-sound-on':'Activado','s-sound-perm':'Se requiere permiso del navegador en el primer clic.','s-loc-lang-title':'El idioma predeterminado se define <em>por ubicación</em>','s-cancel':'Cancelar','st-manuals':'Manuales','s-manuals-title':'Manuales','s-manuals-subtitle':'Descarga aquí los manuales PDF en tu idioma.','s-manuals-lang':'Idioma','s-manuals-lang-help':'Mostrar solo manuales en este idioma.','no-manuals-yet':'No hay manuales disponibles en este idioma todavía.','s-update-hint':'Descarga la última versión del repo GitHub configurado (ver General) y reinicia el servidor.','s-url-label':'URL pública','s-detect':'Detectar','s-url-hint':'Ejecuta start-tunnel-windows.bat y luego pulsa Detectar.','s-timeout-label':'Mensaje de fin','s-save':'Guardar','s-add-loc':'+ Lugar','s-mode-label':'Modo:','s-add-mode':'+ Modo','s-add-mission':'+ MiSSiON','s-rules-title':'Reglas','s-add-rule':'+ Regla','s-rules-hint':'Marcadores: [photo] [video] [indoor]. Arrastra para reordenar.','s-rules-save':'Guardar','s-tpl-title':'Plantilla QR','s-tpl-size-label':'Tamaño de papel','s-tpl-upload-label':'Subir plantilla','s-tpl-drag-hint':'Arrastra el marcador del QR.','s-tpl-save':'Guardar posición','s-tpl-delete':'Eliminar plantilla','s-sec-title':'Cambiar contraseña','s-sec-old':'Contraseña actual','s-sec-new':'Nueva contraseña','s-sec-new2':'Confirmar','s-sec-save':'Actualizar','rej-title':'Rechazar envío','rej-hint':'El medio será eliminado.','rej-reason-label':'Motivo (mostrado al equipo)','rej-confirm':'Rechazar y notificar','qrm-title':'Código QR de acceso','s-add-rs':'＋ Conjunto de reglas','ruleset-label':'Conjunto de reglas','paper-size':'Tamaño de papel','update-title':'Actualizar app','update-btn':'Actualizar ahora','update-log':'Salida','github-label':'URL del repositorio GitHub','version-label':'Versión','modes-label':'Partidas','chat-ph-gm':'Mensaje…','qrm-close':'Cerrar','ng-qr-download':'⬇ QR','qrm-download':'⬇ Descargar QR','cancel':'Cancelar','create':'Crear','save':'Guardar','edit':'Editar','delete':'Eliminar','copy':'Copiar','rule':'Regla','add-mode':'＋ Modo','edit-mode':'Editar modo','min-label':'Minutos','per-game':'por partida','pool':'Pool (todos los lugares)','mission-name-label':'Nombre de la MiSSiON','loc-label':'Lugar','media-label':'Tipo de medio','indoor-label':'También en interior','desc-label':'Descripción','task-label':'Tarea','auto-translate':'🌐 Traducir automáticamente','no-rules':'Aún no hay reglas.','created':'¡Creado!','saved':'¡Guardado!','wrong-pw':'Contraseña incorrecta.','del':'Eliminar','no-missions':'Sin misiones.','all':'Todas','translating':'Traduciendo…','translated':'¡Traducido!','updating':'Actualizando…','selfie-uploaded':'Selfie subido','s-collage-title':'Tiempos del collage','s-collage-subtitle':'Controla el ritmo del vídeo-collage de fin de partida.','s-collage-photo-label':'Duración por foto (segundos)','s-collage-photo-help':'Cuánto tiempo se muestra cada foto del equipo.','s-collage-cover-label':'Duración de la portada (segundos)','s-collage-cover-help':'Cuánto tiempo se muestra la tarjeta de título (selfie + nombre).','s-collage-xfade-label':'Fundido (segundos)','s-collage-xfade-help':'Duración del fundido entre imágenes. 0 = cortes secos.','s-collage-save':'Guardar','st-profanity-label':'Filtro de palabras','s-prof-title':'Filtro de palabras para nombres de equipo','s-prof-subtitle':'Bloquea nombres de equipo ofensivos. Incluye una lista multilingüe; añade tus propias palabras abajo.','s-prof-enabled-label':'Filtro activado','s-prof-enabled-help':'Si se desactiva, los nombres de equipo no se comprueban.','s-prof-words-label':'Palabras bloqueadas personalizadas','s-prof-words-help':'Una palabra por línea (o separadas por comas). Mayúsculas, acentos y leetspeak se gestionan automáticamente. Se bloquean palabras enteras, no fragmentos.','s-prof-save':'Guardar',
+  'tip-cr-hints':'Pistas que los jugadores pueden pedir una a una si se atascan.','ll-select':'Elige un lugar','ll-pick':'Elige un lugar','ll-cr-pick':'O una ruta Rail Adventure','ll-tagline':'Adventurerooms · Maestro de juego','ll-empty':'Aún no hay ubicaciones.','ll-settings':'Ajustes','gs-back':'Atrás','gs-mode-label':'Modo de juego','gs-cr-mode-label':'Modo Rail Adventure','gs-recent':'Partidas recientes','gs-new':'Nueva partida','gs-new-cr':'Iniciar Rail Adventure','gs-kicker-loc':'Ubicación','msel-pick':'Elige un modo de juego','msel-back':'Atrás','msel-empty':'No hay modos para esta ubicación.','gs-start':'Iniciar partida','pick-mode':'Elige un modo','mode-tile-label':'Imagen del mosaico','mode-tile-tip':'Imagen del mosaico de este modo en el selector. Sin imagen, el mosaico queda sencillo.','mode-tile-pick':'Elegir imagen','mode-tile-replace':'Reemplazar imagen','mode-tile-remove':'Quitar imagen','mode-tile-preview':'Vista previa','mode-tile-save-hint':'La imagen se aplica al guardar.','mode-title-show':'Título en el mosaico','mode-title-show-sub':'Desactiva si el nombre ya forma parte de la imagen.','mode-title-show-tip':'Muestra el nombre del modo sobre el mosaico. Desactivalo si el nombre ya está integrado en la imagen.','mode-title-color':'Color del título','mode-title-color-tip':'Color del nombre del modo en el mosaico. "Predeterminado" sigue el tema.','mode-title-color-reset':'Predeterminado','upload-failed':'Error al subir','gs-kicker-cr':'Rail Adventure','gs-cr-pick':'Elegir un modo','gs-open':'Abrir','gs-st-paused':"en pausa",'gs-st-ended':'terminado','gs-st-playing':'en curso','gs-st-waiting':'esperando','gs-none':'Aún no hay partidas.','ng-title':'Partida creada','ng-back':'Atrás','ng-kicker':'Partida creada','ng-title':'Reparte el código','ng-subtitle':'Los jugadores entran escaneando el QR o abriendo el enlace en su móvil. Eligen un nombre de equipo y se hacen un selfie — los verás aparecer en el panel en cuanto entren.','ng-game-id-label':'ID de partida','ng-join-url-label':'Enlace de acceso','ng-qr-hint':'Escanear para entrar','ng-qr-dl':'QR','ng-copy-1':'Copiar','ng-copy-2':'Copiar','ng-copied':'¡Copiado!','ng-template':'Con plantilla','ng-open':'Abrir panel','db-games':'Partidas','tb-start':'Iniciar','tb-pause':'Pausa','db-teams':'EQUIPOS','db-select-team':'Selecciona un equipo','tab-map-label':'Mapa','chat-reply-to':'Responder a','db-broadcast-info':'Enviar un mensaje a todos los equipos.','db-broadcast':'Enviar a todos','db-rankings':'CLASIFICACIÓN','sg-title':'Ajustes','sg-pw-label':'Contraseña','sg-back':'Atrás','sg-unlock':'Desbloquear','s-back':'Atrás','s-title':'AJUSTES','st-general':'General','st-locations':'Lugares','st-missions':'MiSSiONS','st-rules':'Reglas','st-template':'Plantilla QR','st-security':'Seguridad','st-updates':'Actualizaciones','s-gen-title':'General','s-gen-subtitle':'Configuración global de la app. La mayoría de equipos no la tocan después del setup.','s-unlocked':'Desbloqueado','sg-app':'App','sg-games':'Partidas','s-url-help':'El túnel Cloudflare por donde entran los jugadores. „Detectar" lee tunnel-url.txt.','s-timeout-help':'Se muestra a los jugadores cuando el temporizador llega a cero. Por idioma.','s-gh-label':'URL del repo GitHub','s-gh-help':'Usado por el actualizador interno para git pull y la insignia de versión.','s-sound-label':'Sonido al aceptar','s-sound-help':'Reproduce un breve sonido cuando el GM acepta un envío.','s-sound-on':'Activado','s-sound-perm':'Se requiere permiso del navegador en el primer clic.','s-loc-lang-title':'El idioma predeterminado se define <em>por ubicación</em>','s-cancel':'Cancelar','st-manuals':'Manuales','s-manuals-title':'Manuales','s-manuals-subtitle':'Descarga aquí los manuales PDF en tu idioma.','s-manuals-lang':'Idioma','s-manuals-lang-help':'Mostrar solo manuales en este idioma.','no-manuals-yet':'No hay manuales disponibles en este idioma todavía.','s-update-hint':'Descarga la última versión del repo GitHub configurado (ver General) y reinicia el servidor.','s-url-label':'URL pública','s-detect':'Detectar','s-url-hint':'Ejecuta start-tunnel-windows.bat y luego pulsa Detectar.','s-timeout-label':'Mensaje de fin','s-save':'Guardar','s-add-loc':'+ Lugar','s-mode-label':'Modo:','s-add-mode':'+ Modo','s-add-mission':'+ MiSSiON','s-rules-title':'Reglas','s-add-rule':'+ Regla','s-rules-hint':'Marcadores: [photo] [video] [indoor]. Arrastra para reordenar.','s-rules-save':'Guardar','s-tpl-title':'Plantilla QR','s-tpl-size-label':'Tamaño de papel','s-tpl-upload-label':'Subir plantilla','s-tpl-drag-hint':'Arrastra el marcador del QR.','s-tpl-save':'Guardar posición','s-tpl-delete':'Eliminar plantilla','s-sec-title':'Cambiar contraseña','s-sec-old':'Contraseña actual','s-sec-new':'Nueva contraseña','s-sec-new2':'Confirmar','s-sec-save':'Actualizar','rej-title':'Rechazar envío','rej-hint':'El medio será eliminado.','rej-reason-label':'Motivo (mostrado al equipo)','rej-confirm':'Rechazar y notificar','qrm-title':'Código QR de acceso','s-add-rs':'＋ Conjunto de reglas','ruleset-label':'Conjunto de reglas','paper-size':'Tamaño de papel','update-title':'Actualizar app','update-btn':'Actualizar ahora','update-log':'Salida','github-label':'URL del repositorio GitHub','version-label':'Versión','modes-label':'Partidas','chat-ph-gm':'Mensaje…','qrm-close':'Cerrar','ng-qr-download':'⬇ QR','qrm-download':'⬇ Descargar QR','cancel':'Cancelar','create':'Crear','save':'Guardar','edit':'Editar','delete':'Eliminar','copy':'Copiar','rule':'Regla','add-mode':'＋ Modo','edit-mode':'Editar modo','min-label':'Minutos','per-game':'por partida','pool':'Pool (todos los lugares)','mission-name-label':'Nombre de la MiSSiON','loc-label':'Lugar','media-label':'Tipo de medio','indoor-label':'También en interior','desc-label':'Descripción','task-label':'Tarea','auto-translate':'🌐 Traducir automáticamente','no-rules':'Aún no hay reglas.','created':'¡Creado!','saved':'¡Guardado!','wrong-pw':'Contraseña incorrecta.','del':'Eliminar','no-missions':'Sin misiones.','all':'Todas','translating':'Traduciendo…','translated':'¡Traducido!','updating':'Actualizando…','selfie-uploaded':'Selfie subido','s-collage-title':'Tiempos del collage','s-collage-subtitle':'Controla el ritmo del vídeo-collage de fin de partida.','s-collage-photo-label':'Duración por foto (segundos)','s-collage-photo-help':'Cuánto tiempo se muestra cada foto del equipo.','s-collage-cover-label':'Duración de la portada (segundos)','s-collage-cover-help':'Cuánto tiempo se muestra la tarjeta de título (selfie + nombre).','s-collage-xfade-label':'Fundido (segundos)','s-collage-xfade-help':'Duración del fundido entre imágenes. 0 = cortes secos.','s-collage-save':'Guardar','st-profanity-label':'Filtro de palabras','s-prof-title':'Filtro de palabras para nombres de equipo','s-prof-subtitle':'Bloquea nombres de equipo ofensivos. Incluye una lista multilingüe; añade tus propias palabras abajo.','s-prof-enabled-label':'Filtro activado','s-prof-enabled-help':'Si se desactiva, los nombres de equipo no se comprueban.','s-prof-words-label':'Palabras bloqueadas personalizadas','s-prof-words-help':'Una palabra por línea (o separadas por comas). Mayúsculas, acentos y leetspeak se gestionan automáticamente. Se bloquean palabras enteras, no fragmentos.','s-prof-save':'Guardar',
   'no-tunnel':'No se encontró ningún túnel.','mode-placeholder':'p. ej. ADVANCED',
   'location-label':'Lugar','add-loc':'Añadir lugar','edit-loc':'Editar lugar',
   'loc-spec':'MiSSiONS específicas del lugar','add-mission':'Añadir MiSSiON','edit-mission':'Editar MiSSiON',
@@ -2054,6 +2091,7 @@ function setGmLang(lang){
   // language (the tile labels come straight from the API, but the
   // section titles + tooltips are GMT-driven).
   if(document.getElementById('screen-landing')?.style.display !== 'none') loadLanding();
+  repaintPickerLabels();
   if(document.getElementById('screen-dashboard')?.style.display !== 'none' && selectedTeamId){
     selectTeam(selectedTeamId);
   }
@@ -2081,10 +2119,25 @@ function cycleGmLang(){
   if(document.getElementById('stab-cityrush')?.classList.contains('active')) loadCrModes();
   if(document.getElementById('games-grid')&&selectedLocationId) loadGames(selectedLocationId);
   if(document.getElementById('screen-landing')?.style.display!=='none'){loadLanding();}
+  repaintPickerLabels();
+}
+// The mode picker and the new-game screen carry labels that are part GMT, part
+// live selection (location name, mode name). applyGmLang() only knows the GMT
+// half, so re-run the painters after any language switch.
+function repaintPickerLabels(){
+  const k=document.getElementById('msel-kicker');
+  if(k) k.textContent=gmt('gs-kicker-loc');
+  const n=document.getElementById('msel-location-name');
+  if(n && selectedLocationName) n.textContent=selectedLocationName;
+  if(typeof paintGameSelectLabels==='function') paintGameSelectLabels();
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
 let socket,currentGameId=null,selectedLocationId=null,selectedTeamId=null;
+// The location/mode the GM picked their way into on the landing → mode-tile
+// flow. selectedModeId is what createNewGame() starts the game on; there is no
+// dropdown to read it back off any more.
+let selectedLocationName='',selectedModeId=null,selectedModeName='';
 let settingsPassword=null,pendingRejectSubId=null,pendingRejectGameId=null;
 let currentQRData=null,currentJoinUrl=null;
 let currentModeId=1,currentModeName='MiSSiONS';
@@ -2140,17 +2193,20 @@ async function loadLanding(){
   if(crSection) crSection.style.display = crModes.length ? '' : 'none';
 }
 
-// The "New Game" button has both an SVG icon and a label span. These two
-// helpers swap just the label (keeps the icon intact) without re-rendering
-// the whole button, so the topbar visual language stays consistent across
-// the MiSSiONS and Rail Adventure variants of this screen.
-function _setNewGameLabel(text){
-  const span = document.getElementById('gs-new');
-  if(span) span.textContent = text;
-}
-function _setGsKicker(text){
-  const el = document.getElementById('gs-kicker');
-  if(el) el.textContent = text;
+
+// Paint every contextual label on the game-select screen from the current
+// selection. Called on entry AND after a language switch, because the CTA label used
+// to be clobbered by applyGmLang() because its span id matched a GMT key.
+function paintGameSelectLabels(){
+  const isCr = selectedLocationId === 'cityrush';
+  const kicker = document.getElementById('gs-kicker');
+  const title  = document.getElementById('gs-location-name');
+  const cta    = document.getElementById('gs-new-txt');
+  // MiSSiONS puts the MODE in the headline and the location in the kicker:
+  // the mode is the thing GMs kept getting wrong, so it gets the big type.
+  if(kicker) kicker.textContent = isCr ? (gmt('gs-kicker-cr')||'Rail Adventure') : (selectedLocationName || gmt('gs-kicker-loc'));
+  if(title)  title.textContent  = isCr ? 'Rail Adventure' : (selectedModeName || '');
+  if(cta)    cta.textContent    = isCr ? (gmt('gs-new-cr')) : (gmt('gs-start'));
 }
 // Used by the two COPY buttons on the new-game screen. We toggle just the
 // inner <span> (not the whole button) so the icon-less "Copy" / "Copied!"
@@ -2179,46 +2235,78 @@ async function copyToClipboard(text, btn){
 }
 async function selectCityRushLocation(){
   selectedLocationId='cityrush';
-  _setGsKicker(gmt('gs-kicker-cr')||'Rail Adventure');
-  document.getElementById('gs-location-name').textContent='Rail Adventure';
-  showScreen('screen-game-select');
-  // Show only CR modes, hide normal mode selector
-  const crModes=await API('/api/cr/modes');
-  document.getElementById('mode-select-wrap').style.display='none';
+  selectedLocationName=''; selectedModeId=null; selectedModeName='';
+  // Rail Adventure keeps its own route dropdown: it has no per-location mode
+  // tiles, and its picker already starts blank, so it forces a real choice.
+  // Paint the screen before revealing it: everything after the fetch below
+  // would otherwise show for a frame with the last mode's headline still up.
   document.getElementById('cr-mode-select-wrap').style.display='block';
+  paintGameSelectLabels();
+  showScreen('screen-game-select');
+  const crModes=await API('/api/cr/modes');
   const crSel=document.getElementById('cr-mode-select');
   if(crSel){
     crSel.innerHTML='<option value="">— '+(gmt('gs-cr-pick')||'Modus wählen')+' —</option>'+
       crModes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   }
-  _setNewGameLabel(gmt('gs-new-cr')||'Rail Adventure starten');
   await loadGames('cityrush');
 }
+// Picking a location no longer jumps straight to the new-game form. It opens
+// the mode picker. GMs were leaving the old dropdown on whatever sat first in
+// the list and starting games on the wrong mode; a tile has to be aimed at.
 async function selectLocation(id,name){
   selectedLocationId=id;
-  _setGsKicker(gmt('gs-kicker-loc')||'Standort');
-  document.getElementById('gs-location-name').textContent=name;
-  showScreen('screen-game-select');
-  // Restore normal mode selector; hide the CR picker (Rail Adventure has its own
-  // entry point on the landing screen and uses its own location id).
-  document.getElementById('mode-select-wrap').style.display='block';
-  document.getElementById('cr-mode-select-wrap').style.display='none';
-  _setNewGameLabel(gmt('gs-new')||'Neues Spiel');
-  // Load modes into selector — hide modes pinned to a DIFFERENT location so you
-  // can't pick one whose missions belong elsewhere (→ empty game). Modes with no
-  // location restriction (location_id null) always show.
-  const modes=(await API('/api/modes')).filter(m=>!m.location_id||Number(m.location_id)===Number(id));
-  const sel=document.getElementById('mode-select');
-  sel.innerHTML=modes.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
-  sel.value=currentModeId;
-  // Load Rail Adventure modes
-  const crModes=await API('/api/cr/modes');
-  const crSel=document.getElementById('cr-mode-select');
-  if(crSel){
-    crSel.innerHTML='<option value="">— Kein Rail Adventure —</option>'+
-      crModes.map(m=>`<option value="${m.id}">🏃 ${esc(m.name)}</option>`).join('');
+  selectedLocationName=name;
+  selectedModeId=null; selectedModeName='';
+  const kicker=document.getElementById('msel-kicker');
+  if(kicker) kicker.textContent=gmt('gs-kicker-loc');
+  document.getElementById('msel-location-name').textContent=name;
+  showScreen('screen-mode-select');
+  await renderModeTiles(id);
+}
+
+// Modes pinned to a DIFFERENT location stay hidden so you can't pick one whose
+// missions belong elsewhere (→ empty game). Modes with no restriction
+// (location_id null) show everywhere.
+async function renderModeTiles(locationId){
+  const grid=document.getElementById('mode-grid');
+  if(!grid) return;
+  const modes=(await API('/api/modes')).filter(m=>!m.location_id||Number(m.location_id)===Number(locationId));
+  if(!modes.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">🎮</div><p>'+esc(gmt('msel-empty'))+'</p></div>';
+    return;
   }
-  await loadGames(id);
+  grid.innerHTML=modes.map(m=>{
+    const hasImg=!!m.tile_image;
+    const showTitle=m.tile_show_title!==0;
+    // Artwork sits in its own absolutely-positioned layer rather than on the
+    // card itself, so the scrim can sit between it and the title.
+    const img=hasImg?`<div class="mode-card-img" style="background-image:url('/uploads/${encodeURI(m.tile_image)}')"></div>`:'';
+    const scrim=(hasImg&&showTitle)?'<div class="mode-card-scrim"></div>':'';
+    const col=m.tile_title_color?` style="color:${esc(m.tile_title_color)}"`:'';
+    const title=showTitle?`<div class="mode-card-title"${col}>${esc(m.name)}</div>`:'';
+    return `<div class="mode-card${hasImg?' mode-card--img':''}" role="button" tabindex="0" title="${esc(m.name)}" aria-label="${esc(m.name)}"
+      onclick="selectGameMode(${m.id},'${esc(m.name)}')"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGameMode(${m.id},'${esc(m.name)}')}">${img}${scrim}${title}</div>`;
+  }).join('');
+}
+
+async function selectGameMode(id,name){
+  selectedModeId=Number(id);
+  selectedModeName=name;
+  // Rail Adventure has its own entry point on the landing screen; its route
+  // picker never belongs on a MiSSiONS game.
+  document.getElementById('cr-mode-select-wrap').style.display='none';
+  paintGameSelectLabels();
+  showScreen('screen-game-select');
+  await loadGames(selectedLocationId);
+}
+
+// Back out of the new-game screen to wherever the GM came from: the mode
+// picker for MiSSiONS, the landing screen for Rail Adventure.
+function gsBack(){
+  if(selectedLocationId && selectedLocationId!=='cityrush') showScreen('screen-mode-select');
+  else showScreen('screen-landing');
 }
 
 async function loadGames(locationId){
@@ -2280,7 +2368,8 @@ async function createNewGame(){
   btn.disabled=true;
   try{
   const isCityRush = selectedLocationId==='cityrush';
-  const modeId = isCityRush ? 1 : (Number(document.getElementById('mode-select').value)||1);
+  const modeId = isCityRush ? 1 : (Number(selectedModeId)||0);
+  if(!isCityRush && !modeId){toast(gmt('pick-mode'),'warning');btn.disabled=false;return;}
   const crModeId = isCityRush
     ? Number(document.getElementById('cr-mode-select')?.value)||null
     : null;
@@ -2639,6 +2728,9 @@ async function openDashboard(gameId){
 
 function goToDashboardBack(){
   showScreen('screen-game-select');
+  // Re-derive the headline/CTA from the current selection, since the screen may
+  // have been left showing another mode before the dashboard was opened.
+  paintGameSelectLabels();
   if(selectedLocationId)loadGames(selectedLocationId);
 }
 
@@ -4401,25 +4493,29 @@ async function selectMode(id,name,el){
   await loadMissions();await loadMissionFilter();
 }
 async function showAddMode(){ exitSelectionModes();
+  modeTileReset();
   const rulesets=await API('/api/rulesets');
   const rsOpts=rulesets.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   const locations=await API('/api/locations');
   const locOpts=`<option value="">${esc(gmt('mode-location-all')||'Alle Standorte')}</option>`+locations.map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('add-mode')||'Modus / Mode'}</h3>
-    <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="mode-name" class="input" placeholder="${gmt('mode-placeholder')||'z.B. ADVANCED'}" data-tip="mode-name"></div>
+    <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="mode-name" class="input" placeholder="${gmt('mode-placeholder')||'z.B. ADVANCED'}" data-tip="mode-name" oninput="modeTileSync()"></div>
     <div class="field" data-tip="mode-ruleset"><label class="label" data-tip="mode-ruleset">${gmt('ruleset')||'Regelwerk / Ruleset'}</label>
       <select id="mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" id="mode-timer-label" data-tip="mode-timer">Timer (Minuten / Minutes)</label><input id="mode-timer" type="number" class="input" value="60" min="1" data-tip="mode-timer"></div>
     <div class="field" data-tip="mode-location"><label class="label" data-tip="mode-location">${gmt('mode-location-label')||'Verfügbar an'}</label>
       <select id="mode-location" class="select" data-tip="mode-location">${locOpts}</select></div>
+    ${modeTileFieldsHtml(null)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">${gmt('cancel')||(gmLang==='de'?'Abbrechen':gmLang==='fr'?'Annuler':gmLang==='it'?'Annulla':'Cancel')}</button>
       <button class="btn btn-primary" onclick="saveNewMode()">${gmt('create')||(gmLang==='de'?'Erstellen':gmLang==='fr'?'Créer':gmLang==='it'?'Crea':'Create')}</button>
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+  modeTileSync();
 }
 async function showEditMode(id){
+  modeTileReset();
   const modes=await API('/api/modes');
   const rulesets=await API('/api/rulesets');
   const m=modes.find(x=>x.id===id);if(!m)return;
@@ -4428,13 +4524,14 @@ async function showEditMode(id){
   const locOpts=`<option value="">${esc(gmt('mode-location-all')||'Alle Standorte')}</option>`+locations.map(l=>`<option value="${l.id}" ${sel(Number(l.id)===Number(m.location_id))}>${esc(l.name)}</option>`).join('');
   document.getElementById('modal-content').innerHTML=`
     <h3 class="modal-title">${gmt('edit-mode')||'Modus bearbeiten / Edit Mode'}</h3>
-    <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="edit-mode-name" class="input" value="${esc(m.name)}" data-tip="mode-name"></div>
+    <div class="field" data-tip="mode-name"><label class="label" data-tip="mode-name">Name</label><input id="edit-mode-name" class="input" value="${esc(m.name)}" data-tip="mode-name" oninput="modeTileSync()"></div>
     <div class="field" data-tip="mode-ruleset"><label class="label" data-tip="mode-ruleset">${gmt('ruleset-label')||'Regelwerk'}</label>
       <select id="edit-mode-ruleset" class="select" data-tip="mode-ruleset">${rsOpts}</select></div>
     <div class="field" data-tip="mode-timer"><label class="label" data-tip="mode-timer">Timer (${gmt('min-label')||'Minuten / Minutes'})</label>
       <input id="edit-mode-timer" type="number" class="input" value="${m.timer_default||60}" min="1" data-tip="mode-timer"></div>
     <div class="field" data-tip="mode-location"><label class="label" data-tip="mode-location">${gmt('mode-location-label')||'Verfügbar an'}</label>
       <select id="edit-mode-location" class="select" data-tip="mode-location">${locOpts}</select></div>
+    ${modeTileFieldsHtml(m)}
     <div class="modal-footer" style="justify-content:space-between;">
       <div>
         ${m.id!==1?`<button class="btn btn-danger btn-sm" onclick="confirmDeleteMode(${m.id});closeModal()">${gmt('delete')||'Löschen'}</button>`:''}
@@ -4445,15 +4542,142 @@ async function showEditMode(id){
       </div>
     </div>`;
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
+  modeTileSync();
 }
+// ── Mode tile artwork ──────────────────────────────────────────────────────
+// The picked file is held here and only sent when the GM saves, so Cancel
+// really cancels and the add/edit modals share one code path (a brand-new
+// mode has no id to upload against until it exists).
+let _modeTileFile=null, _modeTileRemove=false, _modeTileCur=null, _modeTileObjUrl=null;
+function modeTileReset(){
+  if(_modeTileObjUrl){ URL.revokeObjectURL(_modeTileObjUrl); _modeTileObjUrl=null; }
+  _modeTileFile=null; _modeTileRemove=false; _modeTileCur=null;
+}
+// The theme's text colour, as hex, for the 'follow the theme' swatch. Read
+// from the live token so a re-themed app still shows the truth.
+function modeTileDefaultColor(){
+  const v=(getComputedStyle(document.documentElement).getPropertyValue('--text')||'').trim();
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : '#ffffff';
+}
+function modeTileFieldsHtml(m){
+  _modeTileCur = m && m.tile_image ? m.tile_image : null;
+  const showTitle = !m || m.tile_show_title!==0;
+  const hasCol = !!(m && m.tile_title_color);
+  const col = hasCol ? m.tile_title_color : modeTileDefaultColor();
+  const inf = (k)=>`<i class="cme-info" tabindex="0">i<span class="cme-tip">${esc(gmt(k)||'')}</span></i>`;
+  return `
+    <div class="field">
+      <label class="label">${esc(gmt('mode-tile-label'))}${inf('mode-tile-tip')}</label>
+      <div id="mode-tile-preview" class="mode-grid" style="grid-template-columns:minmax(0,230px);margin-bottom:.55rem;"></div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+          <span id="mode-tile-pick-lbl">${esc(gmt('mode-tile-pick'))}</span>
+          <input type="file" accept="image/*" style="display:none;" onchange="modeTilePick(event)">
+        </label>
+        <button type="button" class="btn btn-ghost btn-sm" id="mode-tile-clear" onclick="modeTileClear()">${esc(gmt('mode-tile-remove'))}</button>
+      </div>
+      <small style="display:block;margin-top:.35rem;">${esc(gmt('mode-tile-save-hint')||'')}</small>
+    </div>
+    <div class="toggle-row" onclick="toggleSwitch(this.querySelector('.toggle'),'mode-title-show');modeTileSync()">
+      <div><div class="toggle-row-text">${esc(gmt('mode-title-show'))}${inf('mode-title-show-tip')}</div>
+      <div class="toggle-row-sub">${esc(gmt('mode-title-show-sub')||'')}</div></div>
+      <div class="toggle ${showTitle?'is-on':''}" onclick="event.stopPropagation();toggleSwitch(this,'mode-title-show');modeTileSync()"></div>
+    </div>
+    <input type="checkbox" id="mode-title-show" ${showTitle?'checked':''} style="display:none;">
+    <div class="field" id="mode-title-color-wrap" style="margin-top:.7rem;display:${showTitle?'block':'none'};">
+      <label class="label">${esc(gmt('mode-title-color'))}${inf('mode-title-color-tip')}</label>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <input type="color" id="mode-title-color" value="${esc(col)}" oninput="modeTileColorTouched(true);modeTileSync()">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="modeTileColorReset()">${esc(gmt('mode-title-color-reset'))}</button>
+      </div>
+      <input type="hidden" id="mode-title-color-set" value="${hasCol?'1':'0'}">
+    </div>`;
+}
+function modeTileColorTouched(v){ const f=document.getElementById('mode-title-color-set'); if(f) f.value = v?'1':'0'; }
+function modeTileColorReset(){
+  const c=document.getElementById('mode-title-color'); if(c) c.value=modeTileDefaultColor();
+  modeTileColorTouched(false); modeTileSync();
+}
+function modeTilePick(e){
+  const f=e.target.files && e.target.files[0]; e.target.value='';
+  if(!f) return;
+  if(_modeTileObjUrl) URL.revokeObjectURL(_modeTileObjUrl);
+  _modeTileFile=f; _modeTileRemove=false; _modeTileObjUrl=URL.createObjectURL(f);
+  modeTileSync();
+}
+function modeTileClear(){
+  if(_modeTileObjUrl){ URL.revokeObjectURL(_modeTileObjUrl); _modeTileObjUrl=null; }
+  _modeTileFile=null;
+  _modeTileRemove=!!_modeTileCur;   // only the saved image needs a server-side delete
+  _modeTileCur=_modeTileRemove?_modeTileCur:null;
+  modeTileSync();
+}
+// Which image the preview should show right now: a freshly picked file wins,
+// then the saved one, unless the GM just removed it.
+function modeTilePreviewUrl(){
+  if(_modeTileObjUrl) return _modeTileObjUrl;
+  if(_modeTileCur && !_modeTileRemove) return '/uploads/'+encodeURI(_modeTileCur);
+  return null;
+}
+// Live preview of the actual tile, built from the same classes the mode
+// picker uses, so what the GM tunes here is what they get there.
+function modeTileSync(){
+  const box=document.getElementById('mode-tile-preview'); if(!box) return;
+  const nameEl=document.getElementById('edit-mode-name')||document.getElementById('mode-name');
+  const name=(nameEl&&nameEl.value.trim())||(gmt('mode-tile-preview'));
+  const showTitle=!!document.getElementById('mode-title-show')?.checked;
+  const colSet=document.getElementById('mode-title-color-set')?.value==='1';
+  const colVal=document.getElementById('mode-title-color')?.value||'';
+  const url=modeTilePreviewUrl();
+  const img=url?`<div class="mode-card-img" style="background-image:url('${url.replace(/'/g,"%27")}')"></div>`:'';
+  const scrim=(url&&showTitle)?'<div class="mode-card-scrim"></div>':'';
+  const col=(colSet&&colVal)?` style="color:${esc(colVal)}"`:'';
+  const title=showTitle?`<div class="mode-card-title"${col}>${esc(name)}</div>`:'';
+  box.innerHTML=`<div class="mode-card${url?' mode-card--img':''}" style="cursor:default;">${img}${scrim}${title}</div>`;
+  const colWrap=document.getElementById('mode-title-color-wrap');
+  if(colWrap) colWrap.style.display=showTitle?'block':'none';
+  const clr=document.getElementById('mode-tile-clear');
+  if(clr) clr.disabled=!url;
+  const pick=document.getElementById('mode-tile-pick-lbl');
+  if(pick) pick.textContent=url?(gmt('mode-tile-replace')):(gmt('mode-tile-pick'));
+}
+// Read the tile form fields for a mode save. tile_title_color null = follow
+// the theme, which is also what an untouched colour picker means.
+function modeTileFormValues(){
+  const show=document.getElementById('mode-title-show')?.checked!==false;
+  const set=document.getElementById('mode-title-color-set')?.value==='1';
+  const val=document.getElementById('mode-title-color')?.value||'';
+  return { tile_show_title: show?1:0, tile_title_color: (set&&val)?val:null };
+}
+// Apply the staged artwork change to a saved mode. Runs after the mode row
+// itself is written, so a brand-new mode already has an id.
+async function modeTileCommit(modeId){
+  if(_modeTileFile){
+    const fd=new FormData();
+    if(settingsPassword) fd.append('password', settingsPassword);
+    fd.append('image', _modeTileFile, _modeTileFile.name);
+    const headers={}; if(gmToken) headers['Authorization']='Bearer '+gmToken;
+    const r=await fetch(`/api/modes/${modeId}/tile-image`,{method:'POST',headers,body:fd});
+    if(!r.ok){ toast((gmt('upload-failed'))+' ('+r.status+')','error'); return false; }
+  } else if(_modeTileRemove){
+    await API(`/api/modes/${modeId}/tile-image`,{method:'DELETE',body:{password:settingsPassword}});
+  }
+  return true;
+}
+
 async function saveEditMode(id){
   const name=document.getElementById('edit-mode-name').value.trim();
   if(!name){toast(gmt('name-required')||'Name required','error');return;}
   const rulesetId=Number(document.getElementById('edit-mode-ruleset').value);
   const timer=Number(document.getElementById('edit-mode-timer').value)||60;
   const locEl=document.getElementById('edit-mode-location');const locId=locEl&&locEl.value?Number(locEl.value):null;
-  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer,location_id:locId}});
-  if(res.success){closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast(gmt('saved')||'Gespeichert!','success');}
+  const tile=modeTileFormValues();
+  const res=await API(`/api/modes/${id}`,{method:'PUT',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:timer,location_id:locId,...tile}});
+  if(res.success){
+    await modeTileCommit(id);
+    modeTileReset();
+    closeModal();await loadModeTabs();if(id===currentModeId)currentModeName=name;toast(gmt('saved')||'Gespeichert!','success');
+  }
   else toast(res.error,'error');
 }
 async function confirmDeleteMode(id){
@@ -4469,8 +4693,14 @@ async function saveNewMode(){
   const rulesetEl=document.getElementById('mode-ruleset');const rulesetId=rulesetEl?Number(rulesetEl.value):1;
   const timerEl=document.getElementById('mode-timer');const modeTimer=timerEl?Number(timerEl.value):60;
   const locEl=document.getElementById('mode-location');const locId=locEl&&locEl.value?Number(locEl.value):null;
-  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer,location_id:locId}});
-  if(res.success){closeModal();loadModeTabs();toast(gmt('mode-created')||'Modus erstellt!','success');}
+  const tile=modeTileFormValues();
+  const res=await API('/api/modes',{method:'POST',body:{password:settingsPassword,name,ruleset_id:rulesetId,timer_default:modeTimer,location_id:locId,...tile}});
+  if(res.success){
+    // The artwork can only be attached once the row exists and has an id.
+    if(res.id) await modeTileCommit(res.id);
+    modeTileReset();
+    closeModal();loadModeTabs();toast(gmt('mode-created')||'Modus erstellt!','success');
+  }
 }
 
 // Locations
@@ -7586,7 +7816,7 @@ async function importMissions(file){
 }
 
 // Util
-const SCREENS=['screen-landing','screen-game-select','screen-new-game','screen-dashboard','screen-settings-gate','screen-settings'];
+const SCREENS=['screen-landing','screen-mode-select','screen-game-select','screen-new-game','screen-dashboard','screen-settings-gate','screen-settings'];
 const GRID_SCREENS=['screen-dashboard'];
 let _prevScreen='screen-landing';
 function currentScreen(){return SCREENS.find(s=>document.getElementById(s).style.display!=='none')||'screen-landing';}
@@ -8468,7 +8698,7 @@ const _TUT = {
   de:{ launch:'Tutorial', menu:'Tutorial wählen', step:'Schritt', next:'Weiter', back:'Zurück', skip:'Beenden', done:'Fertig', needGame:'Öffne zuerst ein Spiel.', demoName:'Demo', demoFail:'Demo-Team konnte nicht erstellt werden.', demoDeleted:'Demo-Team gelöscht.',
     tutDoneTitle:'Tutorial abgeschlossen', tutDoneMsg:'„{name}" ist abgeschlossen.', tutCont:'Weiter mit {name}', tutFinish:'Fertig', tutAllset:'Super — du kennst jetzt die Grundlagen!',
     mMs:'MiSSiONS einrichten', mMsS:'Standort-Spiel Schritt für Schritt', mRa:'Rail Adventure einrichten', mRaS:'GPS-Route Schritt für Schritt', mDash:'Dashboard-Tour', mDashS:'Die Steuerzentrale erklärt', mIn:'Im Spiel (Demo-Team)', mInS:'Live üben mit einem Demo-Team', mAf:'Nach dem Spiel', mAfS:'Abschluss, Rangliste & Export',
-    ms1t:'Standort wählen', ms1b:'Tippe einen Startort an, um ein MiSSiONS-Spiel zu beginnen.', ms2t:'Modus wählen', ms2b:'Wähle, welche Missionen die Teams spielen.', ms3t:'Spiel erstellen', ms3b:'Erstellt das Spiel und seinen Beitritts-Code.', ms4t:'QR drucken', ms4b:'Lade das QR-PDF herunter und drucke je einen für jeden Team-Captain.', ms5t:'Dashboard öffnen', ms5b:'Dein Live-Kontrollzentrum für das laufende Spiel.',
+    ms1t:'Standort wählen', ms1b:'Tippe einen Startort an, um ein MiSSiONS-Spiel zu beginnen.', ms2t:'Modus wählen', ms2b:'Tippe die Kachel des Modus an, den die Teams spielen sollen.', ms3t:'Spiel erstellen', ms3b:'Erstellt das Spiel und seinen Beitritts-Code.', ms4t:'QR drucken', ms4b:'Lade das QR-PDF herunter und drucke je einen für jeden Team-Captain.', ms5t:'Dashboard öffnen', ms5b:'Dein Live-Kontrollzentrum für das laufende Spiel.',
     ra1t:'Rail Adventure wählen', ra1b:'Tippe die Rail-Adventure-Kachel an (GPS-Route).', ra2t:'Route wählen', ra2b:'Wähle den Rail-Adventure-Modus für dieses Spiel.', ra3t:'Spiel erstellen', ra3b:'Erstellt das Spiel und seinen Beitritts-Code.', ra4t:'QR drucken', ra4b:'Lade das QR-PDF herunter und gib es jedem Team-Captain.', ra5t:'Dashboard öffnen', ra5b:'Verfolge Teams live auf Karte und Rangliste.',
     d1t:'Teams', d1b:'Alle beigetretenen Teams erscheinen hier. Tippe ein Team an.', d2t:'Team-Details', d2b:'Fortschritt, Selfie und Einreichungen des Teams.', d3t:'Chat, Karte & Rangliste', d3b:'Wechsle zwischen Chat, Karte und Rangliste.', d4t:'QR & Export', d4b:'Beitritts-QR zeigen; am Ende Fotos und Collage exportieren.', d5t:'Timer', d5b:'Spielzeit starten, pausieren und anpassen.',
     g1t:'Demo-Team', g1b:'Wir haben „📚 Demo" erstellt, um alles live zu zeigen.', g2t:'Team-Details', g2b:'Hier siehst du, woran das Team gerade arbeitet.', g3t:'Einreichungen prüfen', g3b:'Gib Fotos und Videos frei oder lehne sie ab.', g4t:'Chat', g4b:'Schreibe dem Team oder sende einen Broadcast an alle.', g5t:'Einfrieren', g5b:'Friere ein Team kurz ein, z. B. als Strafe.', g6t:'Team löschen', g6b:'Damit setzt du ein falsch beigetretenes Team zurück. Wir löschen jetzt das Demo-Team.',
@@ -8476,7 +8706,7 @@ const _TUT = {
   en:{ launch:'Tutorial', menu:'Choose a tutorial', step:'Step', next:'Next', back:'Back', skip:'Exit', done:'Done', needGame:'Open a game first.', demoName:'Demo', demoFail:'Could not create the demo team.', demoDeleted:'Demo team deleted.',
     tutDoneTitle:'Tutorial complete', tutDoneMsg:'"{name}" is complete.', tutCont:'Continue with {name}', tutFinish:'Done', tutAllset:'Great — you now know the basics!',
     mMs:'MiSSiONS setup', mMsS:'Location game, step by step', mRa:'Rail Adventure setup', mRaS:'GPS route, step by step', mDash:'Dashboard tour', mDashS:'The control centre explained', mIn:'Inside the game (demo team)', mInS:'Practise live with a demo team', mAf:'After the game', mAfS:'Wrap-up, rankings and export',
-    ms1t:'Choose a location', ms1b:'Tap a starting location to begin a MiSSiONS game.', ms2t:'Choose the mode', ms2b:'Pick which set of missions teams will play.', ms3t:'Create the game', ms3b:'This creates the game and its join code.', ms4t:'Print the QR', ms4b:'Download the QR PDF and print one for each team captain.', ms5t:'Open the dashboard', ms5b:'Your live control centre for the running game.',
+    ms1t:'Choose a location', ms1b:'Tap a starting location to begin a MiSSiONS game.', ms2t:'Choose the mode', ms2b:'Tap the tile of the mode the teams should play.', ms3t:'Create the game', ms3b:'This creates the game and its join code.', ms4t:'Print the QR', ms4b:'Download the QR PDF and print one for each team captain.', ms5t:'Open the dashboard', ms5b:'Your live control centre for the running game.',
     ra1t:'Pick Rail Adventure', ra1b:'Tap the Rail Adventure tile (GPS route).', ra2t:'Choose the route', ra2b:'Pick the Rail Adventure mode for this game.', ra3t:'Create the game', ra3b:'This creates the game and its join code.', ra4t:'Print the QR', ra4b:'Download the QR PDF and hand one to each team captain.', ra5t:'Open the dashboard', ra5b:'Track teams live on the map and rankings.',
     d1t:'Teams', d1b:'All joined teams appear here. Tap a team.', d2t:'Team details', d2b:'The team progress, selfie and submissions.', d3t:'Chat, map & rankings', d3b:'Switch between chat, map and rankings.', d4t:'QR & export', d4b:'Show the join QR; export photos and collage at the end.', d5t:'Timer', d5b:'Start, pause and adjust the game time.',
     g1t:'Demo team', g1b:'We created "📚 Demo" to show everything live.', g2t:'Team details', g2b:'Here you see what the team is working on.', g3t:'Review submissions', g3b:'Approve or reject photos and videos.', g4t:'Chat', g4b:'Message the team or broadcast to everyone.', g5t:'Freeze', g5b:'Briefly freeze a team, e.g. as a penalty.', g6t:'Delete team', g6b:'Use this to reset a team that joined wrong. We will delete the demo team now.',
@@ -8484,7 +8714,7 @@ const _TUT = {
   fr:{ launch:'Tutoriel', menu:'Choisir un tutoriel', step:'Étape', next:'Suivant', back:'Retour', skip:'Quitter', done:'Terminé', needGame:'Ouvre d\'abord une partie.', demoName:'Demo', demoFail:'Impossible de créer l\'équipe démo.', demoDeleted:'Équipe démo supprimée.',
     tutDoneTitle:'Tutoriel terminé', tutDoneMsg:'« {name} » est terminé.', tutCont:'Continuer avec {name}', tutFinish:'Terminé', tutAllset:'Parfait, tu connais maintenant les bases !',
     mMs:'Configurer MiSSiONS', mMsS:'Jeu sur site, étape par étape', mRa:'Configurer Rail Adventure', mRaS:'Parcours GPS, étape par étape', mDash:'Visite du tableau de bord', mDashS:'Le centre de contrôle expliqué', mIn:'Pendant le jeu (équipe démo)', mInS:'S\'entraîner en direct avec une équipe démo', mAf:'Après le jeu', mAfS:'Clôture, classement et export',
-    ms1t:'Choisir un lieu', ms1b:'Touche un lieu de départ pour lancer une partie MiSSiONS.', ms2t:'Choisir le mode', ms2b:'Choisis l\'ensemble de missions que les équipes vont jouer.', ms3t:'Créer la partie', ms3b:'Cela crée la partie et son code d\'accès.', ms4t:'Imprimer le QR', ms4b:'Télécharge le PDF du QR et imprime-en un pour chaque capitaine d\'équipe.', ms5t:'Ouvrir le tableau de bord', ms5b:'Ton centre de contrôle en direct pour la partie en cours.',
+    ms1t:'Choisir un lieu', ms1b:'Touche un lieu de départ pour lancer une partie MiSSiONS.', ms2t:'Choisir le mode', ms2b:'Touche la tuile du mode que les équipes vont jouer.', ms3t:'Créer la partie', ms3b:'Cela crée la partie et son code d\'accès.', ms4t:'Imprimer le QR', ms4b:'Télécharge le PDF du QR et imprime-en un pour chaque capitaine d\'équipe.', ms5t:'Ouvrir le tableau de bord', ms5b:'Ton centre de contrôle en direct pour la partie en cours.',
     ra1t:'Choisir Rail Adventure', ra1b:'Touche la tuile Rail Adventure (parcours GPS).', ra2t:'Choisir le parcours', ra2b:'Choisis le mode Rail Adventure pour cette partie.', ra3t:'Créer la partie', ra3b:'Cela crée la partie et son code d\'accès.', ra4t:'Imprimer le QR', ra4b:'Télécharge le PDF du QR et remets-en un à chaque capitaine d\'équipe.', ra5t:'Ouvrir le tableau de bord', ra5b:'Suis les équipes en direct sur la carte et le classement.',
     d1t:'Équipes', d1b:'Toutes les équipes inscrites apparaissent ici. Touche une équipe.', d2t:'Détails de l\'équipe', d2b:'La progression, le selfie et les soumissions de l\'équipe.', d3t:'Chat, carte et classement', d3b:'Bascule entre chat, carte et classement.', d4t:'QR et export', d4b:'Affiche le QR d\'accès ; exporte les photos et le collage à la fin.', d5t:'Minuteur', d5b:'Démarre, mets en pause et ajuste le temps de jeu.',
     g1t:'Équipe démo', g1b:'Nous avons créé « 📚 Demo » pour tout montrer en direct.', g2t:'Détails de l\'équipe', g2b:'Ici tu vois ce sur quoi l\'équipe travaille.', g3t:'Vérifier les soumissions', g3b:'Valide ou refuse les photos et les vidéos.', g4t:'Chat', g4b:'Écris à l\'équipe ou envoie un message à tous.', g5t:'Geler', g5b:'Gèle brièvement une équipe, par ex. comme pénalité.', g6t:'Supprimer l\'équipe', g6b:'Sert à réinitialiser une équipe mal inscrite. Nous supprimons maintenant l\'équipe démo.',
@@ -8492,7 +8722,7 @@ const _TUT = {
   it:{ launch:'Tutorial', menu:'Scegli un tutorial', step:'Passo', next:'Avanti', back:'Indietro', skip:'Esci', done:'Fatto', needGame:'Apri prima una partita.', demoName:'Demo', demoFail:'Impossibile creare la squadra demo.', demoDeleted:'Squadra demo eliminata.',
     tutDoneTitle:'Tutorial completato', tutDoneMsg:'«{name}» è completato.', tutCont:'Continua con {name}', tutFinish:'Fatto', tutAllset:'Ottimo, ora conosci le basi!',
     mMs:'Configura MiSSiONS', mMsS:'Gioco sul posto, passo dopo passo', mRa:'Configura Rail Adventure', mRaS:'Percorso GPS, passo dopo passo', mDash:'Tour della dashboard', mDashS:'Il centro di controllo spiegato', mIn:'Durante il gioco (squadra demo)', mInS:'Esercitati dal vivo con una squadra demo', mAf:'Dopo il gioco', mAfS:'Chiusura, classifica ed esportazione',
-    ms1t:'Scegli un luogo', ms1b:'Tocca un luogo di partenza per iniziare una partita MiSSiONS.', ms2t:'Scegli la modalità', ms2b:'Scegli quale set di missioni giocheranno le squadre.', ms3t:'Crea la partita', ms3b:'Crea la partita e il suo codice di accesso.', ms4t:'Stampa il QR', ms4b:'Scarica il PDF del QR e stampane uno per ogni capitano squadra.', ms5t:'Apri la dashboard', ms5b:'Il tuo centro di controllo dal vivo per la partita in corso.',
+    ms1t:'Scegli un luogo', ms1b:'Tocca un luogo di partenza per iniziare una partita MiSSiONS.', ms2t:'Scegli la modalità', ms2b:'Tocca il riquadro della modalità che giocheranno le squadre.', ms3t:'Crea la partita', ms3b:'Crea la partita e il suo codice di accesso.', ms4t:'Stampa il QR', ms4b:'Scarica il PDF del QR e stampane uno per ogni capitano squadra.', ms5t:'Apri la dashboard', ms5b:'Il tuo centro di controllo dal vivo per la partita in corso.',
     ra1t:'Scegli Rail Adventure', ra1b:'Tocca il riquadro Rail Adventure (percorso GPS).', ra2t:'Scegli il percorso', ra2b:'Scegli la modalità Rail Adventure per questa partita.', ra3t:'Crea la partita', ra3b:'Crea la partita e il suo codice di accesso.', ra4t:'Stampa il QR', ra4b:'Scarica il PDF del QR e consegnane uno a ogni capitano squadra.', ra5t:'Apri la dashboard', ra5b:'Segui le squadre dal vivo su mappa e classifica.',
     d1t:'Squadre', d1b:'Tutte le squadre iscritte appaiono qui. Tocca una squadra.', d2t:'Dettagli squadra', d2b:'Progresso, selfie e invii della squadra.', d3t:'Chat, mappa e classifica', d3b:'Passa tra chat, mappa e classifica.', d4t:'QR ed esportazione', d4b:'Mostra il QR di accesso; alla fine esporta foto e collage.', d5t:'Timer', d5b:'Avvia, metti in pausa e regola il tempo di gioco.',
     g1t:'Squadra demo', g1b:'Abbiamo creato «📚 Demo» per mostrare tutto dal vivo.', g2t:'Dettagli squadra', g2b:'Qui vedi a cosa sta lavorando la squadra.', g3t:'Controlla gli invii', g3b:'Approva o rifiuta foto e video.', g4t:'Chat', g4b:'Scrivi alla squadra o invia un messaggio a tutti.', g5t:'Congela', g5b:'Congela brevemente una squadra, ad es. come penalità.', g6t:'Elimina squadra', g6b:'Serve a reimpostare una squadra iscritta per errore. Ora eliminiamo la squadra demo.',
@@ -8500,7 +8730,7 @@ const _TUT = {
   es:{ launch:'Tutorial', menu:'Elige un tutorial', step:'Paso', next:'Siguiente', back:'Atrás', skip:'Salir', done:'Hecho', needGame:'Abre primero una partida.', demoName:'Demo', demoFail:'No se pudo crear el equipo demo.', demoDeleted:'Equipo demo eliminado.',
     tutDoneTitle:'Tutorial completado', tutDoneMsg:'«{name}» está completado.', tutCont:'Continuar con {name}', tutFinish:'Hecho', tutAllset:'¡Genial, ya conoces lo básico!',
     mMs:'Configurar MiSSiONS', mMsS:'Juego en ubicación, paso a paso', mRa:'Configurar Rail Adventure', mRaS:'Ruta GPS, paso a paso', mDash:'Recorrido del panel', mDashS:'El centro de control explicado', mIn:'Durante el juego (equipo demo)', mInS:'Practica en vivo con un equipo demo', mAf:'Después del juego', mAfS:'Cierre, clasificación y exportación',
-    ms1t:'Elige una ubicación', ms1b:'Toca una ubicación de inicio para empezar una partida MiSSiONS.', ms2t:'Elige el modo', ms2b:'Elige qué conjunto de misiones jugarán los equipos.', ms3t:'Crear la partida', ms3b:'Esto crea la partida y su código de acceso.', ms4t:'Imprimir el QR', ms4b:'Descarga el PDF del QR e imprime uno para cada capitán de equipo.', ms5t:'Abrir el panel', ms5b:'Tu centro de control en vivo para la partida en curso.',
+    ms1t:'Elige una ubicación', ms1b:'Toca una ubicación de inicio para empezar una partida MiSSiONS.', ms2t:'Elige el modo', ms2b:'Toca el mosaico del modo que jugarán los equipos.', ms3t:'Crear la partida', ms3b:'Esto crea la partida y su código de acceso.', ms4t:'Imprimir el QR', ms4b:'Descarga el PDF del QR e imprime uno para cada capitán de equipo.', ms5t:'Abrir el panel', ms5b:'Tu centro de control en vivo para la partida en curso.',
     ra1t:'Elige Rail Adventure', ra1b:'Toca el mosaico de Rail Adventure (ruta GPS).', ra2t:'Elige la ruta', ra2b:'Elige el modo Rail Adventure para esta partida.', ra3t:'Crear la partida', ra3b:'Esto crea la partida y su código de acceso.', ra4t:'Imprimir el QR', ra4b:'Descarga el PDF del QR y entrega uno a cada capitán de equipo.', ra5t:'Abrir el panel', ra5b:'Sigue a los equipos en vivo en el mapa y la clasificación.',
     d1t:'Equipos', d1b:'Todos los equipos unidos aparecen aquí. Toca un equipo.', d2t:'Detalles del equipo', d2b:'El progreso, el selfie y los envíos del equipo.', d3t:'Chat, mapa y clasificación', d3b:'Cambia entre chat, mapa y clasificación.', d4t:'QR y exportación', d4b:'Muestra el QR de acceso; al final exporta fotos y collage.', d5t:'Temporizador', d5b:'Inicia, pausa y ajusta el tiempo de juego.',
     g1t:'Equipo demo', g1b:'Creamos «📚 Demo» para mostrar todo en vivo.', g2t:'Detalles del equipo', g2b:'Aquí ves en qué está trabajando el equipo.', g3t:'Revisar envíos', g3b:'Aprueba o rechaza fotos y vídeos.', g4t:'Chat', g4b:'Escribe al equipo o envía un mensaje a todos.', g5t:'Congelar', g5b:'Congela brevemente a un equipo, p. ej. como penalización.', g6t:'Eliminar equipo', g6b:'Sirve para restablecer un equipo que se unió mal. Ahora eliminamos el equipo demo.',
@@ -8651,12 +8881,13 @@ function _tutMenuKey(e){ if(e.key==='Escape'){ e.preventDefault(); _tutCloseMenu
 function _show(scr){ return ()=>{ try{ showScreen(scr); }catch(e){} return new Promise(r=>setTimeout(r,280)); }; }
 const _onNewGame=()=>currentScreen()==='screen-new-game';
 const _onGameSelect=()=>currentScreen()==='screen-game-select';
+const _onModeSelect=()=>currentScreen()==='screen-mode-select';
 const _onDash=()=>currentScreen()==='screen-dashboard';
 const _actCreate=async()=>{ try{ await createNewGame(); }catch(e){} return _onNewGame(); };
 const _actOpenDash=async()=>{ try{ await openDashboard(currentGameId); }catch(e){} return true; };
 function tutMs(){ tutStart([
-  {before:_show('screen-landing'), sel:'#screen-landing .location-grid', advanceSel:'.location-grid .location-card:not(.location-card--cr)', advanceWhen:_onGameSelect, noNext:true, title:tt('ms1t'), body:tt('ms1b')},
-  {sel:'#mode-select', title:tt('ms2t'), body:tt('ms2b')},
+  {before:_show('screen-landing'), sel:'#screen-landing .location-grid', advanceSel:'.location-grid .location-card:not(.location-card--cr)', advanceWhen:_onModeSelect, noNext:true, title:tt('ms1t'), body:tt('ms1b')},
+  {sel:'#mode-grid', advanceSel:'#mode-grid .mode-card', advanceWhen:_onGameSelect, noNext:true, title:tt('ms2t'), body:tt('ms2b')},
   {sel:'#btn-new-game', advanceSel:'#btn-new-game', advanceWhen:_onNewGame, action:_actCreate, title:tt('ms3t'), body:tt('ms3b')},
   {sel:'#ng-qr-download', title:tt('ms4t'), body:tt('ms4b')},
   {sel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceSel:'#screen-new-game button[onclick="openDashboard(currentGameId)"]', advanceWhen:_onDash, action:_actOpenDash, title:tt('ms5t'), body:tt('ms5b')},

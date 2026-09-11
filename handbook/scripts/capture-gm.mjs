@@ -35,11 +35,16 @@ const DESC = {
                           fr: 'Écran d’accueil — choisir un emplacement (ou la tuile CityRush en bas).',
                           it: 'Schermata iniziale — scegli una posizione (o la tessera CityRush in basso).',
                           es: 'Pantalla de inicio: elige una ubicación (o la casilla CityRush abajo).' },
-  'm-02-game-select':   { de: 'Spielauswahl: Modus wählen, neues Spiel anlegen oder bestehendes öffnen.',
-                          en: 'Game select: pick a mode, start a new game or reopen an existing one.',
-                          fr: 'Sélection de partie : choisir un mode, créer une partie ou rouvrir une existante.',
-                          it: 'Selezione partita: scegli una modalità, avvia una nuova partita o riapri una esistente.',
-                          es: 'Selección de partida: elige un modo, inicia una partida nueva o reabre una existente.' },
+  'm-02-mode-select':   { de: 'Modus-Wähler: eine Kachel pro Spielmodus dieses Standorts.',
+                          en: 'Mode picker: one tile per game mode available at this location.',
+                          fr: 'Sélecteur de mode : une tuile par mode de jeu disponible sur ce lieu.',
+                          it: 'Selettore modalità: un riquadro per ogni modalità disponibile in questa sede.',
+                          es: 'Selector de modo: un mosaico por cada modo disponible en esta ubicación.' },
+  'm-02-game-select':   { de: 'Im Modus: „Spiel starten“ oder ein bestehendes Spiel wieder öffnen.',
+                          en: 'Inside the mode: start a game, or reopen an existing one.',
+                          fr: 'Dans le mode : lancer une partie ou en rouvrir une existante.',
+                          it: 'Nella modalità: avvia una partita o riapri una esistente.',
+                          es: 'Dentro del modo: inicia una partida o reabre una existente.' },
   'm-03-dashboard':     { de: 'Dashboard: Timer, Team-Chips, Chat- und Broadcast-Spalte rechts.',
                           en: 'Dashboard: timer, team chips, chat + broadcast panel on the right.',
                           fr: 'Tableau de bord : minuteur, pastilles d’équipe, panneau chat + diffusion à droite.',
@@ -191,6 +196,11 @@ async function captureLang(base, fixture, lang) {
     manifest.push(await snap(page, outDir, lang, 'm-01-landing'));
 
     await page.evaluate((id) => selectLocation(id, 'Altstadt'), altstadt.id);
+    await page.waitForTimeout(700);
+    manifest.push(await snap(page, outDir, lang, 'm-02-mode-select'));
+
+    // A mode tile, not a dropdown, is what opens the start-game screen now.
+    await page.evaluate(() => document.querySelector('#mode-grid .mode-card')?.click());
     await page.waitForTimeout(700);
     manifest.push(await snap(page, outDir, lang, 'm-02-game-select'));
 

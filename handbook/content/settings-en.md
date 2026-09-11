@@ -281,19 +281,42 @@ those aren't translated automatically.
 
 # Restricting a mode to one location
 
-By default every mode appears in the mode dropdown of every location.
+By default every mode appears in the mode picker of every location.
 That gets confusing once each location has its own, and picking the
-wrong one produces an empty game — the missions belong to a different
-location.
+wrong one produces an empty game, because the missions belong to a
+different location.
 
 Each mode therefore has an **Available at** setting:
 
-- **All locations** (default) — behaves exactly as before.
-- **A specific location** — the mode only shows up in that location's
-  new-game dropdown.
+- **All locations** (default): behaves exactly as before.
+- **A specific location**: the mode only shows up in that location's
+  mode picker.
 
 The default mode stays unrestricted, so every location always has at
 least one mode to choose.
+
+# How the mode tile looks
+
+::shot:m-06-mode-edit
+
+In the mode editor (✎ on the mode tab) three fields control how that
+mode's tile looks in the picker. A live preview right above them shows
+exactly what the game master will see.
+
+- **Tile image**: artwork for this tile. Without one the tile stays
+  plain. The picked image is only applied when you hit **Save**, so
+  **Cancel** really cancels. **Remove image** puts the tile back to
+  plain.
+- **Title on the tile**: on, the mode name is drawn over the tile.
+  Turn it off when the name is already part of the artwork; the
+  darkening layer over the image is then dropped too.
+- **Title colour**: the colour of the name on the tile. **Default**
+  resets it to the colour scheme's text colour, so the tile follows
+  whatever theme is active.
+
+A landscape image of roughly 600 × 380 pixels works best. It is
+cropped to fill the tile, so keep anything important near the
+centre.
 
 ::part:3:Rail Adventure configuration
 

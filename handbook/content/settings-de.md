@@ -254,19 +254,42 @@ zurück, denn die werden nicht automatisch übersetzt.
 
 # Einen Modus auf einen Standort beschränken
 
-Standardmässig erscheint jeder Modus im Auswahlfeld jedes Standorts.
-Sobald jeder Standort eigene Modi hat, wird das unübersichtlich — und
+Standardmässig erscheint jeder Modus im Modus-Wähler jedes Standorts.
+Sobald jeder Standort eigene Modi hat, wird das unübersichtlich, und
 der falsche Modus erzeugt ein leeres Spiel, weil die Missionen zu
 einem anderen Standort gehören.
 
 Jeder Modus hat deshalb die Einstellung **Verfügbar an**:
 
-- **Alle Standorte** (Standard) — verhält sich wie bisher.
-- **Ein bestimmter Standort** — der Modus erscheint nur noch im
-  Auswahlfeld dieses Standorts.
+- **Alle Standorte** (Standard): verhält sich wie bisher.
+- **Ein bestimmter Standort**: der Modus erscheint nur noch beim
+  Modus-Wähler dieses Standorts.
 
 Der Standardmodus bleibt unbeschränkt, damit jeder Standort immer
 mindestens einen Modus zur Auswahl hat.
+
+# Das Aussehen der Modus-Kachel
+
+::shot:m-06-mode-edit
+
+Im Modus-Editor (✎ auf dem Modus-Tab) steuern drei Felder, wie die
+Kachel im Modus-Wähler aussieht. Eine Live-Vorschau direkt darüber
+zeigt beim Einstellen genau das, was der Spielleiter später sieht.
+
+- **Kachelbild**: ein eigenes Bild für diese Kachel. Ohne Bild bleibt
+  die Kachel schlicht. Das gewählte Bild wird erst beim **Speichern**
+  übernommen, **Abbrechen** ändert also nichts. **Bild entfernen**
+  setzt die Kachel wieder auf schlicht zurück.
+- **Titel auf der Kachel**: eingeschaltet steht der Modus-Name auf der
+  Kachel. Schalte ihn aus, wenn der Name schon Teil des Bildes ist,
+  dann wird auch der Abdunkler über dem Bild weggelassen.
+- **Titelfarbe**: die Farbe des Namens auf der Kachel. **Standard**
+  setzt sie zurück auf die Textfarbe des Farbschemas, die Kachel folgt
+  dann also automatisch dem gewählten Theme.
+
+Als Bild eignet sich ein Querformat, etwa 600 × 380 Pixel. Es wird
+formatfüllend beschnitten, wichtige Bildteile gehören also in die
+Mitte.
 
 ::part:3:Rail Adventure Konfiguration
 

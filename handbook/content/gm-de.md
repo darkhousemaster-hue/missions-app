@@ -62,24 +62,36 @@ Die Buttons in der Kopfzeile:
 
 # Modus und Spiel wählen
 
+::shot:m-02-mode-select
+
+Nach dem Tipp auf einen Standort landest du beim Modus-Wähler: eine
+Kachel pro Spielmodus, der an diesem Standort verfügbar ist. Es gibt
+kein Dropdown mehr, ein Modus wird angetippt statt ausgeklappt, damit
+niemand mehr aus Versehen im falschen Modus startet.
+
+Kacheln können ein eigenes Bild tragen, ihren Titel in einer eigenen
+Farbe zeigen oder ganz ohne Titel auskommen, wenn der Name schon Teil
+des Bildes ist. Eingestellt wird das pro Modus in den Einstellungen,
+siehe das Einstellungs-Handbuch.
+
+Modi, die auf einen anderen Standort beschränkt sind, erscheinen hier
+gar nicht erst.
+
 ::shot:m-02-game-select
 
-Nach dem Tipp auf einen Standort landest du hier. Die Liste unten
-zeigt die schon vorhandenen Spiele dieses Standorts (neueste zuerst)
-mit ID, Datum, Status (wartet / spielt / beendet) und Team-Anzahl.
-**Öffnen** springt direkt ins Dashboard, praktisch, wenn du
-versehentlich weg-navigiert hast.
+Eine Kachel antippen bringt dich ins Spielfenster dieses Modus. Ganz
+oben steht klein der Standort, darunter gross der Modus, in dem du
+gerade bist. Die Liste darunter zeigt die vorhandenen Spiele dieses
+Standorts (neueste zuerst) mit ID, Datum, Status (wartet / spielt /
+pausiert / beendet) und Team-Anzahl. **Öffnen** springt direkt ins
+Dashboard, praktisch, wenn du versehentlich weg-navigiert hast.
 
-Ein neues Spiel anlegen:
+**Spiel starten** legt das Spiel im angezeigten Modus an, wählt die
+passende Mission-Mischung für den Standort und zeigt einen
+**Dashboard öffnen →**-Knopf plus ein QR-Code-Modal für die Spieler.
 
-1. **Modus** aus dem Dropdown wählen. Bestimmt Mission-Bibliothek,
-   Regelwerk und Timer. "MiSSiONS" ist der Default; Admins können
-   weitere angelegt haben (z.B. ADVANCED).
-2. **+ Neues Spiel** tippen.
-
-Die App legt das Spiel an, wählt die passende Mission-Mischung für
-den Standort und zeigt einen **Dashboard öffnen →**-Knopf plus ein
-QR-Code-Modal für die Spieler.
+**Zurück** führt auf den Modus-Wähler, von dort wieder auf den
+Startbildschirm.
 
 # Das Dashboard
 

@@ -61,27 +61,37 @@ Les boutons d’en-tête :
 
 # Choisir un mode et lancer une partie
 
+::shot:m-02-mode-select
+
+Toucher un emplacement t'amène au sélecteur de mode : une tuile par
+mode de jeu disponible sur ce lieu. Il n'y a plus de menu déroulant,
+un mode se touche au lieu de se dérouler, pour que personne ne lance
+plus une partie dans le mauvais mode par inadvertance.
+
+Les tuiles peuvent porter leur propre image, afficher leur titre dans
+la couleur de ton choix, ou se passer complètement de titre quand le
+nom fait déjà partie du visuel. Cela se règle mode par mode dans les
+réglages, voir le manuel des réglages.
+
+Les modes réservés à un autre lieu n'apparaissent pas ici.
+
 ::shot:m-02-game-select
 
-Toucher un emplacement t’amène ici. La liste en bas montre les
-parties déjà créées (la plus récente en premier), chacune avec son
-ID, sa date de création, son statut (en attente / en cours /
-terminée) et le nombre d’équipes ayant rejoint. Touche **Ouvrir**
-sur l’une d’elles pour sauter dans son tableau de bord ; pratique
-quand tu as quitté la page par accident.
+Toucher une tuile t'amène à l'écran de partie de ce mode. Le lieu
+s'affiche en petit tout en haut, et le mode dans lequel tu te trouves
+en grand juste en dessous. La liste en bas montre les parties déjà
+créées à cet endroit (la plus récente en premier), chacune avec son
+ID, sa date, son statut (en attente / en cours / en pause / terminée)
+et le nombre d'équipes ayant rejoint. Touche **Ouvrir** sur l'une
+d'elles pour sauter dans son tableau de bord ; pratique quand tu as
+quitté la page par accident.
 
-Pour lancer une nouvelle partie :
+**Lancer la partie** crée la partie dans le mode affiché, choisit le
+bon mélange de missions pour le lieu et t'affiche un bouton **Ouvrir
+le tableau de bord →** plus une fenêtre QR code que tu peux montrer ou
+imprimer pour que les joueurs rejoignent.
 
-1. Choisis un **mode** dans le menu déroulant. Le mode décide de
-   la bibliothèque de missions, du jeu de règles et du minuteur
-   utilisés. « MiSSiONS » est le défaut ; les admins peuvent en
-   avoir ajouté d’autres (ex. ADVANCED).
-2. Touche **+ Nouvelle partie**.
-
-L’app crée la partie, choisit le bon mélange de missions pour
-l’emplacement et t’affiche un bouton **Ouvrir le tableau de bord
-→** plus une fenêtre QR code que tu peux montrer ou imprimer pour
-que les joueurs rejoignent.
+**Retour** ramène au sélecteur de mode, puis à l'écran d'accueil.
 
 # Le tableau de bord
 

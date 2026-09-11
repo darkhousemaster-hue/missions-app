@@ -285,19 +285,41 @@ traducen automáticamente.
 
 # Limitar un modo a una ubicación
 
-Por defecto, cada modo aparece en el desplegable de cada ubicación. En
-cuanto cada ubicación tiene sus propios modos esto se vuelve confuso —
-y elegir el equivocado produce una partida vacía, porque las misiones
-pertenecen a otra ubicación.
+Por defecto, cada modo aparece en el selector de modo de cada
+ubicación. En cuanto cada ubicación tiene sus propios modos esto se
+vuelve confuso, y elegir el equivocado produce una partida vacía,
+porque las misiones pertenecen a otra ubicación.
 
 Por eso cada modo tiene el ajuste **Disponible en**:
 
-- **Todas las ubicaciones** (predeterminado) — se comporta como antes.
-- **Una ubicación concreta** — el modo solo aparece en el desplegable
-  de esa ubicación.
+- **Todas las ubicaciones** (predeterminado): se comporta como antes.
+- **Una ubicación concreta**: el modo solo aparece en el selector de
+  esa ubicación.
 
 El modo predeterminado sigue sin restricción, de modo que cada
 ubicación siempre tenga al menos un modo disponible.
+
+# El aspecto del mosaico del modo
+
+::shot:m-06-mode-edit
+
+En el editor de modo (✎ en la pestaña del modo) hay tres campos que
+controlan el aspecto del mosaico en el selector. Una vista previa en
+vivo justo encima muestra exactamente lo que verá el game master.
+
+- **Imagen del mosaico**: la imagen de este mosaico. Sin imagen el
+  mosaico queda sencillo. La imagen elegida solo se aplica al pulsar
+  **Guardar**, así que **Cancelar** no cambia nada. **Quitar imagen**
+  devuelve el mosaico a sencillo.
+- **Título en el mosaico**: activado, el nombre del modo se dibuja
+  sobre el mosaico. Desactívalo si el nombre ya forma parte de la
+  imagen; entonces también desaparece la capa oscura sobre la imagen.
+- **Color del título**: el color del nombre en el mosaico.
+  **Predeterminado** lo devuelve al color de texto del esquema, así el
+  mosaico sigue automáticamente el tema activo.
+
+Va bien una imagen apaisada de unos 600 × 380 píxeles. Se recorta para
+llenar el mosaico, así que deja lo importante cerca del centro.
 
 ::part:3:Configuración Rail Adventure
 

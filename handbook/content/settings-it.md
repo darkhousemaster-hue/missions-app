@@ -285,19 +285,42 @@ perché non vengono tradotte automaticamente.
 
 # Limitare una modalità a una sede
 
-Per impostazione predefinita ogni modalità compare nell'elenco di ogni
-sede. Appena ogni sede ha le proprie modalità la cosa diventa confusa —
-e scegliere quella sbagliata produce una partita vuota, perché le
-missioni appartengono a un'altra sede.
+Per impostazione predefinita ogni modalità compare nel selettore di
+modalità di ogni sede. Appena ogni sede ha le proprie modalità la cosa
+diventa confusa, e scegliere quella sbagliata produce una partita
+vuota, perché le missioni appartengono a un'altra sede.
 
 Ogni modalità ha quindi l'impostazione **Disponibile a**:
 
-- **Tutte le sedi** (predefinito) — si comporta come prima.
-- **Una sede specifica** — la modalità compare solo nell'elenco di
+- **Tutte le sedi** (predefinito): si comporta come prima.
+- **Una sede specifica**: la modalità compare solo nel selettore di
   quella sede.
 
 La modalità predefinita resta senza limiti, così ogni sede ha sempre
 almeno una modalità disponibile.
+
+# L'aspetto del riquadro della modalità
+
+::shot:m-06-mode-edit
+
+Nell'editor della modalità (✎ sulla scheda della modalità) tre campi
+governano l'aspetto del riquadro nel selettore. Un'anteprima dal vivo
+subito sopra mostra esattamente ciò che vedrà il game master.
+
+- **Immagine del riquadro**: l'immagine di questo riquadro. Senza
+  immagine il riquadro resta semplice. L'immagine scelta viene
+  applicata solo con **Salva**, quindi **Annulla** non cambia nulla.
+  **Rimuovi immagine** riporta il riquadro a semplice.
+- **Titolo sul riquadro**: attivo, il nome della modalità compare sul
+  riquadro. Disattivalo se il nome fa già parte dell'immagine; sparisce
+  allora anche il velo scuro sopra l'immagine.
+- **Colore del titolo**: il colore del nome sul riquadro.
+  **Predefinito** lo riporta al colore del testo del tema, così il
+  riquadro segue automaticamente il tema attivo.
+
+Va bene un'immagine orizzontale di circa 600 × 380 pixel. Viene
+ritagliata per riempire il riquadro, quindi tieni al centro ciò che
+conta.
 
 ::part:3:Configurazione Rail Adventure
 

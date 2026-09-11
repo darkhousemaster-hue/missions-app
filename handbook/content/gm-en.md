@@ -59,24 +59,36 @@ The header buttons:
 
 # Picking a mode and starting a game
 
+::shot:m-02-mode-select
+
+Tapping a location lands you on the mode picker: one tile per game
+mode available at that location. There is no dropdown any more, a mode
+is tapped rather than unfolded, so nobody starts a game on the wrong
+one by accident.
+
+Tiles can carry their own image, show their title in a colour of your
+choosing, or drop the title entirely when the name is already part of
+the artwork. You set this per mode in the settings, see the settings
+manual.
+
+Modes restricted to another location never show up here.
+
 ::shot:m-02-game-select
 
-Tapping a location lands you here. The list at the bottom shows
-games already created here (most recent first), each one with its
-ID, creation date, status (waiting / playing / ended), and how many
-teams joined. Tap **Open** on any of them to jump into its dashboard
-handy when you accidentally navigated away.
+Tapping a tile takes you into that mode's game screen. The location
+sits small at the top, with the mode you are in spelled out large
+underneath. The list below shows games already created at this
+location (most recent first), each one with its ID, date, status
+(waiting / playing / paused / ended) and how many teams joined. Tap
+**Open** on any of them to jump into its dashboard, handy when you
+accidentally navigated away.
 
-To start a new game:
+**Start game** creates the game on the mode shown, picks the right mix
+of missions for the location, and shows you a **Dashboard open →**
+button plus a QR code modal you can show or print for players to join.
 
-1. Pick a **mode** from the dropdown. The mode decides which mission
-   library, ruleset, and timer the game uses. "MiSSiONS" is the
-   default; admins may have added others (e.g. ADVANCED).
-2. Tap **+ New game**.
-
-The app creates the game, picks the right mix of missions for the
-location, and shows you a **Dashboard open →** button plus a QR code
-modal you can show or print for players to join.
+**Back** returns to the mode picker, and from there to the landing
+screen.
 
 # The dashboard
 

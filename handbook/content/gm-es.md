@@ -59,26 +59,36 @@ Los botones de la cabecera:
 
 # Elegir un modo y arrancar una partida
 
+::shot:m-02-mode-select
+
+Tocar una ubicación te lleva al selector de modo: un mosaico por cada
+modo de juego disponible en esa ubicación. Ya no hay desplegable, un
+modo se toca en lugar de desplegarse, así nadie arranca una partida en
+el modo equivocado por descuido.
+
+Los mosaicos pueden llevar su propia imagen, mostrar el título en el
+color que elijas o prescindir del título cuando el nombre ya forma
+parte de la imagen. Se configura modo por modo en los ajustes, mira el
+manual de ajustes.
+
+Los modos limitados a otra ubicación no aparecen aquí.
+
 ::shot:m-02-game-select
 
-Tocar una ubicación te lleva aquí. La lista de abajo muestra las
-partidas ya creadas allí (la más reciente primero), cada una con
-su ID, fecha de creación, estado (esperando / jugando /
-terminada) y cuántos equipos se han unido. Toca **Abrir** en
-cualquiera para saltar a su panel; útil si saliste por error.
+Tocar un mosaico te lleva a la pantalla de partida de ese modo. Arriba
+aparece en pequeño la ubicación y debajo, en grande, el modo en el que
+estás. La lista de abajo muestra las partidas ya creadas allí (la más
+reciente primero), cada una con su ID, fecha, estado (esperando /
+jugando / en pausa / terminada) y cuántos equipos se han unido. Toca
+**Abrir** en cualquiera para saltar a su panel; útil si saliste por
+error.
 
-Para arrancar una nueva partida:
+**Iniciar partida** crea la partida en el modo mostrado, elige la
+mezcla correcta de misiones para la ubicación y te muestra un botón
+**Abrir panel →** más una ventana QR que puedes mostrar o imprimir
+para que los jugadores se unan.
 
-1. Elige un **modo** del desplegable. El modo decide qué
-   biblioteca de misiones, conjunto de reglas y temporizador se
-   usan. «MiSSiONS» es el predeterminado; los admins pueden
-   haber añadido otros (p. ej. ADVANCED).
-2. Toca **+ Nueva partida**.
-
-La app crea la partida, elige la mezcla correcta de misiones
-para la ubicación y te muestra un botón **Abrir panel →** más
-una ventana QR que puedes mostrar o imprimir para que los
-jugadores se unan.
+**Atrás** vuelve al selector de modo y de ahí a la pantalla de inicio.
 
 # El panel de control
 

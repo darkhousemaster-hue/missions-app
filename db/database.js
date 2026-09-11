@@ -374,6 +374,12 @@ try { db.exec("ALTER TABLE missions ADD COLUMN multi_count INTEGER DEFAULT 2"); 
 // All images of a submission as a JSON array. media_path keeps the FIRST one so
 // every existing reader (thumbnails, ZIP, collage, rotation) still works.
 try { db.exec("ALTER TABLE team_missions ADD COLUMN media_paths TEXT"); } catch(e) {}
+// Mode tile appearance (new-game mode picker). tile_image is a path under
+// uploads/ (NULL = plain tile); tile_show_title 0 hides the name so a GM can
+// bake the title into the artwork; tile_title_color NULL = follow the theme.
+try { db.exec("ALTER TABLE modes ADD COLUMN tile_image TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE modes ADD COLUMN tile_show_title INTEGER DEFAULT 1"); } catch(e) {}
+try { db.exec("ALTER TABLE modes ADD COLUMN tile_title_color TEXT"); } catch(e) {}
 // One-time backfill: before 'paused' existed, pausing left status='active' with
 // the clock stopped. Those games are indistinguishable from running ones in the
 // game list (they showed as "waiting") and the idle sweep would never see them.
@@ -585,17 +591,28 @@ const getModes   = () => db.prepare('SELECT m.*, r.name as ruleset_name, l.name 
 const getMode    = id => db.prepare('SELECT * FROM modes WHERE id=?').get(id);
 // A blank/0 location_id means "all locations" — store it as NULL.
 const normModeLoc = v => (v === '' || v === null || v === undefined || Number(v) <= 0) ? null : Number(v);
-const createMode = (name, ruleset_id=1, timer_default=60, location_id=null) => num(db.prepare('INSERT INTO modes(name,ruleset_id,timer_default,location_id) VALUES(?,?,?,?)').run(name, ruleset_id||1, timer_default||60, normModeLoc(location_id)).lastInsertRowid);
+// A tile title colour lands in an inline style on the mode tile, so only a
+// literal hex colour is stored; anything else becomes NULL (= follow theme).
+const normTileColor = v => (typeof v === 'string' && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v.trim())) ? v.trim().toLowerCase() : null;
+const createMode = (name, ruleset_id=1, timer_default=60, location_id=null, tile={}) => num(db.prepare('INSERT INTO modes(name,ruleset_id,timer_default,location_id,tile_show_title,tile_title_color) VALUES(?,?,?,?,?,?)').run(name, ruleset_id||1, timer_default||60, normModeLoc(location_id), tile.tile_show_title === 0 || tile.tile_show_title === false ? 0 : 1, normTileColor(tile.tile_title_color)).lastInsertRowid);
 const setModeNoRandomize = (id, v) => db.prepare('UPDATE modes SET no_randomize=? WHERE id=?').run(v?1:0, id);
 const reorderMissions = orderedIds => {
   const stmt = db.prepare('UPDATE missions SET order_index=? WHERE id=?');
   runTx(() => orderedIds.forEach((id, i) => stmt.run(i + 1, Number(id))));
 };
-const updateMode = (id, {name, ruleset_id, timer_default, location_id}) => {
+const updateMode = (id, {name, ruleset_id, timer_default, location_id, tile_show_title, tile_title_color}) => {
   // Preserve the existing restriction when the caller doesn't send one.
-  const loc = location_id === undefined ? (getMode(id)?.location_id ?? null) : normModeLoc(location_id);
-  db.prepare('UPDATE modes SET name=?,ruleset_id=?,timer_default=?,location_id=? WHERE id=?').run(name, ruleset_id||1, timer_default||60, loc, id);
+  const cur = getMode(id);
+  const loc = location_id === undefined ? (cur?.location_id ?? null) : normModeLoc(location_id);
+  // Same for the tile fields: a name-only PUT must not reset the artwork.
+  const showTitle = tile_show_title === undefined ? (cur?.tile_show_title === 0 ? 0 : 1)
+                  : (tile_show_title === 0 || tile_show_title === false ? 0 : 1);
+  const titleCol = tile_title_color === undefined ? (cur?.tile_title_color ?? null) : normTileColor(tile_title_color);
+  db.prepare('UPDATE modes SET name=?,ruleset_id=?,timer_default=?,location_id=?,tile_show_title=?,tile_title_color=? WHERE id=?').run(name, ruleset_id||1, timer_default||60, loc, showTitle, titleCol, id);
 };
+// The tile image is written only by the upload/clear endpoints, never by a
+// normal mode save, so editing a mode can't silently drop its artwork.
+const setModeTileImage = (id, rel) => db.prepare('UPDATE modes SET tile_image=? WHERE id=?').run(rel || null, Number(id));
 const deleteMode = id => { if(Number(id)===1) throw new Error("Cannot delete default mode"); db.prepare('DELETE FROM modes WHERE id=?').run(id); };
 const reorderModes = (orderedIds=[]) => {
   const stmt = db.prepare('UPDATE modes SET order_index=? WHERE id=?');
@@ -1525,7 +1542,7 @@ module.exports = {
   getGmTheme,setGmTheme,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
-  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,reorderMissions,getGameRules,
+  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,

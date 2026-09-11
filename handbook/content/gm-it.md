@@ -59,27 +59,37 @@ I pulsanti dell’intestazione:
 
 # Scegliere una modalità e avviare una partita
 
+::shot:m-02-mode-select
+
+Toccare una posizione ti porta al selettore di modalità: un riquadro
+per ogni modalità di gioco disponibile in quella sede. Non c'è più il
+menu a discesa, una modalità si tocca invece di aprirsi, così nessuno
+avvia più una partita nella modalità sbagliata per distrazione.
+
+I riquadri possono avere un'immagine propria, mostrare il titolo nel
+colore che scegli oppure rinunciare del tutto al titolo quando il nome
+fa già parte dell'immagine. Si imposta modalità per modalità nelle
+impostazioni, vedi il manuale delle impostazioni.
+
+Le modalità riservate a un'altra sede non compaiono qui.
+
 ::shot:m-02-game-select
 
-Toccare una posizione ti porta qui. La lista in basso mostra le
-partite già create lì (la più recente in cima), ciascuna con il
-suo ID, data di creazione, stato (in attesa / in corso /
-terminata) e quante squadre sono entrate. Tocca **Apri** su una
-qualsiasi per saltare nel suo dashboard; utile se sei uscito per
-sbaglio.
+Toccare un riquadro ti porta alla schermata di partita di quella
+modalità. In alto compare in piccolo la sede e sotto, in grande, la
+modalità in cui ti trovi. La lista sotto mostra le partite già create
+in questa sede (la più recente in cima), ciascuna con il suo ID, data,
+stato (in attesa / in corso / in pausa / terminata) e quante squadre
+sono entrate. Tocca **Apri** su una qualsiasi per saltare nel suo
+dashboard; utile se sei uscito per sbaglio.
 
-Per avviare una nuova partita:
+**Avvia la partita** crea la partita nella modalità mostrata, sceglie
+il giusto mix di missioni per la sede e ti mostra un pulsante **Apri
+dashboard →** più una finestra QR code che puoi mostrare o stampare
+per far entrare i giocatori.
 
-1. Scegli una **modalità** dal menu a discesa. La modalità decide
-   quale libreria missioni, insieme regole e timer usare. «MiSSiONS»
-   è la predefinita; gli admin possono averne aggiunte altre (es.
-   ADVANCED).
-2. Tocca **+ Nuova partita**.
-
-L’app crea la partita, sceglie il giusto mix di missioni per la
-posizione e ti mostra un pulsante **Apri dashboard →** più una
-finestra QR code che puoi mostrare o stampare per far entrare i
-giocatori.
+**Indietro** riporta al selettore di modalità e da lì alla schermata
+iniziale.
 
 # Il dashboard
 
