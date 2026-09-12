@@ -202,6 +202,10 @@ haut, MiSSiONS, ADVANCED, etc.) et par **emplacement** (le
 déroulant). Une mission appartient à exactement un mode et soit à
 un emplacement, soit au Pool global.
 
+**Ordre.** Les onglets de mode se réordonnent par glisser-déposer. Cet
+ordre est exactement celui des tuiles de mode sur l'écran du maître du
+jeu : le premier onglet devient la première tuile.
+
 **Onglets de mode.** Chaque mode est une bibliothèque de
 missions séparée liée à un jeu de règles et un minuteur. Clique
 **+ Mode** pour en ajouter un. Clique ✎ pour éditer nom, règles

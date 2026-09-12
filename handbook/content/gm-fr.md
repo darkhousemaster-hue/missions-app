@@ -61,37 +61,41 @@ Les boutons d’en-tête :
 
 # Choisir un mode et lancer une partie
 
-::shot:m-02-mode-select
+::shot:m-02-game-select
 
-Toucher un emplacement t'amène au sélecteur de mode : une tuile par
-mode de jeu disponible sur ce lieu. Il n'y a plus de menu déroulant,
-un mode se touche au lieu de se dérouler, pour que personne ne lance
-plus une partie dans le mauvais mode par inadvertance.
+Toucher un lieu met tout sur une seule page : les tuiles de mode en
+haut, le bouton de lancement en dessous, puis les parties récentes.
+
+Une tuile par mode de jeu disponible sur ce lieu. Il n'y a plus de
+menu déroulant, un mode se touche au lieu de se dérouler, et **rien
+n'est présélectionné**. La tuile touchée reçoit un cadre orange et une
+coche, et c'est seulement là que **Lancer la partie** s'active.
+Personne ne lance donc plus une partie dans le mauvais mode par
+inadvertance.
+
+Toucher une autre tuile déplace simplement la sélection. Les modes
+réservés à un autre lieu n'apparaissent pas ici.
+
+L'ordre des tuiles est celui des réglages : sous MiSSiONS, les onglets
+de mode se réordonnent par glisser-déposer, et les tuiles suivent
+exactement cet ordre.
 
 Les tuiles peuvent porter leur propre image, afficher leur titre dans
 la couleur de ton choix, ou se passer complètement de titre quand le
 nom fait déjà partie du visuel. Cela se règle mode par mode dans les
 réglages, voir le manuel des réglages.
 
-Les modes réservés à un autre lieu n'apparaissent pas ici.
+**Lancer la partie** crée la partie dans le mode sélectionné, choisit
+le bon mélange de missions pour le lieu et t'affiche un bouton
+**Ouvrir le tableau de bord →** plus une fenêtre QR code que tu peux
+montrer ou imprimer pour que les joueurs rejoignent.
 
-::shot:m-02-game-select
-
-Toucher une tuile t'amène à l'écran de partie de ce mode. Le lieu
-s'affiche en petit tout en haut, et le mode dans lequel tu te trouves
-en grand juste en dessous. La liste en bas montre les parties déjà
+La liste **Parties récentes** en dessous montre les parties déjà
 créées à cet endroit (la plus récente en premier), chacune avec son
 ID, sa date, son statut (en attente / en cours / en pause / terminée)
-et le nombre d'équipes ayant rejoint. Touche **Ouvrir** sur l'une
+et le mode dans lequel elle tourne. Touche **Ouvrir** sur l'une
 d'elles pour sauter dans son tableau de bord ; pratique quand tu as
 quitté la page par accident.
-
-**Lancer la partie** crée la partie dans le mode affiché, choisit le
-bon mélange de missions pour le lieu et t'affiche un bouton **Ouvrir
-le tableau de bord →** plus une fenêtre QR code que tu peux montrer ou
-imprimer pour que les joueurs rejoignent.
-
-**Retour** ramène au sélecteur de mode, puis à l'écran d'accueil.
 
 # Le tableau de bord
 
@@ -99,7 +103,8 @@ imprimer pour que les joueurs rejoignent.
 
 Ton centre de commande pour une partie en cours. Quatre zones :
 
-- **Barre du haut** : ID de partie, **minuteur start/pause** et
+- **Barre du haut** : ID de partie, le **mode** dans lequel tourne la
+  partie (l'itinéraire pour une partie Rail Adventure), **minuteur start/pause** et
   les icônes QR / 🎬 / engrenage / langue à droite. Le bouton 🎬
   est grisé pendant la partie et s’allume à la fin, voir
   *Exporter les photos et vidéos de la partie* plus bas.

@@ -62,36 +62,39 @@ Die Buttons in der Kopfzeile:
 
 # Modus und Spiel wählen
 
-::shot:m-02-mode-select
+::shot:m-02-game-select
 
-Nach dem Tipp auf einen Standort landest du beim Modus-Wähler: eine
-Kachel pro Spielmodus, der an diesem Standort verfügbar ist. Es gibt
-kein Dropdown mehr, ein Modus wird angetippt statt ausgeklappt, damit
-niemand mehr aus Versehen im falschen Modus startet.
+Nach dem Tipp auf einen Standort steht alles auf einer Seite: oben die
+Modus-Kacheln, darunter der Startknopf, darunter die letzten Spiele.
+
+Eine Kachel pro Spielmodus, der an diesem Standort verfügbar ist. Es
+gibt kein Dropdown mehr, ein Modus wird angetippt statt ausgeklappt,
+und **nichts ist vorausgewählt**. Die angetippte Kachel bekommt einen
+orangen Rahmen und ein Häkchen, erst dann wird **Spiel starten**
+aktiv. So startet niemand mehr versehentlich im falschen Modus.
+
+Ein Tipp auf eine andere Kachel verschiebt einfach die Markierung.
+Modi, die auf einen anderen Standort beschränkt sind, erscheinen hier
+gar nicht erst.
+
+Die Reihenfolge der Kacheln ist die aus den Einstellungen: Unter
+MiSSiONS lassen sich die Modus-Reiter per Drag-and-drop sortieren, und
+die Kacheln folgen genau dieser Reihenfolge.
 
 Kacheln können ein eigenes Bild tragen, ihren Titel in einer eigenen
 Farbe zeigen oder ganz ohne Titel auskommen, wenn der Name schon Teil
 des Bildes ist. Eingestellt wird das pro Modus in den Einstellungen,
 siehe das Einstellungs-Handbuch.
 
-Modi, die auf einen anderen Standort beschränkt sind, erscheinen hier
-gar nicht erst.
-
-::shot:m-02-game-select
-
-Eine Kachel antippen bringt dich ins Spielfenster dieses Modus. Ganz
-oben steht klein der Standort, darunter gross der Modus, in dem du
-gerade bist. Die Liste darunter zeigt die vorhandenen Spiele dieses
-Standorts (neueste zuerst) mit ID, Datum, Status (wartet / spielt /
-pausiert / beendet) und Team-Anzahl. **Öffnen** springt direkt ins
-Dashboard, praktisch, wenn du versehentlich weg-navigiert hast.
-
-**Spiel starten** legt das Spiel im angezeigten Modus an, wählt die
+**Spiel starten** legt das Spiel im markierten Modus an, wählt die
 passende Mission-Mischung für den Standort und zeigt einen
 **Dashboard öffnen →**-Knopf plus ein QR-Code-Modal für die Spieler.
 
-**Zurück** führt auf den Modus-Wähler, von dort wieder auf den
-Startbildschirm.
+Die Liste **Letzte Spiele** darunter zeigt die vorhandenen Spiele
+dieses Standorts (neueste zuerst) mit ID, Datum, Status (wartet /
+spielt / pausiert / beendet) und dem Modus, in dem sie laufen.
+**Öffnen** springt direkt ins Dashboard, praktisch, wenn du
+versehentlich weg-navigiert hast.
 
 # Das Dashboard
 
@@ -99,7 +102,8 @@ Startbildschirm.
 
 Deine Kommandozentrale für ein laufendes Spiel. Vier Bereiche:
 
-- **Kopfzeile**: Spiel-ID, **Start/Pause-Timer**, QR / 🎬 /
+- **Kopfzeile**: Spiel-ID, der **Modus**, in dem das Spiel läuft
+  (bei Rail Adventure die Route), **Start/Pause-Timer**, QR / 🎬 /
   Zahnrad / Sprache oben rechts. Der 🎬-Knopf ist während des
   Spiels ausgegraut und wird nach Spielende freigeschaltet, siehe
   *Fotos und Videos des Spiels exportieren* weiter unten.

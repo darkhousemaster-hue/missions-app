@@ -59,36 +59,40 @@ Los botones de la cabecera:
 
 # Elegir un modo y arrancar una partida
 
-::shot:m-02-mode-select
+::shot:m-02-game-select
 
-Tocar una ubicación te lleva al selector de modo: un mosaico por cada
-modo de juego disponible en esa ubicación. Ya no hay desplegable, un
-modo se toca en lugar de desplegarse, así nadie arranca una partida en
-el modo equivocado por descuido.
+Tocar una ubicación pone todo en una sola página: los mosaicos de modo
+arriba, el botón de inicio debajo y las partidas recientes al final.
+
+Un mosaico por cada modo de juego disponible en esa ubicación. Ya no
+hay desplegable, un modo se toca en lugar de desplegarse, y **nada
+está preseleccionado**. El mosaico que tocas recibe un marco naranja y
+una marca de verificación, y solo entonces se activa **Iniciar
+partida**. Así nadie arranca una partida en el modo equivocado por
+descuido.
+
+Tocar otro mosaico simplemente mueve la selección. Los modos limitados
+a otra ubicación no aparecen aquí.
+
+El orden de los mosaicos es el de los ajustes: en MiSSiONS puedes
+reordenar las pestañas de modo arrastrándolas, y los mosaicos siguen
+ese orden exactamente.
 
 Los mosaicos pueden llevar su propia imagen, mostrar el título en el
 color que elijas o prescindir del título cuando el nombre ya forma
 parte de la imagen. Se configura modo por modo en los ajustes, mira el
 manual de ajustes.
 
-Los modos limitados a otra ubicación no aparecen aquí.
-
-::shot:m-02-game-select
-
-Tocar un mosaico te lleva a la pantalla de partida de ese modo. Arriba
-aparece en pequeño la ubicación y debajo, en grande, el modo en el que
-estás. La lista de abajo muestra las partidas ya creadas allí (la más
-reciente primero), cada una con su ID, fecha, estado (esperando /
-jugando / en pausa / terminada) y cuántos equipos se han unido. Toca
-**Abrir** en cualquiera para saltar a su panel; útil si saliste por
-error.
-
-**Iniciar partida** crea la partida en el modo mostrado, elige la
+**Iniciar partida** crea la partida en el modo seleccionado, elige la
 mezcla correcta de misiones para la ubicación y te muestra un botón
 **Abrir panel →** más una ventana QR que puedes mostrar o imprimir
 para que los jugadores se unan.
 
-**Atrás** vuelve al selector de modo y de ahí a la pantalla de inicio.
+La lista **Partidas recientes** de abajo muestra las partidas ya
+creadas allí (la más reciente primero), cada una con su ID, fecha,
+estado (esperando / jugando / en pausa / terminada) y el modo en el
+que corre. Toca **Abrir** en cualquiera para saltar a su panel; útil
+si saliste por error.
 
 # El panel de control
 
@@ -96,7 +100,8 @@ para que los jugadores se unan.
 
 Tu centro de mando para una partida en curso. Cuatro zonas:
 
-- **Barra superior**: ID de partida, **temporizador
+- **Barra superior**: ID de partida, el **modo** en el que corre la
+  partida (la ruta en una partida Rail Adventure), **temporizador
   start/pause** y los iconos QR / 🎬 / engranaje / idioma a la
   derecha. El botón 🎬 está gris durante el juego y se enciende
   al terminar la partida, ver *Exportar fotos y vídeos de la

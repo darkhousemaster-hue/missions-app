@@ -203,6 +203,10 @@ superior, MiSSiONS, ADVANCED, etc.) y por **ubicación** (el
 desplegable). Una misión pertenece a exactamente un modo y a una
 sola ubicación o al Pool global.
 
+**Orden.** Las pestañas de modo se reordenan arrastrándolas. Ese orden
+es exactamente el de los mosaicos en la pantalla de inicio del game
+master: la primera pestaña es el primer mosaico.
+
 **Pestañas de modo.** Cada modo es una biblioteca de misiones
 separada ligada a un conjunto de reglas y un temporizador. Haz
 clic en **+ Modo** para añadir uno. Haz clic en ✎ para editar el

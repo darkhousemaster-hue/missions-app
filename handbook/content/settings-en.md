@@ -207,6 +207,10 @@ The mission library is split by **mode** (the top bar, MiSSiONS,
 ADVANCED, etc.) and by **location** (the dropdown). A mission belongs
 to exactly one mode and either one location or to the global Pool.
 
+**Order.** The mode tabs can be dragged into any order you like. That
+order is exactly the one the mode tiles use on the game master's start
+screen, so the first tab becomes the first tile.
+
 **Mode tabs.** Each mode is a separate mission library tied to a
 ruleset and a timer. Click **+ Mode** to add one. Click ✎ to edit a
 mode's name, ruleset or default duration. The first mode ("MiSSiONS",

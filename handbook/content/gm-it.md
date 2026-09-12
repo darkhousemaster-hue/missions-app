@@ -59,37 +59,41 @@ I pulsanti dell’intestazione:
 
 # Scegliere una modalità e avviare una partita
 
-::shot:m-02-mode-select
+::shot:m-02-game-select
 
-Toccare una posizione ti porta al selettore di modalità: un riquadro
-per ogni modalità di gioco disponibile in quella sede. Non c'è più il
-menu a discesa, una modalità si tocca invece di aprirsi, così nessuno
-avvia più una partita nella modalità sbagliata per distrazione.
+Toccare una sede mette tutto su un'unica pagina: i riquadri delle
+modalità in alto, sotto il pulsante di avvio, e sotto ancora le
+partite recenti.
+
+Un riquadro per ogni modalità disponibile in quella sede. Non c'è più
+il menu a discesa, una modalità si tocca invece di aprirsi, e **nulla
+è preselezionato**. Il riquadro toccato riceve una cornice arancione e
+un segno di spunta, e solo allora **Avvia la partita** diventa attivo.
+Così nessuno avvia più una partita nella modalità sbagliata per
+distrazione.
+
+Toccare un altro riquadro sposta semplicemente la selezione. Le
+modalità riservate a un'altra sede non compaiono qui.
+
+L'ordine dei riquadri è quello delle impostazioni: sotto MiSSiONS le
+schede delle modalità si riordinano trascinandole, e i riquadri
+seguono esattamente quell'ordine.
 
 I riquadri possono avere un'immagine propria, mostrare il titolo nel
 colore che scegli oppure rinunciare del tutto al titolo quando il nome
 fa già parte dell'immagine. Si imposta modalità per modalità nelle
 impostazioni, vedi il manuale delle impostazioni.
 
-Le modalità riservate a un'altra sede non compaiono qui.
+**Avvia la partita** crea la partita nella modalità selezionata,
+sceglie il giusto mix di missioni per la sede e ti mostra un pulsante
+**Apri dashboard →** più una finestra QR code che puoi mostrare o
+stampare per far entrare i giocatori.
 
-::shot:m-02-game-select
-
-Toccare un riquadro ti porta alla schermata di partita di quella
-modalità. In alto compare in piccolo la sede e sotto, in grande, la
-modalità in cui ti trovi. La lista sotto mostra le partite già create
-in questa sede (la più recente in cima), ciascuna con il suo ID, data,
-stato (in attesa / in corso / in pausa / terminata) e quante squadre
-sono entrate. Tocca **Apri** su una qualsiasi per saltare nel suo
+La lista **Partite recenti** sotto mostra le partite già create in
+questa sede (la più recente in cima), ciascuna con il suo ID, data,
+stato (in attesa / in corso / in pausa / terminata) e la modalità in
+cui gira. Tocca **Apri** su una qualsiasi per saltare nel suo
 dashboard; utile se sei uscito per sbaglio.
-
-**Avvia la partita** crea la partita nella modalità mostrata, sceglie
-il giusto mix di missioni per la sede e ti mostra un pulsante **Apri
-dashboard →** più una finestra QR code che puoi mostrare o stampare
-per far entrare i giocatori.
-
-**Indietro** riporta al selettore di modalità e da lì alla schermata
-iniziale.
 
 # Il dashboard
 
@@ -97,7 +101,8 @@ iniziale.
 
 Il tuo centro di comando per una partita in corso. Quattro aree:
 
-- **Barra superiore**: ID partita, **timer start/pause** e le
+- **Barra superiore**: ID partita, la **modalità** in cui gira la
+  partita (il percorso per una partita Rail Adventure), **timer start/pause** e le
   icone QR / 🎬 / ingranaggio / lingua a destra. Il pulsante 🎬
   è grigio durante il gioco e si illumina a fine partita, vedi
   *Esportare le foto e i video della partita* più sotto.

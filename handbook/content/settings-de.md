@@ -187,6 +187,11 @@ Die Mission-Bibliothek ist nach **Modus** (Leiste oben) und
 **Standort** (Dropdown) gegliedert. Eine Mission gehört zu genau
 einem Modus und entweder zu einem Standort oder zum globalen Pool.
 
+**Reihenfolge.** Die Modus-Reiter lassen sich per Drag-and-drop
+sortieren. Diese Reihenfolge ist genau die, in der die Modus-Kacheln
+beim Spielleiter erscheinen, der erste Reiter wird also zur ersten
+Kachel.
+
 **Modus-Tabs.** Jeder Modus ist eine eigene Bibliothek mit eigenem
 Regelwerk und Timer. Mit **+ Modus** legst du einen weiteren an. ✎
 öffnet die Bearbeitung. Der erste Modus ("MiSSiONS", id 1) kann

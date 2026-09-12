@@ -201,6 +201,10 @@ alto, MiSSiONS, ADVANCED, ecc.) e per **posizione** (il menu a
 discesa). Una missione appartiene a esattamente una modalità e
 a una sola posizione o al Pool globale.
 
+**Ordine.** Le schede delle modalità si riordinano trascinandole.
+Quell'ordine è esattamente quello dei riquadri sulla schermata di
+avvio del game master: la prima scheda diventa il primo riquadro.
+
 **Schede modalità.** Ogni modalità è una libreria di missioni
 separata legata a un insieme di regole e un timer. Clicca
 **+ Modalità** per aggiungerne una. Clicca ✎ per modificare nome,

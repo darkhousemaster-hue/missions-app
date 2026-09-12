@@ -59,36 +59,39 @@ The header buttons:
 
 # Picking a mode and starting a game
 
-::shot:m-02-mode-select
+::shot:m-02-game-select
 
-Tapping a location lands you on the mode picker: one tile per game
-mode available at that location. There is no dropdown any more, a mode
-is tapped rather than unfolded, so nobody starts a game on the wrong
-one by accident.
+Tapping a location puts everything on one page: the mode tiles at the
+top, the start button under them, the recent games below that.
+
+One tile per game mode available at that location. There is no
+dropdown any more, a mode is tapped rather than unfolded, and
+**nothing is preselected**. The tile you tap gets an orange frame and
+a tick, and only then does **Start game** become active. That way
+nobody starts a game on the wrong mode by accident.
+
+Tapping a different tile simply moves the highlight. Modes restricted
+to another location never show up here.
+
+The tile order is the one from the settings: under MiSSiONS you can
+drag the mode tabs into whatever order you like, and the tiles follow
+it exactly.
 
 Tiles can carry their own image, show their title in a colour of your
 choosing, or drop the title entirely when the name is already part of
 the artwork. You set this per mode in the settings, see the settings
 manual.
 
-Modes restricted to another location never show up here.
+**Start game** creates the game on the highlighted mode, picks the
+right mix of missions for the location, and shows you a **Dashboard
+open →** button plus a QR code modal you can show or print for players
+to join.
 
-::shot:m-02-game-select
-
-Tapping a tile takes you into that mode's game screen. The location
-sits small at the top, with the mode you are in spelled out large
-underneath. The list below shows games already created at this
+The **Recent games** list below shows games already created at this
 location (most recent first), each one with its ID, date, status
-(waiting / playing / paused / ended) and how many teams joined. Tap
+(waiting / playing / paused / ended) and the mode it runs. Tap
 **Open** on any of them to jump into its dashboard, handy when you
 accidentally navigated away.
-
-**Start game** creates the game on the mode shown, picks the right mix
-of missions for the location, and shows you a **Dashboard open →**
-button plus a QR code modal you can show or print for players to join.
-
-**Back** returns to the mode picker, and from there to the landing
-screen.
 
 # The dashboard
 
@@ -96,7 +99,8 @@ screen.
 
 Your command center for a running game. Four areas:
 
-- **Top bar**: game ID, the **start/pause timer**, and the QR / 🎬
+- **Top bar**: game ID, the **mode** the game runs (the route for a
+  Rail Adventure game), the **start/pause timer**, and the QR / 🎬
   / 🔔 / cog / language icons on the right. The 🎬 button is greyed
   out during play and lights up after the game ends, see *Exporting
   the game's photos and videos* below. The **🔔 bell** toggles the
