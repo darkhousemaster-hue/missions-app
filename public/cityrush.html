@@ -656,6 +656,16 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// Map tiles. tile.openstreetmap.org now refuses this app outright: every tile
+// comes back HTTP 200 carrying an x-blocked header and an "Access blocked"
+// image, so all four maps rendered as a wall of warnings. CARTO is not a
+// drop-in either, it stamps "API KEY REQUIRED" across keyless tiles. Esri's
+// basemap serves keyless and unwatermarked, and its attribution is a licence
+// requirement, not decoration. This is a stopgap: a commercial product should
+// be on a licensed provider, at which point only these two lines change.
+const MAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+const MAP_TILE_ATTRIB = 'Tiles &copy; Esri';
+
 'use strict';
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -1933,7 +1943,7 @@ function initMiniMap(){
   const el = document.getElementById('cr-mini-map');
   if(!el || !window.L) return;
   crMiniMap = L.map(el, { zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false, boxZoom:false, keyboard:false }).setView([47.3769, 8.5417], 14);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19 }).addTo(crMiniMap);
+  L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_TILE_ATTRIB }).addTo(crMiniMap);
 }
 function updateMiniMap(){
   initMiniMap();
@@ -3738,9 +3748,7 @@ function initMap(){
   // the jump-to-me button or the missions topbar at the top of the screen.
   crMap = L.map('cr-map', {zoomControl:false}).setView([47.3769,8.5417], 14);
   L.control.zoom({position:'bottomleft'}).addTo(crMap);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap', maxZoom:19
-  }).addTo(crMap);
+  L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_TILE_ATTRIB }).addTo(crMap);
 }
 function crShowView(v){
   crActiveView = v;

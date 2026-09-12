@@ -68,11 +68,11 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 /* The tiles sit directly above the start card on the same page, so they get
    the section spacing the other blocks on this screen use. */
 #mode-grid-wrap{margin-bottom:1.4rem;}
-/* Mode badge in the dashboard topbar. Capped and ellipsised: mode names run
-   long ("MiSSiONS 2 : THE BASEL CHALLENGE") and must not push the timer out
-   of the bar on a narrow screen. */
-.dt-mode{font:700 .66rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);border:1px solid var(--hairline);border-radius:999px;padding:.34rem .65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22ch;}
-@media (max-width:640px){.dt-mode{max-width:14ch;}}
+/* Mode badge in the dashboard topbar. No fixed cap: the topbar is a
+   1fr auto 1fr grid, so letting the badge shrink inside its own column shows
+   the whole name wherever there is room and only ellipsises when the bar is
+   genuinely full. A laptop shows the longest mode name in full. */
+.dt-mode{font:700 .66rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);border:1px solid var(--hairline);border-radius:999px;padding:.34rem .65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto;}
 /* Colour swatch in the mode editor. A bare <input type="color"> renders with
    browser chrome that clashes with the styled inputs around it, so strip the
    frame and keep only the swatch. */
@@ -1352,6 +1352,16 @@ body.sel-cr #crms-toolbar{display:flex !important;}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// Map tiles. tile.openstreetmap.org now refuses this app outright: every tile
+// comes back HTTP 200 carrying an x-blocked header and an "Access blocked"
+// image, so all four maps rendered as a wall of warnings. CARTO is not a
+// drop-in either, it stamps "API KEY REQUIRED" across keyless tiles. Esri's
+// basemap serves keyless and unwatermarked, and its attribution is a licence
+// requirement, not decoration. This is a stopgap: a commercial product should
+// be on a licensed provider, at which point only these two lines change.
+const MAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+const MAP_TILE_ATTRIB = 'Tiles &copy; Esri';
+
 'use strict';
 const sel = v => v ? 'selected' : '';
 // ── GM Language ────────────────────────────────────────────────────────────
@@ -3969,7 +3979,7 @@ function ensureGmCrMap(){
   if(!el) return null;
   if(!el.offsetWidth || !el.offsetHeight) return null;   // container not visible yet
   gmCrMap = L.map('gm-cr-map').setView([47.3769,8.5417],13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(gmCrMap);
+  L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_TILE_ATTRIB }).addTo(gmCrMap);
   // Defensive: in some environments a custom divIcon marker doesn't re-project
   // on zoom — it sticks at its old screen point until the next setLatLng. Force
   // every team marker (and the mission markers) back to their geo position when
@@ -7499,7 +7509,7 @@ function initCrMissionMapPicker(){
 
   _crPickerMap = L.map(el, { zoomControl: true, attributionControl: false });
   _crPickerMap.setView([initLat, initLng], 16);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_crPickerMap);
+  L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_TILE_ATTRIB }).addTo(_crPickerMap);
 
   const placeMarker = (lat, lng) => {
     if(_crPickerMarker){ _crPickerMarker.setLatLng([lat, lng]); }
