@@ -77,12 +77,22 @@ function getTimerState(game) {
   return { remaining: Math.max(0,Math.floor((game.timer_duration*1000 - elapsed)/1000)), running:!!game.timer_running, total:game.timer_duration, started };
 }
 
-// Play actions (submissions, completes, captures, scans, answers) are blocked
-// until the GM starts the timer. `timer_started_at` is set on the first start
-// and never cleared, so its absence means "the game hasn't started yet".
-function timerNotStarted(gameId) {
+// Play actions (submissions, completes, captures, scans, answers) are open only
+// while the game is actually running. Returns null when play is open, or the
+// reason it is not, which doubles as the error code sent to the player.
+//
+// `timer_started_at` is set on the first start and never cleared, so it only
+// answers "has it begun". On its own it let teams keep uploading after the
+// clock ran out, which is what this closes.
+function playBlocked(gameId) {
   const g = db.getGame(gameId);
-  return !!(g && !g.timer_started_at);
+  if (!g) return 'no_game';
+  if (!g.timer_started_at) return 'not_started';
+  if (g.status === 'ended') return 'ended';
+  // The sweep that flips status to 'ended' runs on a one-second interval, so
+  // the clock can already be at zero a moment before the row says so.
+  if (getTimerState(g).remaining <= 0) return 'ended';
+  return null;
 }
 
 // ── GM authentication ───────────────────────────────────────────────────────
@@ -845,7 +855,8 @@ app.get('/api/games/:gameId/rankings', (req,res) => res.json(db.getRankings(req.
 // ── Upload ────────────────────────────────────────────────────────────────────
 app.post('/api/games/:gameId/media/upload',
   upload.single('media'), (req,res) => {
-    if(timerNotStarted(req.params.gameId)){ if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(403).json({error:'not_started'}); }
+    const _blk = playBlocked(req.params.gameId);
+    if(_blk){ if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(403).json({error:_blk}); }
     if(!req.file) return res.status(400).json({error:'No file'});
     res.json({success:true, mediaPath:`${req.params.gameId}/${req.file.filename}`});
   }
@@ -968,7 +979,8 @@ app.delete('/api/games/:gameId/teams/:teamId/missions/:missionId/media', (req,re
 // bypass the required count.
 app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/submit', (req,res) => {
   const {gameId,teamId,missionId}=req.params;
-  if(timerNotStarted(gameId)) return res.status(403).json({error:'not_started'});
+  const _blk = playBlocked(gameId);
+  if(_blk) return res.status(403).json({error:_blk});
   if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
   const m = db.getMission(Number(missionId));
   const sub = db.getSubmission(Number(teamId), Number(missionId));
@@ -990,7 +1002,8 @@ app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
   upload.single('media'), (req,res) => {
     const {gameId,teamId,missionId}=req.params;
     // Nothing can be submitted before the GM starts the timer.
-    if(timerNotStarted(gameId)){ if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(403).json({error:'not_started'}); }
+    const _blk = playBlocked(gameId);
+    if(_blk){ if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(403).json({error:_blk}); }
     // Server-side anti-cheat: a frozen team cannot submit anything.
     if(db.isTeamFrozen(gameId, Number(teamId))){
       return res.status(423).json({error:'frozen'});
@@ -1237,7 +1250,8 @@ app.post('/api/games/:gameId/cr/hint', (req,res) => {
 
 // Answer submission for question missions
 app.post('/api/games/:gameId/cr/answer', (req,res) => {
-  if(timerNotStarted(req.params.gameId)) return res.status(403).json({error:'not_started'});
+  const _blk = playBlocked(req.params.gameId);
+  if(_blk) return res.status(403).json({error:_blk});
   const {teamId, missionId, answer} = req.body;
   const mission = db.getCrMission(missionId);
   if(!mission) return res.status(404).json({error:'Not found'});
@@ -1267,7 +1281,8 @@ app.post('/api/games/:gameId/cr/answer', (req,res) => {
 app.post('/api/games/:gameId/cr/scan', (req,res) => {
   const gameId = req.params.gameId;
   const { teamId, missionId, payload, detected } = req.body;
-  if(timerNotStarted(gameId)) return res.status(403).json({error:'not_started'});
+  const _blk = playBlocked(gameId);
+  if(_blk) return res.status(403).json({error:_blk});
   if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
   const mission = db.getCrMission(missionId);
   if(!mission || !mission.use_scan) return res.status(400).json({error:'Not a scan mission'});
@@ -1810,7 +1825,8 @@ function advanceCrTeam(gameId, teamId, mission, missionIndex, score) {
 app.post('/api/games/:gameId/cr/complete', (req,res) => {
   const {teamId, missionId, mediaPath, playerKey} = req.body;
   const gameId = req.params.gameId;
-  if(timerNotStarted(gameId)) return res.status(403).json({error:'not_started'});
+  const _blk = playBlocked(gameId);
+  if(_blk) return res.status(403).json({error:_blk});
   // Frozen teams cannot complete anything until their freeze expires.
   if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
   const crMode = db.getGameCrMode(gameId);
@@ -1994,7 +2010,8 @@ app.post('/api/games/:gameId/cr/skip', (req,res) => {
 app.post('/api/games/:gameId/cr/special/complete', (req,res) => {
   const {teamId, missionId, mediaPath, playerKey} = req.body;
   const gameId = req.params.gameId;
-  if(timerNotStarted(gameId)) return res.status(403).json({error:'not_started'});
+  const _blk = playBlocked(gameId);
+  if(_blk) return res.status(403).json({error:_blk});
   if(db.isTeamFrozen(gameId, Number(teamId))) return res.status(423).json({error:'frozen'});
   const mission = db.getCrMission(missionId);
   if(!mission || !mission.is_special) return res.status(400).json({error:'Not a special mission'});
@@ -2041,7 +2058,8 @@ app.post('/api/games/:gameId/cr/special/complete', (req,res) => {
 // ── CR Team capture (photo of another team) ───────────────────────────────────
 app.post('/api/games/:gameId/cr/capture',
   upload.single('media'), (req,res) => {
-    if(timerNotStarted(req.params.gameId)){ if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(403).json({error:'not_started'}); }
+    const _blk = playBlocked(req.params.gameId);
+    if(_blk){ if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(403).json({error:_blk}); }
     const {teamId, targetTeamId} = req.body;
     const mediaPath = req.file ? `${req.params.gameId}/${req.file.filename}` : null;
     if(!mediaPath) return res.status(400).json({error:'No media'});

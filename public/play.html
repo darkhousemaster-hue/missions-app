@@ -544,7 +544,7 @@ const T = {
     uploading_review:'Hochgeladen! Wird geprüft…',
     multi_need_min:"Nimm mindestens {n} Bilder auf",multi_need_exact:"Nimm genau {n} Bilder auf",multi_err_min:"Du brauchst mindestens {n} Bilder — du hast erst {have}.",multi_err_exact:"Es müssen genau {n} Bilder sein — du hast {have}.",multi_added:"{n} Bilder hinzugefügt",multi_skipped:"{n} Bilder übersprungen",multi_submit:"Alle abgeben",delete:"Löschen",upload_failed:'Upload fehlgeschlagen',
     already_solved:'Diese Mission wurde bereits von deinem Team gelöst!',
-    not_started:'Die Zeit hat noch nicht begonnen. Bitte warten.', pending_note:'Warten auf Bewertung durch den Spielleiter.', accepted_note:'Angenommen!',
+    not_started:'Die Zeit hat noch nicht begonnen. Bitte warten.', time_over:'Die Zeit ist abgelaufen. Es kann nichts mehr eingereicht werden.', pending_note:'Warten auf Bewertung durch den Spielleiter.', accepted_note:'Angenommen!',
     video_too_long:'Video zu lang ({len} s). Maximal {max} s. Bitte kürzer filmen.', video_max_reached:'Maximale Länge erreicht ({max} s) — Aufnahme gestoppt.', file_too_large:'Datei zu groß ({size} MB). Maximal {max} MB. Bitte kürzer oder in niedrigerer Auflösung filmen.',
     broadcast:'Rundruf',
     flip:'🔄 Flip', you:'Du', no_missions:'Keine Missionen gefunden.', no_rules:'Keine Regeln vorhanden.',
@@ -567,7 +567,7 @@ const T = {
     capture_failed:'Recording failed:',
     uploading_review:'Uploaded! Awaiting review…',
     multi_need_min:"Take at least {n} images",multi_need_exact:"Take exactly {n} images",multi_err_min:"You need at least {n} images — you have {have} so far.",multi_err_exact:"It has to be exactly {n} images — you have {have}.",multi_added:"{n} images added",multi_skipped:"{n} images skipped",multi_submit:"Submit all",delete:"Delete",upload_failed:'Upload failed',
-    already_solved:'This mission was already solved by your team!', not_started:'The time hasn’t started yet. Please wait.', pending_note:'Waiting for the Gamemaster to review.', accepted_note:'Accepted!',
+    already_solved:'This mission was already solved by your team!', not_started:'The time hasn’t started yet. Please wait.', time_over:'Time is up. Nothing more can be submitted.', pending_note:'Waiting for the Gamemaster to review.', accepted_note:'Accepted!',
     video_too_long:'Video too long ({len} s). Max {max} s. Please film a shorter clip.', video_max_reached:'Maximum length reached ({max} s) — recording stopped.', file_too_large:'File too large ({size} MB). Max {max} MB. Please film a shorter clip or lower the resolution.',
     broadcast:'Broadcast',
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
@@ -590,7 +590,7 @@ const T = {
     uploading_review:'Envoyé ! En attente de validation…',
     multi_need_min:"Prends au moins {n} images",multi_need_exact:"Prends exactement {n} images",multi_err_min:"Il te faut au moins {n} images — tu n’en as que {have}.",multi_err_exact:"Il faut exactement {n} images — tu en as {have}.",multi_added:"{n} images ajoutées",multi_skipped:"{n} images ignorées",multi_submit:"Tout envoyer",delete:"Supprimer",upload_failed:'Échec de l\'envoi',
     already_solved:'Cette mission a déjà été résolue par votre équipe !',
-    not_started:'Le temps n’a pas encore commencé. Merci de patienter.', pending_note:'En attente de validation par le Gamemaster.', accepted_note:'Accepté !',
+    not_started:'Le temps n’a pas encore commencé. Merci de patienter.', time_over:'Le temps est écoulé. Plus rien ne peut être envoyé.', pending_note:'En attente de validation par le Gamemaster.', accepted_note:'Accepté !',
     video_too_long:'Vidéo trop longue ({len} s). Max {max} s. Filme plus court.', video_max_reached:'Durée maximale atteinte ({max} s) — enregistrement arrêté.', file_too_large:'Fichier trop volumineux ({size} Mo). Max {max} Mo. Filme plus court ou en résolution inférieure.',
     broadcast:'Annonce',
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
@@ -613,7 +613,7 @@ const T = {
     uploading_review:'Caricato! In attesa di revisione…',
     multi_need_min:"Scatta almeno {n} immagini",multi_need_exact:"Scatta esattamente {n} immagini",multi_err_min:"Servono almeno {n} immagini — per ora ne hai {have}.",multi_err_exact:"Devono essere esattamente {n} immagini — ne hai {have}.",multi_added:"{n} immagini aggiunte",multi_skipped:"{n} immagini saltate",multi_submit:"Invia tutto",delete:"Elimina",upload_failed:'Caricamento fallito',
     already_solved:'Questa missione è già stata completata dalla tua squadra!',
-    not_started:'Il tempo non è ancora iniziato. Attendi.', pending_note:'In attesa di revisione del Gamemaster.', accepted_note:'Accettato!',
+    not_started:'Il tempo non è ancora iniziato. Attendi.', time_over:'Il tempo è scaduto. Non si può più inviare nulla.', pending_note:'In attesa di revisione del Gamemaster.', accepted_note:'Accettato!',
     video_too_long:'Video troppo lungo ({len} s). Max {max} s. Filma più corto.', video_max_reached:'Durata massima raggiunta ({max} s) — registrazione interrotta.', file_too_large:'File troppo grande ({size} MB). Max {max} MB. Filma più corto o a risoluzione inferiore.',
     broadcast:'Annuncio',
     flip:'🔄 Ribalta', you:'Io', no_missions:'Nessuna missione trovata.', no_rules:'Nessuna regola.',
@@ -637,7 +637,7 @@ const T = {
     uploading_review:'¡Subido! Pendiente de revisión…',
     multi_need_min:"Haz al menos {n} imágenes",multi_need_exact:"Haz exactamente {n} imágenes",multi_err_min:"Necesitas al menos {n} imágenes — solo tienes {have}.",multi_err_exact:"Tienen que ser exactamente {n} imágenes — tienes {have}.",multi_added:"{n} imágenes añadidas",multi_skipped:"{n} imágenes omitidas",multi_submit:"Enviar todo",delete:"Eliminar",upload_failed:'Subida fallida',
     already_solved:'¡Esta misión ya fue resuelta por tu equipo!',
-    not_started:'El tiempo aún no ha comenzado. Espera, por favor.', pending_note:'Esperando la revisión del Gamemaster.', accepted_note:'¡Aceptado!',
+    not_started:'El tiempo aún no ha comenzado. Espera, por favor.', time_over:'Se acabó el tiempo. Ya no se puede enviar nada.', pending_note:'Esperando la revisión del Gamemaster.', accepted_note:'¡Aceptado!',
     video_too_long:'Vídeo demasiado largo ({len} s). Máx {max} s. Graba más corto.', video_max_reached:'Duración máxima alcanzada ({max} s) — grabación detenida.', file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.',
     broadcast:'Anuncio',
     flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
@@ -867,7 +867,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   socket.on('mission_accepted', ({ missionId }) => onAccepted(missionId));
   socket.on('mission_rejected', ({ missionId, message }) => onRejected(missionId, message));
   socket.on('chat_message', onChatMessage);
-  socket.on('game_ended',   ({ messages, message }) => showGameOver((messages&&messages[lang])||message||''));
+  socket.on('game_ended',   ({ messages, message }) => {
+    _timeOver = true;
+    showGameOver((messages&&messages[lang])||message||'');
+  });
   socket.on('settings_updated', () => { loadMissions(); });
 
   // Fix Android keyboard pushing input off screen.
@@ -898,19 +901,33 @@ window.addEventListener('DOMContentLoaded', async () => {
 // gallery picker just to reject the result afterwards. Optimistic default so a
 // slow socket never wrongly blocks a running game; the server always enforces.
 let _timerStarted = true;
+// Whether the game is over. `started` stays true once the GM has started the
+// clock even after it runs out, so it cannot answer this on its own.
+let _timeOver = false;
 function updateTimer({ remaining, running, started }) {
   if (started !== undefined) _timerStarted = !!started;
+  if (remaining !== undefined && _timerStarted) _timeOver = remaining <= 0;
   const el = document.getElementById('player-timer');
   const m  = Math.floor(remaining/60).toString().padStart(2,'0');
   const s  = (remaining%60).toString().padStart(2,'0');
   el.textContent = `${m}:${s}`;
   el.className = 'play-timer' + (remaining<=60&&running?' urgent' : !running?' paused':'');
 }
-// Show the centered "time hasn't started" notice and return false when blocked.
+// A 403 from a play endpoint means either "not started yet" or "time is up".
+// The server says which; without reading it every refusal claimed the game had
+// not begun, which is exactly wrong once the clock has run out.
+function blockedNotice(bodyText){
+  let code = '';
+  try { code = (JSON.parse(bodyText||'{}').error)||''; } catch(e) {}
+  showCenterNotice(t(code === 'ended' ? 'time_over' : 'not_started'));
+}
+// Show the centred notice and return false when play is closed, either because
+// the GM has not started yet or because the time has run out. The server
+// enforces both; this only saves the player a pointless camera round trip.
 function ensureTimerStarted() {
-  if (_timerStarted) return true;
-  showCenterNotice(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.');
-  return false;
+  if (!_timerStarted) { showCenterNotice(t('not_started')); return false; }
+  if (_timeOver)      { showCenterNotice(t('time_over'));   return false; }
+  return true;
 }
 
 // ── Missions ──────────────────────────────────────────────────────────────────
@@ -922,7 +939,12 @@ async function loadMissions() {
   // Custom (GM-defined) languages for this location. Set before setAllowedLangs
   // so the cycler includes them.
   customLangs = Array.isArray(data.custom_langs) ? data.custom_langs : [];
-  if (data.timer) _timerStarted = !!data.timer.started;   // gate submissions until the timer starts
+  // Gate submissions on both ends: not before the GM starts, not after the
+  // clock runs out. Re-read on every loadMissions so a reloaded page is right.
+  if (data.timer) {
+    _timerStarted = !!data.timer.started;
+    _timeOver = !!data.timer.started && data.timer.remaining <= 0;
+  }
   if (typeof data.max_video_seconds === 'number') MAX_VIDEO_SECONDS = data.max_video_seconds;
   if (typeof data.max_upload_mb === 'number') setMaxUploadMb(data.max_upload_mb);
   // Apply the location's allowed-language restriction. Safe to call on every
@@ -1057,7 +1079,7 @@ async function mgUploadFiles(ev, missionId){
       const r = await fetch("/api/games/"+gameId+"/teams/"+teamId+"/missions/"+missionId+"/upload", {method:"POST", body:form});
       const j = await r.json().catch(function(){return {};});
       if(r.ok && j.media){ m.media_paths = JSON.stringify(j.media); m.media_path = j.media[0]||null; added++; }
-      else if(r.status === 403){ showCenterNotice(t("not_started")||"Die Zeit hat noch nicht begonnen."); return; }
+      else if(r.status === 403){ showCenterNotice(t((j&&j.error) === "ended" ? "time_over" : "not_started")); return; }
       else skipped++;
     }catch(e){ skipped++; }
   }
@@ -1095,7 +1117,7 @@ async function mgSubmit(missionId){
       else toast(msg, "error");
       return;
     }
-    if(res.status === 403){ showCenterNotice(t("not_started")||"Die Zeit hat noch nicht begonnen."); return; }
+    if(res.status === 403){ showCenterNotice(t((j&&j.error) === "ended" ? "time_over" : "not_started")); return; }
     toast(t("upload_failed")||"Upload fehlgeschlagen","error");
   }catch(e){ toast(t("upload_failed")||"Upload fehlgeschlagen","error"); }
 }
@@ -1495,7 +1517,7 @@ async function doUpload() {
       // the accept handler.
       loadMissions();
     } else if (xhr.status === 403) {
-      showCenterNotice(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.');
+      blockedNotice(xhr.responseText);
     } else if (xhr.status === 409) {
       // A teammate already got this mission accepted while we were taking the photo.
       toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
@@ -1687,7 +1709,7 @@ async function uploadFromGallery(event, missionId, mediaType) {
       // Repaint from server truth rather than the old dead-`mf-` footer patch.
       loadMissions();
     } else if(xhr.status === 403){
-      showCenterNotice(t('not_started')||'Die Zeit hat noch nicht begonnen. Bitte warten.');
+      blockedNotice(xhr.responseText);
     } else if(xhr.status === 409){
       toast(t('already_solved')||'Diese Mission wurde bereits von deinem Team gelöst!', 'info');
       loadMissions();
