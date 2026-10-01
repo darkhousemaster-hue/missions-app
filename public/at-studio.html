@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trail Studio</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:oklch(0.175 0.004 60); --bg-sunk:oklch(0.145 0.004 60);
+  --surface:oklch(0.235 0.005 60); --raised:oklch(0.275 0.006 60);
+  --line:oklch(0.315 0.007 60); --line-soft:oklch(0.265 0.006 60);
+  --ink:oklch(0.955 0.006 85); --ink-2:oklch(0.700 0.009 75); --ink-3:oklch(0.545 0.009 75);
+  --accent:oklch(0.660 0.190 42); --accent-hi:oklch(0.730 0.185 46); --accent-sunk:oklch(0.300 0.060 42);
+  --go:oklch(0.830 0.180 150); --warn:oklch(0.820 0.140 85); --stop:oklch(0.660 0.190 22);
+  --t-start:oklch(0.800 0.150 150); --t-station:oklch(0.790 0.140 70);
+  --t-riddle:oklch(0.720 0.140 300); --t-story:oklch(0.760 0.105 220);
+  --t-arg:oklch(0.740 0.160 350); --t-gate:oklch(0.830 0.130 95);
+  --t-nav:oklch(0.780 0.120 195); --t-end:oklch(0.700 0.170 20);
+  --display:'Big Shoulders Display','Bebas Neue',Impact,sans-serif;
+  --body:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'JetBrains Mono',Consolas,monospace;
+  --r-sm:3px; --r-md:7px; --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--body);-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer}
+svg{display:block}
+
+.app{height:100vh;display:grid;grid-template-rows:auto 1fr}
+.topbar{display:flex;align-items:center;gap:18px;padding:0 15px;height:52px;background:var(--bg-sunk);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:9px;padding-right:17px;border-right:1px solid var(--line)}
+.brand b{font:800 20px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
+.brand span{font:600 9px/1 var(--body);letter-spacing:.2em;color:var(--ink-3);text-transform:uppercase}
+.trailsel{display:flex;align-items:center;gap:9px;min-width:0}
+.sel,.inp,.ta{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;color:var(--ink);font:400 13px/1.4 var(--body)}
+.inp,.ta,.sel{width:100%}
+.ta{resize:vertical;min-height:70px}
+.topbar .sel{width:auto;min-width:190px}
+.seg{display:flex;background:var(--surface);border-radius:var(--r-md);padding:3px;gap:2px;margin-left:auto}
+.seg button{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;border-radius:var(--r-sm);color:var(--ink-3)}
+.seg button[aria-pressed=true]{background:var(--raised);color:var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:7px;font:600 11px/1 var(--body);padding:7px 11px;border-radius:999px;background:var(--surface);color:var(--ink-2)}
+.chip.warn{color:var(--warn);background:oklch(0.270 0.045 85)}
+.chip.bad{color:var(--stop);background:oklch(0.265 0.055 22)}
+.chip.ok{color:var(--go);background:oklch(0.260 0.050 150)}
+.btn{font:700 11px/1 var(--body);letter-spacing:.09em;text-transform:uppercase;padding:9px 13px;border-radius:var(--r-md);background:var(--raised)}
+.btn:hover{background:var(--line)}
+.btn.primary{background:var(--accent);color:oklch(0.99 0 0)}
+.btn.primary:hover{background:var(--accent-hi)}
+.btn.sm{padding:7px 10px;font-size:10px}
+
+.body{display:grid;grid-template-columns:52px 1fr 372px;min-height:0}
+.rail{background:var(--bg-sunk);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0}
+.rail button{width:36px;height:36px;border-radius:var(--r-md);display:grid;place-items:center;color:var(--ink-3);position:relative}
+.rail button:hover{background:var(--surface);color:var(--ink)}
+.rail svg{width:17px;height:17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.rail button::after{content:attr(data-name);position:absolute;left:46px;white-space:nowrap;background:var(--raised);
+  border:1px solid var(--line);font:600 11px/1 var(--body);padding:6px 9px;border-radius:var(--r-sm);opacity:0;pointer-events:none;z-index:50;color:var(--ink)}
+.rail button:hover::after{opacity:1}
+.rail hr{width:20px;border:0;border-top:1px solid var(--line);margin:6px 0}
+
+.stage{display:grid;grid-template-columns:1fr 1fr;min-width:0;min-height:0}
+.pane{display:flex;flex-direction:column;min-width:0;min-height:0}
+.pane + .pane{border-left:1px solid var(--line)}
+.pane-head{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line-soft)}
+.pane-head h2{font:700 10px/1 var(--body);letter-spacing:.17em;text-transform:uppercase;color:var(--ink-3)}
+.pane-head .sp{margin-left:auto}
+.mini{font:600 11px/1 var(--body);color:var(--ink-3);padding:5px 8px;border-radius:var(--r-sm)}
+.mini:hover{color:var(--ink);background:var(--surface)}
+
+.canvas{flex:1;position:relative;overflow:auto;background-color:var(--bg-sunk);
+  background-image:radial-gradient(circle at 1px 1px, oklch(0.300 0.006 60) 1px, transparent 0);background-size:22px 22px}
+.sheet{position:relative;width:1400px;height:1600px}
+.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.edges path{fill:none;stroke:var(--line);stroke-width:1.6}
+.edges path.br{stroke:var(--t-gate);stroke-dasharray:4 4}
+
+.node{position:absolute;width:184px;z-index:2;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-md);cursor:grab;user-select:none}
+.node.is-sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.node.linking{border-color:var(--go);box-shadow:0 0 0 1px var(--go)}
+.node .cap{height:3px;border-radius:var(--r-md) var(--r-md) 0 0}
+.node .in{padding:9px 11px 10px}
+.node .kind{display:flex;align-items:center;gap:6px;font:700 9px/1 var(--body);letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
+.node .kind i{width:6px;height:6px;border-radius:50%;background:currentColor;font-style:normal}
+.node h3{font:600 13px/1.3 var(--body);color:var(--ink);margin-bottom:5px;word-break:break-word}
+.node .meta{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font:600 9px/1 var(--mono);padding:3px 6px;border-radius:var(--r-sm);background:var(--bg-sunk);color:var(--ink-3)}
+.tag.gps{color:var(--t-station)} .tag.ok{color:var(--go)} .tag.bad{color:var(--warn)}
+.k-start{color:var(--t-start)} .k-start .cap{background:var(--t-start)}
+.k-station{color:var(--t-station)} .k-station .cap{background:var(--t-station)}
+.k-riddle{color:var(--t-riddle)} .k-riddle .cap{background:var(--t-riddle)}
+.k-story{color:var(--t-story)} .k-story .cap{background:var(--t-story)}
+.k-arg{color:var(--t-arg)} .k-arg .cap{background:var(--t-arg)}
+.k-gate{color:var(--t-gate)} .k-gate .cap{background:var(--t-gate)}
+.k-nav{color:var(--t-nav)} .k-nav .cap{background:var(--t-nav)}
+.k-end{color:var(--t-end)} .k-end .cap{background:var(--t-end)}
+
+#map{flex:1;background:oklch(0.205 0.006 230)}
+.leaflet-container{background:oklch(0.205 0.006 230)}
+.at-pin{background:none;border:none}
+.at-pin b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;
+  font:800 10px/1 var(--mono);color:oklch(0.17 0.004 60);box-shadow:0 2px 7px oklch(0.14 0 0 / .8)}
+
+.inspector{background:var(--bg-sunk);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.insp-head{padding:13px 14px 0}
+.insp-kind{display:flex;align-items:center;gap:7px;font:700 9px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px}
+.insp-kind i{width:6px;height:6px;border-radius:50%;background:currentColor;font-style:normal}
+.insp-head h2{font:700 16px/1.25 var(--body);margin-bottom:3px;word-break:break-word}
+.insp-head .sub{font:400 11px/1.4 var(--body);color:var(--ink-3)}
+.tabs{display:flex;gap:1px;padding:12px 14px 0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{font:600 11px/1 var(--body);padding:8px 9px;white-space:nowrap;color:var(--ink-3);border-bottom:2px solid transparent}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+.panel{flex:1;overflow-y:auto;padding:15px 14px 22px}
+.panel[hidden]{display:none}
+.fld{margin-bottom:14px}
+.fld > label{display:block;font:700 9px/1 var(--body);letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.hint{font:400 11px/1.45 var(--body);color:var(--ink-3);margin-top:6px;max-width:62ch}
+.split2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.split3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.sw{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-top:1px solid var(--line-soft)}
+.sw .txt{flex:1}.sw .txt b{display:block;font:600 13px/1.3 var(--body);margin-bottom:2px}
+.sw .txt span{font:400 11px/1.4 var(--body);color:var(--ink-3)}
+.tog{flex:0 0 auto;width:36px;height:21px;border-radius:999px;background:var(--line);position:relative;margin-top:2px;cursor:pointer}
+.tog::after{content:'';position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:var(--ink-2);transition:transform .2s var(--ease)}
+.tog.on{background:var(--accent)}.tog.on::after{transform:translateX(15px);background:oklch(0.98 0 0)}
+.rung{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line-soft);align-items:flex-start}
+.rung .n{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent-sunk);color:var(--accent-hi);display:grid;place-items:center;font:700 10px/1 var(--mono)}
+.rung .c{flex:1;min-width:0}
+.rung .c .row{display:flex;gap:6px;margin-top:6px;align-items:center}
+.rung .c .row input[type=number]{width:72px}
+.rung .x{flex:0 0 auto;color:var(--ink-3);padding:3px 6px}
+.drop{margin-top:10px;border:1px dashed var(--line);border-radius:var(--r-md);padding:14px;text-align:center;color:var(--ink-3);font:500 11px/1.4 var(--body);cursor:pointer}
+.foot{display:flex;gap:8px;padding:11px 14px;border-top:1px solid var(--line)}
+.foot .btn{flex:1;text-align:center}
+.issues{display:flex;flex-direction:column}
+.issue{display:flex;gap:9px;padding:9px 0;border-top:1px solid var(--line-soft);font:400 12px/1.45 var(--body);color:var(--ink-2);cursor:pointer}
+.issue:first-child{border-top:0}
+.issue i{flex:0 0 auto;width:6px;height:6px;border-radius:50%;margin-top:6px;font-style:normal}
+.issue.error i{background:var(--stop)} .issue.warn i{background:var(--warn)}
+.empty{padding:40px 16px;text-align:center;color:var(--ink-3);font-size:13px}
+.codes{font:600 13px/1.9 var(--mono);color:var(--ink-2);word-break:break-all}
+.modal{position:fixed;inset:0;z-index:90;background:oklch(0.12 0 0 / .78);display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.modal .in{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:18px}
+.modal h3{font:800 18px/1 var(--display);letter-spacing:.04em;text-transform:uppercase;margin-bottom:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><b>Trail Studio</b><span>AdventureTrail</span></div>
+    <div class="trailsel">
+      <select class="sel" id="trail-pick"></select>
+      <button class="btn sm" id="b-new-trail">+ Trail</button>
+    </div>
+    <div class="seg">
+      <button type="button" data-view="flow">Fluss</button>
+      <button type="button" data-view="split" aria-pressed="true">Geteilt</button>
+      <button type="button" data-view="map">Karte</button>
+    </div>
+    <span class="chip" id="check-chip">Prüfung</span>
+    <button class="btn sm" id="b-keys">Schlüssel</button>
+    <a class="btn sm" href="/at-play.html" target="_blank" rel="noopener">Spieler-Ansicht</a>
+  </header>
+
+  <div class="body">
+    <nav class="rail" id="rail">
+      <button data-add="station" data-name="Station"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+      <button data-add="riddle" data-name="Rätsel"><svg viewBox="0 0 24 24"><path d="M9 3h6v4a2 2 0 0 0 4 0h2v6h-4a2 2 0 0 0 0 4h4v4H9v-4a2 2 0 0 0-4 0H3V7h2a2 2 0 0 0 4 0z"/></svg></button>
+      <button data-add="story" data-name="Story-Beat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></button>
+      <button data-add="arg" data-name="ARG-Fund"><svg viewBox="0 0 24 24"><path d="M12 3v10"/><circle cx="12" cy="17" r="4"/></svg></button>
+      <button data-add="nav" data-name="Peilung"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.1 5-5 2.1 2.1-5z"/></svg></button>
+      <button data-add="gate" data-name="Weiche"><svg viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 4 4h8"/><path d="M6 21v-6"/><path d="M15 10l3 3-3 3"/></svg></button>
+      <hr>
+      <button data-add="start" data-name="Start"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20"/></svg></button>
+      <button data-add="end" data-name="Ende"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>
+      <hr>
+      <button id="b-link" data-name="Verbinden"><svg viewBox="0 0 24 24"><path d="M9 12h6"/><path d="M7 7a5 5 0 0 0 0 10h2"/><path d="M17 7a5 5 0 0 1 0 10h-2"/></svg></button>
+    </nav>
+
+    <main class="stage" id="stage">
+      <section class="pane" id="pane-flow">
+        <div class="pane-head"><h2>Erzählfluss</h2><span class="tag" id="node-count">0</span>
+          <span class="sp"></span><button class="mini" id="b-tidy">Anordnen</button></div>
+        <div class="canvas" id="canvas"><div class="sheet" id="sheet"><svg class="edges" id="edges"></svg></div></div>
+      </section>
+      <section class="pane" id="pane-map">
+        <div class="pane-head"><h2>Gelände</h2><span class="tag" id="geo-count">0 Orte</span>
+          <span class="sp"></span><button class="mini" id="b-setloc">Ort hier setzen</button></div>
+        <div id="map"></div>
+      </section>
+    </main>
+
+    <aside class="inspector" id="inspector"><div class="empty">Kein Baustein gewählt.</div></aside>
+  </div>
+</div>
+
+<div class="modal" id="modal"><div class="in" id="modal-in"></div></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// Studio calls are GM-gated. The token is the one the settings gate issues.
+let TOKEN = sessionStorage.getItem('gm_token') || '';
+async function api(method, url, body){
+  const h = { 'Content-Type':'application/json' };
+  if(TOKEN) h.Authorization = 'Bearer ' + TOKEN;
+  const r = await fetch('/api/at' + url, { method, headers:h, body: method==='GET'?undefined:JSON.stringify(body||{}) });
+  if(r.status === 401){ await gate(); return api(method, url, body); }
+  return r.json().catch(()=>({}));
+}
+async function gate(){
+  const pw = prompt('GM-Passwort:');
+  if(!pw) throw new Error('no auth');
+  const r = await fetch('/api/settings/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
+  const j = await r.json();
+  if(!j.valid) { alert('Falsches Passwort.'); return gate(); }
+  TOKEN = j.token; sessionStorage.setItem('gm_token', TOKEN);
+}
+
+let TRAIL = null, NODES = [], EDGES = [], selId = null, linking = null, map = null, markers = {};
+const KIND = { start:'Start', station:'Station', riddle:'Rätsel', story:'Story', arg:'ARG-Fund', gate:'Weiche', nav:'Peilung', end:'Ende' };
+const L1 = () => (TRAIL && TRAIL.langs && TRAIL.langs[0]) || 'de';
+const tx = (o, l) => (o && (o[l || L1()] || o.de || Object.values(o).find(v=>v))) || '';
+
+// ── Load ─────────────────────────────────────────────────────────────────────
+async function loadTrails(){
+  const list = await api('GET', '/trails');
+  const pick = $('#trail-pick');
+  pick.innerHTML = list.map(t => '<option value="'+t.id+'">'+esc(t.name)+(t.city?' · '+esc(t.city):'')+'</option>').join('')
+    || '<option value="">Noch kein Trail</option>';
+  if(list.length){ pick.value = localStorage.getItem('at_trail') || list[0].id; await openTrail(pick.value); }
+}
+async function openTrail(id){
+  if(!id) return;
+  localStorage.setItem('at_trail', id);
+  const d = await api('GET', '/trails/' + id);
+  TRAIL = d.trail; NODES = d.nodes || []; EDGES = d.edges || [];
+  if(!NODES.some(n => n.id === selId)) selId = null;
+  render(); runCheck();
+}
+$('#trail-pick').addEventListener('change', e => openTrail(e.target.value));
+$('#b-new-trail').addEventListener('click', async () => {
+  const name = prompt('Name des Trails:'); if(!name) return;
+  const city = prompt('Stadt:') || '';
+  const r = await api('POST', '/trails', { name, city });
+  await loadTrails(); $('#trail-pick').value = r.id; await openTrail(r.id);
+});
+
+// ── Canvas ───────────────────────────────────────────────────────────────────
+function render(){
+  const sheet = $('#sheet');
+  [...sheet.querySelectorAll('.node')].forEach(n => n.remove());
+  NODES.forEach(n => sheet.appendChild(nodeEl(n)));
+  $('#node-count').textContent = NODES.length + ' Bausteine';
+  $('#geo-count').textContent = NODES.filter(n=>n.lat!=null).length + ' Orte';
+  drawEdges(); renderMap(); renderInspector();
+}
+function nodeEl(n){
+  const d = document.createElement('div');
+  d.className = 'node k-' + n.kind + (n.id===selId?' is-sel':'') + (linking===n.id?' linking':'');
+  d.dataset.id = n.id;
+  d.style.left = (n.x||0) + 'px'; d.style.top = (n.y||0) + 'px';
+  const tags = [];
+  if(n.trigger_kind === 'gps') tags.push('<span class="tag gps">GPS '+(n.radius_m||45)+' m</span>');
+  if(n.trigger_kind === 'answer') tags.push('<span class="tag">Antwort</span>');
+  if(n.nav_mode && n.nav_mode !== 'none') tags.push('<span class="tag">'+esc(n.nav_mode)+'</span>');
+  if(n.post_code) tags.push('<span class="tag ok">Code</span>');
+  if((n.hints||[]).length) tags.push('<span class="tag">'+n.hints.length+' Hinweise</span>');
+  if(n.trigger_kind === 'gps' && n.lat == null) tags.push('<span class="tag bad">Ort fehlt</span>');
+  d.innerHTML = '<div class="cap"></div><div class="in">'
+    + '<div class="kind"><i></i>' + (KIND[n.kind]||n.kind) + '</div>'
+    + '<h3>' + esc(tx(n.title) || 'Ohne Titel') + '</h3>'
+    + '<div class="meta">' + tags.join('') + '</div></div>';
+  return d;
+}
+function drawEdges(){
+  const sheet = $('#sheet'), svg = $('#edges');
+  svg.setAttribute('viewBox', '0 0 ' + sheet.offsetWidth + ' ' + sheet.offsetHeight);
+  const box = id => { const e = sheet.querySelector('[data-id="'+id+'"]');
+    return e ? { x:e.offsetLeft, y:e.offsetTop, w:e.offsetWidth, h:e.offsetHeight } : null; };
+  svg.innerHTML = EDGES.map(ed => {
+    const a = box(ed.from_node), b = box(ed.to_node);
+    if(!a || !b) return '';
+    const gapR = b.x-(a.x+a.w), gapL = a.x-(b.x+b.w), below = b.y > a.y+a.h-2;
+    let d;
+    if(below && gapR < 24 && gapL < 24){
+      const sx=a.x+a.w/2, sy=a.y+a.h, tx2=b.x+b.w/2, ty=b.y;
+      const c = Math.max(6, Math.min(52,(ty-sy)/2));
+      d = 'M'+sx+','+sy+' C'+sx+','+(sy+c)+' '+tx2+','+(ty-c)+' '+tx2+','+ty;
+    } else {
+      const right = b.x > a.x;
+      const sx=right?a.x+a.w:a.x, sy=a.y+a.h/2, tx2=right?b.x:b.x+b.w, ty=b.y+b.h/2;
+      const c = Math.min(64, Math.abs(tx2-sx)/2+18) * (right?1:-1);
+      d = 'M'+sx+','+sy+' C'+(sx+c)+','+sy+' '+(tx2-c)+','+ty+' '+tx2+','+ty;
+    }
+    return '<path d="'+d+'"'+(ed.branch_key?' class="br"':'')+'/>';
+  }).join('');
+}
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(drawEdges);
+
+// drag to move, click to select, click-to-link when the link tool is armed
+let drag = null;
+$('#sheet').addEventListener('pointerdown', e => {
+  const el = e.target.closest('.node'); if(!el) return;
+  const id = Number(el.dataset.id);
+  if(linking !== null && linking !== id){ return makeEdge(linking, id); }
+  selId = id; renderInspector();
+  [...document.querySelectorAll('.node')].forEach(x => x.classList.toggle('is-sel', Number(x.dataset.id)===id));
+  drag = { el, id, dx: e.clientX - el.offsetLeft, dy: e.clientY - el.offsetTop, moved:false };
+  el.setPointerCapture(e.pointerId);
+});
+$('#sheet').addEventListener('pointermove', e => {
+  if(!drag) return;
+  drag.moved = true;
+  drag.el.style.left = Math.max(0, e.clientX - drag.dx) + 'px';
+  drag.el.style.top  = Math.max(0, e.clientY - drag.dy) + 'px';
+  drawEdges();
+});
+$('#sheet').addEventListener('pointerup', async () => {
+  if(!drag) return;
+  const { id, el, moved } = drag; drag = null;
+  if(!moved) return;
+  const x = el.offsetLeft, y = el.offsetTop;
+  const n = NODES.find(n => n.id === id); if(n){ n.x = x; n.y = y; }
+  await api('PUT', '/nodes/' + id, { x, y });
+});
+$('#b-link').addEventListener('click', () => {
+  linking = linking === null ? (selId !== null ? selId : null) : null;
+  if(linking === null && selId === null) alert('Erst einen Baustein wählen, dann Verbinden, dann das Ziel anklicken.');
+  render();
+});
+async function makeEdge(from, to){
+  linking = null;
+  await api('POST', '/trails/' + TRAIL.id + '/edges', { from, to });
+  await openTrail(TRAIL.id);
+}
+document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', async () => {
+  if(!TRAIL) return;
+  const kind = b.dataset.add;
+  const r = await api('POST', '/trails/' + TRAIL.id + '/nodes', {
+    kind, title:{ [L1()]: KIND[kind] }, x: 40 + (NODES.length % 5) * 210, y: 30 + Math.floor(NODES.length / 5) * 150,
+  });
+  await openTrail(TRAIL.id); selId = r.id; renderInspector(); render();
+}));
+$('#b-tidy').addEventListener('click', async () => {
+  // Lay the graph out by walking it from its roots, so the spine reads downward.
+  const seen = new Set(), cols = [];
+  const roots = NODES.filter(n => !EDGES.some(e => e.to_node === n.id));
+  let layer = roots.length ? roots : NODES.slice(0,1);
+  while(layer.length){
+    cols.push(layer);
+    layer.forEach(n => seen.add(n.id));
+    const next = [];
+    layer.forEach(n => EDGES.filter(e => e.from_node === n.id).forEach(e => {
+      if(seen.has(e.to_node)) return;
+      const t = NODES.find(x => x.id === e.to_node);
+      if(t && !next.includes(t)){ next.push(t); seen.add(t.id); }
+    }));
+    layer = next;
+  }
+  NODES.filter(n => !seen.has(n.id)).forEach(n => cols.push([n]));
+  for(let r = 0; r < cols.length; r++){
+    for(let c = 0; c < cols[r].length; c++){
+      const n = cols[r][c];
+      n.x = 40 + c * 212; n.y = 30 + r * 160;
+      await api('PUT', '/nodes/' + n.id, { x:n.x, y:n.y });
+    }
+  }
+  render();
+});
+
+// ── Map ──────────────────────────────────────────────────────────────────────
+// Esri, not tile.openstreetmap.org: OSM blocks this app outright and answers
+// every tile with an "Access blocked" image.
+const MAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+const MAP_TILE_ATTRIB = 'Tiles &copy; Esri';
+function renderMap(){
+  if(!map){
+    map = L.map('map', { zoomControl:true }).setView([47.5596, 7.5886], 15);
+    L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_TILE_ATTRIB }).addTo(map);
+  }
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+  const geo = NODES.filter(n => n.lat != null && n.lng != null);
+  geo.forEach((n, i) => {
+    const colour = getComputedStyle(document.documentElement).getPropertyValue('--t-' + n.kind).trim() || '#E85F1E';
+    const m = L.marker([n.lat, n.lng], { draggable:true, icon: L.divIcon({
+      className:'at-pin', iconSize:[20,20],
+      html:'<b style="background:'+colour+'">'+(i+1)+'</b>' }) }).addTo(map);
+    m.on('click', () => { selId = n.id; render(); });
+    m.on('dragend', async () => {
+      const p = m.getLatLng();
+      n.lat = +p.lat.toFixed(6); n.lng = +p.lng.toFixed(6);
+      await api('PUT', '/nodes/' + n.id, { lat:n.lat, lng:n.lng });
+      render();
+    });
+    markers[n.id] = m;
+    if(n.trigger_kind === 'gps'){
+      const c = L.circle([n.lat, n.lng], { radius:n.radius_m||45, color:colour, weight:1, opacity:.6, fillOpacity:.08 }).addTo(map);
+      markers['c'+n.id] = c;
+    }
+  });
+  if(geo.length) { try { map.fitBounds(L.latLngBounds(geo.map(n=>[n.lat,n.lng])).pad(0.35)); } catch(e){} }
+  setTimeout(()=>map.invalidateSize(), 60);
+}
+$('#b-setloc').addEventListener('click', async () => {
+  const n = NODES.find(x => x.id === selId);
+  if(!n) return alert('Erst einen Baustein wählen.');
+  const c = map.getCenter();
+  n.lat = +c.lat.toFixed(6); n.lng = +c.lng.toFixed(6);
+  await api('PUT', '/nodes/' + n.id, { lat:n.lat, lng:n.lng });
+  render(); runCheck();
+});
+
+// ── Inspector ────────────────────────────────────────────────────────────────
+let tab = 'trigger';
+function renderInspector(){
+  const n = NODES.find(x => x.id === selId);
+  const ins = $('#inspector');
+  if(!n){ ins.innerHTML = '<div class="empty">Kein Baustein gewählt.<br><br>Links auswählen oder oben einen neuen anlegen.</div>'; return; }
+  const l = L1();
+  ins.innerHTML =
+   '<div class="insp-head"><div class="insp-kind" style="color:var(--t-'+n.kind+')"><i></i>'+(KIND[n.kind]||n.kind)+'</div>'
+   + '<h2>'+esc(tx(n.title)||'Ohne Titel')+'</h2>'
+   + '<p class="sub">Baustein '+(NODES.indexOf(n)+1)+' von '+NODES.length+'</p></div>'
+   + '<div class="tabs">' + [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['arg','ARG'],['style','Stil']]
+       .map(([k,label]) => '<button data-tab="'+k+'" aria-selected="'+(tab===k)+'">'+label+'</button>').join('') + '</div>'
+   + '<div class="panel" id="panel"></div>'
+   + '<div class="foot"><button class="btn" id="b-del">Löschen</button><button class="btn primary" id="b-save">Speichern</button></div>';
+  ins.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderInspector(); });
+  $('#b-del').onclick = async () => {
+    if(!confirm('Diesen Baustein löschen?')) return;
+    await api('DELETE', '/nodes/' + n.id); selId = null; await openTrail(TRAIL.id);
+  };
+  $('#b-save').onclick = () => saveNode(n);
+  renderPanel(n, l);
+}
+function field(label, id, val, ta, hint){
+  return '<div class="fld"><label>'+esc(label)+'</label>'
+    + (ta ? '<textarea class="ta" id="'+id+'">'+esc(val||'')+'</textarea>'
+          : '<input class="inp" id="'+id+'" value="'+esc(val||'')+'">')
+    + (hint ? '<p class="hint">'+esc(hint)+'</p>' : '') + '</div>';
+}
+function renderPanel(n, l){
+  const p = $('#panel');
+  if(tab === 'trigger'){
+    const sel = v => n.trigger_kind === v ? ' selected' : '';
+    p.innerHTML =
+      '<div class="fld"><label>Wie der Baustein geöffnet wird</label>'
+      + '<select class="sel" id="f-trigger">'
+      + '<option value="answer"'+sel('answer')+'>Antwort eintippen</option>'
+      + '<option value="gps"'+sel('gps')+'>GPS, auf Tippen geprüft</option>'
+      + '<option value="qr"'+sel('qr')+'>QR / Code</option>'
+      + '<option value="none"'+sel('none')+'>Nichts, nur weiter</option></select>'
+      + '<p class="hint">Die Antwort ist der robusteste Schlüssel: nichts zu installieren, nichts zu überkleben, keine Berechtigung.</p></div>'
+      + field('Posten-Code (Rückfall)','f-postcode',n.post_code,false,'Steht auf dem Schild. Funktioniert immer, auch wenn GPS oder Kamera versagen.')
+      + '<div class="split3">'
+      + '<div class="fld"><label>Breite</label><input class="inp" id="f-lat" value="'+(n.lat==null?'':n.lat)+'"></div>'
+      + '<div class="fld"><label>Länge</label><input class="inp" id="f-lng" value="'+(n.lng==null?'':n.lng)+'"></div>'
+      + '<div class="fld"><label>Radius m</label><input class="inp" id="f-radius" value="'+(n.radius_m||45)+'"></div></div>'
+      + '<p class="hint">In der Altstadt sind 40 bis 60 m realistisch. Darunter öffnet sich die Station oft nicht, obwohl das Team davorsteht.</p>'
+      + '<div class="fld" style="margin-top:14px"><label>Peilung auf dem Weg hierher</label>'
+      + '<select class="sel" id="f-nav">'
+      + '<option value="none"'+(n.nav_mode==='none'?' selected':'')+'>Keine</option>'
+      + '<option value="distance"'+(n.nav_mode==='distance'?' selected':'')+'>Distanz, wärmer und kälter</option>'
+      + '<option value="arrow"'+(n.nav_mode==='arrow'?' selected':'')+'>Pfeil, zeigt die Richtung</option></select>'
+      + '<p class="hint">Distanz sagt wie weit, nicht wohin, und lässt das Rätsel „wo“ bestehen. Ein Pfeil ersetzt es durch Navigation.</p></div>'
+      + '<div class="fld"><label>Überspringen nach Minuten (0 = nie)</label><input class="inp" id="f-skip" value="'+(n.skip_after_min||0)+'"></div>';
+  }
+  else if(tab === 'story'){
+    p.innerHTML = field('Aufgabe · '+l,'f-task',tx(n.task,l),true,'Steht da, solange der Baustein offen ist.')
+      + field('Beim Ankommen · '+l,'f-arrive',tx(n.arrive,l),true)
+      + field('Beim Weitergehen · '+l,'f-depart',tx(n.depart,l),true,'Der Satz, der die Geschichte zur nächsten Station trägt. Bekommt einen eigenen Bildschirm.')
+      + field('Titel · '+l,'f-title',tx(n.title,l));
+  }
+  else if(tab === 'riddle'){
+    const list = (n.answers && n.answers[l]) || [];
+    p.innerHTML = field('Akzeptierte Antworten · '+l,'f-answers',Array.isArray(list)?list.join(', '):String(list||''),false,
+        'Mehrere Schreibweisen mit Komma trennen. Es wird immer vollständig verglichen, nie als Teilwort.')
+      + '<div class="sw"><span class="txt"><b>Gross- und Kleinschreibung beachten</b><span>Aus lassen, ausser es ist Teil des Rätsels</span></span>'
+      + '<span class="tog'+(n.answer_case_sensitive?' on':'')+'" id="f-case"></span></div>'
+      + '<div class="fld" style="margin-top:14px"><label>Punkte</label><input class="inp" id="f-points" value="'+(n.points||0)+'"></div>';
+    const t = $('#f-case'); if(t) t.onclick = () => t.classList.toggle('on');
+  }
+  else if(tab === 'hints'){
+    const hs = n.hints || [];
+    p.innerHTML = '<p class="hint" style="margin:0 0 12px">Ohne Spielleiter muss sich die Leiter selbst öffnen. Jede Stufe erscheint nach ihrer Zeit am Posten, die letzte löst auf.</p>'
+      + '<div id="ladder">' + hs.map((h,i) =>
+        '<div class="rung" data-i="'+i+'"><span class="n">'+(i+1)+'</span><span class="c">'
+        + '<textarea class="ta" style="min-height:56px" data-h="text">'+esc(tx(h.text,l))+'</textarea>'
+        + '<span class="row"><input class="inp" type="number" data-h="min" value="'+(h.after_minutes||0)+'"> <span class="hint" style="margin:0">Min</span>'
+        + '<label class="hint" style="margin:0 0 0 auto;display:flex;gap:5px;align-items:center"><input type="checkbox" data-h="res"'+(h.resolves?' checked':'')+'> löst auf</label></span>'
+        + '</span><button class="x" data-del="'+i+'">✕</button></div>').join('') + '</div>'
+      + '<div class="drop" id="b-add-hint">Stufe hinzufügen</div>';
+    $('#b-add-hint').onclick = () => {
+      n.hints = collectHints(n, l);
+      n.hints.push({ text:{[l]:''}, after_minutes:(n.hints.length+1)*4, resolves:false });
+      renderPanel(n,l);
+    };
+    p.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+      n.hints = collectHints(n, l);
+      n.hints.splice(Number(b.dataset.del),1);
+      renderPanel(n,l);
+    });
+  }
+  else if(tab === 'arg'){
+    const as = n.assets || [];
+    p.innerHTML = (as.length ? as.map(a =>
+        '<div class="rung"><span class="n">'+(a.kind||'?').slice(0,1).toUpperCase()+'</span><span class="c">'
+        + '<b style="font:600 13px/1.3 var(--body)">'+esc(a.title||a.path)+'</b>'
+        + '<div class="hint" style="margin-top:3px">'+esc(a.kind)+'</div></span>'
+        + '<button class="x" data-asset-del="'+a.id+'">✕</button></div>').join('')
+        : '<p class="hint" style="margin:0">Noch nichts hinterlegt.</p>')
+      + '<div class="drop" id="b-add-asset">Audio, Video, Bild oder PDF hochladen</div>'
+      + '<input type="file" id="f-asset" style="display:none" accept="image/*,audio/*,video/*,.pdf">'
+      + '<p class="hint">Alles wird beim Start vorgeladen, damit es auch im Funkloch abspielt.</p>';
+    $('#b-add-asset').onclick = () => $('#f-asset').click();
+    $('#f-asset').onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      const fd = new FormData(); fd.append('file', f); fd.append('title', f.name);
+      const r = await fetch('/api/at/nodes/' + n.id + '/assets', { method:'POST', headers: TOKEN?{Authorization:'Bearer '+TOKEN}:{}, body:fd });
+      const j = await r.json().catch(()=>({}));
+      if(!j.success) alert('Upload fehlgeschlagen: ' + (j.error||r.status));
+      await openTrail(TRAIL.id);
+    };
+    p.querySelectorAll('[data-asset-del]').forEach(b => b.onclick = async () => {
+      await api('DELETE', '/assets/' + b.dataset.assetDel); await openTrail(TRAIL.id);
+    });
+  }
+  else if(tab === 'style'){
+    const st = n.style || {};
+    p.innerHTML = '<p class="hint" style="margin:0 0 12px">Überschreibt das Trail-Thema nur für diesen Baustein.</p>'
+      + field('Akzentfarbe (hex)','f-accent',st.accent||'')
+      + field('Hintergrundbild (Pfad)','f-bgimg',st.bg||'',false,'Querformat, ungefähr 1200 × 800. Wird formatfüllend beschnitten.')
+      + '<div class="fld"><label>Abdunkeln %</label><input class="inp" id="f-scrim" value="'+(st.scrim==null?62:st.scrim)+'"></div>';
+  }
+}
+// Read the hint ladder back out of the DOM. Anything that re-renders the panel
+// has to call this first, or whatever was typed since the last save is gone.
+function collectHints(n, l){
+  const rows = [...document.querySelectorAll('#ladder .rung')];
+  if(!rows.length) return n.hints || [];
+  return rows.map((r, i) => {
+    const prev = (n.hints || [])[i] || {};
+    return {
+      text: Object.assign({}, prev.text || {}, { [l]: r.querySelector('[data-h=text]').value }),
+      after_minutes: Number(r.querySelector('[data-h=min]').value) || 0,
+      resolves: r.querySelector('[data-h=res]').checked,
+    };
+  });
+}
+async function saveNode(n){
+  const g = id => { const e = document.getElementById(id); return e ? e.value.trim() : undefined; };
+  const body = {};
+  const l = L1();
+  const setI18n = (key, v) => { if(v === undefined) return; body[key] = Object.assign({}, n[key]||{}, { [l]: v }); };
+  if(tab === 'trigger'){
+    body.trigger_kind = g('f-trigger'); body.post_code = g('f-postcode') || null;
+    body.lat = g('f-lat') === '' ? null : Number(g('f-lat'));
+    body.lng = g('f-lng') === '' ? null : Number(g('f-lng'));
+    body.radius_m = Number(g('f-radius')) || 45;
+    body.nav_mode = g('f-nav'); body.skip_after_min = Number(g('f-skip')) || 0;
+  } else if(tab === 'story'){
+    setI18n('task', g('f-task')); setI18n('arrive', g('f-arrive'));
+    setI18n('depart', g('f-depart')); setI18n('title', g('f-title'));
+  } else if(tab === 'riddle'){
+    const raw = g('f-answers') || '';
+    body.answers = Object.assign({}, n.answers||{}, { [l]: raw.split(',').map(s=>s.trim()).filter(Boolean) });
+    body.answer_case_sensitive = $('#f-case').classList.contains('on') ? 1 : 0;
+    body.points = Number(g('f-points')) || 0;
+  } else if(tab === 'hints'){
+    body.hints = collectHints(n, l);
+  } else if(tab === 'style'){
+    body.style = { accent: g('f-accent') || undefined, bg: g('f-bgimg') || undefined, scrim: Number(g('f-scrim')) };
+  }
+  await api('PUT', '/nodes/' + n.id, body);
+  await openTrail(TRAIL.id);
+}
+
+// ── Check ────────────────────────────────────────────────────────────────────
+async function runCheck(){
+  if(!TRAIL) return;
+  const r = await api('GET', '/trails/' + TRAIL.id + '/check');
+  const chip = $('#check-chip');
+  const errs = r.errors || 0, warns = (r.issues||[]).length - errs;
+  chip.className = 'chip ' + (errs ? 'bad' : warns ? 'warn' : 'ok');
+  chip.textContent = errs ? errs + ' Fehler' : warns ? warns + ' Hinweise' : 'Alles sauber';
+  chip.onclick = () => {
+    $('#modal-in').innerHTML = '<h3>Prüfung</h3><div class="issues">'
+      + ((r.issues||[]).map(i => '<div class="issue '+i.level+'" data-node="'+(i.node||'')+'"><i></i><span>'+esc(i.msg)+'</span></div>').join('')
+         || '<p class="hint" style="margin:0">Nichts gefunden. Der Trail kann live gehen.</p>')
+      + '</div><button class="btn" id="b-close" style="width:100%;margin-top:14px">Schliessen</button>';
+    $('#modal').classList.add('on');
+    $('#b-close').onclick = () => $('#modal').classList.remove('on');
+    $('#modal-in').querySelectorAll('[data-node]').forEach(e => e.onclick = () => {
+      if(!e.dataset.node) return;
+      selId = Number(e.dataset.node); $('#modal').classList.remove('on'); render();
+    });
+  };
+}
+
+// ── Keys ─────────────────────────────────────────────────────────────────────
+$('#b-keys').addEventListener('click', async () => {
+  if(!TRAIL) return;
+  const keys = await api('GET', '/trails/' + TRAIL.id + '/keys');
+  const open = keys.filter(k => !k.run_id).length;
+  $('#modal-in').innerHTML = '<h3>Schlüssel</h3>'
+    + '<p class="hint" style="margin:0 0 12px">'+keys.length+' insgesamt, '+open+' noch nicht eingelöst. Status des Trails: <b>'+esc(TRAIL.status)+'</b>.</p>'
+    + '<div class="fld"><label>Wie viele neue</label><input class="inp" id="f-count" value="10"></div>'
+    + '<button class="btn primary" id="b-mint" style="width:100%">Erzeugen</button>'
+    + '<div class="fld" style="margin-top:14px"><label>Trail-Status</label><select class="sel" id="f-status">'
+    + ['draft','live','retired'].map(s => '<option value="'+s+'"'+(TRAIL.status===s?' selected':'')+'>'+s+'</option>').join('')
+    + '</select><p class="hint">Nur ein Trail mit Status live kann eingelöst werden.</p></div>'
+    + '<div id="minted" class="codes"></div>'
+    + '<button class="btn" id="b-close" style="width:100%;margin-top:14px">Schliessen</button>';
+  $('#modal').classList.add('on');
+  $('#b-close').onclick = () => $('#modal').classList.remove('on');
+  $('#f-status').onchange = async e => { await api('PUT', '/trails/' + TRAIL.id, { status:e.target.value }); TRAIL.status = e.target.value; runCheck(); };
+  $('#b-mint').onclick = async () => {
+    const r = await api('POST', '/trails/' + TRAIL.id + '/keys', { count: Number($('#f-count').value)||1 });
+    $('#minted').textContent = (r.codes||[]).join('  ');
+  };
+});
+
+// ── View toggle ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.seg button').forEach(x => x.removeAttribute('aria-pressed'));
+  b.setAttribute('aria-pressed','true');
+  const v = b.dataset.view;
+  $('#stage').style.gridTemplateColumns = v==='flow' ? '1fr 0' : v==='map' ? '0 1fr' : '1fr 1fr';
+  $('#pane-flow').style.display = v==='map' ? 'none' : 'flex';
+  $('#pane-map').style.display  = v==='flow' ? 'none' : 'flex';
+  setTimeout(() => { drawEdges(); if(map) map.invalidateSize(); }, 40);
+}));
+
+loadTrails().catch(e => console.error(e));
+</script>
+</body>
+</html>

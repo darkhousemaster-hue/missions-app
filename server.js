@@ -2273,6 +2273,16 @@ const MAX_UPLOAD_MB = 200;
 const STALE_WAITING_HOURS = 5;
 // How long a game may stay paused before it is finished automatically.
 const IDLE_PAUSE_HOURS = 2;
+// ── AdventureTrail ───────────────────────────────────────────────────────────
+// Experimental self-guided trail module. Entirely contained in at/ plus two
+// pages in public/. Delete this block and the at/ folder to remove it; see
+// at/README.md. Wrapped so a broken or half-deleted module cannot stop the
+// rest of the app from booting.
+if (process.env.AT_ENABLED !== '0') {
+  try { app.use(require('./at/routes.js')({ upload, UPLOAD_DIR, isGmAuthed })); }
+  catch (e) { console.error('AdventureTrail disabled:', e.message); }
+}
+
 app.use((err, req, res, next) => {
   if(err && err.code === 'LIMIT_FILE_SIZE'){
     return res.status(413).json({ error:'File too large', code:'file_too_large', maxMb: MAX_UPLOAD_MB });

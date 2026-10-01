@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1118">
+<title>AdventureTrail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:oklch(0.155 0.030 265); --bg2:oklch(0.300 0.070 258);
+  --card:oklch(0.225 0.035 262); --card2:oklch(0.270 0.038 261);
+  --line:oklch(0.350 0.035 262);
+  --ink:oklch(0.960 0.010 85); --ink2:oklch(0.790 0.015 85); --ink3:oklch(0.620 0.012 85);
+  --gold:oklch(0.800 0.120 85); --gold-hi:oklch(0.860 0.115 88);
+  --go:oklch(0.820 0.170 150); --warn:oklch(0.820 0.140 70); --stop:oklch(0.680 0.180 22);
+  --display:'Big Shoulders Display','Bebas Neue',Impact,sans-serif;
+  --body:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'JetBrains Mono',Consolas,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font:400 15px/1.55 var(--body);-webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+button,input{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer}
+
+#app{position:fixed;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column}
+.sky{position:fixed;top:0;right:0;left:0;height:62vh;z-index:0;pointer-events:none;
+  background:radial-gradient(125% 80% at 50% -8%,var(--bg2) 0%,var(--bg) 64%)}
+.view{position:relative;z-index:1;flex:1;display:none;flex-direction:column;overflow-y:auto;
+  padding:max(26px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.view.on{display:flex}
+.mid{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.foot{margin-top:auto;padding-top:18px}
+
+.lbl{font:700 9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:11px}
+h1{font:800 clamp(28px,8vw,38px)/1.02 var(--display);letter-spacing:.03em;text-transform:uppercase;margin-bottom:12px}
+h2{font:800 22px/1.08 var(--display);letter-spacing:.03em;text-transform:uppercase;margin-bottom:9px}
+p{color:var(--ink2);margin-bottom:13px;max-width:62ch}
+p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
+.story{font-size:16px;line-height:1.62}
+
+.btn{display:block;width:100%;text-align:center;font:700 12px/1 var(--body);letter-spacing:.13em;
+  text-transform:uppercase;padding:16px;border-radius:9px;background:var(--gold);color:oklch(0.17 0.02 265);
+  transition:background .18s var(--ease),opacity .18s var(--ease)}
+.btn:active{background:var(--gold-hi)}
+.btn:disabled{opacity:.4}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink2)}
+.btn + .btn{margin-top:9px}
+
+.inp{width:100%;background:oklch(0.205 0.030 264);border:1px solid var(--line);border-radius:9px;
+  padding:15px 14px;color:var(--ink);font:600 17px/1 var(--body);text-align:center;letter-spacing:.04em}
+.inp:focus{outline:none;border-color:var(--gold)}
+.inp.code{font:700 22px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase}
+
+.dots{display:flex;gap:5px;justify-content:center;margin-top:14px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--line);transition:background .2s var(--ease)}
+.dots i.on{background:var(--gold)}
+
+.box{border:1px solid var(--line);background:var(--card);border-radius:11px;padding:14px;margin-bottom:13px}
+.box.warn{border-color:oklch(0.480 0.090 60);background:oklch(0.245 0.050 60)}
+.box.bad{border-color:oklch(0.460 0.110 25);background:oklch(0.245 0.055 25)}
+.box b{display:block;font:700 10px/1 var(--body);letter-spacing:.13em;text-transform:uppercase;margin-bottom:7px}
+.box.warn b{color:var(--warn)} .box.bad b{color:var(--stop)}
+.box p{margin:0;font-size:13px;line-height:1.5}
+
+.topbar{display:flex;align-items:center;gap:11px;padding:0 0 15px;flex:0 0 auto}
+.topbar .t{flex:1;min-width:0}
+.topbar .t b{display:block;font:700 9px/1 var(--mono);letter-spacing:.17em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+.topbar .t span{display:block;font:600 13px/1.25 var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog{display:flex;gap:3px;flex:0 0 auto}
+.prog i{width:14px;height:3px;border-radius:2px;background:var(--line)}
+.prog i.on{background:var(--gold)}
+.icobtn{flex:0 0 auto;width:36px;height:36px;border-radius:9px;background:var(--card);display:grid;place-items:center}
+.icobtn svg{width:17px;height:17px;stroke:var(--ink2);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.dist{text-align:center;padding:20px 0 10px}
+.dist b{display:block;font:700 clamp(40px,13vw,56px)/1 var(--mono);color:var(--gold);letter-spacing:-.02em}
+.dist span{display:block;font:600 10px/1 var(--body);letter-spacing:.17em;text-transform:uppercase;color:var(--ink3);margin-top:9px}
+.dist.weak b{color:var(--ink3)}
+
+.hints{margin-top:4px}
+.hint{display:flex;gap:11px;padding:12px 0;border-top:1px solid var(--line)}
+.hint .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:oklch(0.300 0.050 85);
+  color:var(--gold);display:grid;place-items:center;font:700 10px/1 var(--mono)}
+.hint p{margin:0;font-size:14px;color:var(--ink2)}
+.hint.res .n{background:oklch(0.300 0.060 25);color:var(--stop)}
+
+.finds{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.find{display:flex;align-items:center;gap:11px;padding:12px;border:1px solid var(--line);
+  background:var(--card);border-radius:10px;width:100%;text-align:left}
+.find .ic{width:34px;height:34px;border-radius:9px;background:var(--card2);display:grid;place-items:center;flex:0 0 auto}
+.find .ic svg{width:16px;height:16px;stroke:var(--gold);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.find .c{flex:1;min-width:0}
+.find .c b{display:block;font:600 14px/1.3 var(--body);margin-bottom:2px}
+.find .c span{font:400 11px/1.3 var(--body);color:var(--ink3)}
+
+.sheet{position:fixed;inset:0;z-index:40;background:oklch(0.12 0.02 265 / .92);display:none;
+  align-items:flex-end;justify-content:center;padding:16px}
+.sheet.on{display:flex}
+.sheet .inner{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line);
+  border-radius:15px;padding:18px;max-height:84vh;overflow-y:auto}
+.sheet audio,.sheet video,.sheet img{width:100%;border-radius:9px;display:block;margin-bottom:12px}
+
+.toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;
+  background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:13px 15px;
+  font:500 14px/1.4 var(--body);display:none;box-shadow:0 12px 32px oklch(0.10 0.02 265 / .7)}
+.toast.on{display:block}
+.toast.bad{border-color:oklch(0.470 0.110 25)}
+
+.vid{position:relative;border-radius:11px;overflow:hidden;margin-bottom:15px;background:#000}
+.vid video{width:100%;display:block}
+.spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid oklch(0.17 0.02 265 / .35);
+  border-top-color:oklch(0.17 0.02 265);animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<span class="sky"></span>
+<div id="app">
+
+  <!-- REDEEM -->
+  <section class="view on" id="v-redeem">
+    <div class="mid">
+      <div class="lbl" id="r-kick">AdventureTrail</div>
+      <h1>Euer<br>Schlüssel</h1>
+      <p>Der Code steht auf der Karte, die ihr bekommen habt.</p>
+      <input class="inp code" id="f-code" inputmode="latin" autocapitalize="characters"
+             autocomplete="off" spellcheck="false" maxlength="11" placeholder="XXXX XXXX">
+      <p class="sm" style="margin-top:11px">Gross oder klein ist egal, Striche und Leerzeichen auch.</p>
+      <div id="r-err"></div>
+    </div>
+    <div class="foot">
+      <button class="btn" id="b-redeem">Weiter</button>
+      <button class="btn ghost" id="b-join">Ich bin im Team, Beitritts-Code</button>
+    </div>
+  </section>
+
+  <!-- ONBOARDING -->
+  <section class="view" id="v-intro">
+    <div class="mid" id="intro-body"></div>
+    <div class="foot">
+      <button class="btn" id="b-intro-next">Weiter</button>
+      <div class="dots" id="intro-dots"></div>
+    </div>
+  </section>
+
+  <!-- START -->
+  <section class="view" id="v-start">
+    <div class="mid">
+      <div class="vid" id="start-vid" style="display:none"><video id="opener" playsinline preload="auto"></video></div>
+      <div class="lbl">Alles bereit</div>
+      <h1 id="start-title">Jetzt starten</h1>
+      <p class="sm" id="start-sub"></p>
+    </div>
+    <div class="foot"><button class="btn" id="b-start">Jetzt starten</button></div>
+  </section>
+
+  <!-- PLAY -->
+  <section class="view" id="v-play">
+    <div class="topbar">
+      <div class="t"><b id="p-kick">Station</b><span id="p-title"></span></div>
+      <div class="prog" id="p-prog"></div>
+      <button class="icobtn" id="b-help" aria-label="Hilfe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.8 2.8 0 1 1 3.7 2.6c-.6.2-1 .8-1 1.5v.3"/><path d="M12 17.2v.2"/></svg></button>
+    </div>
+    <div class="mid" id="play-body"></div>
+    <div class="foot" id="play-foot"></div>
+  </section>
+
+  <!-- END -->
+  <section class="view" id="v-end">
+    <div class="mid">
+      <div class="lbl">Ende</div>
+      <h1 id="end-title">Geschafft</h1>
+      <div id="end-body"></div>
+    </div>
+    <div class="foot"><button class="btn ghost" id="b-restart">Zum Anfang</button></div>
+  </section>
+</div>
+
+<div class="sheet" id="sheet"><div class="inner" id="sheet-in"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ── AdventureTrail player ────────────────────────────────────────────────────
+// Self-guided: there is no game master, so everything that gates progress is
+// decided by the server and every dead end has a way out.
+const $ = s => document.querySelector(s);
+const api = async (path, body) => {
+  const r = await fetch('/api/at' + path, body === undefined
+    ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json().catch(()=>({}));
+  return { status:r.status, ...j };
+};
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let RUN = null;        // the server's view of this run
+let runId = null;
+let introPage = 0;
+let wakeLock = null;
+let geoDenied = false;
+
+function show(id){
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === id));
+  window.scrollTo(0,0);
+}
+let toastT;
+function toast(msg, bad){
+  const t = $('#toast'); t.textContent = msg;
+  t.classList.toggle('bad', !!bad); t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'), 4200);
+}
+
+// ── Screen wake lock ─────────────────────────────────────────────────────────
+// Only held while a Peilung is on screen. The browser drops it on every hide,
+// so it has to be re-acquired when the page comes back.
+async function holdWake(){
+  try { if(!wakeLock && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }
+  catch(e){ /* denied or unsupported: nothing breaks, the screen just sleeps */ }
+}
+function dropWake(){ try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null; }
+
+// ── Location ─────────────────────────────────────────────────────────────────
+// Pulled, never watched: iOS stops reporting the moment the screen sleeps, so a
+// background watch would be a battery cost with no benefit. Several samples are
+// taken because the first fix after a wake is routinely the worst one.
+function readPosition({ samples = 3, ms = 5000 } = {}){
+  return new Promise(resolve => {
+    if(!navigator.geolocation) return resolve({ error:'unsupported' });
+    let best = null, got = 0, done = false;
+    const finish = () => { if(done) return; done = true; clearTimeout(timer);
+      try{ navigator.geolocation.clearWatch(id); }catch(e){}
+      resolve(best ? { lat:best.coords.latitude, lng:best.coords.longitude, accuracy:best.coords.accuracy }
+                   : { error:'no_fix' }); };
+    const timer = setTimeout(finish, ms);
+    const id = navigator.geolocation.watchPosition(pos => {
+      if(!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
+      if(++got >= samples) finish();
+    }, err => {
+      // Only err.code 1 means denied. navigator.permissions keeps reporting
+      // "prompt" on iOS even after the user refused, so it cannot be trusted.
+      if(err && err.code === 1){ geoDenied = true; done = true; clearTimeout(timer); resolve({ error:'denied' }); }
+    }, { enableHighAccuracy:true, maximumAge:0, timeout:ms });
+  });
+}
+
+// ── Redeem ───────────────────────────────────────────────────────────────────
+$('#f-code').addEventListener('input', e => {
+  const raw = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g,'');
+  e.target.value = raw.length > 4 ? raw.slice(0,4) + ' ' + raw.slice(4,8) : raw;
+});
+$('#b-redeem').addEventListener('click', async () => {
+  const code = $('#f-code').value.trim();
+  if(!code) return;
+  $('#b-redeem').disabled = true;
+  const res = await api('/redeem', { code });
+  $('#b-redeem').disabled = false;
+  if(res.status === 404) return fail('Diesen Code kennen wir nicht. Bitte nochmals prüfen.');
+  if(res.status === 409) return fail('Dieser Trail ist zurzeit nicht spielbar.');
+  if(!res.runId) return fail('Das hat nicht geklappt. Bitte nochmals versuchen.');
+  localStorage.setItem('at_run', res.runId);
+  runId = res.runId;
+  await load();
+  openIntro();
+});
+$('#b-join').addEventListener('click', async () => {
+  const code = prompt('Beitritts-Code vom ersten Handy:');
+  if(!code) return;
+  const res = await api('/join', { code });
+  if(!res.runId) return fail('Diesen Beitritts-Code kennen wir nicht.');
+  localStorage.setItem('at_run', res.runId);
+  runId = res.runId;
+  await load();
+  RUN.run.started_at ? renderPlay() : openIntro();
+});
+function fail(msg){ $('#r-err').innerHTML = '<div class="box bad"><b>Moment</b><p>'+esc(msg)+'</p></div>'; }
+
+// ── Onboarding ───────────────────────────────────────────────────────────────
+// Short on purpose. Its real job is the location permission, not teaching: iOS
+// asks once per site, and a reflexive refusal costs the whole trail. GPS
+// troubleshooting lives under Hilfe, where it is needed.
+function introPages(){
+  const i = (RUN && RUN.trail.intro) || {};
+  const pages = [];
+  if(i.hook) pages.push({ lbl:i.hook_label || '', h:i.hook_title || '', p:[i.hook] });
+  pages.push({ lbl:'So läuft es', h:'Drei Sätze', p:[
+    'Jede Station ist ein echter Ort. Was ihr dort findet, bringt euch zur nächsten.',
+    'Kein Zeitlimit. Pausiert, esst etwas, geht weiter.',
+    'Festgefahren? Die Hinweise öffnen sich von selbst, der letzte verrät die Lösung.' ]});
+  pages.push({ lbl:'Standort', h:'Einmal erlauben', perm:true, p:[
+    'Wir prüfen damit nur, ob ihr an einer Station angekommen seid. Wir verfolgen euch nicht und sehen nichts, solange die App zu ist.' ]});
+  return pages;
+}
+function openIntro(){ introPage = 0; show('v-intro'); renderIntro(); }
+function renderIntro(){
+  const pages = introPages(), p = pages[introPage];
+  $('#intro-body').innerHTML =
+    (p.lbl ? '<div class="lbl">'+esc(p.lbl)+'</div>' : '') +
+    '<h1>'+esc(p.h)+'</h1>' +
+    p.p.map(t => '<p class="story">'+esc(t)+'</p>').join('');
+  $('#intro-dots').innerHTML = pages.map((_,i)=>'<i class="'+(i===introPage?'on':'')+'"></i>').join('');
+  $('#b-intro-next').textContent = p.perm ? 'Standort erlauben' : 'Weiter';
+}
+$('#b-intro-next').addEventListener('click', async () => {
+  const pages = introPages(), p = pages[introPage];
+  if(p.perm){
+    $('#b-intro-next').disabled = true;
+    $('#b-intro-next').innerHTML = '<span class="spin"></span>Einen Moment';
+    const pos = await readPosition({ samples:1, ms:8000 });
+    $('#b-intro-next').disabled = false;
+    $('#b-intro-next').textContent = 'Standort erlauben';
+    if(pos.error === 'denied'){ renderDenied(); return; }
+    // No fix is not a refusal: indoors at the start point this is normal.
+  }
+  if(introPage < pages.length - 1){ introPage++; renderIntro(); }
+  else openStart();
+});
+function renderDenied(){
+  $('#intro-body').innerHTML =
+    '<div class="lbl">Kein Standort</div><h1>Geht auch<br>ohne</h1>' +
+    '<div class="box warn"><b>Abgelehnt</b><p>Safari gibt den Standort nicht frei. Ihr könnt den Trail trotzdem komplett spielen.</p></div>' +
+    '<p class="sm">Freischalten: in der Adressleiste auf <b>aA</b> tippen, dann Einstellungen für diese Website, Standort auf „Fragen“.</p>' +
+    '<p class="sm">Oder ihr tippt an jeder Station den Code vom Schild ein. Das dauert fünf Sekunden länger und funktioniert immer.</p>';
+  $('#b-intro-next').textContent = 'Weiter ohne Standort';
+  $('#b-intro-next').onclick = () => openStart();
+}
+
+// ── Start ────────────────────────────────────────────────────────────────────
+function openStart(){
+  show('v-start');
+  const t = RUN.trail;
+  $('#start-title').textContent = t.name || 'Jetzt starten';
+  $('#start-sub').textContent = [RUN.run.team_name, t.city].filter(Boolean).join(' · ');
+  const v = $('#opener');
+  if(t.video_path){ $('#start-vid').style.display = ''; v.preload = 'auto'; v.src = '/uploads/' + t.video_path; }
+}
+$('#b-start').addEventListener('click', async () => {
+  // Order matters. Every one of these needs a real user gesture, and an await
+  // destroys it, so the video has to go first and synchronously.
+  const v = $('#opener');
+  if(RUN.trail.video_path){ try { v.play(); } catch(e){} }
+  holdWake();                      // deliberately not awaited
+  const res = await api('/run/' + runId + '/start', {});
+  if(res.nodes) RUN = res;
+  preloadAssets();
+  renderPlay();
+});
+
+// Pull the trail's media into the browser cache while the team is still at the
+// start point, so a courtyard with no signal does not swallow a voicemail.
+function preloadAssets(){
+  const seen = new Set();
+  (RUN.nodes||[]).forEach(n => (n.assets||[]).forEach(a => {
+    if(!a.preload || seen.has(a.path)) return;
+    seen.add(a.path);
+    fetch('/uploads/' + a.path, { cache:'force-cache' }).catch(()=>{});
+  }));
+}
+
+// ── Play ─────────────────────────────────────────────────────────────────────
+const KIND_LABEL = { start:'Auftakt', station:'Station', riddle:'Rätsel', story:'Geschichte',
+                     arg:'Fundstück', gate:'Entscheidung', nav:'Peilung', end:'Ende' };
+
+function currentNode(){
+  const open = (RUN.nodes||[]).filter(n => n.status === 'open');
+  // A station or riddle is the main thread; story and finds sit beside it.
+  return open.find(n => ['start','station','riddle','gate','nav','end'].includes(n.kind)) || open[0] || null;
+}
+function sideNodes(){
+  const main = currentNode();
+  return (RUN.nodes||[]).filter(n => n.status === 'open' && n !== main && ['arg','story'].includes(n.kind));
+}
+
+function renderPlay(){
+  if(!RUN){ return; }
+  if(RUN.run.finished_at) return renderEnd();
+  const n = currentNode();
+  if(!n) return renderEnd();
+  show('v-play');
+
+  $('#p-kick').textContent = KIND_LABEL[n.kind] || 'Station';
+  $('#p-title').textContent = n.title || '';
+  $('#p-prog').innerHTML = Array.from({length:Math.min(12, RUN.total||0)},(_,i)=>
+    '<i class="'+(i < (RUN.done||0) ? 'on':'')+'"></i>').join('');
+
+  const body = [];
+  if(n.task) body.push('<p class="story">'+esc(n.task)+'</p>');
+
+  // Peilung: distance only, never an arrow. Which way is still the puzzle.
+  if(n.nav_mode === 'distance' && n.lat != null){
+    body.push('<div class="dist" id="dist"><b>···</b><span>Peilung wird geholt</span></div>');
+  }
+
+  if(n.kind === 'gate' && n.choices.length){
+    body.push('<div class="finds">' + n.choices.map(c =>
+      '<button class="find" data-branch="'+esc(c.branch_key)+'" data-to="'+c.to+'">'+
+      '<span class="ic"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>'+
+      '<span class="c"><b>'+esc(c.label||'Weiter')+'</b></span></button>').join('') + '</div>');
+  }
+
+  if(n.hints && n.hints.length){
+    body.push('<div class="hints">' + n.hints.map((h,i) =>
+      '<div class="hint'+(h.resolves?' res':'')+'"><span class="n">'+(i+1)+'</span><p>'+esc(h.text)+'</p></div>'
+    ).join('') + '</div>');
+  } else if(n.next_hint_in_min != null && ['station','riddle'].includes(n.kind)){
+    body.push('<p class="sm">Erster Hinweis in '+n.next_hint_in_min+' Min.</p>');
+  }
+
+  const finds = sideNodes().concat((n.assets||[]).length ? [] : []);
+  const assets = (n.assets||[]);
+  if(assets.length){
+    body.push('<div class="finds">' + assets.map(a =>
+      '<button class="find" data-asset="'+a.id+'" data-path="'+esc(a.path)+'" data-kind="'+esc(a.kind)+'">'+
+      '<span class="ic">'+assetIcon(a.kind)+'</span>'+
+      '<span class="c"><b>'+esc(a.title||'Fundstück')+'</b><span>'+esc(a.kind)+'</span></span></button>').join('') + '</div>');
+  }
+  if(finds.length){
+    body.push('<div class="finds">' + finds.map(f =>
+      '<button class="find" data-node="'+f.id+'"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v10"/><circle cx="12" cy="17" r="4"/></svg></span>'+
+      '<span class="c"><b>'+esc(f.title)+'</b><span>'+(KIND_LABEL[f.kind]||'')+'</span></span></button>').join('') + '</div>');
+  }
+  $('#play-body').innerHTML = body.join('');
+
+  // Footer: how this node is passed.
+  const foot = [];
+  if(n.kind === 'gate'){ /* the choices are the action */ }
+  else if(n.trigger_kind === 'answer' || n.trigger_kind === 'code' || n.trigger_kind === 'qr'){
+    foot.push('<input class="inp" id="f-answer" autocomplete="off" spellcheck="false" placeholder="Antwort eintippen">');
+    foot.push('<button class="btn" id="b-solve" style="margin-top:9px">Prüfen</button>');
+  } else if(n.trigger_kind === 'gps'){
+    foot.push('<button class="btn" id="b-here">Ich bin da</button>');
+    foot.push('<button class="btn ghost" id="b-code">Code vom Schild eintippen</button>');
+  } else {
+    foot.push('<button class="btn" id="b-next">Weiter</button>');
+  }
+  if(n.can_skip) foot.push('<button class="btn ghost" id="b-skip">Diese Station überspringen</button>');
+  // Failures are shown here, above the buttons, not in a floating toast: the
+  // toast sat on top of "type the code from the sign", which is precisely the
+  // button a team reaches for when the location check has just refused them.
+  $('#play-foot').innerHTML = '<div id="solve-msg"></div>' + foot.join('');
+  wire(n);
+
+  if(n.nav_mode === 'distance' && n.lat != null){ holdWake(); tickDistance(n); }
+  else dropWake();
+}
+function assetIcon(kind){
+  if(kind==='audio') return '<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>';
+  if(kind==='video') return '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>';
+  if(kind==='doc')   return '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+  return '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/></svg>';
+}
+
+function wire(n){
+  const solve = async payload => {
+    const slot0 = $('#solve-msg'); if(slot0) slot0.innerHTML = '';
+    const res = await api('/run/'+runId+'/node/'+n.id+'/solve', payload);
+    if(res.ok){
+      if(res.state) RUN = res.state;
+      const done = (RUN.nodes||[]).find(x => x.id === n.id);
+      if(done && (done.arrive || done.depart)) return showStory(done);
+      return renderPlay();
+    }
+    const why = {
+      wrong:'Das ist es nicht. Schaut nochmals genau hin.',
+      too_far:'Noch nicht nah genug' + (res.distance!=null ? ' ('+res.distance+' m).' : '.'),
+      weak_signal:'Das Signal ist hier zu schwach, um das sicher zu sagen. Nochmals versuchen, oder den Code vom Schild eintippen.',
+      no_fix:'Wir bekommen gerade keine Ortung. Nochmals versuchen, oder den Code vom Schild eintippen.',
+      node_has_no_location:'Für diese Station ist kein Ort hinterlegt.',
+      not_open:'Diese Station ist gerade nicht an der Reihe.',
+    }[res.reason || res.error] || 'Das hat nicht geklappt.';
+    const slot = $('#solve-msg');
+    if(slot) slot.innerHTML = '<div class="box bad" style="margin-bottom:11px"><b>Noch nicht</b><p>'+esc(why)+'</p></div>';
+    else toast(why, true);
+  };
+
+  const bs = $('#b-solve');
+  if(bs) bs.onclick = () => solve({ answer: ($('#f-answer').value||'').trim() });
+  const fa = $('#f-answer');
+  if(fa) fa.onkeydown = e => { if(e.key === 'Enter') bs && bs.click(); };
+
+  const bh = $('#b-here');
+  if(bh) bh.onclick = async () => {
+    bh.disabled = true; bh.innerHTML = '<span class="spin"></span>Wird geprüft';
+    const pos = await readPosition();
+    bh.disabled = false; bh.textContent = 'Ich bin da';
+    if(pos.error === 'denied'){ toast('Ohne Standort geht es über den Code vom Schild.', true); return; }
+    if(pos.error){ toast('Wir bekommen gerade keine Ortung. Nochmals versuchen, oder den Code eintippen.', true); return; }
+    solve(pos);
+  };
+  const bc = $('#b-code');
+  if(bc) bc.onclick = () => {
+    const c = prompt('Code vom Schild am Posten:');
+    if(c) solve({ code:c });
+  };
+  const bn = $('#b-next');
+  if(bn) bn.onclick = () => solve({});
+  const bsk = $('#b-skip');
+  if(bsk) bsk.onclick = async () => {
+    const res = await api('/run/'+runId+'/node/'+n.id+'/skip', {});
+    if(res.nodes){ RUN = res; renderPlay(); } else toast('Noch nicht.', true);
+  };
+
+  document.querySelectorAll('[data-branch]').forEach(b => b.onclick = async () => {
+    const res = await api('/run/'+runId+'/node/'+n.id+'/choose', { branch_key: b.dataset.branch });
+    if(res.nodes){ RUN = res; renderPlay(); }
+  });
+  document.querySelectorAll('[data-asset]').forEach(b => b.onclick = () => openAsset(b.dataset));
+  document.querySelectorAll('[data-node]').forEach(b => b.onclick = async () => {
+    const f = (RUN.nodes||[]).find(x => x.id === Number(b.dataset.node));
+    if(f) showStory(f, true);
+  });
+}
+
+// The departure text is what makes a trail feel like one story instead of a
+// list, so it gets the screen to itself before the next station.
+function showStory(node, backOnly){
+  const txt = [node.arrive, node.depart].filter(Boolean);
+  if(!txt.length) return renderPlay();
+  show('v-play');
+  $('#p-kick').textContent = KIND_LABEL[node.kind] || '';
+  $('#p-title').textContent = node.title || '';
+  $('#play-body').innerHTML = txt.map(t => '<p class="story">'+esc(t)+'</p>').join('') +
+    ((node.assets||[]).length ? '<div class="finds">' + node.assets.map(a =>
+      '<button class="find" data-asset="'+a.id+'" data-path="'+esc(a.path)+'" data-kind="'+esc(a.kind)+'">'+
+      '<span class="ic">'+assetIcon(a.kind)+'</span><span class="c"><b>'+esc(a.title||'Fundstück')+'</b></span></button>').join('') + '</div>' : '');
+  $('#play-foot').innerHTML = '<button class="btn" id="b-go">Weiter</button>';
+  $('#b-go').onclick = () => renderPlay();
+  document.querySelectorAll('[data-asset]').forEach(b => b.onclick = () => openAsset(b.dataset));
+}
+
+function openAsset(d){
+  const url = '/uploads/' + d.path;
+  const inner = d.kind === 'audio' ? '<audio controls autoplay src="'+esc(url)+'"></audio>'
+    : d.kind === 'video' ? '<video controls playsinline autoplay src="'+esc(url)+'"></video>'
+    : d.kind === 'doc'   ? '<p>Dokument</p><a class="btn" href="'+esc(url)+'" target="_blank" rel="noopener">Öffnen</a>'
+    : '<img src="'+esc(url)+'" alt="">';
+  $('#sheet-in').innerHTML = inner + '<button class="btn ghost" id="b-sheet-close" style="margin-top:12px">Schliessen</button>';
+  $('#sheet').classList.add('on');
+  $('#b-sheet-close').onclick = () => { $('#sheet').classList.remove('on'); $('#sheet-in').innerHTML=''; };
+}
+
+// Distance readout, refreshed while the page is open and the lock is held.
+let distT = null;
+async function tickDistance(n){
+  clearInterval(distT);
+  const run = async () => {
+    const el = $('#dist'); if(!el) { clearInterval(distT); return; }
+    const pos = await readPosition({ samples:2, ms:4000 });
+    const cur = $('#dist'); if(!cur) return;
+    if(pos.error){ cur.classList.add('weak');
+      cur.innerHTML = '<b>···</b><span>'+(pos.error==='denied'?'kein Standort':'kein Signal')+'</span>'; return; }
+    const res = await api('/run/'+runId+'/node/'+n.id+'/distance', pos);
+    const el2 = $('#dist'); if(!el2 || res.distance == null) return;
+    const weak = pos.accuracy > 60;
+    el2.classList.toggle('weak', weak);
+    el2.innerHTML = '<b>'+res.distance+' m</b><span>'+(weak?'ungefähr · Signal schwach':'ungefähr')+'</span>';
+  };
+  run(); distT = setInterval(run, 9000);
+}
+
+// ── End ──────────────────────────────────────────────────────────────────────
+function renderEnd(){
+  show('v-end');
+  const done = (RUN.nodes||[]).filter(n => n.status !== 'open');
+  $('#end-body').innerHTML =
+    '<p class="story">Ihr habt '+done.length+' von '+(RUN.total||done.length)+' Stationen hinter euch.</p>' +
+    (RUN.run.branch_key ? '<p class="sm">Euer Weg: '+esc(RUN.run.branch_key)+'</p>' : '');
+}
+$('#b-restart').addEventListener('click', () => { localStorage.removeItem('at_run'); location.reload(); });
+
+// ── Help ─────────────────────────────────────────────────────────────────────
+// Troubleshooting belongs here, not in the intro: it is only meaningful once
+// something has actually gone wrong.
+$('#b-help').addEventListener('click', () => {
+  $('#sheet-in').innerHTML =
+    '<h2>Hilfe</h2>' +
+    '<div class="box"><b>Die Ortung findet uns nicht</b><p>Zwischen hohen Häusern liegt der Fehler oft bei 30 m. Geht ein paar Schritte auf den offenen Platz, wartet fünf Sekunden und tippt nochmals. Oder nehmt den Code vom Schild am Posten, der funktioniert immer.</p></div>' +
+    '<div class="box"><b>Wir stecken fest</b><p>Die Hinweise öffnen sich von selbst, je länger ihr am Posten seid. Der letzte verrät die Lösung.</p></div>' +
+    '<div class="box"><b>Das Handy ist fast leer</b><p>Beitritts-Code: <b>'+esc((RUN&&RUN.run.join_code)||'noch keiner')+'</b>. Damit steigt ein zweites Handy in denselben Trail ein.</p></div>' +
+    '<button class="btn ghost" id="b-sheet-close">Schliessen</button>';
+  $('#sheet').classList.add('on');
+  $('#b-sheet-close').onclick = () => $('#sheet').classList.remove('on');
+});
+
+// ── Boot and resume ──────────────────────────────────────────────────────────
+async function load(){
+  const res = await api('/run/' + runId);
+  if(res.status === 404){ localStorage.removeItem('at_run'); runId = null; return false; }
+  RUN = res; return true;
+}
+// iOS suspends the page and can close the socket without saying so, so the only
+// safe assumption on return is that we know nothing. Re-read everything.
+document.addEventListener('visibilitychange', async () => {
+  if(document.visibilityState !== 'visible' || !runId) return;
+  if(wakeLock === null) holdWake();
+  if(await load()){ if(RUN.run.started_at) renderPlay(); }
+});
+
+(async () => {
+  runId = localStorage.getItem('at_run');
+  if(!runId) return show('v-redeem');
+  if(!(await load())) return show('v-redeem');
+  if(RUN.run.finished_at) return renderEnd();
+  if(RUN.run.started_at){ preloadAssets(); return renderPlay(); }
+  openIntro();
+})();
+</script>
+</body>
+</html>
