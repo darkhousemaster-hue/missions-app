@@ -15,7 +15,7 @@ Everything lives behind four hard boundaries.
 
 | Boundary | Rule |
 |---|---|
-| **Files** | All server code is in `at/`. Two player-facing pages, `public/at-studio.html` and `public/at-play.html`. Nothing else. |
+| **Files** | All server code is in `at/`. Two pages, `public/at-studio.html` and `public/at-play.html`. The only other touch is three marked blocks in `public/gm.html` that hang the studio in the settings sidebar. |
 | **Database** | Every table is prefixed `at_`. No AdventureTrail column is ever added to an existing table. |
 | **Routes** | Everything is under `/api/at/*`. No existing route is modified. |
 | **Uploads** | Everything lands in `uploads/at/`. |
@@ -42,8 +42,11 @@ tables stay, so nothing is lost.
 2. Delete `public/at-studio.html` and `public/at-play.html`.
 3. In `server.js`, delete the block marked `── AdventureTrail ──`. It is six
    lines and touches nothing else.
-4. Delete `uploads/at/`.
-5. Drop the tables, if you want the space back:
+4. In `public/gm.html`, delete the three blocks marked
+   `AdventureTrail · experimental`: the sidebar button, the `stab-advtrail`
+   panel, and the lazy-load hook in `switchSettingsTab`. About a dozen lines.
+5. Delete `uploads/at/`.
+6. Drop the tables, if you want the space back:
 
 ```sql
 DROP TABLE IF EXISTS at_run_progress;
@@ -56,7 +59,7 @@ DROP TABLE IF EXISTS at_nodes;
 DROP TABLE IF EXISTS at_trails;
 ```
 
-Step 5 is optional. Leaving the tables costs nothing and keeps the door open.
+Step 6 is optional. Leaving the tables costs nothing and keeps the door open.
 
 ## What is here
 
@@ -78,6 +81,13 @@ Step 5 is optional. Leaving the tables costs nothing and keeps the door open.
 - **Nothing a human must review can block progress.** There is no game master.
   Photos are collected for the ending, never gating.
 - **Hints release themselves** on time at the post, and the last one resolves.
+- **A Peilung owns nothing.** No trigger, no answer, no radius, no coordinates.
+  It reads the location of the next connected node, so moving a station moves
+  every bearing that leads to it and there is nothing to keep in sync by hand.
+  Its inspector offers only the two things it actually has.
+- **Only a station or a riddle is solvable.** Every other kind is created with
+  no trigger, because a start, a story beat or an ending is walked past rather
+  than answered.
 
 See `C:\projects\story-trail\research\FINDINGS.md` for the research these came
 from.

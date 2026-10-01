@@ -199,11 +199,15 @@ const getNode = id => {
   const n = db.prepare('SELECT * FROM at_nodes WHERE id=?').get(Number(id));
   return n ? hydrateNode(n) : null;
 };
-const createNode = (trailId, p = {}) => num(db.prepare(
-  'INSERT INTO at_nodes(trail_id,kind,title,x,y,order_index) VALUES(?,?,?,?,?,?)')
-  .run(Number(trailId), String(p.kind || 'station'), S(p.title || {}),
-       Number(p.x) || 0, Number(p.y) || 0,
-       Number(p.order_index) || 0).lastInsertRowid);
+const SOLVABLE = new Set(['station', 'riddle']);
+const createNode = (trailId, p = {}) => {
+  const kind = String(p.kind || 'station');
+  return num(db.prepare(
+    'INSERT INTO at_nodes(trail_id,kind,title,x,y,order_index,trigger_kind) VALUES(?,?,?,?,?,?,?)')
+    .run(Number(trailId), kind, S(p.title || {}),
+         Number(p.x) || 0, Number(p.y) || 0, Number(p.order_index) || 0,
+         p.trigger_kind || (SOLVABLE.has(kind) ? 'answer' : 'none')).lastInsertRowid);
+};
 
 const NODE_FIELDS = ['kind', 'title', 'arrive', 'depart', 'task', 'trigger_kind', 'answers',
   'answer_case_sensitive', 'post_code', 'lat', 'lng', 'radius_m', 'accuracy_max',

@@ -271,15 +271,15 @@ $('#b-redeem').addEventListener('click', async () => {
   await load();
   openIntro();
 });
-$('#b-join').addEventListener('click', async () => {
-  const code = prompt('Beitritts-Code vom ersten Handy:');
-  if(!code) return;
-  const res = await api('/join', { code });
-  if(!res.runId) return fail('Diesen Beitritts-Code kennen wir nicht.');
-  localStorage.setItem('at_run', res.runId);
-  runId = res.runId;
-  await load();
-  RUN.run.started_at ? renderPlay() : openIntro();
+$('#b-join').addEventListener('click', () => {
+  ask('Beitreten', 'Der Beitritts-Code steht auf dem Handy, das schon dabei ist.', 'XXXXXX', async code => {
+    const res = await api('/join', { code });
+    if(!res.runId) return false;
+    localStorage.setItem('at_run', res.runId);
+    runId = res.runId;
+    await load();
+    RUN.run.started_at ? renderPlay() : openIntro();
+  });
 });
 function fail(msg){ $('#r-err').innerHTML = '<div class="box bad"><b>Moment</b><p>'+esc(msg)+'</p></div>'; }
 
@@ -496,10 +496,9 @@ function wire(n){
     solve(pos);
   };
   const bc = $('#b-code');
-  if(bc) bc.onclick = () => {
-    const c = prompt('Code vom Schild am Posten:');
-    if(c) solve({ code:c });
-  };
+  if(bc) bc.onclick = () => ask('Code vom Schild',
+    'Steht am Posten. Er funktioniert immer, auch ohne Standort.', 'z. B. PFALZ-74',
+    async c => { solve({ code:c }); });
   const bn = $('#b-next');
   if(bn) bn.onclick = () => solve({});
   const bsk = $('#b-skip');
@@ -534,6 +533,33 @@ function showStory(node, backOnly){
   $('#play-foot').innerHTML = '<button class="btn" id="b-go">Weiter</button>';
   $('#b-go').onclick = () => renderPlay();
   document.querySelectorAll('[data-asset]').forEach(b => b.onclick = () => openAsset(b.dataset));
+}
+
+// One in-app ask, in the trail's own skin, instead of a browser prompt.
+function ask(title, note, placeholder, onOk){
+  $('#sheet-in').innerHTML =
+    '<h2>'+esc(title)+'</h2>'
+    + (note ? '<p class="sm">'+esc(note)+'</p>' : '')
+    + '<input class="inp" id="ask-f" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="'+esc(placeholder||'')+'">'
+    + '<div id="ask-err"></div>'
+    + '<button class="btn" id="ask-ok" style="margin-top:12px">Weiter</button>'
+    + '<button class="btn ghost" id="ask-cancel">Abbrechen</button>';
+  $('#sheet').classList.add('on');
+  const close = () => { $('#sheet').classList.remove('on'); $('#sheet-in').innerHTML = ''; };
+  $('#ask-cancel').onclick = close;
+  $('#ask-ok').onclick = async () => {
+    const v = $('#ask-f').value.trim();
+    if(!v) return;
+    const res = await onOk(v);
+    if(res === false){
+      const e = $('#ask-err');
+      if(e) e.innerHTML = '<div class="box bad" style="margin-top:11px"><b>Nicht erkannt</b><p>Bitte nochmals prüfen.</p></div>';
+      return;
+    }
+    close();
+  };
+  $('#ask-f').onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); $('#ask-ok').click(); } };
+  setTimeout(() => $('#ask-f') && $('#ask-f').focus(), 60);
 }
 
 function openAsset(d){

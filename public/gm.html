@@ -870,6 +870,9 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       </button>
       <button class="item is-sub" onclick="switchSettingsTab('missions',this)" id="st-missions">MiSSiONS</button>
       <button class="item is-sub" onclick="switchSettingsTab('cityrush',this)" id="st-cityrush">Rail Adventure</button>
+      <!-- AdventureTrail · experimental. Remove this line, the stab-advtrail
+           panel and the hook in switchSettingsTab to take it out. -->
+      <button class="item is-sub" onclick="switchSettingsTab('advtrail',this)" id="st-advtrail">AdventureTrail</button>
       <button class="item" onclick="switchSettingsTab('rules',this)" id="st-rules">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
         <span>Regeln</span>
@@ -1214,6 +1217,15 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       </div>
 
       <!-- Rail Adventure -->
+      <!-- AdventureTrail · experimental. The studio is its own page, embedded
+           here so it shares the settings chrome without being wired into it.
+           src is set on first open so the map and tiles cost nothing until
+           someone actually looks. -->
+      <div id="stab-advtrail" class="stab" style="padding:0;">
+        <iframe id="at-frame" title="AdventureTrail Studio"
+                style="width:100%;height:calc(100vh - 92px);border:0;display:block;background:var(--bg);"></iframe>
+      </div>
+
       <div id="stab-cityrush" class="stab">
         <div class="card mb-2">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;gap:.5rem;flex-wrap:wrap;">
@@ -7981,6 +7993,12 @@ function switchSettingsTab(tab,el){
   if(tab === 'missions' || tab === 'cityrush') _activeGameSubTab = tab;
   if(tab === 'rules')    loadRulesetsSettings();
   if(tab === 'cityrush') loadCrModes();
+  // AdventureTrail · experimental. Lazy so the studio's map is never loaded
+  // for a GM who does not open the tab.
+  if(tab === 'advtrail'){
+    const f = document.getElementById('at-frame');
+    if(f && !f.getAttribute('src')) f.setAttribute('src', '/at-studio.html?embed=1');
+  }
   if(tab === 'manuals')  loadManualsList();
   if(tab === 'messages') loadAutoMessages();
   if(tab === 'stats')    loadStats();

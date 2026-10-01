@@ -34,6 +34,9 @@ button{background:none;border:none;cursor:pointer}
 svg{display:block}
 
 .app{height:100vh;display:grid;grid-template-rows:auto 1fr}
+body.embed{background:transparent}
+body.embed .app{height:100%}
+body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 .topbar{display:flex;align-items:center;gap:18px;padding:0 15px;height:52px;background:var(--bg-sunk);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:baseline;gap:9px;padding-right:17px;border-right:1px solid var(--line)}
 .brand b{font:800 20px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
@@ -57,8 +60,19 @@ svg{display:block}
 .btn.sm{padding:7px 10px;font-size:10px}
 
 .body{display:grid;grid-template-columns:52px 1fr 372px;min-height:0}
-.rail{background:var(--bg-sunk);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0}
+.rail{background:var(--bg-sunk);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;overflow:hidden}
 .rail button{width:36px;height:36px;border-radius:var(--r-md);display:grid;place-items:center;color:var(--ink-3);position:relative}
+/* Unfolded, the rail names every part instead of relying on hover. */
+.body.railopen{grid-template-columns:188px 1fr 372px}
+.railopen .rail{align-items:stretch;padding:10px 9px}
+.railopen .rail button{width:100%;height:auto;grid-template-columns:20px 1fr;display:grid;
+  align-items:center;gap:10px;padding:9px 8px;justify-items:start}
+.railopen .rail button::after{display:none}
+.railopen .rail button .nm{display:block;font:600 12px/1 var(--body);white-space:nowrap}
+.rail button .nm{display:none}
+.railopen .rail hr{width:auto}
+.rail .fold{color:var(--ink-3)}
+.railopen .rail .fold svg{transform:rotate(180deg)}
 .rail button:hover{background:var(--surface);color:var(--ink)}
 .rail svg{width:17px;height:17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .rail button::after{content:attr(data-name);position:absolute;left:46px;white-space:nowrap;background:var(--raised);
@@ -84,6 +98,23 @@ svg{display:block}
 
 .node{position:absolute;width:184px;z-index:2;background:var(--surface);border:1px solid var(--line);
   border-radius:var(--r-md);cursor:grab;user-select:none}
+/* Connection handles, the way EscapeFlow does it: drag out of one node and
+   drop on another. A generous invisible ring around a small visible dot, so
+   it can be hit with a trackpad without making the card look studded. */
+.node .h{position:absolute;left:50%;width:13px;height:13px;margin-left:-6.5px;border-radius:50%;
+  background:var(--raised);border:2px solid var(--line);z-index:4;cursor:crosshair;
+  transition:background .14s var(--ease),border-color .14s var(--ease),transform .14s var(--ease)}
+.node .h::after{content:'';position:absolute;top:-9px;left:-9px;right:-9px;bottom:-9px;border-radius:50%}
+.node .h.out{bottom:-7px} .node .h.in{top:-7px}
+.node:hover .h,.node.is-sel .h{border-color:var(--accent)}
+.node .h:hover{background:var(--accent);border-color:var(--accent);transform:scale(1.25)}
+.node.droptarget{border-color:var(--go);box-shadow:0 0 0 2px var(--go)}
+.edges path.hit{stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
+.edges path.sel{stroke:var(--accent);stroke-width:2.4}
+.edges path.ghost{stroke:var(--go);stroke-width:2;stroke-dasharray:5 4}
+.edge-x{position:absolute;z-index:5;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;
+  background:var(--stop);color:oklch(0.99 0 0);display:grid;place-items:center;font:700 12px/1 var(--body);
+  border:2px solid var(--bg-sunk)}
 .node.is-sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .node.linking{border-color:var(--go);box-shadow:0 0 0 1px var(--go)}
 .node .cap{height:3px;border-radius:var(--r-md) var(--r-md) 0 0}
@@ -174,17 +205,17 @@ svg{display:block}
 
   <div class="body">
     <nav class="rail" id="rail">
-      <button data-add="station" data-name="Station"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
-      <button data-add="riddle" data-name="Rätsel"><svg viewBox="0 0 24 24"><path d="M9 3h6v4a2 2 0 0 0 4 0h2v6h-4a2 2 0 0 0 0 4h4v4H9v-4a2 2 0 0 0-4 0H3V7h2a2 2 0 0 0 4 0z"/></svg></button>
-      <button data-add="story" data-name="Story-Beat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></button>
-      <button data-add="arg" data-name="ARG-Fund"><svg viewBox="0 0 24 24"><path d="M12 3v10"/><circle cx="12" cy="17" r="4"/></svg></button>
-      <button data-add="nav" data-name="Peilung"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.1 5-5 2.1 2.1-5z"/></svg></button>
-      <button data-add="gate" data-name="Weiche"><svg viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 4 4h8"/><path d="M6 21v-6"/><path d="M15 10l3 3-3 3"/></svg></button>
+      <button data-add="station" data-name="Station"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="nm">Station</span></button>
+      <button data-add="riddle" data-name="Rätsel"><svg viewBox="0 0 24 24"><path d="M9 3h6v4a2 2 0 0 0 4 0h2v6h-4a2 2 0 0 0 0 4h4v4H9v-4a2 2 0 0 0-4 0H3V7h2a2 2 0 0 0 4 0z"/></svg><span class="nm">Rätsel</span></button>
+      <button data-add="story" data-name="Story-Beat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg><span class="nm">Story-Beat</span></button>
+      <button data-add="arg" data-name="ARG-Fund"><svg viewBox="0 0 24 24"><path d="M12 3v10"/><circle cx="12" cy="17" r="4"/></svg><span class="nm">ARG-Fund</span></button>
+      <button data-add="nav" data-name="Peilung"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.1 5-5 2.1 2.1-5z"/></svg><span class="nm">Peilung</span></button>
+      <button data-add="gate" data-name="Weiche"><svg viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 4 4h8"/><path d="M6 21v-6"/><path d="M15 10l3 3-3 3"/></svg><span class="nm">Weiche</span></button>
       <hr>
-      <button data-add="start" data-name="Start"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20"/></svg></button>
-      <button data-add="end" data-name="Ende"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>
+      <button data-add="start" data-name="Start"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20"/></svg><span class="nm">Start</span></button>
+      <button data-add="end" data-name="Ende"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg><span class="nm">Ende</span></button>
       <hr>
-      <button id="b-link" data-name="Verbinden"><svg viewBox="0 0 24 24"><path d="M9 12h6"/><path d="M7 7a5 5 0 0 0 0 10h2"/><path d="M17 7a5 5 0 0 1 0 10h-2"/></svg></button>
+      <button class="fold" id="b-fold" data-name="Namen zeigen"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="nm">Einklappen</span></button>
     </nav>
 
     <main class="stage" id="stage">
@@ -229,7 +260,27 @@ async function gate(){
   TOKEN = j.token; sessionStorage.setItem('gm_token', TOKEN);
 }
 
-let TRAIL = null, NODES = [], EDGES = [], selId = null, linking = null, map = null, markers = {};
+let TRAIL = null, NODES = [], EDGES = [], selId = null, selEdge = null, map = null, markers = {};
+// Where a Peilung points: the first connected node downstream that has a
+// location. The server resolves it the same way, so the studio shows the truth.
+function navTargetOf(node){
+  const seen = new Set([node.id]);
+  let frontier = [node.id];
+  for(let d = 0; d < 12 && frontier.length; d++){
+    const next = [];
+    for(const id of frontier){
+      for(const e of EDGES){
+        if(e.from_node !== id || seen.has(e.to_node)) continue;
+        seen.add(e.to_node);
+        const t = NODES.find(n => n.id === e.to_node);
+        if(t && t.lat != null && t.lng != null) return t;
+        next.push(e.to_node);
+      }
+    }
+    frontier = next;
+  }
+  return null;
+}
 const KIND = { start:'Start', station:'Station', riddle:'Rätsel', story:'Story', arg:'ARG-Fund', gate:'Weiche', nav:'Peilung', end:'Ende' };
 const L1 = () => (TRAIL && TRAIL.langs && TRAIL.langs[0]) || 'de';
 const tx = (o, l) => (o && (o[l || L1()] || o.de || Object.values(o).find(v=>v))) || '';
@@ -242,8 +293,10 @@ async function loadTrails(){
     || '<option value="">Noch kein Trail</option>';
   if(list.length){ pick.value = localStorage.getItem('at_trail') || list[0].id; await openTrail(pick.value); }
 }
+let _recentre = false;
 async function openTrail(id){
   if(!id) return;
+  _recentre = true;   // a different trail means a different city
   localStorage.setItem('at_trail', id);
   const d = await api('GET', '/trails/' + id);
   TRAIL = d.trail; NODES = d.nodes || []; EDGES = d.edges || [];
@@ -251,11 +304,32 @@ async function openTrail(id){
   render(); runCheck();
 }
 $('#trail-pick').addEventListener('change', e => openTrail(e.target.value));
-$('#b-new-trail').addEventListener('click', async () => {
-  const name = prompt('Name des Trails:'); if(!name) return;
-  const city = prompt('Stadt:') || '';
-  const r = await api('POST', '/trails', { name, city });
-  await loadTrails(); $('#trail-pick').value = r.id; await openTrail(r.id);
+// In-app, not a browser prompt: a prompt() cannot be styled, cannot hold two
+// fields, and on some phones does not appear at all.
+function dialog(title, fieldsHtml, onOk, okLabel){
+  $('#modal-in').innerHTML = '<h3>'+esc(title)+'</h3>' + fieldsHtml
+    + '<div style="display:flex;gap:8px;margin-top:15px">'
+    + '<button class="btn" id="dlg-cancel" style="flex:1">Abbrechen</button>'
+    + '<button class="btn primary" id="dlg-ok" style="flex:1">'+esc(okLabel||'Übernehmen')+'</button></div>';
+  $('#modal').classList.add('on');
+  const close = () => $('#modal').classList.remove('on');
+  $('#dlg-cancel').onclick = close;
+  $('#dlg-ok').onclick = async () => { const keep = await onOk(); if(keep !== false) close(); };
+  const first = $('#modal-in input'); if(first){ first.focus(); first.select(); }
+  $('#modal-in').onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); $('#dlg-ok').click(); } };
+}
+$('#b-new-trail').addEventListener('click', () => {
+  dialog('Neuer Trail',
+    '<div class="fld"><label>Name</label><input class="inp" id="d-name" placeholder="Die letzte Schicht"></div>'
+    + '<div class="fld"><label>Stadt</label><input class="inp" id="d-city" list="d-cities" placeholder="Basel">'
+    + '<datalist id="d-cities">' + Object.keys(CITIES).map(c => '<option value="'+c+'">').join('') + '</datalist>'
+    + '<p class="hint">Setzt die Karte an den richtigen Ort.</p></div>',
+    async () => {
+      const name = $('#d-name').value.trim(); if(!name) return false;
+      const city = $('#d-city').value.trim();
+      const r = await api('POST', '/trails', { name, city });
+      await loadTrails(); $('#trail-pick').value = r.id; await openTrail(r.id);
+    }, 'Anlegen');
 });
 
 // ── Canvas ───────────────────────────────────────────────────────────────────
@@ -269,7 +343,7 @@ function render(){
 }
 function nodeEl(n){
   const d = document.createElement('div');
-  d.className = 'node k-' + n.kind + (n.id===selId?' is-sel':'') + (linking===n.id?' linking':'');
+  d.className = 'node k-' + n.kind + (n.id===selId?' is-sel':'');
   d.dataset.id = n.id;
   d.style.left = (n.x||0) + 'px'; d.style.top = (n.y||0) + 'px';
   const tags = [];
@@ -279,10 +353,19 @@ function nodeEl(n){
   if(n.post_code) tags.push('<span class="tag ok">Code</span>');
   if((n.hints||[]).length) tags.push('<span class="tag">'+n.hints.length+' Hinweise</span>');
   if(n.trigger_kind === 'gps' && n.lat == null) tags.push('<span class="tag bad">Ort fehlt</span>');
+  if(n.kind === 'nav'){
+    const t = navTargetOf(n);
+    tags.length = 0;
+    tags.push('<span class="tag">'+esc(n.nav_mode==='arrow'?'Pfeil':'Distanz')+'</span>');
+    tags.push(t ? '<span class="tag ok">→ '+esc(tx(t.title)||('#'+t.id))+'</span>'
+                : '<span class="tag bad">zeigt auf nichts</span>');
+  }
   d.innerHTML = '<div class="cap"></div><div class="in">'
     + '<div class="kind"><i></i>' + (KIND[n.kind]||n.kind) + '</div>'
     + '<h3>' + esc(tx(n.title) || 'Ohne Titel') + '</h3>'
-    + '<div class="meta">' + tags.join('') + '</div></div>';
+    + '<div class="meta">' + tags.join('') + '</div></div>'
+    + (n.kind === 'start' ? '' : '<span class="h in" data-h="in"></span>')
+    + (n.kind === 'end'   ? '' : '<span class="h out" data-h="out"></span>');
   return d;
 }
 function drawEdges(){
@@ -290,9 +373,11 @@ function drawEdges(){
   svg.setAttribute('viewBox', '0 0 ' + sheet.offsetWidth + ' ' + sheet.offsetHeight);
   const box = id => { const e = sheet.querySelector('[data-id="'+id+'"]');
     return e ? { x:e.offsetLeft, y:e.offsetTop, w:e.offsetWidth, h:e.offsetHeight } : null; };
-  svg.innerHTML = EDGES.map(ed => {
+  const paths = [];
+  const mids = [];
+  EDGES.forEach(ed => {
     const a = box(ed.from_node), b = box(ed.to_node);
-    if(!a || !b) return '';
+    if(!a || !b) return;
     const gapR = b.x-(a.x+a.w), gapL = a.x-(b.x+b.w), below = b.y > a.y+a.h-2;
     let d;
     if(below && gapR < 24 && gapL < 24){
@@ -305,30 +390,104 @@ function drawEdges(){
       const c = Math.min(64, Math.abs(tx2-sx)/2+18) * (right?1:-1);
       d = 'M'+sx+','+sy+' C'+(sx+c)+','+sy+' '+(tx2-c)+','+ty+' '+tx2+','+ty;
     }
-    return '<path d="'+d+'"'+(ed.branch_key?' class="br"':'')+'/>';
-  }).join('');
+    const on = selEdge && selEdge.from === ed.from_node && selEdge.to === ed.to_node;
+    paths.push('<path class="hit" data-from="'+ed.from_node+'" data-to="'+ed.to_node+'" d="'+d+'"/>');
+    paths.push('<path d="'+d+'" class="'+(ed.branch_key?'br ':'')+(on?'sel':'')+'"/>');
+    if(on) mids.push({ from:ed.from_node, to:ed.to_node, d });
+  });
+  // The live connection being dragged out of a handle.
+  if(link){
+    const a = box(link.from);
+    if(a){
+      const sx = a.x + a.w/2, sy = link.dir === 'out' ? a.y + a.h : a.y;
+      paths.push('<path class="ghost" d="M'+sx+','+sy+' L'+link.pt.x+','+link.pt.y+'"/>');
+    }
+  }
+  svg.innerHTML = paths.join('');
+
+  [...sheet.querySelectorAll('.edge-x')].forEach(e => e.remove());
+  svg.querySelectorAll('.hit').forEach(h => h.addEventListener('pointerdown', ev => {
+    ev.stopPropagation();
+    selEdge = { from:Number(h.dataset.from), to:Number(h.dataset.to) };
+    selId = null; renderInspector(); drawEdges();
+  }));
+  mids.forEach(m => {
+    const tmp = svg.querySelector('.hit[data-from="'+m.from+'"][data-to="'+m.to+'"]');
+    if(!tmp) return;
+    const pt = tmp.getPointAtLength(tmp.getTotalLength() / 2);
+    const x = document.createElement('button');
+    x.className = 'edge-x'; x.textContent = '\u00d7';
+    x.style.left = pt.x + 'px'; x.style.top = pt.y + 'px';
+    x.title = 'Verbindung löschen';
+    x.onclick = async ev => { ev.stopPropagation();
+      await api('DELETE', '/trails/' + TRAIL.id + '/edges', { from:m.from, to:m.to });
+      selEdge = null; await openTrail(TRAIL.id); };
+    sheet.appendChild(x);
+  });
 }
+document.addEventListener('keydown', async e => {
+  if(e.key !== 'Delete' && e.key !== 'Backspace') return;
+  if(/input|textarea|select/i.test((e.target.tagName||''))) return;
+  if(!selEdge || !TRAIL) return;
+  e.preventDefault();
+  await api('DELETE', '/trails/' + TRAIL.id + '/edges', { from:selEdge.from, to:selEdge.to });
+  selEdge = null; await openTrail(TRAIL.id);
+});
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(drawEdges);
 
-// drag to move, click to select, click-to-link when the link tool is armed
-let drag = null;
+// Dragging a card moves it. Dragging out of a handle draws a connection, the
+// way EscapeFlow does it. Drawing one that already exists removes it again, so
+// the same gesture is both connect and disconnect.
+let drag = null, link = null;
+const canvasPt = e => {
+  const r = $('#sheet').getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+};
 $('#sheet').addEventListener('pointerdown', e => {
+  const handle = e.target.closest('.h');
   const el = e.target.closest('.node'); if(!el) return;
   const id = Number(el.dataset.id);
-  if(linking !== null && linking !== id){ return makeEdge(linking, id); }
-  selId = id; renderInspector();
-  [...document.querySelectorAll('.node')].forEach(x => x.classList.toggle('is-sel', Number(x.dataset.id)===id));
+  if(handle){
+    e.preventDefault();
+    link = { from: id, dir: handle.dataset.h, pt: canvasPt(e) };
+    $('#sheet').setPointerCapture(e.pointerId);
+    return;
+  }
+  selectNode(id);
   drag = { el, id, dx: e.clientX - el.offsetLeft, dy: e.clientY - el.offsetTop, moved:false };
   el.setPointerCapture(e.pointerId);
 });
 $('#sheet').addEventListener('pointermove', e => {
+  if(link){
+    link.pt = canvasPt(e);
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    const t = over && over.closest('.node');
+    document.querySelectorAll('.node.droptarget').forEach(x => x.classList.remove('droptarget'));
+    if(t && Number(t.dataset.id) !== link.from) t.classList.add('droptarget');
+    drawEdges();
+    return;
+  }
   if(!drag) return;
   drag.moved = true;
   drag.el.style.left = Math.max(0, e.clientX - drag.dx) + 'px';
   drag.el.style.top  = Math.max(0, e.clientY - drag.dy) + 'px';
   drawEdges();
 });
-$('#sheet').addEventListener('pointerup', async () => {
+$('#sheet').addEventListener('pointerup', async e => {
+  try { $('#sheet').releasePointerCapture(e.pointerId); } catch(err) {}
+  if(link){
+    const from = link.from, dir = link.dir;
+    link = null;
+    document.querySelectorAll('.node.droptarget').forEach(x => x.classList.remove('droptarget'));
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    const t = over && over.closest('.node');
+    drawEdges();
+    if(!t) return;
+    const to = Number(t.dataset.id);
+    if(to === from) return;
+    const a = dir === 'out' ? from : to, b = dir === 'out' ? to : from;
+    return toggleEdge(a, b);
+  }
   if(!drag) return;
   const { id, el, moved } = drag; drag = null;
   if(!moved) return;
@@ -336,24 +495,39 @@ $('#sheet').addEventListener('pointerup', async () => {
   const n = NODES.find(n => n.id === id); if(n){ n.x = x; n.y = y; }
   await api('PUT', '/nodes/' + id, { x, y });
 });
-$('#b-link').addEventListener('click', () => {
-  linking = linking === null ? (selId !== null ? selId : null) : null;
-  if(linking === null && selId === null) alert('Erst einen Baustein wählen, dann Verbinden, dann das Ziel anklicken.');
-  render();
+$('#sheet').addEventListener('pointercancel', e => {
+  try { $('#sheet').releasePointerCapture(e.pointerId); } catch(err) {}
+  link = null; drag = null;
+  document.querySelectorAll('.node.droptarget').forEach(x => x.classList.remove('droptarget'));
+  drawEdges();
 });
-async function makeEdge(from, to){
-  linking = null;
-  await api('POST', '/trails/' + TRAIL.id + '/edges', { from, to });
+function selectNode(id){
+  selId = id; selEdge = null; renderInspector();
+  [...document.querySelectorAll('.node')].forEach(x => x.classList.toggle('is-sel', Number(x.dataset.id)===id));
+  drawEdges();
+}
+async function toggleEdge(from, to){
+  const exists = EDGES.some(e => e.from_node === from && e.to_node === to);
+  if(exists) await api('DELETE', '/trails/' + TRAIL.id + '/edges', { from, to });
+  else       await api('POST',   '/trails/' + TRAIL.id + '/edges', { from, to });
   await openTrail(TRAIL.id);
 }
 document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', async () => {
   if(!TRAIL) return;
   const kind = b.dataset.add;
   const r = await api('POST', '/trails/' + TRAIL.id + '/nodes', {
-    kind, title:{ [L1()]: KIND[kind] }, x: 40 + (NODES.length % 5) * 210, y: 30 + Math.floor(NODES.length / 5) * 150,
+    kind, title:{ [L1()]: KIND[kind] }, x: 40, y: 30 + NODES.length * 155,
   });
   await openTrail(TRAIL.id); selId = r.id; renderInspector(); render();
 }));
+$('#canvas').addEventListener('pointerdown', e => {
+  if(e.target.closest('.node') || e.target.closest('.edge-x') || e.target.closest('.hit')) return;
+  selEdge = null; drawEdges();
+});
+$('#b-fold').addEventListener('click', () => {
+  document.querySelector('.body').classList.toggle('railopen');
+  setTimeout(() => { drawEdges(); if(map) map.invalidateSize(); }, 220);
+});
 $('#b-tidy').addEventListener('click', async () => {
   // Lay the graph out by walking it from its roots, so the spine reads downward.
   const seen = new Set(), cols = [];
@@ -374,7 +548,7 @@ $('#b-tidy').addEventListener('click', async () => {
   for(let r = 0; r < cols.length; r++){
     for(let c = 0; c < cols[r].length; c++){
       const n = cols[r][c];
-      n.x = 40 + c * 212; n.y = 30 + r * 160;
+      n.x = 40 + c * 206; n.y = 30 + r * 158;
       await api('PUT', '/nodes/' + n.id, { x:n.x, y:n.y });
     }
   }
@@ -386,6 +560,22 @@ $('#b-tidy').addEventListener('click', async () => {
 // every tile with an "Access blocked" image.
 const MAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 const MAP_TILE_ATTRIB = 'Tiles &copy; Esri';
+// The cities this company actually runs in, plus the usual Swiss suspects. A
+// fixed table instead of a geocoding service: no key, no rate limit, no network
+// call, and it covers every trail anyone here is going to build.
+const CITIES = {
+  'Basel':[47.5596,7.5886], 'Bern':[46.9480,7.4474], 'Zürich':[47.3769,8.5417],
+  'Luzern':[47.0502,8.3093], 'Baden':[47.4733,8.3064], 'Solothurn':[47.2088,7.5323],
+  'Thun':[46.7580,7.6280], 'Winterthur':[47.5001,8.7241], 'St. Gallen':[47.4245,9.3767],
+  'Lausanne':[46.5197,6.6323], 'Genf':[46.2044,6.1432], 'Lugano':[46.0037,8.9511],
+  'Chur':[46.8499,9.5329], 'Schaffhausen':[47.6960,8.6349], 'Grindelwald':[46.6242,8.0414],
+  'Interlaken':[46.6863,7.8632], 'Zug':[47.1662,8.5155], 'Venlo':[51.3704,6.1724],
+};
+function cityCentre(name){
+  if(!name) return null;
+  const key = Object.keys(CITIES).find(c => c.toLowerCase() === String(name).trim().toLowerCase());
+  return key ? CITIES[key] : null;
+}
 function renderMap(){
   if(!map){
     map = L.map('map', { zoomControl:true }).setView([47.5596, 7.5886], 15);
@@ -413,6 +603,8 @@ function renderMap(){
     }
   });
   if(geo.length) { try { map.fitBounds(L.latLngBounds(geo.map(n=>[n.lat,n.lng])).pad(0.35)); } catch(e){} }
+  else if(_recentre){ const c = cityCentre(TRAIL && TRAIL.city); if(c) map.setView(c, 15); }
+  _recentre = false;
   setTimeout(()=>map.invalidateSize(), 60);
 }
 $('#b-setloc').addEventListener('click', async () => {
@@ -426,6 +618,20 @@ $('#b-setloc').addEventListener('click', async () => {
 
 // ── Inspector ────────────────────────────────────────────────────────────────
 let tab = 'trigger';
+// Not every kind has every setting. A Peilung in particular owns no trigger, no
+// answer and no location: it is a signpost that reads the next connected
+// station's coordinates, so offering it a radius would be a lie.
+const TABS = {
+  start:   [['story','Story'],['style','Stil']],
+  station: [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['arg','ARG'],['style','Stil']],
+  riddle:  [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['arg','ARG'],['style','Stil']],
+  story:   [['story','Story'],['arg','ARG'],['style','Stil']],
+  arg:     [['story','Story'],['arg','ARG'],['style','Stil']],
+  gate:    [['story','Story'],['choices','Zweige'],['style','Stil']],
+  nav:     [['peilung','Peilung'],['story','Story']],
+  end:     [['story','Story'],['arg','ARG'],['style','Stil']],
+};
+const tabsFor = kind => TABS[kind] || TABS.station;
 function renderInspector(){
   const n = NODES.find(x => x.id === selId);
   const ins = $('#inspector');
@@ -435,11 +641,12 @@ function renderInspector(){
    '<div class="insp-head"><div class="insp-kind" style="color:var(--t-'+n.kind+')"><i></i>'+(KIND[n.kind]||n.kind)+'</div>'
    + '<h2>'+esc(tx(n.title)||'Ohne Titel')+'</h2>'
    + '<p class="sub">Baustein '+(NODES.indexOf(n)+1)+' von '+NODES.length+'</p></div>'
-   + '<div class="tabs">' + [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['arg','ARG'],['style','Stil']]
+   + '<div class="tabs">' + tabsFor(n.kind)
        .map(([k,label]) => '<button data-tab="'+k+'" aria-selected="'+(tab===k)+'">'+label+'</button>').join('') + '</div>'
    + '<div class="panel" id="panel"></div>'
    + '<div class="foot"><button class="btn" id="b-del">Löschen</button><button class="btn primary" id="b-save">Speichern</button></div>';
   ins.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderInspector(); });
+  if(!tabsFor(n.kind).some(([k]) => k === tab)){ tab = tabsFor(n.kind)[0][0]; return renderInspector(); }
   $('#b-del').onclick = async () => {
     if(!confirm('Diesen Baustein löschen?')) return;
     await api('DELETE', '/nodes/' + n.id); selId = null; await openTrail(TRAIL.id);
@@ -539,6 +746,34 @@ function renderPanel(n, l){
       await api('DELETE', '/assets/' + b.dataset.assetDel); await openTrail(TRAIL.id);
     });
   }
+  else if(tab === 'peilung'){
+    const t = navTargetOf(n);
+    p.innerHTML = '<div class="fld"><label>Art der Peilung</label>'
+      + '<select class="sel" id="f-nav">'
+      + '<option value="distance"'+(n.nav_mode!=='arrow'?' selected':'')+'>Distanz, wärmer und kälter</option>'
+      + '<option value="arrow"'+(n.nav_mode==='arrow'?' selected':'')+'>Pfeil, zeigt die Richtung</option></select>'
+      + '<p class="hint">Distanz sagt wie weit, nicht wohin, und lässt das Rätsel „wo“ bestehen. Ein Pfeil ersetzt es durch Navigation und braucht zusätzlich den Kompass.</p></div>'
+      + '<div class="fld"><label>Zeigt auf</label>'
+      + (t ? '<div class="rung" style="border:0;padding:0"><span class="n">→</span><span class="c">'
+             + '<b style="font:600 13px/1.3 var(--body)">'+esc(tx(t.title)||('#'+t.id))+'</b>'
+             + '<div class="hint" style="margin-top:3px">'+t.lat.toFixed(5)+', '+t.lng.toFixed(5)+'</div></span></div>'
+           : '<p class="hint" style="margin:0;color:var(--warn)">Noch nichts. Verbinde die Peilung mit einem Baustein, der einen Ort hat.</p>')
+      + '<p class="hint">Eine Peilung hat keinen eigenen Ort. Sie liest den Ort des nächsten verbundenen Bausteins, also verschiebt sich die Peilung automatisch mit, wenn die Station umzieht.</p></div>'
+      + '<p class="hint">Kein Auslöser, keine Antwort, kein Radius: hier wird nichts freigeschaltet, es wird nur gezeigt, wie weit es noch ist.</p>';
+  }
+  else if(tab === 'choices'){
+    const outs = EDGES.filter(e => e.from_node === n.id);
+    p.innerHTML = '<p class="hint" style="margin:0 0 12px">Jeder ausgehende Pfeil ist ein Zweig. Die Beschriftung ist der Text auf dem Knopf, den das Team sieht.</p>'
+      + (outs.length ? outs.map((e,i) => {
+          const t = NODES.find(x => x.id === e.to_node);
+          return '<div class="rung" data-edge="'+e.from_node+'-'+e.to_node+'"><span class="n">'+(i+1)+'</span><span class="c">'
+            + '<input class="inp" data-c="label" value="'+esc(tx(e.label))+'" placeholder="Beschriftung">'
+            + '<span class="row"><input class="inp" data-c="key" value="'+esc(e.branch_key||'')+'" placeholder="Zweig-Kürzel"></span>'
+            + '<div class="hint" style="margin-top:4px">→ '+esc(t?(tx(t.title)||('#'+t.id)):'?')+'</div></span></div>';
+        }).join('')
+        : '<p class="hint" style="margin:0;color:var(--warn)">Noch keine Zweige. Zieh aus dem unteren Punkt der Weiche zwei Verbindungen heraus.</p>')
+      + '<p class="hint">Das Kürzel markiert alles dahinter. Ein Baustein hinter „geld“ erscheint nur für Teams, die diesen Zweig gewählt haben.</p>';
+  }
   else if(tab === 'style'){
     const st = n.style || {};
     p.innerHTML = '<p class="hint" style="margin:0 0 12px">Überschreibt das Trail-Thema nur für diesen Baustein.</p>'
@@ -584,6 +819,19 @@ async function saveNode(n){
     body.hints = collectHints(n, l);
   } else if(tab === 'style'){
     body.style = { accent: g('f-accent') || undefined, bg: g('f-bgimg') || undefined, scrim: Number(g('f-scrim')) };
+  } else if(tab === 'peilung'){
+    body.nav_mode = g('f-nav') || 'distance';
+    // A bearing never locks anything, so it must not carry a trigger.
+    body.trigger_kind = 'none'; body.lat = null; body.lng = null;
+  } else if(tab === 'choices'){
+    for(const row of document.querySelectorAll('[data-edge]')){
+      const [from, to] = row.dataset.edge.split('-').map(Number);
+      await api('POST', '/trails/' + TRAIL.id + '/edges', {
+        from, to,
+        label: { [l]: row.querySelector('[data-c=label]').value },
+        branch_key: row.querySelector('[data-c=key]').value.trim() || null,
+      });
+    }
   }
   await api('PUT', '/nodes/' + n.id, body);
   await openTrail(TRAIL.id);
@@ -645,7 +893,17 @@ document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click'
   setTimeout(() => { drawEdges(); if(map) map.invalidateSize(); }, 40);
 }));
 
-loadTrails().catch(e => console.error(e));
+// Embedded in the MiSSiONS settings the page already sits under a header, so
+// the studio drops its own brand block and reclaims the row.
+if(new URLSearchParams(location.search).get('embed') === '1'){
+  document.body.classList.add('embed');
+  const b = document.querySelector('.brand'); if(b) b.remove();
+}
+loadTrails().catch(e => {
+  console.error(e);
+  document.getElementById('inspector').innerHTML =
+    '<div class="empty">Das Studio konnte nicht laden.<br><br>' + esc(e && e.message || e) + '</div>';
+});
 </script>
 </body>
 </html>

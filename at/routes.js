@@ -47,6 +47,30 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     return { open: new Set(open), done: doneIds, byId };
   }
 
+  // A Peilung owns no coordinates. It aims at the first node downstream that
+  // has some, so moving a station automatically moves every bearing leading to
+  // it and there is nothing to keep in sync by hand.
+  function navTarget(node, nodes, edges, branchKey) {
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    const seen = new Set([node.id]);
+    let frontier = [node.id];
+    for (let depth = 0; depth < 12 && frontier.length; depth++) {
+      const next = [];
+      for (const id of frontier) {
+        for (const e of edges) {
+          if (e.from_node !== id || seen.has(e.to_node)) continue;
+          if (e.branch_key && branchKey && e.branch_key !== branchKey) continue;
+          seen.add(e.to_node);
+          const t = byId.get(e.to_node);
+          if (t && t.lat != null && t.lng != null) return t;
+          next.push(e.to_node);
+        }
+      }
+      frontier = next;
+    }
+    return null;
+  }
+
   // ── Player payload ─────────────────────────────────────────────────────────
   // Everything the player app is allowed to know. Answers, post codes and
   // unreleased hints never leave the server: the quiz leak we fixed in Rail
@@ -63,6 +87,14 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     const now = Date.now();
 
     const visible = nodes.filter(n => open.has(n.id) || done.has(n.id));
+    const coordsFor = n => {
+      if (n.kind === 'nav') {
+        const t = navTarget(n, nodes, edges, run.branch_key);
+        return t ? { lat: t.lat, lng: t.lng } : null;
+      }
+      if (n.trigger_kind === 'gps' && n.lat != null) return { lat: n.lat, lng: n.lng };
+      return null;
+    };
     return {
       run: {
         id: run.id, team_name: run.team_name, join_code: run.join_code,
@@ -105,8 +137,8 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
           nav_mode: n.nav_mode,
           // Coordinates only go out when the node actually uses them, and only
           // for a node already in play. Otherwise the whole route leaks.
-          lat: (n.nav_mode !== 'none' || n.trigger_kind === 'gps') ? n.lat : null,
-          lng: (n.nav_mode !== 'none' || n.trigger_kind === 'gps') ? n.lng : null,
+          lat: coordsFor(n) ? coordsFor(n).lat : null,
+          lng: coordsFor(n) ? coordsFor(n).lng : null,
           radius_m: n.radius_m,
           style: n.style,
           points: n.points,
@@ -182,7 +214,9 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     if (!open.has(node.id)) return res.status(409).json({ error: 'not_open' });
 
     at.bumpAttempts(run.id, node.id);
-    const kind = node.trigger_kind || 'answer';
+    // A Peilung is a signpost, not a lock. It has no answer and no radius of
+    // its own, so walking past it is always allowed.
+    const kind = node.kind === 'nav' ? 'none' : (node.trigger_kind || 'answer');
 
     // The post code always works, whatever the node's own trigger is. It is the
     // way through when the camera, the GPS or the puzzle has defeated a team.
@@ -244,10 +278,14 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     const node = at.getNode(req.params.nodeId);
     if (!node || node.trail_id !== run.trail_id) return res.status(404).json({ error: 'unknown_node' });
     const { lat, lng, accuracy } = req.body;
-    if (node.lat == null || node.lng == null) return res.json({ distance: null });
+    let target = node;
+    if (node.kind === 'nav') {
+      target = navTarget(node, at.listNodes(run.trail_id), at.listEdges(run.trail_id), run.branch_key);
+    }
+    if (!target || target.lat == null || target.lng == null) return res.json({ distance: null });
     if (typeof lat !== 'number' || typeof lng !== 'number') return res.json({ distance: null });
     res.json({
-      distance: Math.round(metresBetween(lat, lng, node.lat, node.lng)),
+      distance: Math.round(metresBetween(lat, lng, target.lat, target.lng)),
       accuracy: Number(accuracy) || null,
     });
   });
@@ -418,6 +456,11 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       if (!reachable.has(n.id)) out.push({ level: 'error', node: n.id, msg: `„${name}“ ist von keinem Weg aus erreichbar.` });
       if (n.kind !== 'end' && !edges.some(e => e.from_node === n.id)) {
         out.push({ level: 'error', node: n.id, msg: `„${name}“ führt nirgendwohin.` });
+      }
+      if (n.kind === 'nav') {
+        const t = navTarget(n, nodes, edges, null);
+        if (!t) out.push({ level: 'error', node: n.id, msg: `Die Peilung „${name}“ zeigt auf nichts: kein verbundener Baustein dahinter hat einen Ort.` });
+        continue;
       }
       if (n.trigger_kind === 'gps' && (n.lat == null || n.lng == null)) {
         out.push({ level: 'error', node: n.id, msg: `„${name}“ wird per GPS geöffnet, hat aber keinen Ort.` });
