@@ -7,6 +7,7 @@
 <title>MiSSiONS — Join</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.56">
 <script src="/js/theme.js?v=14"></script>
+<script src="/js/dialog.js?v=1"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. The
    team-name placeholder keeps a (lighter) grey, see .name-field below. */
@@ -466,7 +467,7 @@ async function openSelfieCamera() {
     selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: selfieFacing }, audio: false });
     document.getElementById('selfie-video').srcObject = selfieStream;
   } catch (e) {
-    alert(e.name === 'NotAllowedError' ? jt('cam_denied') : jt('cam_unavailable'));
+    uiAlert(e.name === 'NotAllowedError' ? jt('cam_denied') : jt('cam_unavailable'));
     closeSelfieCamera();
   }
 }

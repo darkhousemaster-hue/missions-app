@@ -134,6 +134,8 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
           arrive: isDone ? at.pick(n.arrive, lang) : '',
           depart: isDone ? at.pick(n.depart, lang) : '',
           trigger_kind: n.trigger_kind,
+          story_media: n.story_media || 'text',
+          story_media_path: n.story_media_path || null,
           nav_mode: n.nav_mode,
           // Coordinates only go out when the node actually uses them, and only
           // for a node already in play. Otherwise the whole route leaks.
@@ -165,7 +167,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
   // ════════════════════════════ PLAYER ══════════════════════════════════════
   r.post('/api/at/redeem', (req, res) => {
     const out = at.redeemKey(req.body.code, {
-      teamName: req.body.teamName, lang: req.body.lang,
+      teamName: req.body.teamName, lang: req.body.lang, trailId: req.body.trailId,
     });
     if (out.error) return res.status(out.error === 'unknown_code' ? 404 : 409).json(out);
     if (req.body.teamName) at.setRunTeam(out.run.id, req.body.teamName);
@@ -417,6 +419,34 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     if (/pdf$/.test(mime)) return 'doc';
     return 'image';
   }
+
+  // The story's own recording, stored on the node rather than in its find list:
+  // it is how this beat is told, not something the team discovers.
+  r.post('/api/at/nodes/:id/story-media', upload.single('file'), (req, res) => {
+    if (!isGmAuthed(req)) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch (e) {} }
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+    const mime = String(req.file.mimetype || '').toLowerCase();
+    if (!/^audio\/|^video\//.test(mime)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(400).json({ error: 'unsupported_type' });
+    }
+    const node = at.getNode(req.params.id);
+    if (!node) { try { fs.unlinkSync(req.file.path); } catch (e) {} return res.status(404).json({ error: 'unknown_node' }); }
+    if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
+    const dest = path.join(AT_UPLOAD_DIR, req.file.filename);
+    try { fs.renameSync(req.file.path, dest); }
+    catch (e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+    // Replacing one drops the old file rather than leaving it behind.
+    if (node.story_media_path && !String(node.story_media_path).includes('..')) {
+      try { fs.unlinkSync(path.join(UPLOAD_DIR, node.story_media_path)); } catch (e) {}
+    }
+    const rel = `at/${req.file.filename}`;
+    at.updateNode(node.id, { story_media_path: rel, story_media: /^video\//.test(mime) ? 'video' : 'voice' });
+    res.json({ success: true, path: rel, kind: /^video\//.test(mime) ? 'video' : 'voice' });
+  });
 
   r.delete('/api/at/assets/:id', gm, (req, res) => {
     const a = at.getAsset(req.params.id);

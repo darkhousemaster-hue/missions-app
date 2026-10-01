@@ -49,6 +49,8 @@ db.exec(`
     accuracy_max INTEGER DEFAULT 80,      -- refuse a fix worse than this
 
     nav_mode TEXT DEFAULT 'none',         -- none|distance|arrow
+    story_media TEXT DEFAULT 'text',      -- text|video|voice
+    story_media_path TEXT,                -- the uploaded file, when not text
     x INTEGER DEFAULT 0, y INTEGER DEFAULT 0,   -- canvas position
     style TEXT DEFAULT '{}',              -- per-node look, within the theme
     points INTEGER DEFAULT 0,
@@ -119,6 +121,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS at_edges_trail ON at_edges(trail_id);
   CREATE INDEX IF NOT EXISTS at_prog_run    ON at_run_progress(run_id);
 `);
+
+// Added after the first build, so existing trails get them here.
+try { db.exec("ALTER TABLE at_nodes ADD COLUMN story_media TEXT DEFAULT 'text'"); } catch (e) {}
+try { db.exec("ALTER TABLE at_nodes ADD COLUMN story_media_path TEXT"); } catch (e) {}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const J = (v, fallback) => {
@@ -202,14 +208,23 @@ const getNode = id => {
 const SOLVABLE = new Set(['station', 'riddle']);
 const createNode = (trailId, p = {}) => {
   const kind = String(p.kind || 'station');
+  // Without a position, land below whatever sits lowest. The corner is where
+  // the first card already is, so defaulting to it hides one behind another.
+  let x = Number(p.x), y = Number(p.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    const low = db.prepare('SELECT MAX(y) AS y FROM at_nodes WHERE trail_id=?').get(Number(trailId));
+    x = Number.isFinite(x) ? x : 40;
+    y = Number.isFinite(y) ? y : (low && low.y != null ? Number(low.y) + 155 : 30);
+  }
   return num(db.prepare(
     'INSERT INTO at_nodes(trail_id,kind,title,x,y,order_index,trigger_kind) VALUES(?,?,?,?,?,?,?)')
     .run(Number(trailId), kind, S(p.title || {}),
-         Number(p.x) || 0, Number(p.y) || 0, Number(p.order_index) || 0,
+         Math.max(0, Math.round(x)), Math.max(0, Math.round(y)), Number(p.order_index) || 0,
          p.trigger_kind || (SOLVABLE.has(kind) ? 'answer' : 'none')).lastInsertRowid);
 };
 
 const NODE_FIELDS = ['kind', 'title', 'arrive', 'depart', 'task', 'trigger_kind', 'answers',
+  'story_media', 'story_media_path',
   'answer_case_sensitive', 'post_code', 'lat', 'lng', 'radius_m', 'accuracy_max',
   'nav_mode', 'x', 'y', 'style', 'points', 'skip_after_min', 'order_index'];
 const updateNode = (id, p) => {
@@ -274,7 +289,14 @@ const mintKeys = (trailId, count = 1, note = '') => {
 };
 const listKeys = trailId => db.prepare('SELECT * FROM at_keys WHERE trail_id=? ORDER BY created_at DESC')
   .all(Number(trailId)).map(k => ({ ...k, id: num(k.id) }));
+// A fixed key for testing, which never runs out: every redemption of it starts
+// a fresh run rather than handing back the last one, so the trail can be walked
+// again and again without minting anything. Live keys stay single use.
+const TEST_CODE = '1898';
+const isTestCode = code => String(code || '').replace(/[^0-9A-Za-z]/g, '') === TEST_CODE;
+
 const findKey = code => {
+  if (isTestCode(code)) return null;      // handled separately, it has no row
   const c = normCode(code);
   if (!c) return null;
   const k = db.prepare('SELECT * FROM at_keys WHERE code=?').get(c);
@@ -295,7 +317,19 @@ const findRunByJoinCode = code => {
 
 // Redeeming is one transaction: a key can only ever produce one run, so two
 // phones racing on the same code cannot create two runs.
-const redeemKey = (code, { teamName = '', lang = 'de' } = {}) => {
+const redeemKey = (code, { teamName = '', lang = 'de', trailId = null } = {}) => {
+  if (isTestCode(code)) {
+    // Pick the trail being worked on, else the newest live one, else any trail
+    // at all, so the test key works before anything has been published.
+    const t = (trailId && getTrail(trailId))
+      || db.prepare("SELECT * FROM at_trails WHERE status='live' ORDER BY updated_at DESC").get()
+      || db.prepare('SELECT * FROM at_trails ORDER BY updated_at DESC').get();
+    if (!t) return { error: 'unknown_code' };
+    const runId = shortId();
+    db.prepare('INSERT INTO at_runs(id,trail_id,key_id,team_name,join_code,lang) VALUES(?,?,?,?,?,?)')
+      .run(runId, num(t.id), null, String(teamName || 'Test'), makeCode(6), String(lang || 'de'));
+    return { run: getRun(runId), test: true };
+  }
   const key = findKey(code);
   if (!key) return { error: 'unknown_code' };
   if (key.run_id) {
@@ -366,7 +400,7 @@ const useHint = (runId, nodeId, n) => {
 };
 
 module.exports = {
-  pick, makeCode, normCode, J,
+  pick, makeCode, normCode, J, TEST_CODE, isTestCode,
   listTrails, getTrail, createTrail, updateTrail, deleteTrail,
   listNodes, getNode, createNode, updateNode, deleteNode,
   listEdges, addEdge, removeEdge,

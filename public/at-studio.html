@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trail Studio</title>
+<script src="/js/dialog.js?v=1"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,7 +90,7 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 .mini{font:600 11px/1 var(--body);color:var(--ink-3);padding:5px 8px;border-radius:var(--r-sm)}
 .mini:hover{color:var(--ink);background:var(--surface)}
 
-.canvas{flex:1;position:relative;overflow:auto;background-color:var(--bg-sunk);
+.canvas{flex:1;position:relative;overflow:auto;cursor:grab;background-color:var(--bg-sunk);
   background-image:radial-gradient(circle at 1px 1px, oklch(0.300 0.006 60) 1px, transparent 0);background-size:22px 22px}
 .sheet{position:relative;width:1400px;height:1600px}
 .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
@@ -101,16 +102,17 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 /* Connection handles, the way EscapeFlow does it: drag out of one node and
    drop on another. A generous invisible ring around a small visible dot, so
    it can be hit with a trackpad without making the card look studded. */
-.node .h{position:absolute;left:50%;width:13px;height:13px;margin-left:-6.5px;border-radius:50%;
+.node .hdl{position:absolute;left:50%;width:13px;height:13px;margin-left:-6.5px;border-radius:50%;
   background:var(--raised);border:2px solid var(--line);z-index:4;cursor:crosshair;
   transition:background .14s var(--ease),border-color .14s var(--ease),transform .14s var(--ease)}
-.node .h::after{content:'';position:absolute;top:-9px;left:-9px;right:-9px;bottom:-9px;border-radius:50%}
-.node .h.out{bottom:-7px} .node .h.in{top:-7px}
-.node:hover .h,.node.is-sel .h{border-color:var(--accent)}
-.node .h:hover{background:var(--accent);border-color:var(--accent);transform:scale(1.25)}
+.node .hdl::after{content:'';position:absolute;top:-9px;left:-9px;right:-9px;bottom:-9px;border-radius:50%}
+.node .hdl-bot{bottom:-7px} .node .hdl-top{top:-7px}
+.node:hover .hdl,.node.is-sel .hdl{border-color:var(--accent)}
+.node .hdl:hover{background:var(--accent);border-color:var(--accent);transform:scale(1.25)}
 .node.droptarget{border-color:var(--go);box-shadow:0 0 0 2px var(--go)}
 .edges path.hit{stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
 .edges path.sel{stroke:var(--accent);stroke-width:2.4}
+.canvas.dropping{outline:2px dashed var(--accent);outline-offset:-6px}
 .edges path.ghost{stroke:var(--go);stroke-width:2;stroke-dasharray:5 4}
 .edge-x{position:absolute;z-index:5;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;
   background:var(--stop);color:oklch(0.99 0 0);display:grid;place-items:center;font:700 12px/1 var(--body);
@@ -179,6 +181,18 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 .issue.error i{background:var(--stop)} .issue.warn i{background:var(--warn)}
 .empty{padding:40px 16px;text-align:center;color:var(--ink-3);font-size:13px}
 .codes{font:600 13px/1.9 var(--mono);color:var(--ink-2);word-break:break-all}
+/* One floating tooltip, driven by data-tip. Explains every control rather than
+   relying on the reader already knowing the vocabulary. */
+#tip{position:fixed;z-index:9999;max-width:290px;pointer-events:none;opacity:0;
+  background:var(--raised);color:var(--ink);border:1px solid var(--line);
+  border-radius:7px;padding:9px 11px;font:400 12px/1.5 var(--body);
+  box-shadow:0 10px 30px oklch(0.12 0 0 / .65);transition:opacity .13s var(--ease)}
+#tip.on{opacity:1}
+#tip b{display:block;font:700 11px/1.3 var(--body);color:var(--accent-hi);margin-bottom:4px}
+.tipdot{display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;
+  border:1px solid var(--line);color:var(--ink-3);font:700 9px/1 var(--body);
+  margin-left:6px;cursor:help;vertical-align:1px}
+.tipdot:hover{border-color:var(--accent);color:var(--accent-hi)}
 .modal{position:fixed;inset:0;z-index:90;background:oklch(0.12 0 0 / .78);display:none;align-items:center;justify-content:center;padding:20px}
 .modal.on{display:flex}
 .modal .in{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:18px}
@@ -190,39 +204,39 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
   <header class="topbar">
     <div class="brand"><b>Trail Studio</b><span>AdventureTrail</span></div>
     <div class="trailsel">
-      <select class="sel" id="trail-pick"></select>
+      <select class="sel" id="trail-pick" data-tip="trail"></select>
       <button class="btn sm" id="b-new-trail">+ Trail</button>
     </div>
-    <div class="seg">
+    <div class="seg" data-tip="view">
       <button type="button" data-view="flow">Fluss</button>
       <button type="button" data-view="split" aria-pressed="true">Geteilt</button>
       <button type="button" data-view="map">Karte</button>
     </div>
-    <span class="chip" id="check-chip">Prüfung</span>
-    <button class="btn sm" id="b-keys">Schlüssel</button>
-    <a class="btn sm" href="/at-play.html" target="_blank" rel="noopener">Spieler-Ansicht</a>
+    <span class="chip" id="check-chip" data-tip="check">Prüfung</span>
+    <button class="btn sm" id="b-keys" data-tip="keys">Schlüssel</button>
+    <a class="btn sm" data-tip="play" href="/at-play.html" target="_blank" rel="noopener">Spieler-Ansicht</a>
   </header>
 
   <div class="body">
     <nav class="rail" id="rail">
-      <button data-add="station" data-name="Station"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="nm">Station</span></button>
-      <button data-add="riddle" data-name="Rätsel"><svg viewBox="0 0 24 24"><path d="M9 3h6v4a2 2 0 0 0 4 0h2v6h-4a2 2 0 0 0 0 4h4v4H9v-4a2 2 0 0 0-4 0H3V7h2a2 2 0 0 0 4 0z"/></svg><span class="nm">Rätsel</span></button>
-      <button data-add="story" data-name="Story-Beat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg><span class="nm">Story-Beat</span></button>
-      <button data-add="arg" data-name="ARG-Fund"><svg viewBox="0 0 24 24"><path d="M12 3v10"/><circle cx="12" cy="17" r="4"/></svg><span class="nm">ARG-Fund</span></button>
-      <button data-add="nav" data-name="Peilung"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.1 5-5 2.1 2.1-5z"/></svg><span class="nm">Peilung</span></button>
-      <button data-add="gate" data-name="Weiche"><svg viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 4 4h8"/><path d="M6 21v-6"/><path d="M15 10l3 3-3 3"/></svg><span class="nm">Weiche</span></button>
+      <button data-add="station" data-tip="k-station" data-name="Station"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="nm">Station</span></button>
+      <button data-add="riddle" data-tip="k-riddle" data-name="Rätsel"><svg viewBox="0 0 24 24"><path d="M9 3h6v4a2 2 0 0 0 4 0h2v6h-4a2 2 0 0 0 0 4h4v4H9v-4a2 2 0 0 0-4 0H3V7h2a2 2 0 0 0 4 0z"/></svg><span class="nm">Rätsel</span></button>
+      <button data-add="story" data-tip="k-story" data-name="Story-Beat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg><span class="nm">Story-Beat</span></button>
+      <button data-add="arg" data-tip="k-arg" data-name="ARG-Fund"><svg viewBox="0 0 24 24"><path d="M12 3v10"/><circle cx="12" cy="17" r="4"/></svg><span class="nm">ARG-Fund</span></button>
+      <button data-add="nav" data-tip="k-nav" data-name="Peilung"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.1 5-5 2.1 2.1-5z"/></svg><span class="nm">Peilung</span></button>
+      <button data-add="gate" data-tip="k-gate" data-name="Weiche"><svg viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 4 4h8"/><path d="M6 21v-6"/><path d="M15 10l3 3-3 3"/></svg><span class="nm">Weiche</span></button>
       <hr>
-      <button data-add="start" data-name="Start"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20"/></svg><span class="nm">Start</span></button>
-      <button data-add="end" data-name="Ende"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg><span class="nm">Ende</span></button>
+      <button data-add="start" data-tip="k-start" data-name="Start"><svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20"/></svg><span class="nm">Start</span></button>
+      <button data-add="end" data-tip="k-end" data-name="Ende"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg><span class="nm">Ende</span></button>
       <hr>
-      <button class="fold" id="b-fold" data-name="Namen zeigen"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="nm">Einklappen</span></button>
+      <button class="fold" id="b-fold" data-tip="fold" data-name="Namen zeigen"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="nm">Einklappen</span></button>
     </nav>
 
     <main class="stage" id="stage">
       <section class="pane" id="pane-flow">
         <div class="pane-head"><h2>Erzählfluss</h2><span class="tag" id="node-count">0</span>
-          <span class="sp"></span><button class="mini" id="b-tidy">Anordnen</button></div>
-        <div class="canvas" id="canvas"><div class="sheet" id="sheet"><svg class="edges" id="edges"></svg></div></div>
+          <span class="sp"></span><button class="mini" id="b-tidy" data-tip="tidy">Anordnen</button></div>
+        <div class="canvas" id="canvas" data-tip="canvas"><div class="sheet" id="sheet"><svg class="edges" id="edges"></svg></div></div>
       </section>
       <section class="pane" id="pane-map">
         <div class="pane-head"><h2>Gelände</h2><span class="tag" id="geo-count">0 Orte</span>
@@ -236,10 +250,90 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 </div>
 
 <div class="modal" id="modal"><div class="in" id="modal-in"></div></div>
+<div id="tip" role="tooltip"></div>
 
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
+
+// Every explanation in one place. A key is attached with data-tip, and shows on
+// hover or focus. Written for someone who has never seen the vocabulary before,
+// because that is who opens an editor for the first time.
+const TIPS = {
+  // the parts
+  'k-station': ['Station', 'Ein echter Ort auf der Strecke. Das Team geht hin, findet dort etwas und tippt es ein. Die Antwort beweist, dass sie da waren, ganz ohne GPS und ohne etwas an die Wand zu kleben.'],
+  'k-riddle':  ['Rätsel', 'Eine Aufgabe ohne festen Ort. Nützlich, wenn unterwegs etwas gelöst werden soll, das nicht an einer Hauswand hängt.'],
+  'k-story':   ['Story-Beat', 'Reiner Text, kein Rätsel. Trägt die Geschichte zwischen zwei Stationen weiter, damit der Trail eine Erzählung ist und keine Liste.'],
+  'k-arg':     ['Fundstück', 'Ein Beweisstück aus der Geschichte: eine Sprachnachricht, ein Foto, ein gescanntes Dokument. Es schaltet nichts frei, es macht die Geschichte greifbar. ARG steht für Alternate Reality Game: eine Geschichte, die so tut, als wäre sie echt.'],
+  'k-nav':     ['Peilung', 'Ein Wegweiser, kein Schloss. Zeigt nur, wie weit es noch bis zum nächsten verbundenen Ort ist, nie in welche Richtung. Damit bleibt „wo ist es“ das Rätsel. Sie hat keinen eigenen Ort und nichts einzustellen ausser der Art.'],
+  'k-gate':    ['Weiche', 'Eine Abzweigung. Das Team wählt zwischen zwei Wegen, und ab da sieht es nur noch seinen eigenen Zweig. Dieselben Posten, andere Geschichte, also kostet eine Weiche nichts an Aufbau draussen.'],
+  'k-start':   ['Start', 'Der erste Baustein. Hier beginnt der Trail, nachdem das Team den Schlüssel eingelöst hat.'],
+  'k-end':     ['Ende', 'Der Abschluss. Hier laufen alle Zweige wieder zusammen.'],
+
+  // canvas and rail
+  'canvas':  ['Erzählfluss', 'Die Reihenfolge des Trails. Ziehe einen Baustein aus der Leiste links auf die Fläche, verbinde zwei Bausteine, indem du von einem Punkt am Rand auf den nächsten Baustein ziehst. Die leere Fläche lässt sich verschieben.'],
+  'handle':  ['Verbindungspunkt', 'Von hier aus auf einen anderen Baustein ziehen, um beide zu verbinden. Dieselbe Bewegung noch einmal löst die Verbindung wieder.'],
+  'tidy':    ['Anordnen', 'Legt alle Bausteine entlang ihrer Verbindungen neu aus, von oben nach unten.'],
+  'fold':    ['Leiste', 'Klappt die Namen der Bausteine aus oder ein.'],
+  'view':    ['Ansicht', 'Nur den Fluss, nur die Karte, oder beides nebeneinander.'],
+
+  // top bar
+  'trail':   ['Trail', 'Ein kompletter Rundgang durch eine Stadt, von Start bis Ende.'],
+  'check':   ['Prüfung', 'Sucht alles, was ein zahlendes Team draussen stranden lässt: Bausteine, die nirgendwo hinführen, Stationen ohne Hinweise, GPS-Posten zu nah beieinander. Anklicken zeigt die Liste.'],
+  'keys':    ['Schlüssel', 'Die Codes, die ihr verkauft oder ausdruckt. Ein Code startet genau einen Durchlauf und kann nicht zweimal benutzt werden.'],
+  'play':    ['Spieler-Ansicht', 'Öffnet die App so, wie das Team sie auf dem Handy sieht.'],
+
+  // inspector tabs
+  't-trigger': ['Auslöser', 'Womit dieser Baustein geöffnet wird: mit einer Antwort, mit GPS, oder gar nicht.'],
+  't-story':   ['Story', 'Die Texte, die das Team beim Ankommen und beim Weitergehen liest.'],
+  't-riddle':  ['Rätsel', 'Die Antwort, die akzeptiert wird, und wie streng verglichen wird.'],
+  't-hints':   ['Hinweise', 'Die Hilfe, die sich von selbst öffnet. Ohne Spielleiter kann niemand nachfragen.'],
+  't-fund':    ['Fundstücke', 'Dateien, die hier auftauchen: Audio, Video, Bild oder PDF.'],
+  't-style':   ['Stil', 'Aussehen dieses einen Bildschirms.'],
+  't-choices': ['Zweige', 'Die Wege, die von dieser Weiche abgehen, und ihre Beschriftung.'],
+
+  // fields
+  'trigger':   ['Wie wird geöffnet', 'Antwort ist am robustesten: nichts zu installieren, nichts zu überkleben, keine Berechtigung nötig. GPS braucht Erlaubnis und ist in engen Gassen auf 30 m genau.'],
+  'postcode':  ['Posten-Code', 'Steht auf dem Schild am Posten. Er funktioniert immer, auch wenn GPS, Kamera oder Geduld versagen, und verhindert, dass ein Team draussen hängen bleibt.'],
+  'pick':      ['Ort wählen', 'Klick auf die Karte setzt den Punkt. Danach lässt sich die Nadel einfach packen und verschieben.'],
+  'radius':    ['Radius', 'Wie nah das Team sein muss. In der Altstadt sind 40 bis 60 m realistisch; darunter öffnet sich die Station oft nicht, obwohl das Team davorsteht.'],
+  'skip':      ['Überspringen', 'Nach so vielen Minuten darf das Team weiter, ohne gelöst zu haben. 0 heisst nie. Besser als ein Team, das aufgibt und nach Hause geht.'],
+  'answers':   ['Antworten', 'Alle Schreibweisen, die gelten, mit Komma getrennt. Verglichen wird immer das ganze Wort, nie ein Teil davon.'],
+  'case':      ['Gross und klein', 'Normalerweise egal. Nur einschalten, wenn die Schreibweise selbst Teil des Rätsels ist.'],
+  'hintladder':['Hinweis-Leiter', 'Jede Stufe öffnet sich nach ihrer Zeit am Posten von selbst. Die letzte verrät die Lösung, damit niemand endgültig feststeckt.'],
+  'depart':    ['Beim Weitergehen', 'Der Satz, der zur nächsten Station überleitet. Das ist, was aus einer Liste von Aufgaben eine Geschichte macht.'],
+  'navmode':   ['Art der Peilung', 'Distanz sagt wie weit, nicht wohin: wärmer und kälter, das Rätsel bleibt. Ein Pfeil sagt wohin und ersetzt das Rätsel durch Navigation.'],
+  'media':     ['Darstellung', 'Ob dieser Beitrag als Text gelesen, als Video gezeigt oder als Sprachaufnahme gehört wird.'],
+};
+
+// Hover or keyboard focus shows it; nothing is required but the attribute.
+(function(){
+  let el;
+  const box = () => el || (el = document.getElementById('tip'));
+  function show(t, target){
+    const e = box(); if(!e || !t) return;
+    e.innerHTML = '<b></b><span></span>';
+    e.querySelector('b').textContent = t[0];
+    e.querySelector('span').textContent = t[1];
+    e.classList.add('on');
+    const r = target.getBoundingClientRect();
+    e.style.left = '0px'; e.style.top = '0px';
+    const w = e.offsetWidth, h = e.offsetHeight;
+    let x = Math.min(window.innerWidth - w - 10, Math.max(10, r.left));
+    let y = r.bottom + 8;
+    if(y + h > window.innerHeight - 10) y = Math.max(10, r.top - h - 8);
+    e.style.left = x + 'px'; e.style.top = y + 'px';
+  }
+  function hide(){ const e = box(); if(e) e.classList.remove('on'); }
+  const find = n => { const t = n && n.closest && n.closest('[data-tip]'); return t ? [t, TIPS[t.dataset.tip]] : null; };
+  document.addEventListener('mouseover', e => { const f = find(e.target); if(f && f[1]) show(f[1], f[0]); });
+  document.addEventListener('mouseout',  e => { if(find(e.target)) hide(); });
+  document.addEventListener('focusin',   e => { const f = find(e.target); if(f && f[1]) show(f[1], f[0]); });
+  document.addEventListener('focusout',  hide);
+  window.addEventListener('scroll', hide, true);
+})();
+// A small ⓘ next to a label, for things a hover over the label alone would miss.
+const tipdot = key => '<span class="tipdot" data-tip="' + key + '" tabindex="0">i</span>';
 const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 // Studio calls are GM-gated. The token is the one the settings gate issues.
@@ -252,11 +346,11 @@ async function api(method, url, body){
   return r.json().catch(()=>({}));
 }
 async function gate(){
-  const pw = prompt('GM-Passwort:');
+  const pw = await uiPrompt('GM-Passwort', { title:'Gesperrt' });
   if(!pw) throw new Error('no auth');
   const r = await fetch('/api/settings/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
   const j = await r.json();
-  if(!j.valid) { alert('Falsches Passwort.'); return gate(); }
+  if(!j.valid) { await uiAlert('Falsches Passwort.'); return gate(); }
   TOKEN = j.token; sessionStorage.setItem('gm_token', TOKEN);
 }
 
@@ -364,8 +458,8 @@ function nodeEl(n){
     + '<div class="kind"><i></i>' + (KIND[n.kind]||n.kind) + '</div>'
     + '<h3>' + esc(tx(n.title) || 'Ohne Titel') + '</h3>'
     + '<div class="meta">' + tags.join('') + '</div></div>'
-    + (n.kind === 'start' ? '' : '<span class="h in" data-h="in"></span>')
-    + (n.kind === 'end'   ? '' : '<span class="h out" data-h="out"></span>');
+    + (n.kind === 'start' ? '' : '<span class="hdl hdl-top" data-h="in" data-tip="handle"></span>')
+    + (n.kind === 'end'   ? '' : '<span class="hdl hdl-bot" data-h="out" data-tip="handle"></span>');
   return d;
 }
 function drawEdges(){
@@ -444,7 +538,7 @@ const canvasPt = e => {
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 };
 $('#sheet').addEventListener('pointerdown', e => {
-  const handle = e.target.closest('.h');
+  const handle = e.target.closest('.hdl');
   const el = e.target.closest('.node'); if(!el) return;
   const id = Number(el.dataset.id);
   if(handle){
@@ -512,18 +606,74 @@ async function toggleEdge(from, to){
   else       await api('POST',   '/trails/' + TRAIL.id + '/edges', { from, to });
   await openTrail(TRAIL.id);
 }
-document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', async () => {
-  if(!TRAIL) return;
-  const kind = b.dataset.add;
+// Parts are dragged onto the canvas and land where they are dropped. Clicking
+// still works and drops one at the end of the column, for a trackpad.
+async function addNode(kind, x, y){
+  if(!TRAIL) return null;
   const r = await api('POST', '/trails/' + TRAIL.id + '/nodes', {
-    kind, title:{ [L1()]: KIND[kind] }, x: 40, y: 30 + NODES.length * 155,
+    kind, title:{ [L1()]: KIND[kind] },
+    x: Math.max(0, Math.round(x)), y: Math.max(0, Math.round(y)),
   });
-  await openTrail(TRAIL.id); selId = r.id; renderInspector(); render();
-}));
+  await openTrail(TRAIL.id);
+  selId = r.id; render();
+  return r.id;
+}
+document.querySelectorAll('[data-add]').forEach(b => {
+  b.draggable = true;
+  b.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/at-kind', b.dataset.add);
+    e.dataTransfer.effectAllowed = 'copy';
+  });
+  b.addEventListener('click', () => addNode(b.dataset.add, 40, nextFreeY()));
+});
+// Below whatever sits lowest, rather than counting parts: after a deletion the
+// count no longer says where the column ends, and the new card lands on an old
+// one.
+function nextFreeY(){
+  if(!NODES.length) return 30;
+  return Math.max(...NODES.map(n => Number(n.y) || 0)) + 155;
+}
+$('#canvas').addEventListener('dragover', e => {
+  if(![...e.dataTransfer.types].includes('text/at-kind')) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+  $('#canvas').classList.add('dropping');
+});
+$('#canvas').addEventListener('dragleave', e => {
+  if(e.target === $('#canvas')) $('#canvas').classList.remove('dropping');
+});
+$('#canvas').addEventListener('drop', async e => {
+  const kind = e.dataTransfer.getData('text/at-kind');
+  $('#canvas').classList.remove('dropping');
+  if(!kind) return;
+  e.preventDefault();
+  const r = $('#sheet').getBoundingClientRect();
+  // drop point minus half a card, so the cursor lands in its middle
+  await addNode(kind, e.clientX - r.left - 92, e.clientY - r.top - 55);
+});
+// Drag empty canvas to pan, the same gesture the map uses. Without it a graph
+// taller than the pane can only be reached with a scrollbar.
+let pan = null;
 $('#canvas').addEventListener('pointerdown', e => {
   if(e.target.closest('.node') || e.target.closest('.edge-x') || e.target.closest('.hit')) return;
   selEdge = null; drawEdges();
+  const c = $('#canvas');
+  pan = { x:e.clientX, y:e.clientY, l:c.scrollLeft, t:c.scrollTop };
+  c.style.cursor = 'grabbing';
+  c.setPointerCapture(e.pointerId);
 });
+$('#canvas').addEventListener('pointermove', e => {
+  if(!pan) return;
+  const c = $('#canvas');
+  c.scrollLeft = pan.l - (e.clientX - pan.x);
+  c.scrollTop  = pan.t - (e.clientY - pan.y);
+});
+['pointerup','pointercancel'].forEach(ev => $('#canvas').addEventListener(ev, e => {
+  if(!pan) return;
+  pan = null;
+  const c = $('#canvas');
+  c.style.cursor = '';
+  try { c.releasePointerCapture(e.pointerId); } catch(err) {}
+}));
 $('#b-fold').addEventListener('click', () => {
   document.querySelector('.body').classList.toggle('railopen');
   setTimeout(() => { drawEdges(); if(map) map.invalidateSize(); }, 220);
@@ -580,6 +730,7 @@ function renderMap(){
   if(!map){
     map = L.map('map', { zoomControl:true }).setView([47.5596, 7.5886], 15);
     L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution:MAP_TILE_ATTRIB }).addTo(map);
+    map.on('click', onMapClick);
   }
   Object.values(markers).forEach(m => map.removeLayer(m));
   markers = {};
@@ -609,7 +760,7 @@ function renderMap(){
 }
 $('#b-setloc').addEventListener('click', async () => {
   const n = NODES.find(x => x.id === selId);
-  if(!n) return alert('Erst einen Baustein wählen.');
+  if(!n) return uiAlert('Erst einen Baustein wählen.');
   const c = map.getCenter();
   n.lat = +c.lat.toFixed(6); n.lng = +c.lng.toFixed(6);
   await api('PUT', '/nodes/' + n.id, { lat:n.lat, lng:n.lng });
@@ -622,14 +773,14 @@ let tab = 'trigger';
 // answer and no location: it is a signpost that reads the next connected
 // station's coordinates, so offering it a radius would be a lie.
 const TABS = {
-  start:   [['story','Story'],['style','Stil']],
-  station: [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['arg','ARG'],['style','Stil']],
-  riddle:  [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['arg','ARG'],['style','Stil']],
-  story:   [['story','Story'],['arg','ARG'],['style','Stil']],
-  arg:     [['story','Story'],['arg','ARG'],['style','Stil']],
-  gate:    [['story','Story'],['choices','Zweige'],['style','Stil']],
-  nav:     [['peilung','Peilung'],['story','Story']],
-  end:     [['story','Story'],['arg','ARG'],['style','Stil']],
+  start:   [['text','Text'],['style','Stil']],
+  station: [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
+  riddle:  [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
+  story:   [['story','Story'],['fund','Fundstücke'],['style','Stil']],
+  arg:     [['fund','Fundstücke'],['text','Text'],['style','Stil']],
+  gate:    [['text','Text'],['choices','Zweige'],['style','Stil']],
+  nav:     [['peilung','Peilung']],
+  end:     [['text','Text'],['fund','Fundstücke'],['style','Stil']],
 };
 const tabsFor = kind => TABS[kind] || TABS.station;
 function renderInspector(){
@@ -642,41 +793,47 @@ function renderInspector(){
    + '<h2>'+esc(tx(n.title)||'Ohne Titel')+'</h2>'
    + '<p class="sub">Baustein '+(NODES.indexOf(n)+1)+' von '+NODES.length+'</p></div>'
    + '<div class="tabs">' + tabsFor(n.kind)
-       .map(([k,label]) => '<button data-tab="'+k+'" aria-selected="'+(tab===k)+'">'+label+'</button>').join('') + '</div>'
+       .map(([k,label]) => '<button data-tab="'+k+'" data-tip="t-'+k+'" aria-selected="'+(tab===k)+'">'+label+'</button>').join('') + '</div>'
    + '<div class="panel" id="panel"></div>'
    + '<div class="foot"><button class="btn" id="b-del">Löschen</button><button class="btn primary" id="b-save">Speichern</button></div>';
   ins.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderInspector(); });
   if(!tabsFor(n.kind).some(([k]) => k === tab)){ tab = tabsFor(n.kind)[0][0]; return renderInspector(); }
   $('#b-del').onclick = async () => {
-    if(!confirm('Diesen Baustein löschen?')) return;
+    if(!await uiConfirm('Diesen Baustein löschen?', { ok:'Löschen' })) return;
     await api('DELETE', '/nodes/' + n.id); selId = null; await openTrail(TRAIL.id);
   };
   $('#b-save').onclick = () => saveNode(n);
   renderPanel(n, l);
 }
 function field(label, id, val, ta, hint){
-  return '<div class="fld"><label>'+esc(label)+'</label>'
+  // The label may carry a tip dot, so it is markup, not text. Values are still
+  // escaped; only labels this file writes itself go in raw.
+  return '<div class="fld"><label>'+label+'</label>'
     + (ta ? '<textarea class="ta" id="'+id+'">'+esc(val||'')+'</textarea>'
           : '<input class="inp" id="'+id+'" value="'+esc(val||'')+'">')
     + (hint ? '<p class="hint">'+esc(hint)+'</p>' : '') + '</div>';
 }
 function renderPanel(n, l){
   const p = $('#panel');
-  if(tab === 'trigger'){
+  if(tab === 'trigger'){ setTimeout(armPicker, 0);
     const sel = v => n.trigger_kind === v ? ' selected' : '';
     p.innerHTML =
-      '<div class="fld"><label>Wie der Baustein geöffnet wird</label>'
+      '<div class="fld"><label>Wie der Baustein geöffnet wird'+tipdot('trigger')+'</label>'
       + '<select class="sel" id="f-trigger">'
       + '<option value="answer"'+sel('answer')+'>Antwort eintippen</option>'
       + '<option value="gps"'+sel('gps')+'>GPS, auf Tippen geprüft</option>'
       + '<option value="qr"'+sel('qr')+'>QR / Code</option>'
       + '<option value="none"'+sel('none')+'>Nichts, nur weiter</option></select>'
       + '<p class="hint">Die Antwort ist der robusteste Schlüssel: nichts zu installieren, nichts zu überkleben, keine Berechtigung.</p></div>'
-      + field('Posten-Code (Rückfall)','f-postcode',n.post_code,false,'Steht auf dem Schild. Funktioniert immer, auch wenn GPS oder Kamera versagen.')
+      + field('Posten-Code (Rückfall)'+tipdot('postcode'),'f-postcode',n.post_code,false,'Steht auf dem Schild. Funktioniert immer, auch wenn GPS oder Kamera versagen.')
+      + '<div class="fld"><label>Ort</label>'
+      + '<button class="btn" id="b-pick" style="width:100%" data-tip="pick">'
+      + (n.lat==null ? 'Auf der Karte wählen' : 'Ort auf der Karte verschieben') + '</button>'
+      + '<p class="hint">Klick auf die Karte setzt den Punkt. Die Nadel lässt sich danach einfach packen und verschieben.</p></div>'
       + '<div class="split3">'
       + '<div class="fld"><label>Breite</label><input class="inp" id="f-lat" value="'+(n.lat==null?'':n.lat)+'"></div>'
       + '<div class="fld"><label>Länge</label><input class="inp" id="f-lng" value="'+(n.lng==null?'':n.lng)+'"></div>'
-      + '<div class="fld"><label>Radius m</label><input class="inp" id="f-radius" value="'+(n.radius_m||45)+'"></div></div>'
+      + '<div class="fld"><label>Radius m'+tipdot('radius')+'</label><input class="inp" id="f-radius" value="'+(n.radius_m||45)+'"></div></div>'
       + '<p class="hint">In der Altstadt sind 40 bis 60 m realistisch. Darunter öffnet sich die Station oft nicht, obwohl das Team davorsteht.</p>'
       + '<div class="fld" style="margin-top:14px"><label>Peilung auf dem Weg hierher</label>'
       + '<select class="sel" id="f-nav">'
@@ -684,17 +841,50 @@ function renderPanel(n, l){
       + '<option value="distance"'+(n.nav_mode==='distance'?' selected':'')+'>Distanz, wärmer und kälter</option>'
       + '<option value="arrow"'+(n.nav_mode==='arrow'?' selected':'')+'>Pfeil, zeigt die Richtung</option></select>'
       + '<p class="hint">Distanz sagt wie weit, nicht wohin, und lässt das Rätsel „wo“ bestehen. Ein Pfeil ersetzt es durch Navigation.</p></div>'
-      + '<div class="fld"><label>Überspringen nach Minuten (0 = nie)</label><input class="inp" id="f-skip" value="'+(n.skip_after_min||0)+'"></div>';
+      + '<div class="fld"><label>Überspringen nach Minuten'+tipdot('skip')+'</label><input class="inp" id="f-skip" value="'+(n.skip_after_min||0)+'"></div>';
   }
   else if(tab === 'story'){
-    p.innerHTML = field('Aufgabe · '+l,'f-task',tx(n.task,l),true,'Steht da, solange der Baustein offen ist.')
+    const sm = n.story_media || 'text';
+    p.innerHTML = '<div class="fld"><label>Darstellung'+tipdot('media')+'</label>'
+      + '<div class="seg" style="margin-left:0">'
+      + [['text','Text'],['voice','Sprecher'],['video','Video']].map(([k,lab]) =>
+          '<button type="button" data-sm="'+k+'" aria-pressed="'+(sm===k)+'">'+lab+'</button>').join('')
+      + '</div>'
+      + (sm === 'text' ? '<p class="hint">Das Team liest den Text.</p>'
+        : '<div style="margin-top:9px">'
+          + (n.story_media_path
+              ? (sm === 'video'
+                  ? '<video src="/uploads/'+esc(n.story_media_path)+'" controls style="width:100%;border-radius:7px"></video>'
+                  : '<audio src="/uploads/'+esc(n.story_media_path)+'" controls style="width:100%"></audio>')
+              : '<p class="hint" style="color:var(--warn)">Noch keine Datei.</p>')
+          + '<div class="drop" id="b-sm-up">'+(sm==='video'?'Video':'Sprachaufnahme')+' hochladen</div>'
+          + '<input type="file" id="f-sm" style="display:none" accept="'+(sm==='video'?'video/*':'audio/*')+'">'
+          + '<p class="hint">Wird beim Start vorgeladen, damit es auch ohne Empfang läuft. Der Text unten bleibt als Untertitel und für die Übersetzung.</p></div>')
+      + '</div>'
+      + field('Aufgabe · '+l,'f-task',tx(n.task,l),true,'Steht da, solange der Baustein offen ist.')
       + field('Beim Ankommen · '+l,'f-arrive',tx(n.arrive,l),true)
-      + field('Beim Weitergehen · '+l,'f-depart',tx(n.depart,l),true,'Der Satz, der die Geschichte zur nächsten Station trägt. Bekommt einen eigenen Bildschirm.')
+      + field('Beim Weitergehen · '+l+tipdot('depart'),'f-depart',tx(n.depart,l),true,'Der Satz, der die Geschichte zur nächsten Station trägt. Bekommt einen eigenen Bildschirm.')
       + field('Titel · '+l,'f-title',tx(n.title,l));
+    p.querySelectorAll('[data-sm]').forEach(b => b.onclick = async () => {
+      await api('PUT', '/nodes/' + n.id, { story_media: b.dataset.sm });
+      n.story_media = b.dataset.sm; renderPanel(n, l);
+    });
+    const up = $('#b-sm-up');
+    if(up) up.onclick = () => $('#f-sm').click();
+    const fsm = $('#f-sm');
+    if(fsm) fsm.onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      const fd = new FormData(); fd.append('file', f);
+      const r = await fetch('/api/at/nodes/' + n.id + '/story-media',
+        { method:'POST', headers: TOKEN?{Authorization:'Bearer '+TOKEN}:{}, body:fd });
+      const j = await r.json().catch(()=>({}));
+      if(!j.success) return uiAlert('Upload fehlgeschlagen: ' + (j.error || r.status));
+      await openTrail(TRAIL.id);
+    };
   }
   else if(tab === 'riddle'){
     const list = (n.answers && n.answers[l]) || [];
-    p.innerHTML = field('Akzeptierte Antworten · '+l,'f-answers',Array.isArray(list)?list.join(', '):String(list||''),false,
+    p.innerHTML = field('Akzeptierte Antworten · '+l+tipdot('answers'),'f-answers',Array.isArray(list)?list.join(', '):String(list||''),false,
         'Mehrere Schreibweisen mit Komma trennen. Es wird immer vollständig verglichen, nie als Teilwort.')
       + '<div class="sw"><span class="txt"><b>Gross- und Kleinschreibung beachten</b><span>Aus lassen, ausser es ist Teil des Rätsels</span></span>'
       + '<span class="tog'+(n.answer_case_sensitive?' on':'')+'" id="f-case"></span></div>'
@@ -722,7 +912,7 @@ function renderPanel(n, l){
       renderPanel(n,l);
     });
   }
-  else if(tab === 'arg'){
+  else if(tab === 'fund'){
     const as = n.assets || [];
     p.innerHTML = (as.length ? as.map(a =>
         '<div class="rung"><span class="n">'+(a.kind||'?').slice(0,1).toUpperCase()+'</span><span class="c">'
@@ -739,16 +929,20 @@ function renderPanel(n, l){
       const fd = new FormData(); fd.append('file', f); fd.append('title', f.name);
       const r = await fetch('/api/at/nodes/' + n.id + '/assets', { method:'POST', headers: TOKEN?{Authorization:'Bearer '+TOKEN}:{}, body:fd });
       const j = await r.json().catch(()=>({}));
-      if(!j.success) alert('Upload fehlgeschlagen: ' + (j.error||r.status));
+      if(!j.success) await uiAlert('Upload fehlgeschlagen: ' + (j.error||r.status));
       await openTrail(TRAIL.id);
     };
     p.querySelectorAll('[data-asset-del]').forEach(b => b.onclick = async () => {
       await api('DELETE', '/assets/' + b.dataset.assetDel); await openTrail(TRAIL.id);
     });
   }
+  else if(tab === 'text'){
+    p.innerHTML = field('Titel · '+l,'f-title',tx(n.title,l))
+      + field('Text · '+l,'f-task',tx(n.task,l),true,'Was hier auf dem Bildschirm steht.');
+  }
   else if(tab === 'peilung'){
     const t = navTargetOf(n);
-    p.innerHTML = '<div class="fld"><label>Art der Peilung</label>'
+    p.innerHTML = '<div class="fld"><label>Art der Peilung'+tipdot('navmode')+'</label>'
       + '<select class="sel" id="f-nav">'
       + '<option value="distance"'+(n.nav_mode!=='arrow'?' selected':'')+'>Distanz, wärmer und kälter</option>'
       + '<option value="arrow"'+(n.nav_mode==='arrow'?' selected':'')+'>Pfeil, zeigt die Richtung</option></select>'
@@ -819,6 +1013,8 @@ async function saveNode(n){
     body.hints = collectHints(n, l);
   } else if(tab === 'style'){
     body.style = { accent: g('f-accent') || undefined, bg: g('f-bgimg') || undefined, scrim: Number(g('f-scrim')) };
+  } else if(tab === 'text'){
+    setI18n('title', g('f-title')); setI18n('task', g('f-task'));
   } else if(tab === 'peilung'){
     body.nav_mode = g('f-nav') || 'distance';
     // A bearing never locks anything, so it must not carry a trigger.
@@ -835,6 +1031,27 @@ async function saveNode(n){
   }
   await api('PUT', '/nodes/' + n.id, body);
   await openTrail(TRAIL.id);
+}
+
+// Click the map to place this node's point. Stays armed until a click lands,
+// and the pin is draggable afterwards, so fine tuning never needs the form.
+let picking = false;
+function armPicker(){
+  const b = $('#b-pick'); if(!b) return;
+  b.onclick = () => {
+    picking = !picking;
+    b.classList.toggle('primary', picking);
+    b.textContent = picking ? 'Klick jetzt auf die Karte' : 'Auf der Karte wählen';
+    if(map) map.getContainer().style.cursor = picking ? 'crosshair' : '';
+  };
+}
+function onMapClick(ev){
+  if(!picking) return;
+  const n = NODES.find(x => x.id === selId); if(!n) return;
+  picking = false;
+  if(map) map.getContainer().style.cursor = '';
+  n.lat = +ev.latlng.lat.toFixed(6); n.lng = +ev.latlng.lng.toFixed(6);
+  api('PUT', '/nodes/' + n.id, { lat:n.lat, lng:n.lng }).then(() => { render(); runCheck(); });
 }
 
 // ── Check ────────────────────────────────────────────────────────────────────

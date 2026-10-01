@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E1118">
 <title>AdventureTrail</title>
+<script src="/js/dialog.js?v=1"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
@@ -93,6 +94,7 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
 .hint p{margin:0;font-size:14px;color:var(--ink2)}
 .hint.res .n{background:oklch(0.300 0.060 25);color:var(--stop)}
 
+.beat{width:100%;border-radius:10px;display:block;margin-bottom:13px;background:#000}
 .finds{display:flex;flex-direction:column;gap:9px;margin-top:4px}
 .find{display:flex;align-items:center;gap:11px;padding:12px;border:1px solid var(--line);
   background:var(--card);border-radius:10px;width:100%;text-align:left}
@@ -358,11 +360,17 @@ $('#b-start').addEventListener('click', async () => {
 // start point, so a courtyard with no signal does not swallow a voicemail.
 function preloadAssets(){
   const seen = new Set();
-  (RUN.nodes||[]).forEach(n => (n.assets||[]).forEach(a => {
-    if(!a.preload || seen.has(a.path)) return;
-    seen.add(a.path);
-    fetch('/uploads/' + a.path, { cache:'force-cache' }).catch(()=>{});
-  }));
+  (RUN.nodes||[]).forEach(n => {
+    (n.assets||[]).forEach(a => {
+      if(!a.preload || seen.has(a.path)) return;
+      seen.add(a.path);
+      fetch('/uploads/' + a.path, { cache:'force-cache' }).catch(()=>{});
+    });
+    if(n.story_media_path && !seen.has(n.story_media_path)){
+      seen.add(n.story_media_path);
+      fetch('/uploads/' + n.story_media_path, { cache:'force-cache' }).catch(()=>{});
+    }
+  });
 }
 
 // ── Play ─────────────────────────────────────────────────────────────────────
@@ -392,6 +400,13 @@ function renderPlay(){
     '<i class="'+(i < (RUN.done||0) ? 'on':'')+'"></i>').join('');
 
   const body = [];
+  // A beat can be read, watched or listened to. The text stays either way, as
+  // subtitle and as the thing that gets translated.
+  if(n.story_media_path && n.story_media === 'video'){
+    body.push('<video class="beat" src="/uploads/'+esc(n.story_media_path)+'" controls playsinline preload="auto"></video>');
+  } else if(n.story_media_path && n.story_media === 'voice'){
+    body.push('<audio class="beat" src="/uploads/'+esc(n.story_media_path)+'" controls preload="auto"></audio>');
+  }
   if(n.task) body.push('<p class="story">'+esc(n.task)+'</p>');
 
   // Peilung: distance only, never an arrow. Which way is still the puzzle.

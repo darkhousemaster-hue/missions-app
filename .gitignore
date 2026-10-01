@@ -40,3 +40,6 @@ logs/
 # Handbook artifacts — regenerated on demand by handbook/scripts/*
 handbook/screenshots/
 handbook/pdf/
+
+# Local scratch: downloads, dumps, scratch files. Never part of a release.
+.local/

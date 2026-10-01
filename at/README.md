@@ -61,6 +61,16 @@ DROP TABLE IF EXISTS at_trails;
 
 Step 6 is optional. Leaving the tables costs nothing and keeps the door open.
 
+`public/js/dialog.js` stays. It belongs to the main app, which uses it on every
+screen; AdventureTrail only borrows it.
+
+## The test key
+
+`1898` always works and never runs out. Every redemption starts a fresh run on
+the trail being edited, or else the newest live one, so a trail can be walked
+again and again without minting anything. Real keys stay single use: redeeming
+one twice returns the same run, which is what lets a team reload mid-trail.
+
 ## What is here
 
 - `db.js` schema and data layer. Creates its own tables on first require.

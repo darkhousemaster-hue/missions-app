@@ -879,6 +879,9 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       </button>
     </aside>
 
+    <button id="s-navtoggle" type="button" onclick="toggleSettingsNav()" title="Menü ein- und ausklappen" aria-label="Menü ein- und ausklappen">
+      <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
     <main class="settings-main">
       <!-- General — mockup 08 form-grid: label cell (200px) + control cell (1fr).
            All 4 fields per mockup: Public URL, Timeout (lang-tabbed), GitHub repo URL,
@@ -1362,6 +1365,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/dialog.js?v=1"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 // Map tiles. tile.openstreetmap.org now refuses this app outright: every tile
@@ -2633,13 +2637,13 @@ async function deleteGame(gameId,e){
   e.stopPropagation();
   // A returning GM already holds a token (sessionStorage) — no need to prompt.
   if(!settingsPassword && !gmToken){
-    const pw=prompt('Passwort eingeben:');if(!pw)return;
+    const pw=await uiPrompt(gmt('sg-pw-label'));if(!pw)return;
     const v=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
     if(!v.valid){toast(gmt('wrong-pw')||'Falsches Passwort','error');return;}
     settingsPassword=pw;
     if(v.token){gmToken=v.token;sessionStorage.setItem('gm_token',v.token);}
   }
-  if(!confirm(`Spiel ${gameId} löschen? Alle Medien werden gelöscht.`))return;
+  if(!await uiConfirm(`Spiel ${gameId} löschen? Alle Medien werden gelöscht.`, {ok:'Löschen'}))return;
   const res=await API(`/api/games/${gameId}`,{method:'DELETE',body:{password:settingsPassword}});
   if(res.success){toast(gmt('deleted')||'Gelöscht','success');loadGames(selectedLocationId);}
   else toast(res.error,'error');
@@ -3916,7 +3920,7 @@ async function thawTeam(){
 async function deleteSelectedTeam(){
   if(!selectedTeamId) return;
   const name = (currentGame && currentGame.teams && currentGame.teams.find(t=>t.id===selectedTeamId)?.name) || '';
-  if(!confirm((gmt('team-delete-confirm')||'Team "{name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.').replace('{name}', name))) return;
+  if(!await uiConfirm((gmt('team-delete-confirm')||'Team "{name}" wirklich löschen?').replace('{name}', name), {ok:gmt('delete')})) return;
   const tid = selectedTeamId;
   const r = await API(`/api/games/${currentGameId}/teams/${tid}`, { method:'DELETE' });
   if(r && r.success){
@@ -4263,6 +4267,23 @@ function switchPanel(panel,el){
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
+// Collapsing the settings menu hands the panel the full width, which the
+// mission list and the trail studio both want. Remembered per browser.
+function toggleSettingsNav(on){
+  const body = document.querySelector('.settings-shell');
+  if(!body) return;
+  const shut = on === undefined ? !body.classList.contains('navshut') : !!on;
+  body.classList.toggle('navshut', shut);
+  try { localStorage.setItem('gm_nav_shut', shut ? '1' : '0'); } catch(e){}
+  // Leaflet and the studio iframe both measure themselves, so tell them.
+  setTimeout(() => {
+    window.dispatchEvent(new Event('resize'));
+    const f = document.getElementById('at-frame');
+    if(f && f.contentWindow) f.contentWindow.dispatchEvent(new Event('resize'));
+  }, 230);
+}
+try { if(localStorage.getItem('gm_nav_shut') === '1') document.addEventListener('DOMContentLoaded', () => toggleSettingsNav(true)); } catch(e){}
+
 function showSettingsGate(){
   _prevScreen=currentScreen();
   showScreen('screen-settings-gate');
@@ -4311,7 +4332,7 @@ async function uploadLogoImage(e){
   try{
     let r = await send(settingsPassword);
     if(r.status === 401){                       // session expired → ask once and retry
-      const pw = prompt(gmt('gate-prompt')||'GM-Passwort:');
+      const pw = await uiPrompt(gmt('gate-prompt')||gmt('sg-pw-label'));
       if(pw){ settingsPassword = pw; r = await send(pw); }
     }
     const res = await r.json().catch(()=>({}));
@@ -4729,7 +4750,7 @@ async function saveEditMode(id){
 }
 async function confirmDeleteMode(id){
   if(id===1){toast(gmt('cannot-del-default-mode')||'Standard-Modus kann nicht gelöscht werden.','warning');return;}
-  if(!confirm(gmt('del-mode-confirm')||'Modus löschen? Alle MiSSiONS werden ebenfalls gelöscht. / Delete mode? All missions will be deleted too.'))return;
+  if(!await uiConfirm(gmt('del-mode-confirm'), {ok:gmt('delete')}))return;
   const res=await API(`/api/modes/${id}`,{method:'DELETE',body:{password:settingsPassword}});
   if(res.success){currentModeId=1;currentModeName='MiSSiONS';await loadModeTabs();await loadMissions();toast(gmt('deleted')||'Gelöscht','success');}
   else toast(res.error,'error');
@@ -4872,7 +4893,7 @@ async function saveEditLocation(id){
   if(res.success){closeModal();loadLocationsSettings();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteLocation(id){
-  if(!confirm(gmt('del-loc-confirm')||'Standort und alle MiSSiONS löschen? / Delete location and all its missions?'))return;
+  if(!await uiConfirm(gmt('del-loc-confirm'), {ok:gmt('delete')}))return;
   await API(`/api/locations/${id}`,{method:'DELETE',body:{password:settingsPassword}});
   loadLocationsSettings();loadMissionFilter();loadMissions();
 }
@@ -5501,7 +5522,7 @@ async function saveEditMission(id){
   if(res.success){await uploadMsTaskImage(id);closeModal();loadMissions();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteMission(id){
-  if(!confirm(gmt('del-mission-confirm')||'MiSSiON löschen? / Delete mission?'))return;
+  if(!await uiConfirm(gmt('del-mission-confirm'), {ok:gmt('delete')}))return;
   await API(`/api/missions/${id}`,{method:'DELETE',body:{password:settingsPassword}});loadMissions();
 }
 
@@ -5816,7 +5837,7 @@ async function saveRules(){
 
 async function deleteCurrentRuleset(){
   if(currentEditRulesetId===1){toast(gmt('cannot-del-default-rs')||'Standard-Regelwerk kann nicht gelöscht werden.','warning');return;}
-  if(!confirm(gmt('del-rs-confirm')||'Regelwerk löschen? Modi werden auf Standard zurückgesetzt. / Delete ruleset? Modes will fall back to Standard.'))return;
+  if(!await uiConfirm(gmt('del-rs-confirm'), {ok:gmt('delete')}))return;
   const res=await API(`/api/rulesets/${currentEditRulesetId}`,{method:'DELETE',body:{password:settingsPassword}});
   if(res.success){
     currentEditRulesetId=1; currentEditRulesetName='Standard';
@@ -6168,7 +6189,7 @@ async function saveEditCrMode(){
   currentCrModeName=name; currentCrModeRush=(body.rush_mode===1); closeModal(); loadCrModes();
 }
 async function deleteCurrentCrMode(){
-  if(!confirm((gmt('cr-mode-delete-confirm')||'Rail Adventure Modus "{name}" und alle Missionen löschen?').replace('{name}', currentCrModeName)))return;
+  if(!await uiConfirm((gmt('cr-mode-delete-confirm')||'').replace('{name}', currentCrModeName), {ok:gmt('delete')}))return;
   await API(`/api/cr/modes/${currentCrModeId}`,{method:'DELETE',body:{password:settingsPassword}});
   currentCrModeId=null; currentCrModeName=''; loadCrModes();
 }
@@ -7118,7 +7139,7 @@ async function saveEditCrMission(id){
   }
 }
 async function deleteCrMission(id){
-  if(!confirm(gmt('c-del-mission')||'Mission löschen?'))return;
+  if(!await uiConfirm(gmt('c-del-mission'), {ok:gmt('delete')}))return;
   const res=await API(`/api/cr/missions/${id}`,{method:'DELETE',body:{password:settingsPassword}});
   if(res.success!==false){
     // Remove card from DOM immediately for instant feedback
@@ -7297,7 +7318,7 @@ async function saveCrHint(hintId, missionId){
   else toast(res.error||'Fehler','error');
 }
 async function deleteCrHintFromEditor(hintId,missionId){
-  if(!confirm(gmt('c-del-hint')||'Hinweis löschen?'))return;
+  if(!await uiConfirm(gmt('c-del-hint'), {ok:gmt('delete')}))return;
   await API(`/api/cr/hints/${hintId}`,{method:'DELETE',body:{password:settingsPassword}});
   loadCrHintsEditor(missionId);
 }
@@ -7970,7 +7991,7 @@ async function updAutoMsg(id, field, value){
   try{ await API('/api/automated-messages/'+id,{method:'PUT',body}); }catch(e){}
 }
 async function delAutoMsg(id){
-  if(!confirm(gmt('s-msgs-del-confirm')||'Diese automatische Nachricht löschen?')) return;
+  if(!await uiConfirm(gmt('s-msgs-del-confirm'), {ok:gmt('delete')})) return;
   try{ await API('/api/automated-messages/'+id,{method:'DELETE'}); }catch(e){}
   loadAutoMessages();
 }
@@ -8716,8 +8737,8 @@ function tdRemoveLogo(){
   const rm = document.getElementById('td-logo-rm'); if(rm) rm.style.display = 'none';
   _tdBrandLive();
 }
-function tdResetAll(){
-  if(!confirm(gmt('th-reset-confirm')||'Alle Farben, Texte und das Logo auf den Standard zurücksetzen?')) return;
+async function tdResetAll(){
+  if(!await uiConfirm(gmt('th-reset-confirm'), {ok:gmt('th-reset')})) return;
   if(_td.side==='gm'){ _gmTheme = { vars:{}, stamp:'', wordmark:'', logo:null }; applyGmTheme(_gmTheme); applyGmBranding(_gmTheme); }
   else { _td.theme = { vars:{}, logo:null, stamp:'', wordmark:'', borderWidth:null }; _tdPost(); }
   const el = document.getElementById('theme-designer');

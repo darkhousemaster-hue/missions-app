@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Draw</title>
+<script src="/js/dialog.js?v=1"></script>
 <link rel="stylesheet" href="/css/app.css">
 <style>
   :root{ --text-dim:var(--text); --text-muted:var(--text); }
@@ -375,8 +376,8 @@ async function submitDrawing(){
 }
 
 // ── Navigation ───────────────────────────────────────────────────────────────────
-function goBack(){
-  if(canSubmit){ if(!confirm(t('leave_confirm'))) return; if(socket && collaborative) socket.emit('draw_close',{token,reason:'cancel'}); }
+async function goBack(){
+  if(canSubmit){ if(!await uiConfirm(t('leave_confirm'))) return; if(socket && collaborative) socket.emit('draw_close',{token,reason:'cancel'}); }
   backToGame();
 }
 function backToGame(){ location.href=`/cityrush.html?game=${gameId}&team=${teamId}&lang=${lang}`; }

@@ -7,6 +7,7 @@
 <title>Rail Adventure</title>
 <link rel="stylesheet" href="/css/app.css?v=2.4.56">
 <script src="/js/theme.js?v=14"></script>
+<script src="/js/dialog.js?v=1"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -3408,7 +3409,7 @@ function crLockActionsIfFrozen(){
 // Skip the selected mission. Awards no points and leaves the rest available.
 async function confirmSkipMission(){
   if(!currentMission) return;
-  const ok = confirm(t('skip_confirm') || 'Mission überspringen? Es gibt keine Punkte dafür.');
+  const ok = await uiConfirm(t('skip_confirm') || 'Mission überspringen? Es gibt keine Punkte dafür.');
   if(!ok) return;
   const res = await fetch(`/api/games/${gameId}/cr/skip`,{
     method:'POST', headers:{'Content-Type':'application/json'},
