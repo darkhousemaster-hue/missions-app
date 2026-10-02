@@ -207,10 +207,10 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
       <select class="sel" id="trail-pick" data-tip="trail"></select>
       <button class="btn sm" id="b-new-trail">+ Trail</button>
     </div>
-    <div class="seg" data-tip="view">
-      <button type="button" data-view="flow">Fluss</button>
-      <button type="button" data-view="split" aria-pressed="true">Geteilt</button>
-      <button type="button" data-view="map">Karte</button>
+    <div class="seg">
+      <button type="button" data-view="flow" data-tip="v-flow">Fluss</button>
+      <button type="button" data-view="split" data-tip="v-split" aria-pressed="true">Geteilt</button>
+      <button type="button" data-view="map" data-tip="v-map">Karte</button>
     </div>
     <span class="chip" id="check-chip" data-tip="check">Prüfung</span>
     <button class="btn sm" id="b-keys" data-tip="keys">Schlüssel</button>
@@ -236,7 +236,7 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
       <section class="pane" id="pane-flow">
         <div class="pane-head"><h2>Erzählfluss</h2><span class="tag" id="node-count">0</span>
           <span class="sp"></span><button class="mini" id="b-tidy" data-tip="tidy">Anordnen</button></div>
-        <div class="canvas" id="canvas" data-tip="canvas"><div class="sheet" id="sheet"><svg class="edges" id="edges"></svg></div></div>
+        <div class="canvas" id="canvas"><div class="sheet" id="sheet"><svg class="edges" id="edges"></svg></div></div>
       </section>
       <section class="pane" id="pane-map">
         <div class="pane-head"><h2>Gelände</h2><span class="tag" id="geo-count">0 Orte</span>
@@ -271,11 +271,12 @@ const TIPS = {
   'k-end':     ['Ende', 'Der Abschluss. Hier laufen alle Zweige wieder zusammen.'],
 
   // canvas and rail
-  'canvas':  ['Erzählfluss', 'Die Reihenfolge des Trails. Ziehe einen Baustein aus der Leiste links auf die Fläche, verbinde zwei Bausteine, indem du von einem Punkt am Rand auf den nächsten Baustein ziehst. Die leere Fläche lässt sich verschieben.'],
   'handle':  ['Verbindungspunkt', 'Von hier aus auf einen anderen Baustein ziehen, um beide zu verbinden. Dieselbe Bewegung noch einmal löst die Verbindung wieder.'],
   'tidy':    ['Anordnen', 'Legt alle Bausteine entlang ihrer Verbindungen neu aus, von oben nach unten.'],
   'fold':    ['Leiste', 'Klappt die Namen der Bausteine aus oder ein.'],
-  'view':    ['Ansicht', 'Nur den Fluss, nur die Karte, oder beides nebeneinander.'],
+  'v-flow':  ['Fluss', 'Nur der Erzählfluss, über die ganze Breite. Hier entsteht die Reihenfolge: Bausteine aus der Leiste links auf die Fläche ziehen und verbinden, indem du von einem Punkt am Rand auf den nächsten Baustein ziehst. Die leere Fläche lässt sich verschieben.'],
+  'v-split': ['Geteilt', 'Fluss und Karte nebeneinander, zum Verbinden und Platzieren in einem Blick. Ein Klick auf eine Nadel wählt ihren Baustein.'],
+  'v-map':   ['Karte', 'Nur das Gelände, über die ganze Breite. Jede Nadel ist ein Baustein mit Ort und lässt sich packen und verschieben. GPS-Posten zeigen ihren Radius als Kreis.'],
 
   // top bar
   'trail':   ['Trail', 'Ein kompletter Rundgang durch eine Stadt, von Start bis Ende.'],
@@ -291,6 +292,7 @@ const TIPS = {
   't-fund':    ['Fundstücke', 'Dateien, die hier auftauchen: Audio, Video, Bild oder PDF.'],
   't-style':   ['Stil', 'Aussehen dieses einen Bildschirms.'],
   't-choices': ['Zweige', 'Die Wege, die von dieser Weiche abgehen, und ihre Beschriftung.'],
+  't-ort':     ['Ort', 'Optional. Ohne Ort erscheint der Story-Beat direkt nach dem vorherigen Baustein. Mit Ort wartet er, bis das Team dort ankommt.'],
 
   // fields
   'trigger':   ['Wie wird geöffnet', 'Antwort ist am robustesten: nichts zu installieren, nichts zu überkleben, keine Berechtigung nötig. GPS braucht Erlaubnis und ist in engen Gassen auf 30 m genau.'],
@@ -303,6 +305,7 @@ const TIPS = {
   'hintladder':['Hinweis-Leiter', 'Jede Stufe öffnet sich nach ihrer Zeit am Posten von selbst. Die letzte verrät die Lösung, damit niemand endgültig feststeckt.'],
   'depart':    ['Beim Weitergehen', 'Der Satz, der zur nächsten Station überleitet. Das ist, was aus einer Liste von Aufgaben eine Geschichte macht.'],
   'navmode':   ['Art der Peilung', 'Distanz sagt wie weit, nicht wohin: wärmer und kälter, das Rätsel bleibt. Ein Pfeil sagt wohin und ersetzt das Rätsel durch Navigation.'],
+  'place':     ['Wo dieser Beat spielt', 'Überall: erscheint sofort. An einem Ort: das Team muss hin, und Sprachaufnahme, Video und Ankunftstext spielen erst dort. Gut für eine Nachricht, die genau an dieser Ecke ankommen soll.'],
   'media':     ['Darstellung', 'Ob dieser Beitrag als Text gelesen, als Video gezeigt oder als Sprachaufnahme gehört wird.'],
 };
 
@@ -324,11 +327,43 @@ const TIPS = {
     if(y + h > window.innerHeight - 10) y = Math.max(10, r.top - h - 8);
     e.style.left = x + 'px'; e.style.top = y + 'px';
   }
-  function hide(){ const e = box(); if(e) e.classList.remove('on'); }
+  // A tip waits a moment before it appears and never shows while a button is
+  // held: dragging a connection or panning the canvas is exactly when one
+  // popping up is in the way. Keyboard focus still shows it at once.
+  // After a click the control is known, and its tip would only cover what
+  // the click just opened, so tips stay quiet until the pointer leaves that spot.
+  let wait = 0, held = false, shownFor = null, quiet = null;
+  const inQuiet = e => quiet && e.clientX >= quiet.left && e.clientX <= quiet.right
+                             && e.clientY >= quiet.top && e.clientY <= quiet.bottom;
+  function hide(){ clearTimeout(wait); shownFor = null; const e = box(); if(e) e.classList.remove('on'); }
   const find = n => { const t = n && n.closest && n.closest('[data-tip]'); return t ? [t, TIPS[t.dataset.tip]] : null; };
-  document.addEventListener('mouseover', e => { const f = find(e.target); if(f && f[1]) show(f[1], f[0]); });
-  document.addEventListener('mouseout',  e => { if(find(e.target)) hide(); });
-  document.addEventListener('focusin',   e => { const f = find(e.target); if(f && f[1]) show(f[1], f[0]); });
+  document.addEventListener('mouseover', e => {
+    if(held && e.buttons === 0) held = false;    // released outside this frame
+    const f = find(e.target);
+    if(!f || !f[1] || held || f[0] === shownFor || inQuiet(e)) return;
+    clearTimeout(wait);
+    // A re-render inside the pause replaces the control; a tip for the old,
+    // detached one would land in the corner of the screen.
+    wait = setTimeout(() => { if(!held && f[0].isConnected){ show(f[1], f[0]); shownFor = f[0]; } }, 400);
+  });
+  document.addEventListener('mouseout', e => {
+    const from = find(e.target); if(!from) return;
+    const to = find(e.relatedTarget);
+    if(to && to[0] === from[0]) return;          // still inside the same control
+    hide();
+  });
+  document.addEventListener('pointerdown', e => {
+    held = true; hide();
+    const t = e.target && e.target.closest && e.target.closest('[data-tip]');
+    quiet = t ? t.getBoundingClientRect() : null;
+  }, true);
+  document.addEventListener('mousemove', e => { if(quiet && !inQuiet(e)) quiet = null; }, true);
+  document.addEventListener('pointerup', () => { held = false; }, true);
+  document.addEventListener('pointercancel', () => { held = false; }, true);
+  document.addEventListener('focusin', e => {
+    if(held) return;
+    const f = find(e.target); if(f && f[1]){ show(f[1], f[0]); shownFor = f[0]; }
+  });
   document.addEventListener('focusout',  hide);
   window.addEventListener('scroll', hide, true);
 })();
@@ -776,7 +811,7 @@ const TABS = {
   start:   [['text','Text'],['style','Stil']],
   station: [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
   riddle:  [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
-  story:   [['story','Story'],['fund','Fundstücke'],['style','Stil']],
+  story:   [['story','Story'],['ort','Ort'],['fund','Fundstücke'],['style','Stil']],
   arg:     [['fund','Fundstücke'],['text','Text'],['style','Stil']],
   gate:    [['text','Text'],['choices','Zweige'],['style','Stil']],
   nav:     [['peilung','Peilung']],
@@ -813,6 +848,27 @@ function field(label, id, val, ta, hint){
           : '<input class="inp" id="'+id+'" value="'+esc(val||'')+'">')
     + (hint ? '<p class="hint">'+esc(hint)+'</p>' : '') + '</div>';
 }
+// Where a part sits on the map, and how the team is guided there. Shared by the
+// station trigger and the story's optional place, so both pick, drag and save
+// the same way.
+const placeHtml = n =>
+  '<div class="fld"><label>Ort</label>'
+  + '<button class="btn" id="b-pick" style="width:100%" data-tip="pick">'
+  + (n.lat==null ? 'Auf der Karte wählen' : 'Ort auf der Karte verschieben') + '</button>'
+  + '<p class="hint">Klick auf die Karte setzt den Punkt. Die Nadel lässt sich danach einfach packen und verschieben.</p></div>'
+  + '<div class="split3">'
+  + '<div class="fld"><label>Breite</label><input class="inp" id="f-lat" value="'+(n.lat==null?'':n.lat)+'"></div>'
+  + '<div class="fld"><label>Länge</label><input class="inp" id="f-lng" value="'+(n.lng==null?'':n.lng)+'"></div>'
+  + '<div class="fld"><label>Radius m'+tipdot('radius')+'</label><input class="inp" id="f-radius" value="'+(n.radius_m||45)+'"></div></div>'
+  + '<p class="hint">In der Altstadt sind 40 bis 60 m realistisch. Darunter öffnet sich der Baustein oft nicht, obwohl das Team davorsteht.</p>';
+const navHtml = n =>
+  '<div class="fld" style="margin-top:14px"><label>Peilung auf dem Weg hierher'+tipdot('navmode')+'</label>'
+  + '<select class="sel" id="f-nav">'
+  + '<option value="none"'+(n.nav_mode==='none'?' selected':'')+'>Keine</option>'
+  + '<option value="distance"'+(n.nav_mode==='distance'?' selected':'')+'>Distanz, wärmer und kälter</option>'
+  + '<option value="arrow"'+(n.nav_mode==='arrow'?' selected':'')+'>Pfeil, zeigt die Richtung</option></select>'
+  + '<p class="hint">Distanz sagt wie weit, nicht wohin, und lässt das Rätsel „wo“ bestehen. Ein Pfeil ersetzt es durch Navigation.</p></div>';
+
 function renderPanel(n, l){
   const p = $('#panel');
   if(tab === 'trigger'){ setTimeout(armPicker, 0);
@@ -826,22 +882,36 @@ function renderPanel(n, l){
       + '<option value="none"'+sel('none')+'>Nichts, nur weiter</option></select>'
       + '<p class="hint">Die Antwort ist der robusteste Schlüssel: nichts zu installieren, nichts zu überkleben, keine Berechtigung.</p></div>'
       + field('Posten-Code (Rückfall)'+tipdot('postcode'),'f-postcode',n.post_code,false,'Steht auf dem Schild. Funktioniert immer, auch wenn GPS oder Kamera versagen.')
-      + '<div class="fld"><label>Ort</label>'
-      + '<button class="btn" id="b-pick" style="width:100%" data-tip="pick">'
-      + (n.lat==null ? 'Auf der Karte wählen' : 'Ort auf der Karte verschieben') + '</button>'
-      + '<p class="hint">Klick auf die Karte setzt den Punkt. Die Nadel lässt sich danach einfach packen und verschieben.</p></div>'
-      + '<div class="split3">'
-      + '<div class="fld"><label>Breite</label><input class="inp" id="f-lat" value="'+(n.lat==null?'':n.lat)+'"></div>'
-      + '<div class="fld"><label>Länge</label><input class="inp" id="f-lng" value="'+(n.lng==null?'':n.lng)+'"></div>'
-      + '<div class="fld"><label>Radius m'+tipdot('radius')+'</label><input class="inp" id="f-radius" value="'+(n.radius_m||45)+'"></div></div>'
-      + '<p class="hint">In der Altstadt sind 40 bis 60 m realistisch. Darunter öffnet sich die Station oft nicht, obwohl das Team davorsteht.</p>'
-      + '<div class="fld" style="margin-top:14px"><label>Peilung auf dem Weg hierher</label>'
-      + '<select class="sel" id="f-nav">'
-      + '<option value="none"'+(n.nav_mode==='none'?' selected':'')+'>Keine</option>'
-      + '<option value="distance"'+(n.nav_mode==='distance'?' selected':'')+'>Distanz, wärmer und kälter</option>'
-      + '<option value="arrow"'+(n.nav_mode==='arrow'?' selected':'')+'>Pfeil, zeigt die Richtung</option></select>'
-      + '<p class="hint">Distanz sagt wie weit, nicht wohin, und lässt das Rätsel „wo“ bestehen. Ein Pfeil ersetzt es durch Navigation.</p></div>'
+      + placeHtml(n) + navHtml(n)
       + '<div class="fld"><label>Überspringen nach Minuten'+tipdot('skip')+'</label><input class="inp" id="f-skip" value="'+(n.skip_after_min||0)+'"></div>';
+  }
+  else if(tab === 'ort'){
+    const bound = n.trigger_kind === 'gps';
+    if(bound) setTimeout(armPicker, 0);
+    p.innerHTML = '<div class="fld"><label>Wo dieser Beat spielt'+tipdot('place')+'</label>'
+      + '<div class="seg" style="margin-left:0">'
+      + '<button type="button" data-place="none" aria-pressed="'+(!bound)+'">Überall</button>'
+      + '<button type="button" data-place="gps" aria-pressed="'+bound+'">An einem Ort</button></div>'
+      + (bound
+          ? '<p class="hint">Bis das Team dort ist, sieht es Titel und Aufgabe. Sprachaufnahme, Video und der Ankunftstext kommen erst am Ort.</p>'
+          : '<p class="hint">Erscheint direkt nach dem vorherigen Baustein, egal wo das Team gerade steht.</p>')
+      + '</div>'
+      + (bound
+          ? placeHtml(n) + navHtml(n)
+            + field('Posten-Code (Rückfall)'+tipdot('postcode'),'f-postcode',n.post_code,false,'Falls die Ortung versagt. Ohne Code oder Überspringen kommt ein Team hier bei schlechtem Empfang nicht weiter.')
+            + '<div class="fld"><label>Überspringen nach Minuten'+tipdot('skip')+'</label><input class="inp" id="f-skip" value="'+(n.skip_after_min||0)+'"></div>'
+          : '');
+    p.querySelectorAll('[data-place]').forEach(b => b.onclick = async () => {
+      const gps = b.dataset.place === 'gps';
+      if(gps === bound) return;
+      // Leaving the place clears it, so no pin stays on the map for a beat
+      // that no longer waits for one.
+      const patch = gps ? { trigger_kind:'gps' }
+        : { trigger_kind:'none', lat:null, lng:null, nav_mode:'none', post_code:null, skip_after_min:0 };
+      await api('PUT', '/nodes/' + n.id, patch);
+      Object.assign(n, patch);
+      render(); runCheck();
+    });
   }
   else if(tab === 'story'){
     const sm = n.story_media || 'text';
@@ -1001,6 +1071,15 @@ async function saveNode(n){
     body.lng = g('f-lng') === '' ? null : Number(g('f-lng'));
     body.radius_m = Number(g('f-radius')) || 45;
     body.nav_mode = g('f-nav'); body.skip_after_min = Number(g('f-skip')) || 0;
+  } else if(tab === 'ort'){
+    // "Überall" saves itself the moment it is chosen; only a place has fields.
+    if(n.trigger_kind === 'gps'){
+      body.trigger_kind = 'gps'; body.post_code = g('f-postcode') || null;
+      body.lat = g('f-lat') === '' ? null : Number(g('f-lat'));
+      body.lng = g('f-lng') === '' ? null : Number(g('f-lng'));
+      body.radius_m = Number(g('f-radius')) || 45;
+      body.nav_mode = g('f-nav'); body.skip_after_min = Number(g('f-skip')) || 0;
+    }
   } else if(tab === 'story'){
     setI18n('task', g('f-task')); setI18n('arrive', g('f-arrive'));
     setI18n('depart', g('f-depart')); setI18n('title', g('f-title'));

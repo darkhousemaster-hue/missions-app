@@ -402,11 +402,8 @@ function renderPlay(){
   const body = [];
   // A beat can be read, watched or listened to. The text stays either way, as
   // subtitle and as the thing that gets translated.
-  if(n.story_media_path && n.story_media === 'video'){
-    body.push('<video class="beat" src="/uploads/'+esc(n.story_media_path)+'" controls playsinline preload="auto"></video>');
-  } else if(n.story_media_path && n.story_media === 'voice'){
-    body.push('<audio class="beat" src="/uploads/'+esc(n.story_media_path)+'" controls preload="auto"></audio>');
-  }
+  // A beat tied to a place keeps its recording for when the team gets there.
+  if(!holdsMedia(n)) body.push(mediaHtml(n));
   if(n.task) body.push('<p class="story">'+esc(n.task)+'</p>');
 
   // Peilung: distance only, never an arrow. Which way is still the puzzle.
@@ -456,7 +453,7 @@ function renderPlay(){
   } else {
     foot.push('<button class="btn" id="b-next">Weiter</button>');
   }
-  if(n.can_skip) foot.push('<button class="btn ghost" id="b-skip">Diese Station überspringen</button>');
+  if(n.can_skip) foot.push('<button class="btn ghost" id="b-skip">'+(n.kind === 'story' ? 'Diesen Ort überspringen' : 'Diese Station überspringen')+'</button>');
   // Failures are shown here, above the buttons, not in a floating toast: the
   // toast sat on top of "type the code from the sign", which is precisely the
   // button a team reaches for when the location check has just refused them.
@@ -480,7 +477,7 @@ function wire(n){
     if(res.ok){
       if(res.state) RUN = res.state;
       const done = (RUN.nodes||[]).find(x => x.id === n.id);
-      if(done && (done.arrive || done.depart)) return showStory(done);
+      if(done && (done.arrive || done.depart || (holdsMedia(done) && done.story_media_path))) return showStory(done);
       return renderPlay();
     }
     const why = {
@@ -519,7 +516,13 @@ function wire(n){
   const bsk = $('#b-skip');
   if(bsk) bsk.onclick = async () => {
     const res = await api('/run/'+runId+'/node/'+n.id+'/skip', {});
-    if(res.nodes){ RUN = res; renderPlay(); } else toast('Noch nicht.', true);
+    if(res.nodes){
+      RUN = res;
+      // Skipping a place, usually for want of a signal, still tells its story.
+      const d = (RUN.nodes||[]).find(x => x.id === n.id);
+      if(d && holdsMedia(d)) return showStory(d);
+      renderPlay();
+    } else toast('Noch nicht.', true);
   };
 
   document.querySelectorAll('[data-branch]').forEach(b => b.onclick = async () => {
@@ -533,15 +536,26 @@ function wire(n){
   });
 }
 
+// A story beat tied to a place holds its recording and its arrival text until
+// the team is there; on the way it shows only its title and task.
+function holdsMedia(n){ return n.kind === 'story' && n.trigger_kind === 'gps'; }
+function mediaHtml(n){
+  if(!n.story_media_path) return '';
+  const src = '/uploads/' + esc(n.story_media_path);
+  if(n.story_media === 'video') return '<video class="beat" src="'+src+'" controls playsinline preload="auto"></video>';
+  if(n.story_media === 'voice') return '<audio class="beat" src="'+src+'" controls preload="auto"></audio>';
+  return '';
+}
 // The departure text is what makes a trail feel like one story instead of a
 // list, so it gets the screen to itself before the next station.
 function showStory(node, backOnly){
   const txt = [node.arrive, node.depart].filter(Boolean);
-  if(!txt.length) return renderPlay();
+  const media = holdsMedia(node) ? mediaHtml(node) : '';
+  if(!txt.length && !media) return renderPlay();
   show('v-play');
   $('#p-kick').textContent = KIND_LABEL[node.kind] || '';
   $('#p-title').textContent = node.title || '';
-  $('#play-body').innerHTML = txt.map(t => '<p class="story">'+esc(t)+'</p>').join('') +
+  $('#play-body').innerHTML = media + txt.map(t => '<p class="story">'+esc(t)+'</p>').join('') +
     ((node.assets||[]).length ? '<div class="finds">' + node.assets.map(a =>
       '<button class="find" data-asset="'+a.id+'" data-path="'+esc(a.path)+'" data-kind="'+esc(a.kind)+'">'+
       '<span class="ic">'+assetIcon(a.kind)+'</span><span class="c"><b>'+esc(a.title||'Fundstück')+'</b></span></button>').join('') + '</div>' : '');

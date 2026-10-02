@@ -83,6 +83,14 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     const progress = at.listProgress(run.id);
     const progByNode = new Map(progress.map(p => [p.node_id, p]));
     const { open, done } = computeOpen(nodes, edges, progress, run.branch_key);
+    // A part's clock starts the first time it is in play. The hint ladder and
+    // the skip offer both run on it. It used to wait for the player app to call
+    // /open, which it never did, so only the first part ever had a clock: later
+    // hints never released and "skip after N minutes" never came.
+    for (const id of open) {
+      const p = progByNode.get(id);
+      if (!p || !p.opened_at) progByNode.set(id, at.openNode(run.id, id));
+    }
     const lang = run.lang || 'de';
     const now = Date.now();
 
@@ -501,6 +509,9 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       }
       if (['station', 'riddle'].includes(n.kind) && !at.listHints(n.id).length) {
         out.push({ level: 'warn', node: n.id, msg: `„${name}“ hat keine Hinweise. Ohne Spielleiter kann niemand helfen.` });
+      }
+      if (n.kind === 'story' && n.trigger_kind === 'gps' && !n.post_code && !n.skip_after_min) {
+        out.push({ level: 'warn', node: n.id, msg: `Der Story-Beat „${name}“ wartet auf GPS, hat aber weder Posten-Code noch Überspringen. Bei schlechtem Empfang kommt das Team dort nicht weiter.` });
       }
       if (['station', 'riddle'].includes(n.kind) && !n.post_code) {
         out.push({ level: 'warn', node: n.id, msg: `„${name}“ hat keinen Posten-Code als Rückfall.` });
