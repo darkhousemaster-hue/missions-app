@@ -75,6 +75,8 @@ one twice returns the same run, which is what lets a team reload mid-trail.
 
 - `db.js` schema and data layer. Creates its own tables on first require.
 - `routes.js` the Express router, mounted once.
+- `samples/` two 3D objects (a chest, a key) a manager can pick to try AR,
+  and the script that builds them (`node at/samples/build-samples.js`).
 - `public/at-studio.html` the trail editor (GM-gated).
 - `public/at-play.html` the player app.
 

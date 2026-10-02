@@ -110,6 +110,28 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
 .sheet .inner{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line);
   border-radius:15px;padding:18px;max-height:84vh;overflow-y:auto}
 .sheet audio,.sheet video,.sheet img{width:100%;border-radius:9px;display:block;margin-bottom:12px}
+.sheet a.btn{display:block;text-align:center;text-decoration:none}
+.fcard{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.fcard .ic{width:44px;height:44px;border-radius:11px;background:var(--card2);display:grid;place-items:center;flex:0 0 auto}
+.fcard .ic svg{width:20px;height:20px;stroke:var(--gold);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.fcard .c{min-width:0}
+.fcard .c b{display:block;font:600 16px/1.3 var(--body)}
+.fcard .c span{display:block;font:400 13px/1.4 var(--body);color:var(--ink3);overflow-wrap:anywhere}
+.paper{white-space:pre-wrap;overflow-wrap:anywhere;font:400 15px/1.65 var(--body);border-radius:6px;padding:20px 18px;margin-bottom:4px}
+.paper.look-letter{background:oklch(0.95 0.018 85);color:oklch(0.27 0.02 70);font-family:Georgia,'Times New Roman',serif;font-size:16px}
+.paper.look-message{background:var(--card2);color:var(--ink);border-radius:18px 18px 18px 5px;max-width:88%}
+.paper.look-note{background:oklch(0.91 0.10 95);color:oklch(0.28 0.03 80);transform:rotate(-1deg);box-shadow:0 8px 18px oklch(0 0 0 / .35)}
+.sheet.full{padding:0;align-items:stretch}
+.sheet.full .inner{max-width:none;max-height:none;height:100%;border-radius:0;border:0;padding:0;display:flex;flex-direction:column}
+.sheet.full #b-sheet-close{margin:0 !important;border-radius:0}
+.pagebar{display:flex;align-items:center;gap:8px;padding:12px 14px calc(10px);padding-top:calc(10px + env(safe-area-inset-top));background:var(--card2);font:500 13px/1.2 var(--body);color:var(--ink2)}
+.pagebar svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.pagebar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pageframe{flex:1;width:100%;border:0;background:#fff}
+.arbox{flex:1;min-height:0;display:grid;place-items:center;background:var(--card2);padding-top:env(safe-area-inset-top)}
+.arbox model-viewer{width:100%;height:100%;--poster-color:transparent}
+.arbtn{position:absolute;left:16px;right:16px;bottom:16px;width:auto}
+.arhint{padding:10px 16px 0;margin:0}
 
 .toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;
   background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:13px 15px;
@@ -362,9 +384,14 @@ function preloadAssets(){
   const seen = new Set();
   (RUN.nodes||[]).forEach(n => {
     (n.assets||[]).forEach(a => {
-      if(!a.preload || seen.has(a.path)) return;
-      seen.add(a.path);
-      fetch('/uploads/' + a.path, { cache:'force-cache' }).catch(()=>{});
+      if(!a.preload) return;
+      if(a.kind === 'model' && !seen.has(MV_SRC)){ seen.add(MV_SRC); fetch(MV_SRC, { cache:'force-cache', mode:'cors' }).catch(()=>{}); }
+      const u = a.kind === 'page' ? '/api/at/page/' + a.id + '?run=' + encodeURIComponent(runId)
+              : a.kind === 'model' ? modelUrl(a, 'model.glb')
+              : a.path ? '/uploads/' + a.path : '';
+      if(!u || seen.has(u)) return;
+      seen.add(u);
+      fetch(u, { cache:'force-cache' }).catch(()=>{});
     });
     if(n.story_media_path && !seen.has(n.story_media_path)){
       seen.add(n.story_media_path);
@@ -430,9 +457,9 @@ function renderPlay(){
   const assets = (n.assets||[]);
   if(assets.length){
     body.push('<div class="finds">' + assets.map(a =>
-      '<button class="find" data-asset="'+a.id+'" data-path="'+esc(a.path)+'" data-kind="'+esc(a.kind)+'">'+
+      '<button class="find" data-asset="'+a.id+'">'+
       '<span class="ic">'+assetIcon(a.kind)+'</span>'+
-      '<span class="c"><b>'+esc(a.title||'Fundstück')+'</b><span>'+esc(a.kind)+'</span></span></button>').join('') + '</div>');
+      '<span class="c"><b>'+esc(a.title||'Fundstück')+'</b><span>'+esc(findSub(a))+'</span></span></button>').join('') + '</div>');
   }
   if(finds.length){
     body.push('<div class="finds">' + finds.map(f =>
@@ -463,12 +490,8 @@ function renderPlay(){
   if(n.nav_mode === 'distance' && n.lat != null){ holdWake(); tickDistance(n); }
   else dropWake();
 }
-function assetIcon(kind){
-  if(kind==='audio') return '<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>';
-  if(kind==='video') return '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>';
-  if(kind==='doc')   return '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
-  return '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/></svg>';
-}
+const FIND_ICON = {model:'<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12"/><path d="M21 7l-9 5-9-5"/>',image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/>',audio:'<path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>',doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M7 13h6M7 16h9"/>',file:'<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>',link:'<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',email:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',note:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h5"/>'};
+function assetIcon(kind){ return '<svg viewBox="0 0 24 24">' + (FIND_ICON[kind] || FIND_ICON.image) + '</svg>'; }
 
 function wire(n){
   const solve = async payload => {
@@ -529,7 +552,7 @@ function wire(n){
     const res = await api('/run/'+runId+'/node/'+n.id+'/choose', { branch_key: b.dataset.branch });
     if(res.nodes){ RUN = res; renderPlay(); }
   });
-  document.querySelectorAll('[data-asset]').forEach(b => b.onclick = () => openAsset(b.dataset));
+  document.querySelectorAll('[data-asset]').forEach(b => b.onclick = () => openAsset(Number(b.dataset.asset)));
   document.querySelectorAll('[data-node]').forEach(b => b.onclick = async () => {
     const f = (RUN.nodes||[]).find(x => x.id === Number(b.dataset.node));
     if(f) showStory(f, true);
@@ -557,11 +580,11 @@ function showStory(node, backOnly){
   $('#p-title').textContent = node.title || '';
   $('#play-body').innerHTML = media + txt.map(t => '<p class="story">'+esc(t)+'</p>').join('') +
     ((node.assets||[]).length ? '<div class="finds">' + node.assets.map(a =>
-      '<button class="find" data-asset="'+a.id+'" data-path="'+esc(a.path)+'" data-kind="'+esc(a.kind)+'">'+
-      '<span class="ic">'+assetIcon(a.kind)+'</span><span class="c"><b>'+esc(a.title||'Fundstück')+'</b></span></button>').join('') + '</div>' : '');
+      '<button class="find" data-asset="'+a.id+'">'+
+      '<span class="ic">'+assetIcon(a.kind)+'</span><span class="c"><b>'+esc(a.title||'Fundstück')+'</b><span>'+esc(findSub(a))+'</span></span></button>').join('') + '</div>' : '');
   $('#play-foot').innerHTML = '<button class="btn" id="b-go">Weiter</button>';
   $('#b-go').onclick = () => renderPlay();
-  document.querySelectorAll('[data-asset]').forEach(b => b.onclick = () => openAsset(b.dataset));
+  document.querySelectorAll('[data-asset]').forEach(b => b.onclick = () => openAsset(Number(b.dataset.asset)));
 }
 
 // One in-app ask, in the trail's own skin, instead of a browser prompt.
@@ -591,16 +614,86 @@ function ask(title, note, placeholder, onOk){
   setTimeout(() => $('#ask-f') && $('#ask-f').focus(), 60);
 }
 
-function openAsset(d){
-  const url = '/uploads/' + d.path;
-  const inner = d.kind === 'audio' ? '<audio controls autoplay src="'+esc(url)+'"></audio>'
-    : d.kind === 'video' ? '<video controls playsinline autoplay src="'+esc(url)+'"></video>'
-    : d.kind === 'doc'   ? '<p>Dokument</p><a class="btn" href="'+esc(url)+'" target="_blank" rel="noopener">Öffnen</a>'
-    : '<img src="'+esc(url)+'" alt="">';
-  $('#sheet-in').innerHTML = inner + '<button class="btn ghost" id="b-sheet-close" style="margin-top:12px">Schliessen</button>';
-  $('#sheet').classList.add('on');
-  $('#b-sheet-close').onclick = () => { $('#sheet').classList.remove('on'); $('#sheet-in').innerHTML=''; };
+const FIND_LABEL = { image:'Bild', audio:'Sprachaufnahme', video:'Video', doc:'Dokument', page:'Webseite',
+  file:'Download', link:'Link', phone:'Telefonnummer', email:'E-Mail-Adresse', note:'Brief', model:'3D-Objekt' };
+// Google's 3D viewer: turns the object in the hand and hands it to the phone's
+// own AR (Quick Look on iPhone, Scene Viewer on Android). Loaded on first use,
+// and fetched ahead with the rest when a trail has a 3D object at all.
+const MV_SRC = 'https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js';
+let _mv = null;
+const loadViewer = () => _mv || (_mv = import(MV_SRC).catch(e => { _mv = null; throw e; }));
+const modelUrl = (a, f) => '/api/at/model/' + a.id + '/' + f + '?run=' + encodeURIComponent(runId);
+const fmtSize = b => !b ? '' : b < 1024*1024 ? Math.max(1, Math.round(b/1024)) + ' KB' : (b/1024/1024).toFixed(1).replace('.0','') + ' MB';
+function findSub(a){
+  if(a.kind === 'link'){ try { return new URL(a.ref).hostname; } catch(e){ return FIND_LABEL.link; } }
+  if(a.kind === 'phone' || a.kind === 'email') return a.ref || '';
+  if(a.kind === 'page') return a.shown || FIND_LABEL.page;
+  if(a.kind === 'file') return [a.name, fmtSize(a.size)].filter(Boolean).join(' · ');
+  if(a.kind === 'model') return '3D · in den Raum stellen';
+  return FIND_LABEL[a.kind] || '';
 }
+function findAsset(id){
+  for(const n of (RUN && RUN.nodes) || []) for(const a of n.assets || []) if(a.id === id) return a;
+  return null;
+}
+// Each kind opens the way the real thing would: a call, a mail, a page, a file.
+function openAsset(id){
+  const a = findAsset(id); if(!a) return;
+  const sheet = $('#sheet');
+  const url = a.path ? '/uploads/' + a.path : '';
+  const card = (sub, action) => '<div class="fcard"><span class="ic">'+assetIcon(a.kind)+'</span>'
+    + '<div class="c"><b>'+esc(a.title||FIND_LABEL[a.kind]||'')+'</b><span>'+esc(sub||'')+'</span></div></div>' + action;
+  let inner = '';
+  sheet.classList.remove('full');
+  if(a.kind === 'audio') inner = '<audio controls autoplay src="'+esc(url)+'"></audio>';
+  else if(a.kind === 'video') inner = '<video controls playsinline autoplay src="'+esc(url)+'"></video>';
+  else if(a.kind === 'doc') inner = card('PDF', '<a class="btn" href="'+esc(url)+'" target="_blank" rel="noopener">Öffnen</a>');
+  else if(a.kind === 'link' && /^https?:\/\//i.test(a.ref || ''))
+    inner = card(findSub(a), '<a class="btn" href="'+esc(a.ref)+'" target="_blank" rel="noopener noreferrer">Öffnen</a>');
+  else if(a.kind === 'phone')
+    inner = card(a.ref, '<a class="btn" href="tel:'+esc(String(a.ref||'').replace(/[^0-9+]/g, ''))+'">Anrufen</a>');
+  else if(a.kind === 'email')
+    inner = card(a.ref, '<a class="btn" href="mailto:'+esc(a.ref||'')+(a.subject ? '?subject='+encodeURIComponent(a.subject) : '')+'">E-Mail schreiben</a>');
+  else if(a.kind === 'note') inner = '<div class="paper look-'+esc(a.look||'letter')+'">'+esc(a.body||'')+'</div>';
+  else if(a.kind === 'file')
+    inner = card(findSub(a), '<a class="btn" href="'+esc(url)+'" download="'+esc(a.name||'')+'">Herunterladen</a>');
+  else if(a.kind === 'model'){
+    sheet.classList.add('full');
+    inner = '<div class="arbox" id="arbox"><p class="sm">3D-Objekt wird geladen…</p></div>'
+      + '<p class="sm arhint">Mit dem Finger drehen, mit zwei Fingern zoomen. „In den Raum stellen“ öffnet die Kamera: langsam umherschwenken, bis der Boden erkannt ist.</p>';
+    setTimeout(() => loadViewer().then(() => {
+      const box = $('#arbox'); if(!box) return;
+      const mv = document.createElement('model-viewer');
+      mv.setAttribute('src', location.origin + modelUrl(a, 'model.glb'));
+      if(a.ios) mv.setAttribute('ios-src', location.origin + modelUrl(a, 'model.usdz'));
+      mv.setAttribute('ar', ''); mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+      mv.setAttribute('camera-controls', ''); mv.setAttribute('touch-action', 'pan-y');
+      mv.setAttribute('auto-rotate', ''); mv.setAttribute('shadow-intensity', '1');
+      mv.setAttribute('alt', a.title || FIND_LABEL.model);
+      const btn = document.createElement('button');
+      btn.setAttribute('slot', 'ar-button'); btn.className = 'btn arbtn'; btn.textContent = 'In den Raum stellen';
+      mv.appendChild(btn);
+      box.innerHTML = ''; box.appendChild(mv);
+    }).catch(() => {
+      const box = $('#arbox');
+      if(box) box.innerHTML = '<p class="sm">Für das 3D-Objekt braucht es kurz Empfang. Bitte nochmals öffnen, sobald ihr Netz habt.</p>';
+    }), 0);
+  }
+  else if(a.kind === 'page'){
+    // Sandboxed and on an origin of its own: the page can be anything, and
+    // still cannot touch the game.
+    sheet.classList.add('full');
+    inner = '<div class="pagebar"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+      + '<span>'+esc(a.shown || '')+'</span></div>'
+      + '<iframe class="pageframe" title="'+esc(a.title||FIND_LABEL.page)+'" sandbox="allow-scripts allow-forms allow-popups allow-modals"'
+      + ' referrerpolicy="no-referrer" src="/api/at/page/'+a.id+'?run='+encodeURIComponent(runId)+'"></iframe>';
+  }
+  else inner = '<img src="'+esc(url)+'" alt="'+esc(a.title||'')+'">';
+  $('#sheet-in').innerHTML = inner + '<button class="btn ghost" id="b-sheet-close" style="margin-top:12px">Schliessen</button>';
+  sheet.classList.add('on');
+  $('#b-sheet-close').onclick = () => { sheet.classList.remove('on', 'full'); $('#sheet-in').innerHTML = ''; };
+}
+
 
 // Distance readout, refreshed while the page is open and the lock is held.
 let distT = null;

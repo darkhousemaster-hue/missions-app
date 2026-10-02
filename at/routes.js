@@ -5,6 +5,7 @@
 // MiSSiONS imports from here.
 const express = require('express');
 const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 const at = require('./db.js');
 
@@ -133,7 +134,17 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
           if (w.on === 'solve') return isDone;
           if (w.on === 'delay') return minutesHere >= (Number(w.minutes) || 0);
           return true;
-        }).map(a => ({ id: a.id, kind: a.kind, path: a.path, title: a.title, preload: !!a.preload }));
+        }).map(a => ({
+          id: a.id, kind: a.kind, path: a.kind === 'page' || a.kind === 'model' ? '' : a.path, title: a.title, preload: !!a.preload,
+          ios: a.kind === 'model' ? !!(a.meta && a.meta.usdz) : undefined,
+          ref: ['link', 'phone', 'email'].includes(a.kind) ? a.ref : undefined,
+          body: a.kind === 'note' ? at.pick(a.body, lang) : undefined,
+          look: a.kind === 'note' ? (a.meta && a.meta.look) || 'letter' : undefined,
+          subject: a.kind === 'email' ? (a.meta && a.meta.subject) || '' : undefined,
+          shown: a.kind === 'page' ? (a.meta && a.meta.display_url) || '' : undefined,
+          name: a.kind === 'file' ? (a.meta && a.meta.name) || '' : undefined,
+          size: a.kind === 'file' ? (a.meta && a.meta.size) || 0 : undefined,
+        }));
 
         return {
           id: n.id, kind: n.kind, status: isDone ? (p && p.status) || 'done' : 'open',
@@ -403,9 +414,22 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     if (!req.file) return res.status(400).json({ error: 'no_file' });
-    if (!ASSET_TYPES.has(String(req.file.mimetype || '').toLowerCase())) {
+    // A website is one self-contained HTML file; a download is any document,
+    // archive or card a phone can open. Everything else must be real media.
+    const want = String(req.body.kind || '');
+    const name = String(req.file.originalname || '');
+    // The browser's claimed type alone is not enough: the name has to agree,
+    // or a page named .html could ride in as an "image".
+    const media = ASSET_TYPES.has(String(req.file.mimetype || '').toLowerCase()) && MEDIA_EXT.test(name);
+    const ok = want === 'page' ? PAGE_EXT.test(name) && req.file.size <= PAGE_MAX
+      : want === 'model' ? MODEL_EXT.test(name) && req.file.size <= MODEL_MAX && magic(req.file.path, 'glTF')
+      : want === 'file' ? FILE_EXT.test(name) || media
+      : media;
+    if (!ok) {
       try { fs.unlinkSync(req.file.path); } catch (e) {}
-      return res.status(400).json({ error: 'unsupported_type' });
+      const tooBig = (want === 'page' && PAGE_EXT.test(name) && req.file.size > PAGE_MAX)
+                  || (want === 'model' && MODEL_EXT.test(name) && req.file.size > MODEL_MAX);
+      return res.status(400).json({ error: tooBig ? 'too_large' : want === 'model' && MODEL_EXT.test(name) ? 'not_glb' : 'unsupported_type' });
     }
     const node = at.getNode(req.params.id);
     if (!node) { try { fs.unlinkSync(req.file.path); } catch (e) {} return res.status(404).json({ error: 'unknown_node' }); }
@@ -414,13 +438,178 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     try { fs.renameSync(req.file.path, dest); }
     catch (e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
     const rel = `at/${req.file.filename}`;
+    const kind = ['page', 'file', 'model'].includes(want) ? want : guessKind(req.file.mimetype);
+    const meta = { name: cleanName(name), size: req.file.size };
+    if (kind === 'page') meta.display_url = cleanShown(req.body.display_url);
+    let appear = {};
+    try { appear = req.body.appear_when ? JSON.parse(req.body.appear_when) : {}; } catch (e) {}
     const id = at.addAsset(node.id, {
-      kind: req.body.kind || guessKind(req.file.mimetype),
-      path: rel, title: req.body.title || req.file.originalname,
-      appear_when: req.body.appear_when ? JSON.parse(req.body.appear_when) : {},
+      kind, path: rel, title: String(req.body.title || name).slice(0, 120), appear_when: appear, meta,
+      // A download can be big and is opened on purpose, so it is not fetched ahead.
+      preload: kind === 'file' ? 0 : 1,
     });
     res.json({ id, path: rel, success: true });
   });
+  // Downloads: archives, office files, notes, and the cards a phone knows what
+  // to do with (a contact, a calendar invite, a GPS track). HTML, SVG and
+  // scripts never go here: from our own origin they would run.
+  const FILE_EXT = /\.(zip|7z|rar|txt|md|csv|rtf|doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp|epub|json|gpx|kml|kmz|vcf|ics|eml|pdf)$/i;
+  const PAGE_EXT = /\.html?$/i;
+  const MEDIA_EXT = /\.(png|jpe?g|webp|gif|mp3|m4a|aac|ogg|oga|wav|mp4|m4v|webm|pdf)$/i;
+  const PAGE_MAX = 5 * 1024 * 1024;
+  // 3D: one self-contained .glb (the format Android and the viewer read), and
+  // optionally a .usdz beside it, which iPhones place in the room most faithfully.
+  // Without one, the viewer builds it on the phone.
+  const MODEL_EXT = /\.glb$/i;
+  const USDZ_EXT = /\.usdz$/i;
+  const MODEL_MAX = 60 * 1024 * 1024;
+  // A file is what its first bytes say, not what its name claims.
+  const magic = (file, sig) => {
+    try {
+      const fd = fs.openSync(file, 'r'); const b = Buffer.alloc(sig.length);
+      fs.readSync(fd, b, 0, sig.length, 0); fs.closeSync(fd);
+      return b.toString('latin1') === sig;
+    } catch (e) { return false; }
+  };
+  const cleanName = n => String(n || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 120);
+  // What a fake website shows in its address bar. Display only, never followed.
+  const cleanShown = u => String(u || '').replace(/[\u0000-\u001f<>"]/g, '').trim().slice(0, 120);
+
+  // A find that is not a file. Each kind is checked for what it is: a link has
+  // to be a web address (a "javascript:" link would run in the player), a
+  // number has to be dialable, an address has to look like one.
+  function entryFields(kind, b) {
+    const out = { title: String(b.title || '').slice(0, 120) };
+    if (kind === 'link') {
+      let u; try { u = new URL(String(b.ref || '').trim()); } catch (e) { return { error: 'bad_url' }; }
+      if (!/^https?:$/.test(u.protocol)) return { error: 'bad_url' };
+      out.ref = u.href.slice(0, 2000);
+    } else if (kind === 'phone') {
+      const t = String(b.ref || '').trim();
+      if (!/^\+?[0-9][0-9 ()\/.\-]{2,28}$/.test(t)) return { error: 'bad_phone' };
+      out.ref = t;
+    } else if (kind === 'email') {
+      const t = String(b.ref || '').trim();
+      if (!/^[^\s@<>"]{1,64}@[^\s@<>"]{1,190}\.[A-Za-z]{2,24}$/.test(t)) return { error: 'bad_email' };
+      out.ref = t;
+      out.meta = { subject: String((b.meta && b.meta.subject) || '').slice(0, 200) };
+    } else if (kind === 'note') {
+      const body = {};
+      for (const [k, v] of Object.entries(b.body || {})) {
+        if (/^(de|en|fr|it|es)$/.test(k)) body[k] = String(v || '').slice(0, 10000);
+      }
+      if (!Object.values(body).some(v => v.trim())) return { error: 'empty_note' };
+      out.body = body;
+      out.meta = { look: ['letter', 'message', 'note'].includes(b.meta && b.meta.look) ? b.meta.look : 'letter' };
+    } else return { error: 'bad_kind' };
+    if (!out.title) out.title = kind === 'note' ? 'Brief' : String(out.ref || '').slice(0, 120);
+    return out;
+  }
+  r.post('/api/at/nodes/:id/assets/entry', gm, (req, res) => {
+    const node = at.getNode(req.params.id);
+    if (!node) return res.status(404).json({ error: 'unknown_node' });
+    const kind = String((req.body || {}).kind || '');
+    const f = entryFields(kind, req.body || {});
+    if (f.error) return res.status(400).json({ error: f.error });
+    const id = at.addAsset(node.id, { kind, path: '', preload: 0, ...f });
+    res.json({ success: true, id });
+  });
+  r.put('/api/at/assets/:id', gm, (req, res) => {
+    const a = at.getAsset(req.params.id);
+    if (!a) return res.status(404).json({ error: 'unknown_asset' });
+    const b = req.body || {};
+    let patch;
+    if (['link', 'phone', 'email', 'note'].includes(a.kind)) {
+      patch = entryFields(a.kind, { ...a, ...b, meta: { ...a.meta, ...(b.meta || {}) } });
+      if (patch.error) return res.status(400).json({ error: patch.error });
+    } else {
+      patch = { title: String(b.title == null ? a.title : b.title).slice(0, 120) };
+      if (a.kind === 'page' && b.meta && b.meta.display_url !== undefined) {
+        patch.meta = { ...a.meta, display_url: cleanShown(b.meta.display_url) };
+      }
+    }
+    at.updateAsset(a.id, patch);
+    res.json({ success: true });
+  });
+
+  // An uploaded website, served so it cannot reach the game: the sandbox gives
+  // it an origin of its own, so it sees none of our storage and cannot act as
+  // us, even when opened in a tab of its own. A team only gets it once the part
+  // holding it is in play; the studio previews it with the GM login.
+  function canSeeAsset(req, a) {
+    if (isGmAuthed(req)) return true;
+    if (!req.query.run) return false;
+    const run = at.getRun(String(req.query.run));
+    if (!run) return false;
+    const node = at.getNode(a.node_id);
+    if (!node || node.trail_id !== run.trail_id) return false;
+    const { open, done } = computeOpen(at.listNodes(run.trail_id), at.listEdges(run.trail_id),
+      at.listProgress(run.id), run.branch_key);
+    return open.has(node.id) || done.has(node.id);
+  }
+  r.get('/api/at/page/:id', (req, res) => {
+    const a = at.getAsset(req.params.id);
+    if (!a || a.kind !== 'page' || !a.path || String(a.path).includes('..')) return res.status(404).end();
+    if (!canSeeAsset(req, a)) return res.status(404).end();
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Security-Policy', 'sandbox allow-scripts allow-forms allow-popups allow-modals');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.sendFile(path.join(UPLOAD_DIR, a.path), err => { if (err && !res.headersSent) res.status(404).end(); });
+  });
+
+  // A 3D object, under the content type each AR viewer insists on. The address
+  // is handed to the phone's own AR app as well, so it carries the run.
+  r.get('/api/at/model/:id/:file', (req, res) => {
+    const a = at.getAsset(req.params.id);
+    if (!a || a.kind !== 'model' || !canSeeAsset(req, a)) return res.status(404).end();
+    const usdz = req.params.file === 'model.usdz';
+    if (!usdz && req.params.file !== 'model.glb') return res.status(404).end();
+    const rel = usdz ? a.meta && a.meta.usdz : a.path;
+    if (!rel || String(rel).includes('..')) return res.status(404).end();
+    res.setHeader('Content-Type', usdz ? 'model/vnd.usdz+zip' : 'model/gltf-binary');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.sendFile(path.join(UPLOAD_DIR, rel), err => { if (err && !res.headersSent) res.status(404).end(); });
+  });
+  // Built-in 3D objects, so a manager can try AR before having a model of their
+  // own. Each pick is a copy, so it is deleted like any upload and never
+  // touches the sample itself. Made by at/samples/build-samples.js.
+  const SAMPLES = { chest: 'Schatztruhe (Beispiel)', key: 'Alter Schlüssel (Beispiel)' };
+  r.post('/api/at/nodes/:id/assets/sample', gm, (req, res) => {
+    const node = at.getNode(req.params.id);
+    if (!node) return res.status(404).json({ error: 'unknown_node' });
+    const which = String((req.body || {}).sample || '');
+    if (!Object.prototype.hasOwnProperty.call(SAMPLES, which)) return res.status(400).json({ error: 'unknown_sample' });
+    const src = path.join(__dirname, 'samples', which + '.glb');
+    if (!fs.existsSync(src)) return res.status(404).json({ error: 'unknown_sample' });
+    if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
+    const name = crypto.randomUUID() + '.glb';
+    fs.copyFileSync(src, path.join(AT_UPLOAD_DIR, name));
+    const id = at.addAsset(node.id, { kind: 'model', path: `at/${name}`, title: SAMPLES[which],
+      meta: { name: which + '.glb', size: fs.statSync(src).size, sample: which } });
+    res.json({ success: true, id });
+  });
+
+  // The iPhone companion of a 3D object. Replacing it drops the old file.
+  r.post('/api/at/assets/:id/usdz', upload.single('file'), (req, res) => {
+    const drop = () => { if (req.file) { try { fs.unlinkSync(req.file.path); } catch (e) {} } };
+    if (!isGmAuthed(req)) { drop(); return res.status(401).json({ error: 'Unauthorized' }); }
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+    const a = at.getAsset(req.params.id);
+    if (!a || a.kind !== 'model') { drop(); return res.status(404).json({ error: 'unknown_asset' }); }
+    if (!USDZ_EXT.test(String(req.file.originalname || '')) || !magic(req.file.path, 'PK')) { drop(); return res.status(400).json({ error: 'not_usdz' }); }
+    if (req.file.size > MODEL_MAX) { drop(); return res.status(400).json({ error: 'too_large' }); }
+    if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
+    const dest = path.join(AT_UPLOAD_DIR, req.file.filename);
+    try { fs.renameSync(req.file.path, dest); }
+    catch (e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+    if (a.meta && a.meta.usdz && !String(a.meta.usdz).includes('..')) {
+      try { fs.unlinkSync(path.join(UPLOAD_DIR, a.meta.usdz)); } catch (e) {}
+    }
+    const rel = `at/${req.file.filename}`;
+    at.updateAsset(a.id, { meta: { ...a.meta, usdz: rel, usdz_size: req.file.size } });
+    res.json({ success: true });
+  });
+
   function guessKind(mime) {
     if (/^audio\//.test(mime)) return 'audio';
     if (/^video\//.test(mime)) return 'video';
@@ -458,8 +647,8 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
 
   r.delete('/api/at/assets/:id', gm, (req, res) => {
     const a = at.getAsset(req.params.id);
-    if (a && a.path && !String(a.path).includes('..')) {
-      try { fs.unlinkSync(path.join(UPLOAD_DIR, a.path)); } catch (e) {}
+    for (const rel of [a && a.path, a && a.meta && a.meta.usdz]) {
+      if (rel && !String(rel).includes('..')) { try { fs.unlinkSync(path.join(UPLOAD_DIR, rel)); } catch (e) {} }
     }
     at.deleteAsset(req.params.id);
     res.json({ success: true });

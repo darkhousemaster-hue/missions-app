@@ -48,6 +48,20 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 .inp,.ta,.sel{width:100%}
 .ta{resize:vertical;min-height:70px}
 .topbar .sel{width:auto;min-width:190px}
+.kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.kindbtn{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--surface);color:var(--ink-2);font:500 12px/1.2 var(--body);text-align:left;cursor:pointer}
+.kindbtn:hover{color:var(--ink);border-color:var(--ink-3)}
+.kindbtn svg,.rung.find .n svg,.rung .x svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.rung.find .n{display:grid;place-items:center;color:var(--accent)}
+.findform{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--bg-sunk)}
+.findform > b{display:block;font:600 12px/1.2 var(--body);margin-bottom:10px}
+.findform .row2{display:flex;gap:8px;margin-top:6px}
+.pageprev{position:fixed;inset:0;z-index:80;background:oklch(0.10 0.004 60 / .78);display:grid;place-items:center;padding:24px}
+.pageprev .pp-in{width:min(430px,100%);height:min(860px,100%);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.pageprev .pp-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;font:500 12px/1.2 var(--body);color:var(--ink-2)}
+.pageprev iframe{flex:1;border:0;background:#fff;width:100%}
+.pageprev .pp-3d{flex:1;display:grid;place-items:center;min-height:0}
 .seg{display:flex;background:var(--surface);border-radius:var(--r-md);padding:3px;gap:2px;margin-left:auto}
 .seg button{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;border-radius:var(--r-sm);color:var(--ink-3)}
 .seg button[aria-pressed=true]{background:var(--raised);color:var(--ink)}
@@ -293,9 +307,18 @@ const TIPS = {
   't-story':   ['Story', 'Die Texte, die das Team beim Ankommen und beim Weitergehen liest.'],
   't-riddle':  ['Rätsel', 'Die Antwort, die akzeptiert wird, und wie streng verglichen wird.'],
   't-hints':   ['Hinweise', 'Die Hilfe, die sich von selbst öffnet. Ohne Spielleiter kann niemand nachfragen.'],
-  't-fund':    ['Fundstücke', 'Dateien, die hier auftauchen: Audio, Video, Bild oder PDF.'],
+  't-fund':    ['Fundstücke', 'Was das Team hier findet: Dateien, eine Webseite, eine Nummer, eine Adresse, einen Brief. Es schaltet nichts frei, es macht die Geschichte greifbar.'],
   't-style':   ['Stil', 'Aussehen dieses einen Bildschirms.'],
   't-choices': ['Zweige', 'Die Wege, die von dieser Weiche abgehen, und ihre Beschriftung.'],
+  'f-media':   ['Datei', 'Ein Bild, eine Sprachaufnahme, ein Video oder ein PDF. Wird vorgeladen und läuft auch ohne Empfang.'],
+  'f-page':    ['Webseite', 'Eine kleine echte Webseite, zum Beispiel die Seite der Firma aus der Geschichte: eine einzelne HTML-Datei mit allem drin. Sie läuft abgeschottet und kann im Spiel nichts lesen oder verändern.'],
+  'f-file':    ['Download', 'Etwas zum Herunterladen und Knacken: ein ZIP mit Passwort, eine Kontaktkarte (.vcf), die das Handy als Kontakt speichert, eine Kalendereinladung (.ics), eine Tabelle, ein Textdokument.'],
+  'f-model':   ['3D-Objekt (AR)', 'Ein Gegenstand aus der Geschichte, den das Team in 3D dreht und mit der Kamera in echt vor sich hinstellt (AR): auf dem iPhone mit AR Quick Look, auf Android mit Scene Viewer, ohne App. Datei als .glb, fürs iPhone am genauesten mit einer zusätzlichen .usdz.'],
+  'sample3d':  ['Beispiel', 'Fertige 3D-Objekte in echter Grösse, um AR auszuprobieren, bevor ein eigenes Modell da ist. Mit dem Testschlüssel 1898 im Spieler öffnen und das Objekt in den Raum stellen.'],
+  'f-link':    ['Link', 'Öffnet eine Webseite, die es wirklich gibt, oder eine, die ihr selbst ins Netz gestellt habt.'],
+  'f-phone':   ['Telefon', 'Eine Nummer zum Anrufen. Der Klassiker: eine Combox, auf der die Figur eine Nachricht hinterlassen hat.'],
+  'f-email':   ['E-Mail', 'Eine Adresse, an die das Team schreiben kann. Mit einer automatischen Antwort wird daraus ein Rätsel.'],
+  'f-note':    ['Brief', 'Ein Brief, eine Nachricht oder ein Notizzettel, direkt hier geschrieben. Kein Scan nötig, und übersetzbar.'],
   't-ort':     ['Ort', 'Optional. Ohne Ort erscheint der Story-Beat direkt nach dem vorherigen Baustein. Mit Ort wartet er, bis das Team dort ankommt.'],
 
   // fields
@@ -812,7 +835,7 @@ let tab = 'trigger';
 // answer and no location: it is a signpost that reads the next connected
 // station's coordinates, so offering it a radius would be a lie.
 const TABS = {
-  start:   [['text','Text'],['style','Stil']],
+  start:   [['text','Text'],['fund','Fundstücke'],['style','Stil']],
   station: [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
   riddle:  [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
   story:   [['story','Story'],['ort','Ort'],['fund','Fundstücke'],['style','Stil']],
@@ -843,6 +866,83 @@ function renderInspector(){
   };
   $('#b-save').onclick = () => saveNode(n);
   renderPanel(n, l);
+}
+// ── Fundstücke ───────────────────────────────────────────────────────────────
+// What an alternate reality game hands a team: media, but also a website of
+// the story's company, a number that rings a voicemail, an address that
+// answers, a letter, a file to crack open.
+const FIND_ADD = [['media','Bild, Ton, Video, PDF'],['page','Webseite'],['file','Download'],['model','3D-Objekt (AR)'],
+  ['link','Link'],['phone','Telefon'],['email','E-Mail'],['note','Brief']];
+const FIND_LABEL = { image:'Bild', audio:'Ton', video:'Video', doc:'PDF', page:'Webseite', file:'Download',
+  link:'Link', phone:'Telefonnummer', email:'E-Mail-Adresse', note:'Brief', media:'Datei', model:'3D-Objekt' };
+// Google's 3D viewer, loaded the first time a 3D object is looked at.
+const MV_SRC = 'https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js';
+let _mv = null;
+const loadViewer = () => _mv || (_mv = import(MV_SRC).catch(e => { _mv = null; throw e; }));
+const FIND_ICON = {model:'<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12"/><path d="M21 7l-9 5-9-5"/>',media:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/>',page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M7 13h6M7 16h9"/>',file:'<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>',link:'<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',email:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',note:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h5"/>',audio:'<path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>',doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/>'};
+const FIND_ERR = { bad_url:'Das ist keine Webadresse. Sie muss mit https:// oder http:// beginnen.',
+  bad_phone:'Das ist keine Telefonnummer.', bad_email:'Das ist keine E-Mail-Adresse.',
+  empty_note:'Der Brief ist noch leer.', unsupported_type:'Diese Art Datei geht hier nicht.',
+  too_large:'Die Datei ist zu gross: eine Webseite bis 5 MB, ein 3D-Objekt bis 60 MB.',
+  not_glb:'Das ist keine echte .glb-Datei. In Blender: Datei, Exportieren, glTF 2.0, Format „glTF Binary (.glb)“.',
+  not_usdz:'Das ist keine .usdz-Datei.' };
+const FILE_ACCEPT = '.zip,.7z,.rar,.txt,.md,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.epub,.json,.gpx,.kml,.kmz,.vcf,.ics,.eml,.pdf';
+const fmtSize = b => !b ? '' : b < 1024*1024 ? Math.max(1, Math.round(b/1024)) + ' KB' : (b/1024/1024).toFixed(1).replace('.0','') + ' MB';
+function findRow(x, l){
+  const sub = x.kind === 'link' || x.kind === 'phone' || x.kind === 'email' ? x.ref
+    : x.kind === 'note' ? (tx(x.body, l) || '').split('\n')[0].slice(0, 60)
+    : x.kind === 'page' ? ((x.meta && x.meta.display_url) || 'Webseite')
+    : x.kind === 'file' ? ((x.meta && x.meta.name) || '') + (x.meta && x.meta.size ? ' · ' + fmtSize(x.meta.size) : '')
+    : x.kind === 'model' ? ((x.meta && x.meta.name) || '') + (x.meta && x.meta.size ? ' · ' + fmtSize(x.meta.size) : '') + (x.meta && x.meta.usdz ? ' · iPhone-Datei' : '')
+    : FIND_LABEL[x.kind] || x.kind;
+  return '<div class="rung find"><span class="n"><svg viewBox="0 0 24 24">'+(FIND_ICON[x.kind]||FIND_ICON.media)+'</svg></span>'
+    + '<span class="c"><b style="font:600 13px/1.3 var(--body)">'+esc(x.title||x.path)+'</b>'
+    + '<div class="hint" style="margin-top:3px">'+esc(FIND_LABEL[x.kind]||x.kind)+(sub && sub !== FIND_LABEL[x.kind] ? ' · '+esc(sub) : '')+'</div></span>'
+    + (x.kind === 'page' || x.kind === 'model' ? '<button class="x" data-find-view="'+x.id+'" title="Ansehen" aria-label="Ansehen"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>' : '')
+    + '<button class="x" data-find-edit="'+x.id+'" title="Bearbeiten" aria-label="Bearbeiten"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>'
+    + '<button class="x" data-asset-del="'+x.id+'" title="Löschen" aria-label="Löschen">✕</button></div>';
+}
+// An uploaded website, seen the way a team sees it: sandboxed, with an origin
+// of its own. Fetched with the GM login, so the preview works before any run.
+async function previewPage(id){
+  const r = await fetch('/api/at/page/' + id, { headers: TOKEN ? { Authorization:'Bearer ' + TOKEN } : {} });
+  if(!r.ok) return uiAlert('Die Seite konnte nicht geladen werden.');
+  const html = await r.text();
+  const ov = document.createElement('div');
+  ov.className = 'pageprev';
+  ov.innerHTML = '<div class="pp-in"><div class="pp-bar"><span>Vorschau, so sieht das Team die Seite</span>'
+    + '<button class="btn" type="button">Schliessen</button></div>'
+    + '<iframe sandbox="allow-scripts allow-forms allow-popups allow-modals" referrerpolicy="no-referrer"></iframe></div>';
+  ov.querySelector('iframe').srcdoc = html;
+  const close = () => ov.remove();
+  ov.querySelector('button').onclick = close;
+  ov.onclick = e => { if(e.target === ov) close(); };
+  document.body.appendChild(ov);
+}
+// A 3D object as the team will turn it in their hand. Fetched with the GM login
+// and handed to the viewer as a local copy, since the viewer cannot send one.
+async function previewModel(x){
+  const ov = document.createElement('div');
+  ov.className = 'pageprev';
+  ov.innerHTML = '<div class="pp-in"><div class="pp-bar"><span>Vorschau: drehen und zoomen wie das Team</span>'
+    + '<button class="btn" type="button">Schliessen</button></div><div class="pp-3d"><p class="hint">Lädt…</p></div></div>';
+  let url = null;
+  const close = () => { ov.remove(); if(url) URL.revokeObjectURL(url); };
+  ov.querySelector('button').onclick = close;
+  ov.onclick = e => { if(e.target === ov) close(); };
+  document.body.appendChild(ov);
+  try {
+    const [r] = await Promise.all([fetch('/api/at/model/' + x.id + '/model.glb', { headers: TOKEN ? { Authorization:'Bearer ' + TOKEN } : {} }), loadViewer()]);
+    if(!r.ok) throw new Error(r.status);
+    url = URL.createObjectURL(await r.blob());
+    const mv = document.createElement('model-viewer');
+    mv.setAttribute('src', url); mv.setAttribute('camera-controls', ''); mv.setAttribute('auto-rotate', '');
+    mv.setAttribute('shadow-intensity', '1'); mv.setAttribute('alt', x.title || '3D-Objekt');
+    mv.style.cssText = 'width:100%;height:100%;background:var(--bg-sunk)';
+    const box = ov.querySelector('.pp-3d'); box.innerHTML = ''; box.appendChild(mv);
+  } catch(e){
+    ov.querySelector('.pp-3d').innerHTML = '<p class="hint">Das Objekt konnte nicht geladen werden.</p>';
+  }
 }
 function field(label, id, val, ta, hint){
   // The label may carry a tip dot, so it is markup, not text. Values are still
@@ -988,26 +1088,108 @@ function renderPanel(n, l){
   }
   else if(tab === 'fund'){
     const as = n.assets || [];
-    p.innerHTML = (as.length ? as.map(a =>
-        '<div class="rung"><span class="n">'+(a.kind||'?').slice(0,1).toUpperCase()+'</span><span class="c">'
-        + '<b style="font:600 13px/1.3 var(--body)">'+esc(a.title||a.path)+'</b>'
-        + '<div class="hint" style="margin-top:3px">'+esc(a.kind)+'</div></span>'
-        + '<button class="x" data-asset-del="'+a.id+'">✕</button></div>').join('')
-        : '<p class="hint" style="margin:0">Noch nichts hinterlegt.</p>')
-      + '<div class="drop" id="b-add-asset">Audio, Video, Bild oder PDF hochladen</div>'
-      + '<input type="file" id="f-asset" style="display:none" accept="image/*,audio/*,video/*,.pdf">'
-      + '<p class="hint">Alles wird beim Start vorgeladen, damit es auch im Funkloch abspielt.</p>';
-    $('#b-add-asset').onclick = () => $('#f-asset').click();
-    $('#f-asset').onchange = async e => {
-      const f = e.target.files[0]; if(!f) return;
-      const fd = new FormData(); fd.append('file', f); fd.append('title', f.name);
+    p.innerHTML = '<div id="finds">' + (as.length ? as.map(x => findRow(x, l)).join('')
+        : '<p class="hint" style="margin:0">Noch nichts hinterlegt.</p>') + '</div>'
+      + '<div class="fld" style="margin-top:14px"><label>Hinzufügen'+tipdot('t-fund')+'</label>'
+      + '<div class="kinds">' + FIND_ADD.map(([k, lab]) =>
+          '<button type="button" class="kindbtn" data-add-find="'+k+'" data-tip="f-'+k+'">'
+          + '<svg viewBox="0 0 24 24">'+FIND_ICON[k]+'</svg><span>'+lab+'</span></button>').join('') + '</div></div>'
+      + '<div id="find-form"></div>'
+      + '<input type="file" id="f-asset" style="display:none">'
+      + '<p class="hint">Bilder, Ton, Video und Webseiten werden beim Start vorgeladen, damit sie auch im Funkloch laufen. Downloads holt das Team erst, wenn es sie öffnet.</p>';
+    const upload = async (file, extra) => {
+      const fd = new FormData(); fd.append('file', file); fd.append('title', extra.title || file.name);
+      for (const [k, v] of Object.entries(extra)) if(k !== 'title' && v != null) fd.append(k, v);
       const r = await fetch('/api/at/nodes/' + n.id + '/assets', { method:'POST', headers: TOKEN?{Authorization:'Bearer '+TOKEN}:{}, body:fd });
       const j = await r.json().catch(()=>({}));
-      if(!j.success) await uiAlert('Upload fehlgeschlagen: ' + (j.error||r.status));
+      if(!j.success) await uiAlert(FIND_ERR[j.error] || ('Upload fehlgeschlagen: ' + (j.error||r.status)));
       await openTrail(TRAIL.id);
     };
-    p.querySelectorAll('[data-asset-del]').forEach(b => b.onclick = async () => {
-      await api('DELETE', '/assets/' + b.dataset.assetDel); await openTrail(TRAIL.id);
+    const pickFile = (accept, extra) => {
+      const inp = $('#f-asset'); inp.value = ''; inp.accept = accept;
+      inp.onchange = e => { const f = e.target.files[0]; if(f) upload(f, extra); };
+      inp.click();
+    };
+    const form = (k, cur) => {
+      const ff = $('#find-form');
+      const head = '<div class="findform"><b>'+(cur ? 'Bearbeiten: ' : '')+(FIND_LABEL[k]||k)+'</b>';
+      const titleF = field('Titel, so sieht das Team den Fund','ff-title',cur ? cur.title : '');
+      let body = '';
+      if(k === 'link')  body = field('Adresse','ff-ref',cur ? cur.ref : 'https://',false,'Eine echte Webseite oder eine, die ihr selbst ins Netz gestellt habt.');
+      if(k === 'phone') body = field('Nummer','ff-ref',cur ? cur.ref : '',false,'Mit Landesvorwahl, z. B. +41 79 123 45 67. Das Team ruft direkt aus dem Trail an.');
+      if(k === 'email') body = field('Adresse','ff-ref',cur ? cur.ref : '',false,'Mit automatischer Antwort wird daraus ein Rätsel.')
+                             + field('Betreff (vorausgefüllt)','ff-subject',cur && cur.meta ? cur.meta.subject : '');
+      if(k === 'note')  body = '<div class="fld"><label>Aussehen</label><div class="seg" style="margin-left:0">'
+                             + [['letter','Brief'],['message','Nachricht'],['note','Notizzettel']].map(([v,t]) =>
+                                 '<button type="button" data-look="'+v+'" aria-pressed="'+(((cur&&cur.meta&&cur.meta.look)||'letter')===v)+'">'+t+'</button>').join('')
+                             + '</div></div>' + field('Text · '+l,'ff-body',cur ? tx(cur.body,l) : '',true,'Zeilenumbrüche bleiben, wie du sie schreibst.');
+      if(k === 'page')  body = field('Adresszeile, die angezeigt wird','ff-shown',cur && cur.meta ? cur.meta.display_url : '',false,'Nur zur Anzeige, z. B. www.kellerei-ilse.ch. Die Seite selbst kommt aus der Datei.');
+      if(k === 'model') body = '<p class="hint">Eine .glb-Datei, am besten unter 10 MB, damit sie auch unterwegs schnell lädt. Aus Blender: Datei, Exportieren, glTF 2.0, „glTF Binary“.</p>'
+                             + (cur ? '' : '<div class="fld"><label>Oder ein Beispiel zum Ausprobieren'+tipdot('sample3d')+'</label><div class="row2" style="margin-top:0">'
+                                    + '<button class="btn" type="button" data-sample="chest">Schatztruhe</button>'
+                                    + '<button class="btn" type="button" data-sample="key">Alter Schlüssel</button></div></div>')
+                             + (cur ? '<div class="fld"><label>iPhone-Datei (.usdz)</label><button class="btn" type="button" id="ff-usdz" style="width:100%">'
+                                    + (cur.meta && cur.meta.usdz ? 'iPhone-Datei ersetzen' : 'iPhone-Datei hinzufügen') + '</button>'
+                                    + '<p class="hint">Freiwillig. Ohne sie baut das iPhone das Objekt selbst; mit ihr sieht es im Raum am genauesten aus.</p></div>' : '');
+      ff.innerHTML = head + titleF + body + '<div class="row2">'
+        + (k === 'model' && !cur ? '<button class="btn primary" type="button" id="ff-file">GLB-Datei wählen</button>'
+         : k === 'page' && !cur ? '<button class="btn primary" type="button" id="ff-file">HTML-Datei wählen</button>'
+                                 : '<button class="btn primary" type="button" id="ff-save">Speichern</button>')
+        + '<button class="btn" type="button" id="ff-cancel">Abbrechen</button></div><div id="ff-err" class="hint" style="color:var(--stop)"></div></div>';
+      ff.querySelectorAll('[data-look]').forEach(bt => bt.onclick = () =>
+        ff.querySelectorAll('[data-look]').forEach(x => x.setAttribute('aria-pressed', String(x === bt))));
+      $('#ff-cancel').onclick = () => { ff.innerHTML = ''; };
+      const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : undefined; };
+      const look = () => { const on = ff.querySelector('[data-look][aria-pressed="true"]'); return on ? on.dataset.look : 'letter'; };
+      if($('#ff-file')) $('#ff-file').onclick = () => k === 'model'
+        ? pickFile('.glb', { kind:'model', title: val('ff-title') })
+        : pickFile('.html,.htm', { kind:'page', title: val('ff-title'), display_url: val('ff-shown') });
+      ff.querySelectorAll('[data-sample]').forEach(bt => bt.onclick = async () => {
+        const r = await api('POST', '/nodes/' + n.id + '/assets/sample', { sample: bt.dataset.sample });
+        if(r && r.error){ $('#ff-err').textContent = r.error; return; }
+        await openTrail(TRAIL.id);
+      });
+      if($('#ff-usdz')) $('#ff-usdz').onclick = () => {
+        const inp = $('#f-asset'); inp.value = ''; inp.accept = '.usdz';
+        inp.onchange = async e => {
+          const f = e.target.files[0]; if(!f) return;
+          const fd = new FormData(); fd.append('file', f);
+          const r = await fetch('/api/at/assets/' + cur.id + '/usdz', { method:'POST', headers: TOKEN?{Authorization:'Bearer '+TOKEN}:{}, body:fd });
+          const j = await r.json().catch(()=>({}));
+          if(!j.success) return uiAlert(FIND_ERR[j.error] || ('Upload fehlgeschlagen: ' + (j.error||r.status)));
+          await openTrail(TRAIL.id);
+        };
+        inp.click();
+      };
+      if($('#ff-save')) $('#ff-save').onclick = async () => {
+        const data = { title: val('ff-title') };
+        if(['link','phone','email'].includes(k)) data.ref = val('ff-ref');
+        if(k === 'email') data.meta = { subject: val('ff-subject') };
+        if(k === 'note'){ data.body = Object.assign({}, cur ? cur.body : {}, { [l]: $('#ff-body').value }); data.meta = { look: look() }; }
+        if(k === 'page') data.meta = { display_url: val('ff-shown') };
+        const r = cur ? await api('PUT', '/assets/' + cur.id, data)
+                      : await api('POST', '/nodes/' + n.id + '/assets/entry', Object.assign({ kind:k }, data));
+        if(r && r.error){ $('#ff-err').textContent = FIND_ERR[r.error] || r.error; return; }
+        await openTrail(TRAIL.id);
+      };
+      ff.scrollIntoView({ block:'nearest' });
+    };
+    p.querySelectorAll('[data-add-find]').forEach(bt => bt.onclick = () => {
+      const k = bt.dataset.addFind;
+      if(k === 'media') return pickFile('image/*,audio/*,video/*,.pdf', {});
+      if(k === 'file')  return pickFile(FILE_ACCEPT, { kind:'file' });
+      form(k, null);
+    });
+    p.querySelectorAll('[data-find-edit]').forEach(bt => bt.onclick = () => {
+      const x = as.find(y => y.id === Number(bt.dataset.findEdit)); if(x) form(x.kind, x);
+    });
+    p.querySelectorAll('[data-find-view]').forEach(bt => bt.onclick = () => {
+      const x = as.find(y => y.id === Number(bt.dataset.findView));
+      return x && x.kind === 'model' ? previewModel(x) : previewPage(Number(bt.dataset.findView));
+    });
+    p.querySelectorAll('[data-asset-del]').forEach(bt => bt.onclick = async () => {
+      if(!await uiConfirm('Diesen Fund löschen?', { ok:'Löschen' })) return;
+      await api('DELETE', '/assets/' + bt.dataset.assetDel); await openTrail(TRAIL.id);
     });
   }
   else if(tab === 'text'){

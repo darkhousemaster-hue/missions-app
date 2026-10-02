@@ -125,6 +125,12 @@ db.exec(`
 // Added after the first build, so existing trails get them here.
 try { db.exec("ALTER TABLE at_nodes ADD COLUMN story_media TEXT DEFAULT 'text'"); } catch (e) {}
 try { db.exec("ALTER TABLE at_nodes ADD COLUMN story_media_path TEXT"); } catch (e) {}
+// Finds that are not files: a link, a number, an address, a letter. ref holds
+// the target, body the text (per language), meta the rest (file name, size,
+// the address a fake website shows, an email subject).
+try { db.exec("ALTER TABLE at_assets ADD COLUMN ref TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE at_assets ADD COLUMN body TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE at_assets ADD COLUMN meta TEXT"); } catch (e) {}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const J = (v, fallback) => {
@@ -265,13 +271,27 @@ const setHints = (nodeId, hints = []) => {
 };
 
 // ── Assets ───────────────────────────────────────────────────────────────────
+const hydrateAsset = a => ({ ...a, id: num(a.id), node_id: num(a.node_id),
+  appear_when: J(a.appear_when, {}), body: J(a.body, {}), meta: J(a.meta, {}) });
 const listAssets = nodeId => db.prepare('SELECT * FROM at_assets WHERE node_id=? ORDER BY order_index, id')
-  .all(Number(nodeId)).map(a => ({ ...a, id: num(a.id), appear_when: J(a.appear_when, {}) }));
+  .all(Number(nodeId)).map(hydrateAsset);
 const addAsset = (nodeId, p) => num(db.prepare(
-  'INSERT INTO at_assets(node_id,kind,path,title,appear_when,preload,order_index) VALUES(?,?,?,?,?,?,?)')
-  .run(Number(nodeId), String(p.kind || 'image'), String(p.path), String(p.title || ''),
-       S(p.appear_when || {}), p.preload === 0 ? 0 : 1, Number(p.order_index) || 0).lastInsertRowid);
-const getAsset = id => db.prepare('SELECT * FROM at_assets WHERE id=?').get(Number(id));
+  'INSERT INTO at_assets(node_id,kind,path,title,appear_when,preload,order_index,ref,body,meta) VALUES(?,?,?,?,?,?,?,?,?,?)')
+  .run(Number(nodeId), String(p.kind || 'image'), String(p.path || ''), String(p.title || ''),
+       S(p.appear_when || {}), p.preload === 0 ? 0 : 1, Number(p.order_index) || 0,
+       p.ref == null ? null : String(p.ref), S(p.body || {}), S(p.meta || {})).lastInsertRowid);
+const getAsset = id => { const a = db.prepare('SELECT * FROM at_assets WHERE id=?').get(Number(id)); return a ? hydrateAsset(a) : null; };
+const ASSET_FIELDS = ['title', 'ref', 'body', 'meta', 'appear_when', 'preload'];
+const updateAsset = (id, p) => {
+  const cur = db.prepare('SELECT * FROM at_assets WHERE id=?').get(Number(id));
+  if (!cur) return false;
+  const vals = ASSET_FIELDS.map(k => {
+    if (p[k] === undefined) return cur[k];
+    return ['body', 'meta', 'appear_when'].includes(k) ? S(p[k]) : (k === 'preload' ? (p[k] ? 1 : 0) : p[k]);
+  });
+  db.prepare(`UPDATE at_assets SET ${ASSET_FIELDS.map(k => k + '=?').join(',')} WHERE id=?`).run(...vals, Number(id));
+  return true;
+};
 const deleteAsset = id => { db.prepare('DELETE FROM at_assets WHERE id=?').run(Number(id)); };
 
 // ── Keys ─────────────────────────────────────────────────────────────────────
@@ -405,7 +425,7 @@ module.exports = {
   listNodes, getNode, createNode, updateNode, deleteNode,
   listEdges, addEdge, removeEdge,
   listHints, setHints,
-  listAssets, addAsset, getAsset, deleteAsset,
+  listAssets, addAsset, getAsset, updateAsset, deleteAsset,
   mintKeys, listKeys, findKey,
   getRun, findRunByJoinCode, redeemKey, startRun, finishRun, setRunLang, setRunBranch, setRunTeam,
   listProgress, openNode, completeNode, bumpAttempts, useHint,
