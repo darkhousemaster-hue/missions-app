@@ -300,18 +300,26 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
 .settings-shell{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr;grid-template-areas:"topbar topbar" "side main";height:100%;min-height:0;flex:1;}
 /* Collapsing the settings menu. The shell is a grid with a fixed 260px nav
    column, so the column itself has to go to zero; hiding the buttons alone
-   would leave the gap behind. */
+   would leave the gap behind. The toggle rides the seam between menu and
+   panel and slides with it, so it never covers either. Only on wide screens:
+   on a phone the menu is stacked above the panel and there is no column. */
 .settings-shell{position:relative;transition:grid-template-columns .2s cubic-bezier(.22,1,.36,1);}
-.settings-shell.navshut{grid-template-columns:0 1fr;}
-.settings-shell.navshut .settings-side{overflow:hidden;border-right:0;padding-left:0;padding-right:0;min-width:0;}
-.settings-shell.navshut .settings-side > *{display:none;}
-#s-navtoggle{position:absolute;left:0;top:76px;z-index:30;width:24px;height:34px;display:grid;place-items:center;
+#s-navtoggle{position:absolute;left:0;top:76px;z-index:30;width:22px;height:34px;display:grid;place-items:center;
   border-radius:0 7px 7px 0;background:var(--surface2);color:var(--text-dim);
-  border:1px solid var(--hairline);border-left:0;cursor:pointer;}
+  border:1px solid var(--hairline);border-left:0;cursor:pointer;transform:translateX(260px);
+  transition:transform .2s cubic-bezier(.22,1,.36,1),color .15s,background .15s;}
 #s-navtoggle:hover{color:var(--text);background:var(--border);}
+#s-navtoggle:focus-visible{outline:2px solid var(--orange);outline-offset:2px;}
 #s-navtoggle svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;
   transition:transform .2s cubic-bezier(.22,1,.36,1);}
-.settings-shell.navshut #s-navtoggle svg{transform:rotate(180deg);}
+@media(min-width:769px){
+  .settings-shell.navshut{grid-template-columns:0 1fr;}
+  .settings-shell.navshut .settings-side{overflow:hidden;border-right:0;padding-left:0;padding-right:0;min-width:0;}
+  .settings-shell.navshut .settings-side > *{display:none;}
+  .settings-shell.navshut #s-navtoggle{transform:none;}
+  .settings-shell.navshut #s-navtoggle svg{transform:rotate(180deg);}
+}
+@media(max-width:768px){ #s-navtoggle{display:none;} }
 .settings-topbar{grid-area:topbar;display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--hairline);background:var(--bg2);}
 .settings-topbar h1{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin:0;}
 .settings-topbar .spacer{flex:1;}

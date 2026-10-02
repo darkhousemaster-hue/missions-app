@@ -6,6 +6,7 @@ const multer     = require('multer');
 const QRCode     = require('qrcode');
 const path       = require('path');
 const fs         = require('fs');
+const crypto     = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const cron       = require('node-cron');
 const db         = require('./db/database');
@@ -43,7 +44,49 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname,'public')));
+// ── Pages carry a fingerprint of their own CSS and JS ───────────────────────
+// Pages linked their stylesheet as app.css?v=2.4.56, a stamp that only helps
+// if someone remembers to change it, and nobody had since 2.4.56. Cloudflare
+// tells browsers to keep CSS and JS for four hours, so a release that changed
+// markup and styles together put the new markup on the old styles (v2.6.7:
+// the settings-menu toggle came out as a bare white box). The stamp is now a
+// hash of the file itself, written into each page as it is served, and pages
+// are revalidated on every load so a new stamp reaches the browser at once.
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const assetHashes = new Map();   // '/css/app.css' -> { mtime, hash }
+function assetHash(rel) {
+  const file = path.join(PUBLIC_DIR, rel);
+  if (!file.startsWith(PUBLIC_DIR + path.sep)) return null;
+  let st;
+  try { st = fs.statSync(file); } catch (e) { return null; }
+  const hit = assetHashes.get(rel);
+  if (hit && hit.mtime === st.mtimeMs) return hit.hash;
+  const hash = crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex').slice(0, 10);
+  assetHashes.set(rel, { mtime: st.mtimeMs, hash });
+  return hash;
+}
+// Same-origin /css/ and /js/ references only; CDN links are left alone.
+const ASSET_REF = /(["'])(\/(?:css|js)\/[\w./-]+?\.(?:css|js))(?:\?v=[^"'#]*)?\1/g;
+function sendPage(res, name) {
+  fs.readFile(path.join(PUBLIC_DIR, name), 'utf8', (err, html) => {
+    if (err) return res.status(404).end();
+    html = html.replace(ASSET_REF, (m, q, rel) => {
+      const h = assetHash(rel);
+      return h ? `${q}${rel}?v=${h}${q}` : m;
+    });
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(html);
+  });
+}
+// Any page in public/ by its own name. The pattern admits no slash and no dot
+// before .html, so nothing outside public/ can be named.
+app.get(/^\/[\w-]+\.html$/, (req, res, next) => {
+  const name = req.path.slice(1);
+  if (!fs.existsSync(path.join(PUBLIC_DIR, name))) return next();
+  sendPage(res, name);
+});
+
+app.use(express.static(PUBLIC_DIR));
 
 // Uploaded media is user-supplied. Serve it with nosniff (set above) AND force
 // anything that isn't a recognised image/video to download instead of render,
@@ -2257,11 +2300,11 @@ cron.schedule('0 * * * *', () => {
   for(const [token,s] of drawSessions){ if(s.createdAt < drawCutoff) drawSessions.delete(token); }
 });
 
-app.get('/gm*',        (req,res)=>res.sendFile(path.join(__dirname,'public','gm.html')));
-app.get('/join*',      (req,res)=>res.sendFile(path.join(__dirname,'public','join.html')));
-app.get('/play*',      (req,res)=>res.sendFile(path.join(__dirname,'public','play.html')));
-app.get('/cityrush*',  (req,res)=>res.sendFile(path.join(__dirname,'public','cityrush.html')));
-app.get('/draw*',      (req,res)=>res.sendFile(path.join(__dirname,'public','draw.html')));
+app.get('/gm*',        (req,res)=>sendPage(res,'gm.html'));
+app.get('/join*',      (req,res)=>sendPage(res,'join.html'));
+app.get('/play*',      (req,res)=>sendPage(res,'play.html'));
+app.get('/cityrush*',  (req,res)=>sendPage(res,'cityrush.html'));
+app.get('/draw*',      (req,res)=>sendPage(res,'draw.html'));
 
 // Turn Multer's file-size limit (200 MB, see `upload` above) into a clean 413
 // the player app can explain ("video too large"), instead of a generic 500 that
