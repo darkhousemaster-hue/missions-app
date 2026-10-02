@@ -2300,6 +2300,14 @@ cron.schedule('0 * * * *', () => {
   for(const [token,s] of drawSessions){ if(s.createdAt < drawCutoff) drawSessions.delete(token); }
 });
 
+// The bare address answered 404. People land there when they type only the
+// domain, and player pages before 2.6.9 sent a player who had lost their
+// session there too. Send them to the join page, which asks for a game ID when
+// none is given; the query rides along, so /?game=ID still opens that game.
+app.get('/', (req,res) => {
+  const q = req.originalUrl.indexOf('?');
+  res.redirect(302, '/join.html' + (q === -1 ? '' : req.originalUrl.slice(q)));
+});
 app.get('/gm*',        (req,res)=>sendPage(res,'gm.html'));
 app.get('/join*',      (req,res)=>sendPage(res,'join.html'));
 app.get('/play*',      (req,res)=>sendPage(res,'play.html'));

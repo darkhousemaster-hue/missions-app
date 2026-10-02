@@ -145,6 +145,23 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 #screen-loading, #screen-error { padding:40px 24px; text-align:center; color:var(--text-muted); }
 #screen-error h2 { color:var(--red-light); margin-bottom:8px; font:800 22px/1 var(--display); letter-spacing:.06em; text-transform:uppercase; }
 #screen-error p { color:var(--text-dim); font:500 13px/1.5 var(--body); margin-top:4px; }
+#screen-error .join-existing-link { margin-top:24px; text-decoration:none; }
+
+/* ── Game ID entry: the create screen's field and bottom CTA. The ID reads
+   in mono, as game IDs do everywhere else. The example in the placeholder is
+   set in the body face so it can't pass for an ID already filled in. The
+   box's padding sits on the label and the input instead, so a tap anywhere in
+   the box focuses the field; it looks the same. */
+.code-screen { flex:1; flex-direction:column; }
+.code-screen .name-field { padding:0; }
+.code-screen .name-field .label { display:block; padding:12px 16px 6px; margin-bottom:0; }
+.code-screen .name-field .code-input { padding:0 16px 12px; font:700 22px/1.1 var(--mono); letter-spacing:.12em; }
+.code-screen .name-field .code-input::placeholder { font:500 15px/1.1 var(--body); letter-spacing:.02em; text-transform:none; }
+/* The input drops its outline, which left keyboard users no sign of where
+   they were. Same focus as every other field in the app: orange border plus
+   the soft orange ring. */
+.name-field { transition:border-color .12s, box-shadow .12s; }
+.name-field:focus-within { border-color:var(--orange); box-shadow:0 0 0 2px var(--orange-soft); }
 
 /* ── Selfie camera modal — full-screen camera with shutter / flip /
    cancel; review pane with retake / accept. */
@@ -204,7 +221,27 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
     <h2 id="err-title">Fehler</h2>
     <p id="error-detail">Ungültiger Code oder Spiel beendet.</p>
     <p id="err-ask-gm">Bitte den Spielleiter um einen neuen Code.</p>
+    <a class="join-existing-link" id="err-code-link" href="/join.html">Spiel-ID eingeben</a>
   </div>
+
+  <!-- Game ID entry: the link carried no game (someone typed the bare address,
+       or a player page lost its session and had no game ID to pass on). -->
+  <form id="screen-code" class="code-screen" style="display:none;" onsubmit="submitGameCode(event)">
+    <div class="join-body">
+      <p class="lead" id="code-lead">Scanne den QR-Code des Spielleiters oder gib die Spiel-ID ein.</p>
+      <div class="name-field">
+        <label class="label" for="game-code" id="game-code-label">Spiel-ID</label>
+        <input id="game-code" class="code-input" type="text" placeholder="z. B. 7F3A9C1B" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-describedby="code-error">
+      </div>
+      <p class="error-msg" id="code-error" role="alert"></p>
+    </div>
+    <div class="join-cta">
+      <button type="submit" class="btn btn-primary" id="btn-code">
+        <span id="btn-code-label">Weiter</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+      </button>
+    </div>
+  </form>
 
   <!-- Create-new screen (mockup default) -->
   <div id="screen-create" class="join-body" style="display:none;">
@@ -320,7 +357,10 @@ const JOIN_T = {
        waiting:'Warte…', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.',
        name_blocked:'Dieser Teamname ist nicht erlaubt. Bitte wähle einen anderen.', name_taken:'Teamname bereits vergeben. Bitte wähle einen anderen.',
        cam_denied:'Kamera-Zugriff abgelehnt.', cam_unavailable:'Kamera nicht verfügbar.',
-       sm_retake:'Erneut', sm_accept:'Übernehmen'},
+       sm_retake:'Erneut', sm_accept:'Übernehmen',
+       code_lead:'Scanne den QR-Code des Spielleiters oder gib die Spiel-ID ein.', code_label:'Spiel-ID', code_ph:'z. B. 7F3A9C1B',
+       code_go:'Weiter', code_empty:'Bitte die Spiel-ID eingeben.', code_unknown:'Kein Spiel mit dieser ID. Bitte beim Spielleiter nachfragen.',
+       enter_code:'Spiel-ID eingeben'},
   en: {loading:'Loading…', error:'Error', invalid:'Invalid code or game ended.', ask_gm:'Please ask the Gamemaster for a new code.', game_ended:'This game has already ended.',
        lead:'Take a selfie and pick a team name. Other teams will see your selfie on the rankings.',
        selfie_cta:'Tap to capture', teamname:'Team name', teamname_ph:'Type a team name…',
@@ -330,7 +370,10 @@ const JOIN_T = {
        waiting:'Waiting…', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.',
        name_blocked:'That team name isn’t allowed. Please choose another.', name_taken:'Team name already taken. Please choose another.',
        cam_denied:'Camera access denied.', cam_unavailable:'Camera not available.',
-       sm_retake:'Retake', sm_accept:'Use'},
+       sm_retake:'Retake', sm_accept:'Use',
+       code_lead:'Scan the QR code from your Gamemaster, or enter the game ID.', code_label:'Game ID', code_ph:'e.g. 7F3A9C1B',
+       code_go:'Continue', code_empty:'Please enter the game ID.', code_unknown:'No game with this ID. Please check it with your Gamemaster.',
+       enter_code:'Enter a game ID'},
   fr: {loading:'Chargement…', error:'Erreur', invalid:'Code invalide ou partie terminée.', ask_gm:'Demande un nouveau code au Gamemaster.', game_ended:'Cette partie est déjà terminée.',
        lead:'Fais un selfie et choisis un nom d’équipe. Les autres équipes verront votre selfie dans le classement.',
        selfie_cta:'Toucher pour capturer', teamname:'Nom d’équipe', teamname_ph:'Saisir le nom de l’équipe…',
@@ -340,7 +383,10 @@ const JOIN_T = {
        waiting:'Attente…', conn_err:'Erreur de connexion. Réessaie.', err_default:'Erreur. Réessaie.',
        name_blocked:'Ce nom d’équipe n’est pas autorisé. Choisis-en un autre.', name_taken:'Nom d’équipe déjà pris. Choisis-en un autre.',
        cam_denied:'Accès caméra refusé.', cam_unavailable:'Caméra non disponible.',
-       sm_retake:'Refaire', sm_accept:'Utiliser'},
+       sm_retake:'Refaire', sm_accept:'Utiliser',
+       code_lead:'Scanne le QR code du Gamemaster ou saisis l’ID de partie.', code_label:'ID de partie', code_ph:'ex. 7F3A9C1B',
+       code_go:'Continuer', code_empty:'Saisis l’ID de partie.', code_unknown:'Aucune partie avec cet ID. Vérifie-le auprès du Gamemaster.',
+       enter_code:'Saisir un ID de partie'},
   it: {loading:'Caricamento…', error:'Errore', invalid:'Codice non valido o partita terminata.', ask_gm:'Chiedi al Gamemaster un nuovo codice.', game_ended:'Questa partita è già terminata.',
        lead:'Fate un selfie e scegliete un nome squadra. Le altre squadre vedranno il selfie nella classifica.',
        selfie_cta:'Tocca per scattare', teamname:'Nome squadra', teamname_ph:'Inserisci il nome…',
@@ -350,7 +396,10 @@ const JOIN_T = {
        waiting:'Attendi…', conn_err:'Errore di connessione. Riprova.', err_default:'Errore. Riprova.',
        name_blocked:'Questo nome squadra non è consentito. Scegline un altro.', name_taken:'Nome squadra già in uso. Scegline un altro.',
        cam_denied:'Accesso fotocamera negato.', cam_unavailable:'Fotocamera non disponibile.',
-       sm_retake:'Riprova', sm_accept:'Usa'},
+       sm_retake:'Riprova', sm_accept:'Usa',
+       code_lead:'Scansiona il codice QR del Gamemaster o inserisci l’ID partita.', code_label:'ID partita', code_ph:'es. 7F3A9C1B',
+       code_go:'Continua', code_empty:'Inserisci l’ID partita.', code_unknown:'Nessuna partita con questo ID. Verificalo con il Gamemaster.',
+       enter_code:'Inserisci un ID partita'},
   es: {loading:'Cargando…', error:'Error', invalid:'Código no válido o partida finalizada.', ask_gm:'Pide al Gamemaster un nuevo código.', game_ended:'Esta partida ya ha terminado.',
        lead:'Hazte un selfie y elige un nombre de equipo. Otros equipos verán vuestro selfie en la clasificación.',
        selfie_cta:'Toca para capturar', teamname:'Nombre del equipo', teamname_ph:'Escribe el nombre…',
@@ -360,7 +409,10 @@ const JOIN_T = {
        waiting:'Esperando…', conn_err:'Error de conexión. Inténtalo de nuevo.', err_default:'Error. Inténtalo de nuevo.',
        name_blocked:'Ese nombre de equipo no está permitido. Elige otro.', name_taken:'Nombre de equipo ya en uso. Elige otro.',
        cam_denied:'Acceso a cámara denegado.', cam_unavailable:'Cámara no disponible.',
-       sm_retake:'Repetir', sm_accept:'Usar'},
+       sm_retake:'Repetir', sm_accept:'Usar',
+       code_lead:'Escanea el código QR del Gamemaster o introduce el ID de partida.', code_label:'ID de partida', code_ph:'p. ej. 7F3A9C1B',
+       code_go:'Continuar', code_empty:'Introduce el ID de partida.', code_unknown:'No hay ninguna partida con este ID. Compruébalo con el Gamemaster.',
+       enter_code:'Introducir un ID de partida'},
 };
 function jt(k) { const L = joinBaseOf(joinLang); return (JOIN_T[L] || JOIN_T.de)[k] || k; }
 
@@ -381,6 +433,11 @@ function _applyJoinTranslations() {
   $('err-title').textContent = jt('error');
   $('error-detail').textContent = jt('invalid');
   $('err-ask-gm').textContent = jt('ask_gm');
+  $('err-code-link').textContent = jt('enter_code');
+  $('code-lead').textContent = jt('code_lead');
+  $('game-code-label').textContent = jt('code_label');
+  $('game-code').placeholder = jt('code_ph');
+  $('btn-code-label').textContent = jt('code_go');
   $('lead-text').textContent = jt('lead');
   $('selfie-cta-label').textContent = jt('selfie_cta');
   $('team-name-label').textContent = jt('teamname');
@@ -540,7 +597,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     show('create');
     return;
   }
-  if (!gameId) { show('error'); return; }
+  // No game in the link: ask for the ID rather than call it invalid. The
+  // game ID pill has nothing to show here, so it goes.
+  if (!gameId) {
+    document.getElementById('game-id-display').style.display = 'none';
+    show('code');
+    return;
+  }
 
   // Already joined this exact game — go straight to play / Rail Adventure
   const storedGame = sessionStorage.getItem('gameId');
@@ -742,8 +805,55 @@ async function joinExisting(teamId, teamName) {
   }
 }
 
+// Game ID typed in by hand, as the Gamemaster reads it off their screen. IDs
+// are stored in capitals and looked up exactly, so case and any spaces or
+// dashes are dropped first. Checked here so a typo stays on this form instead
+// of landing on the error screen.
+async function submitGameCode(e) {
+  e.preventDefault();
+  // Cleared first, so the alert changes, and is read out again, even when the
+  // next message is the same as the last one.
+  setCodeError('');
+  const code = document.getElementById('game-code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let key = 'code_empty';
+  if (code) {
+    setCodeBusy(true);
+    key = 'conn_err';
+    try {
+      const res = await fetch('/api/games/' + encodeURIComponent(code));
+      if (res.ok) {
+        const game = await res.json();
+        if (game.status !== 'ended') { location.href = '/join.html?game=' + encodeURIComponent(code); return; }
+        key = 'game_ended';
+      } else if (res.status === 404) {
+        key = 'code_unknown';
+      }
+    } catch (err) { /* network: key stays conn_err */ }
+    setCodeBusy(false);
+  } else {
+    await new Promise(r => setTimeout(r, 100));   // the beat that makes it a change
+  }
+  setCodeError(key);
+}
+// Busy while the ID is checked. Stays busy once the check passes, since the
+// page is on its way to the game.
+function setCodeBusy(busy) {
+  document.getElementById('btn-code').disabled = busy;
+  document.getElementById('btn-code-label').textContent = jt(busy ? 'waiting' : 'code_go');
+}
+// The field takes focus with its error, so the player can retype at once.
+function setCodeError(key) {
+  const input = document.getElementById('game-code');
+  document.getElementById('code-error').textContent = key ? jt(key) : '';
+  if (key) { input.setAttribute('aria-invalid', 'true'); input.focus(); }
+  else input.removeAttribute('aria-invalid');
+}
+// Back from the game's join screen restores this page from the back-forward
+// cache exactly as it was left, button still busy. Re-arm it.
+window.addEventListener('pageshow', e => { if (e.persisted) setCodeBusy(false); });
+
 function show(s) {
-  ['loading', 'error', 'create', 'join-existing'].forEach(n => {
+  ['loading', 'error', 'code', 'create', 'join-existing'].forEach(n => {
     document.getElementById('screen-' + n).style.display = n === s ? (n === 'loading' || n === 'error' ? 'block' : 'flex') : 'none';
   });
 }

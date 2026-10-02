@@ -672,7 +672,9 @@ const MAP_TILE_ATTRIB = 'Tiles &copy; Esri';
 // ── State ─────────────────────────────────────────────────────────────────────
 const params   = new URLSearchParams(window.location.search);
 const gameId   = params.get('game');
-const teamId   = parseInt(params.get('team') || sessionStorage.getItem('teamId'));
+// The team this tab remembers only counts for the game it was joined in, or a
+// link to another game would open it with this team (see play.html).
+const teamId   = parseInt(params.get('team') || (sessionStorage.getItem('gameId') === gameId ? sessionStorage.getItem('teamId') : null));
 const teamName = sessionStorage.getItem('teamName') || 'Team';
 
 // Language priority: ?lang= from the join screen → saved cr_lang → German.
@@ -1251,7 +1253,15 @@ function enterCrPreview(){
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   if(window.ArTheme && ArTheme.preview){ enterCrPreview(); return; }
-  if(!gameId || !teamId){ window.location.href='/'; return; }
+  // No team in the link or this tab's session: back to the join page, with the
+  // game ID from the link or the session, so the player can rejoin their team.
+  // replace() keeps this page out of the history; otherwise Back would land
+  // here and be sent straight on to the join page again.
+  if(!gameId || !teamId){
+    const g = gameId || sessionStorage.getItem('gameId');
+    location.replace('/join.html' + (g ? '?game=' + encodeURIComponent(g) : ''));
+    return;
+  }
   // Set the team name on the inner span so we don't wipe out the score chip.
   document.getElementById('cr-team-name-text').textContent = teamName;
   document.getElementById('btn-v-lang').textContent = lang.toUpperCase();

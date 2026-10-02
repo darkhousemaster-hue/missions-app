@@ -821,9 +821,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (window.ArTheme && ArTheme.preview) { enterPlayPreview(); return; }
   const p = new URLSearchParams(window.location.search);
   gameId   = p.get('game')  || sessionStorage.getItem('gameId');
-  teamId   = parseInt(p.get('team') || sessionStorage.getItem('teamId'));
+  // The team this tab remembers only counts for the game it was joined in. A
+  // link to another game would otherwise open that game with this team, and
+  // the team lookup goes by team ID alone, so it would show the old game's
+  // missions.
+  const sessionTeam = sessionStorage.getItem('gameId') === gameId ? sessionStorage.getItem('teamId') : null;
+  teamId   = parseInt(p.get('team') || sessionTeam);
   teamName = sessionStorage.getItem('teamName') || 'Team';
-  if (!gameId || !teamId) { window.location.href='/'; return; }
+  // No team in the link or this tab's session (iOS dropped the tab, private
+  // mode, link opened in a new tab). Back to the join page, with the game ID
+  // when we have one, so the player can rejoin their team. replace() keeps
+  // this page out of the history; otherwise Back would land here and be sent
+  // straight on to the join page again.
+  if (!gameId || !teamId) { location.replace('/join.html' + (gameId ? '?game=' + encodeURIComponent(gameId) : '')); return; }
 
   document.getElementById('team-name-text').textContent = teamName;
   applyTranslations();
