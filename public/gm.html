@@ -1225,8 +1225,21 @@ body.sel-cr #crms-toolbar{display:flex !important;}
            src is set on first open so the map and tiles cost nothing until
            someone actually looks. -->
       <div id="stab-advtrail" class="stab" style="padding:0;">
-        <iframe id="at-frame" title="AdventureTrail Studio"
-                style="width:100%;height:calc(100vh - 92px);border:0;display:block;background:var(--bg);"></iframe>
+        <!-- The studio takes the panel's whole height rather than a guessed
+             one: while this tab is open the panel drops its padding and stops
+             scrolling (.at-fill, toggled in switchSettingsTab). A strip stays
+             on the left for the menu toggle. On a phone the page scrolls as a
+             whole, so the frame takes the screen's height instead. -->
+        <style>
+          .settings-main.at-fill{padding:0 0 0 24px;overflow:hidden;display:flex;flex-direction:column}
+          .settings-main.at-fill > .stab.active{flex:1;min-height:0}
+          .settings-main.at-fill > .stab.active > iframe{width:100%;height:100%;border:0;display:block;background:var(--bg)}
+          @media(max-width:768px){
+            .settings-main.at-fill{display:block;overflow:visible;padding:0}
+            .settings-main.at-fill > .stab.active > iframe{height:calc(100dvh - 120px)}
+          }
+        </style>
+        <iframe id="at-frame" title="AdventureTrail Studio"></iframe>
       </div>
 
       <div id="stab-cityrush" class="stab">
@@ -4280,12 +4293,9 @@ function toggleSettingsNav(on){
   const btn = document.getElementById('s-navtoggle');
   if(btn) btn.setAttribute('aria-expanded', String(!shut));
   try { localStorage.setItem('gm_nav_shut', shut ? '1' : '0'); } catch(e){}
-  // Leaflet and the studio iframe both measure themselves, so tell them.
-  setTimeout(() => {
-    window.dispatchEvent(new Event('resize'));
-    const f = document.getElementById('at-frame');
-    if(f && f.contentWindow) f.contentWindow.dispatchEvent(new Event('resize'));
-  }, 230);
+  // Leaflet measures itself, so tell it. An embedded page needs no nudge: a
+  // frame gets its own resize event whenever its size changes.
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 230);
 }
 try { if(localStorage.getItem('gm_nav_shut') === '1') document.addEventListener('DOMContentLoaded', () => toggleSettingsNav(true)); } catch(e){}
 
@@ -8020,7 +8030,10 @@ function switchSettingsTab(tab,el){
   if(tab === 'rules')    loadRulesetsSettings();
   if(tab === 'cityrush') loadCrModes();
   // AdventureTrail · experimental. Lazy so the studio's map is never loaded
-  // for a GM who does not open the tab.
+  // for a GM who does not open the tab. While it is open the studio takes the
+  // panel's full height (.at-fill, styled in the studio's own panel).
+  const atMain = document.querySelector('.settings-main');
+  if(atMain) atMain.classList.toggle('at-fill', tab === 'advtrail');
   if(tab === 'advtrail'){
     const f = document.getElementById('at-frame');
     if(f && !f.getAttribute('src')) f.setAttribute('src', '/at-studio.html?embed=1');
