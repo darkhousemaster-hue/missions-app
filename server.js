@@ -143,6 +143,9 @@ function playBlocked(gameId) {
 // (Authorization: Bearer <tok>, or body.token) OR the raw password (body
 // .password). Accepting both keeps every existing client working unchanged
 // while letting the dashboard stop resending the password on every call.
+// Despite the name, this is the Settings login, and that is for managers only:
+// nothing a GM does while running a game may require it. Deleting a whole game
+// is a manager action and keeps it.
 function isGmAuthed(req){
   const hdr = req.headers['authorization'] || '';
   const bearer = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
@@ -150,11 +153,6 @@ function isGmAuthed(req){
   if(token && db.verifyGmToken(token)) return true;
   if(req.body && req.body.password && db.verifyPassword(req.body.password)) return true;
   return false;
-}
-// Express middleware form for routes that are purely GM-gated.
-function gmAuth(req,res,next){
-  if(isGmAuthed(req)) return next();
-  return res.status(401).json({error:'Unauthorized'});
 }
 
 // ── A team belongs to its game ──────────────────────────────────────────────
@@ -907,8 +905,11 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
     ? 100 : Math.max(1, Math.min(MAX_UPLOAD_MB, parseInt(rawMaxMb, 10) || 100));
   res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null});
 });
+// Deleting a team is GM work, and GM work never needs the Settings login,
+// which is for managers only. It answered 401 to a GM who had not unlocked
+// Settings in that tab. The dashboard asks for confirmation instead, and the
+// team must belong to the game in the path (see teamInGame).
 app.delete('/api/games/:gameId/teams/:teamId', (req,res) => {
-  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const team = db.getTeam(req.params.teamId);
   if(!team) return res.status(404).json({error:'Not found'});
   db.deleteTeam(req.params.teamId);
@@ -1129,8 +1130,10 @@ app.post('/api/submissions/:id/review', (req,res) => {
 // The GM can rotate a sideways photo/selfie from the lightbox. We persist the
 // chosen rotation (degrees clockwise, 0/90/180/270) rather than re-encoding the
 // file, so it's lossless + reversible and applied consistently in the
-// dashboard, the ZIP export and the collage. GM-gated.
-app.post('/api/submissions/:id/rotate', gmAuth, (req,res) => {
+// dashboard, the ZIP export and the collage. It is GM work, so it takes no
+// Settings login: these routes used to, and a GM who had not unlocked Settings
+// in that tab rotated for nothing, since the rotation was silently not saved.
+app.post('/api/submissions/:id/rotate', (req,res) => {
   const sub = db.getSubmissionById(Number(req.params.id));
   if(!sub) return res.status(404).json({error:'Not found'});
   const deg = Number(req.body.rotation);
@@ -1138,14 +1141,14 @@ app.post('/api/submissions/:id/rotate', gmAuth, (req,res) => {
   const updated = db.getSubmissionById(sub.id);
   res.json({success:true, rotation: updated.media_rotation});
 });
-app.post('/api/cr/submissions/:id/rotate', gmAuth, (req,res) => {
+app.post('/api/cr/submissions/:id/rotate', (req,res) => {
   const sub = db.getCrSubmission(Number(req.params.id));
   if(!sub) return res.status(404).json({error:'Not found'});
   db.setCrSubmissionRotation(sub.id, Number(req.body.rotation));
   const updated = db.getCrSubmission(sub.id);
   res.json({success:true, rotation: updated.media_rotation});
 });
-app.post('/api/games/:gameId/teams/:teamId/selfie/rotate', gmAuth, (req,res) => {
+app.post('/api/games/:gameId/teams/:teamId/selfie/rotate', (req,res) => {
   const team = db.getTeam(Number(req.params.teamId));
   if(!team) return res.status(404).json({error:'Not found'});
   db.setTeamSelfieRotation(team.id, Number(req.body.rotation));
