@@ -157,6 +157,30 @@ function gmAuth(req,res,next){
   return res.status(401).json({error:'Unauthorized'});
 }
 
+// ── A team belongs to its game ──────────────────────────────────────────────
+// A player is known by nothing more than the team ID in their link, and team
+// IDs simply count up. Lookups went by team ID alone, so editing the link let
+// a player read or act as any team in any game: upload or submit as them,
+// delete their drafts, post in their chat. Now, whenever a request names a
+// game and a team, the team must be in that game. That covers a team in the
+// path (app.param) and in a JSON body or the query (the middleware below);
+// multipart routes check once multer has read the form (see /cr/capture).
+const TEAM_FIELDS = ['teamId', 'targetTeamId', 'freezerTeamId', 'frozenTeamId'];
+function teamInGame(gameId, teamId){
+  if(teamId === undefined || teamId === null || teamId === '') return true;   // no team named
+  const team = db.getTeam(String(teamId));
+  return !!team && team.game_id === gameId;
+}
+app.param('teamId', (req,res,next,teamId) => {
+  if(req.params.gameId === undefined || teamInGame(req.params.gameId, teamId)) return next();
+  res.status(404).json({error:'Not found'});
+});
+app.use('/api/games/:gameId', (req,res,next) => {
+  const body = req.body || {};
+  if(TEAM_FIELDS.every(f => teamInGame(req.params.gameId, body[f])) && teamInGame(req.params.gameId, req.query.teamId)) return next();
+  res.status(404).json({error:'Not found'});
+});
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 app.get('/api/setup-status', (req,res) => res.json({isSetup:true}));
 app.post('/api/setup',       (req,res) => res.json({success:true}));
@@ -2104,6 +2128,12 @@ app.post('/api/games/:gameId/cr/capture',
     const _blk = playBlocked(req.params.gameId);
     if(_blk){ if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(403).json({error:_blk}); }
     const {teamId, targetTeamId} = req.body;
+    // Multipart, so the shared team check ran before this form was read. Both
+    // the capturing team and the captured one must be in this game.
+    if(!teamId || !teamInGame(req.params.gameId, teamId) || !teamInGame(req.params.gameId, targetTeamId)){
+      if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} }
+      return res.status(404).json({error:'Not found'});
+    }
     const mediaPath = req.file ? `${req.params.gameId}/${req.file.filename}` : null;
     if(!mediaPath) return res.status(400).json({error:'No media'});
     const id = db.createCrCapture(req.params.gameId, teamId, targetTeamId, mediaPath);
@@ -2121,13 +2151,25 @@ app.post('/api/cr/captures/:id/review', (req,res) => {
 
 // ── Socket ────────────────────────────────────────────────────────────────────
 io.on('connection', socket => {
+  // Every event below takes one object. Sent nothing, null or a bare value,
+  // the handlers' destructuring threw, and an exception in a socket handler
+  // takes the whole server down, every live game with it. Such packets are
+  // dropped. gameId is made a string before it reaches the database, since
+  // SQLite refuses to bind an object or a boolean and would throw the same way.
+  socket.use(([event, payload], next) => {
+    if(payload !== null && typeof payload === 'object') next();
+  });
   socket.on('join_game', ({gameId,teamId}) => {
+    gameId = String(gameId);
     socket.join(`game_${gameId}`);
-    if(teamId) socket.join(`team_${teamId}`);
+    // The team room carries that team's chat and verdicts, so only a team of
+    // this game gets in (see teamInGame).
+    if(teamId && teamInGame(gameId, teamId)) socket.join(`team_${teamId}`);
     const game=db.getGame(gameId);
     if(game) socket.emit('timer_state',getTimerState(game));
   });
   socket.on('join_gm', ({gameId}) => {
+    gameId = String(gameId);
     socket.join(`gm_${gameId}`);
     socket.join(`game_${gameId}`);
     const game=db.getGame(gameId);

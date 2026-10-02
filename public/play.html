@@ -1578,6 +1578,9 @@ function openLightbox(url, isVid) {
 // ── Chat ──────────────────────────────────────────────────────────────────────
 async function loadChatHistory(resync) {
   const msgs = await fetch(`/api/games/${gameId}/chat?teamId=${teamId}`).then(r=>r.json());
+  // A team the GM has deleted gets an error here, not a list; mapping it
+  // threw and stopped the page before its socket connected.
+  if (!Array.isArray(msgs)) return;
   const box  = document.getElementById('chat-messages');
   box.innerHTML = msgs.map(m => bubble(m)).join('');
   scrollChat();
