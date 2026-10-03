@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS&#8203; — Spielleiter</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.56">
+<link rel="stylesheet" href="/css/app.css?v=2.4.57">
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
@@ -209,10 +209,15 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .td-sides{display:inline-flex;gap:.2rem;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:.18rem;}
 .td-side{background:transparent;border:0;color:var(--text-dim);font:700 .72rem/1 var(--body);letter-spacing:.04em;text-transform:uppercase;padding:.4rem .85rem;border-radius:999px;cursor:pointer;}
 .td-side.active{background:var(--orange);color:#fff;}
+.td-page-control{display:inline-flex;align-items:center;gap:.45rem;color:var(--text-muted);font:700 .65rem/1 var(--body);letter-spacing:.1em;text-transform:uppercase;}
+.td-page-control .select{min-width:150px;padding:.45rem 2rem .45rem .65rem;font-size:.75rem;}
 .td-gm-note{max-width:340px;color:var(--text-dim);font:500 .86rem/1.5 var(--body);text-align:center;padding:.9rem 1.2rem;border:1px dashed var(--hairline);border-radius:14px;align-self:center;}
 /* Live, view-only clone of the real #screen-dashboard, scaled to fit. */
 .td-gmwrap{width:100%;align-self:flex-start;border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.55);background:var(--bg);}
-.td-gmscale{transform-origin:0 0;}
+.td-gmpage{position:relative;width:100%;overflow:hidden;background:var(--bg);border-bottom:1px solid var(--border);}
+.td-gmpage:last-child{border-bottom:0;}
+.td-gmpage-title{height:30px;padding:8px 12px;font:700 10px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);}
+.td-gmscale{width:1280px;transform-origin:0 0;}
 /* Full-screen live preview of the GM dashboard (re-colours via the same :root vars). */
 .td-gmprev{width:100%;max-width:840px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.55);align-self:flex-start;display:flex;flex-direction:column;background:var(--bg);}
 .td-gmprev .gp-bar{background:var(--bg3);border-bottom:1px solid var(--hairline);padding:.7rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;}
@@ -918,6 +923,14 @@ body.sel-cr #crms-toolbar{display:flex !important;}
               <input id="s-public-url" class="input" type="text" placeholder="https://xxx.trycloudflare.com">
               <button class="btn" onclick="detectTunnel()"><span id="s-detect">Erkennen</span></button>
             </div>
+          </div>
+
+          <div class="label">
+            <span id="s-global-theme-label">Globales Farbschema (Spieler)</span>
+            <span class="help" id="s-global-theme-help">Standardfarben und Logo für alle Spieleransichten festlegen.</span>
+          </div>
+          <div class="control">
+            <button type="button" class="btn" onclick="openThemeDesigner('global')"><span id="s-global-theme-open">Farbschema bearbeiten</span></button>
           </div>
 
           <div class="label">
@@ -2784,7 +2797,6 @@ async function openDashboard(gameId){
   });
   socket.on('team_password_updated',async()=>{
     if(!currentGame) return;
-    if(!(await ensureGmPasswordAccess())) return;
     try{const refreshed=await API(`/api/games/${currentGameId}`);currentGame.teams=refreshed.teams||[];renderTeamsBar(currentGame.teams);}catch(e){}
   });
   socket.on('submission_new',onSubmissionNew);
@@ -2839,25 +2851,9 @@ function goToDashboardBack(){
 }
 
 let currentGame=null;
-async function ensureGmPasswordAccess(){
-  if(gmToken) return true;
-  const pw=settingsPassword||await uiPrompt(gmt('sg-pw-label'));
-  if(!pw) return false;
-  const verified=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
-  if(!verified.valid){toast(gmt('wrong-pw')||'Wrong password.','error');return false;}
-  settingsPassword=pw;
-  if(verified.token){gmToken=verified.token;sessionStorage.setItem('gm_token',verified.token);}
-  return !!gmToken;
-}
 async function refreshDashboard(gameId){
   currentGame=await API(`/api/games/${gameId}`);
   let game=currentGame;
-  if(!gmToken && game.password_enabled && game.teams.some(t=>t.password_set)){
-    if(await ensureGmPasswordAccess()){
-      currentGame=await API(`/api/games/${gameId}`);
-      game=currentGame;
-    }
-  }
   // Rail Adventure only UI bits (map tab on the right rail, freeze/thaw on the
   // team header) are hidden for MiSSiONS games. Re-evaluated on every
   // refresh in case the game type ever flips mid-session.
@@ -8407,7 +8403,7 @@ async function loadStats(){
 const THEME_DEFAULTS = {
   '--bg':'#0f0e0d','--bg3':'#1c1916',
   '--surface':'#1a1817','--tile-text':'#f4f2ee','--tile-active':'#221f1d','--points':'#f4f2ee','--points-bg':'#242120',
-  '--btn-bg':'#e85f1e','--btn-text':'#ffffff',
+  '--btn-bg':'#e85f1e','--btn-text':'#ffffff','--btn-primary-text':'#ffffff','--btn-secondary-text':'#ffffff','--btn-join-text':'#ffffff',
   '--input-bg':'#221f1d',
   '--notice-bg':'#1a1817','--notice-text':'#f4f2ee','--chat-bubble':'#221f1d',
   '--text':'#f4f2ee','--text-dim':'#9b9690','--text-muted':'#6a6560',
@@ -8429,7 +8425,9 @@ const THEME_GROUPS = () => [
     ['--points',     gmt('th-v-points')||'Punkte-Text','points'] ]},
   { lbl: gmt('th-g-button')||'Buttons', vars: [
     ['--btn-bg',    gmt('th-v-btn-bg')||'Button-Füllung','button'],
-    ['--btn-text',  gmt('th-v-btn-text')||'Button-Text','button'] ]},
+    ['--btn-primary-text',gmt('th-v-btn-primary-text')||'Text: primärer Button','button-primary-text'],
+    ['--btn-secondary-text',gmt('th-v-btn-secondary-text')||'Text: sekundärer Button','button-secondary-text'],
+    ['--btn-join-text',gmt('th-v-btn-join-text')||'Text: Team beitreten','button-join-text'] ]},
   { lbl: gmt('th-g-nav')||'Navigation', vars: [
     ['--nav',       gmt('th-v-nav')||'Symbole (Sprache/Chat/Regeln)','nav'] ]},
   { lbl: gmt('th-g-input')||'Eingabefelder', vars: [
@@ -8475,28 +8473,34 @@ const GM_GROUPS = () => [
     ['--green',     gmt('th-v-green')||'Erfolg','green'],
     ['--red',       gmt('gm-v-danger')||'Gefahr / Löschen','red'] ]},
 ];
-let _gmTheme = { vars:{} };        // editable draft while the designer is open
-let _gmThemeSaved = { vars:{} };   // the persisted theme currently on the dashboard
+let _gmTheme = { vars:{}, pages:{} };        // editable draft while the designer is open
+let _gmThemeSaved = { vars:{}, pages:{} };   // the persisted theme currently applied across GM pages
 function _gmAlpha(hex,a){ hex=String(hex).replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex.slice(0,6),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+const GM_PAGE_SELECTORS = {
+  landing:'#screen-landing', 'game-select':'#screen-game-select', 'new-game':'#screen-new-game',
+  dashboard:'#screen-dashboard', 'settings-gate':'#screen-settings-gate', settings:'#screen-settings',
+};
+const GM_ALL_PAGE_SELECTOR = Object.values(GM_PAGE_SELECTORS).join(',');
+function _gmColorDecl(vars){
+  const decl=[]; const add=(k,v)=>decl.push(`${k}:${v};`);
+  for(const [k,v] of Object.entries(vars||{})) if(/^--[a-z0-9-]+$/i.test(k)&&/^#[0-9a-f]{3,8}$/i.test(v)) add(k,v);
+  const t=vars['--text'],o=vars['--orange'],g=vars['--green'],r=vars['--red'];
+  if(t)add('--hairline',_gmAlpha(t,.08));
+  if(o){add('--orange-soft',_gmAlpha(o,.14));add('--orange-dim',_gmAlpha(o,.55));add('--glow-orange',`0 0 16px ${_gmAlpha(o,.45)}`);add('--btn-bg',o);}
+  if(g){add('--green-soft',_gmAlpha(g,.14));add('--green-dim',_gmAlpha(g,.55));}
+  if(r){add('--red-light',_gmAlpha(r,.85));add('--glow-red',`0 0 12px ${_gmAlpha(r,.5)}`);}
+  return decl.join('');
+}
 function applyGmTheme(theme){
-  // Scope the GM theme to the dashboard ONLY (the real #screen-dashboard AND the
-  // preview clone) via a <style> rule, so it never repaints the rest of the GM
-  // app — settings, editors, or the colour designer itself.
-  const vars = (theme && theme.vars) || {};
-  const decl = [];
-  const add = (k,v) => decl.push(`${k}:${v};`);
-  for(const [k,v] of Object.entries(vars)){
-    if(/^--[a-z0-9-]+$/i.test(k) && /^#[0-9a-f]{3,8}$/i.test(v)) add(k,v);
+  const vars=(theme&&theme.vars)||{};
+  const rules=[`${GM_ALL_PAGE_SELECTOR}{${_gmColorDecl(vars)}}`];
+  for(const [page,selector] of Object.entries(GM_PAGE_SELECTORS)){
+    const overrides=(theme&&theme.pages&&theme.pages[page]&&theme.pages[page].vars)||{};
+    if(Object.keys(overrides).length) rules.push(`${selector}{${_gmColorDecl({...vars,...overrides})}}`);
   }
-  // Keep the derived tints/hairline consistent with the chosen base colours.
-  const t=vars['--text'], o=vars['--orange'], g=vars['--green'], r=vars['--red'];
-  if(t) add('--hairline', _gmAlpha(t,.08));
-  if(o){ add('--orange-soft',_gmAlpha(o,.14)); add('--orange-dim',_gmAlpha(o,.55)); add('--glow-orange',`0 0 16px ${_gmAlpha(o,.45)}`); add('--btn-bg',o); }
-  if(g){ add('--green-soft',_gmAlpha(g,.14)); add('--green-dim',_gmAlpha(g,.55)); }
-  if(r){ add('--red-light',_gmAlpha(r,.85)); add('--glow-red',`0 0 12px ${_gmAlpha(r,.5)}`); }
   let st = document.getElementById('gm-theme-style');
   if(!st){ st = document.createElement('style'); st.id='gm-theme-style'; document.head.appendChild(st); }
-  st.textContent = decl.length ? `#screen-dashboard{${decl.join('')}}` : '';
+  st.textContent=rules.join('\n');
 }
 // Swap the dashboard wordmark: stamp (Adventurerooms) + wordmark (MiSSiONS), or
 // a logo image replacing both. Operates on a given .dt-wordmark node.
@@ -8522,8 +8526,8 @@ async function loadGmTheme(){
   try{
     const j = await fetch('/api/gm-theme').then(r=>r.json());
     const th = (j && j.theme) || {};
-    _gmThemeSaved = { vars: Object.assign({}, th.vars||{}), stamp: th.stamp||'', wordmark: th.wordmark||'', logo: th.logo||null };
-  }catch(e){ _gmThemeSaved = { vars:{} }; }
+    _gmThemeSaved = { vars: Object.assign({}, th.vars||{}), pages: Object.assign({},th.pages||{}), stamp: th.stamp||'', wordmark: th.wordmark||'', logo: th.logo||null };
+  }catch(e){ _gmThemeSaved = { vars:{}, pages:{} }; }
   applyGmTheme(_gmThemeSaved);
   applyGmBranding(_gmThemeSaved);
 }
@@ -8535,35 +8539,41 @@ function renderGmPreview(){
   const wrap = document.querySelector('#theme-designer .td-gmwrap');
   if(!wrap) return;
   wrap.innerHTML = '';
-  const src = document.getElementById('screen-dashboard');
-  if(!src) return;
-  const clone = src.cloneNode(true);
-  clone.style.display = 'grid';
-  clone.style.width = '1280px';
-  clone.style.height = '760px';
-  clone.style.pointerEvents = 'none';   // view-only
-  const scaler = document.createElement('div');
-  scaler.className = 'td-gmscale';
-  scaler.appendChild(clone);
-  wrap.appendChild(scaler);
+  const allPages = [
+    ['landing','screen-landing'], ['game-select','screen-game-select'],
+    ['new-game','screen-new-game'], ['dashboard','screen-dashboard'],
+    ['settings-gate','screen-settings-gate'], ['settings','screen-settings'],
+  ];
+  const pages=_td.page==='all'?allPages:allPages.filter(([key])=>key===_td.page);
+  for(const [key,id] of pages){
+    const src=document.getElementById(id);
+    if(!src) continue;
+    const page=document.createElement('section');
+    page.className='td-gmpage'; page.dataset.page=key;
+    const title=document.createElement('div');
+    title.className='td-gmpage-title'; title.textContent=_tdPageLabel(key);
+    const clone=src.cloneNode(true);
+    clone.style.display=id==='screen-dashboard'?'grid':'flex'; clone.style.width='1280px'; clone.style.height='760px'; clone.style.pointerEvents='none';
+    const scaler=document.createElement('div'); scaler.className='td-gmscale'; scaler.appendChild(clone);
+    page.append(title,scaler); wrap.appendChild(page);
+  }
   _gmFitPreview();
 }
 function _gmFitPreview(){
   const wrap = document.querySelector('#theme-designer .td-gmwrap');
-  const scaler = wrap && wrap.querySelector('.td-gmscale');
-  if(!wrap || !scaler) return;
+  if(!wrap) return;
   const s = Math.min(1, (wrap.clientWidth||600) / 1280);
-  scaler.style.transform = `scale(${s})`;
-  wrap.style.height = (760 * s) + 'px';
+  wrap.querySelectorAll('.td-gmscale').forEach(scaler=>{ scaler.style.transform=`scale(${s})`; });
+  wrap.querySelectorAll('.td-gmpage').forEach(page=>{ page.style.height=(760*s+30)+'px'; });
 }
 window.addEventListener('resize', ()=>{ if(_td && _td.side==='gm') _gmFitPreview(); });
 // Reverse hover on the GM side: outline the dashboard element(s) a setting recolours.
 const GM_SEL = {
-  bg:'#screen-dashboard', bg2:'#dash-teams, #dash-panel', bg3:'#dash-topbar',
-  surface:'.icon-btn, .dt-topbar__back', surface2:'#gm-chat-input',
-  border:'#dash-panel', text:'.dt-wordmark, .timer-display',
-  'text-dim':'#db-select-team', 'text-muted':'#db-teams, #db-games, .dt-topbar__gameid',
-  accent:'.tab.active, .chat-send', green:'#btn-timer-start', red:'#btn-delete-team',
+  bg:'#screen-dashboard, #screen-landing, #screen-game-select, #screen-new-game, #screen-settings', bg2:'#dash-teams, #dash-panel', bg3:'#dash-topbar',
+  surface:'.icon-btn, .dt-topbar__back, .location-card, .mode-card', surface2:'#gm-chat-input, .gs-form-card',
+  border:'#dash-panel, .location-card, .mode-card, .gs-form-card', text:'.dt-wordmark, .timer-display, .landing-logo h1',
+  'text-dim':'#db-select-team', 'text-muted':'#db-teams, #db-games, .dt-topbar__gameid, .ll-section-title, .ll-section-title, .landing-logo p',
+  accent:'.tab.active, .chat-send, .location-card--cr', green:'#btn-timer-start', red:'#btn-delete-team',
 };
 let _gmHlEls = [];
 function _gmHighlight(role){
@@ -8577,23 +8587,86 @@ function _gmHighlight(role){
   });
 }
 
-let _td = null;   // { kind:'location'|'crmode', id, name, side, theme:{vars,logo,stamp,wordmark} }
+let _td = null;   // { kind, id, name, side, page, theme }
+const TD_PLAYER_PAGES = ['join','join-existing','password','play','mission','chat','reject','cityrush'];
+const TD_GM_PAGES = ['landing','game-select','new-game','dashboard','settings-gate','settings'];
+function _tdPageLabel(page){
+  const labels={
+    all:{de:'Alle Seiten',en:'All pages',fr:'Toutes les pages',it:'Tutte le pagine',es:'Todas las páginas'},
+    join:{de:'Team erstellen',en:'Create team',fr:'Créer une équipe',it:'Crea squadra',es:'Crear equipo'},
+    'join-existing':{de:'Team beitreten',en:'Join team',fr:'Rejoindre équipe',it:'Unisciti a squadra',es:'Unirse al equipo'},
+    password:{de:'Passwort-Gate',en:'Password gate',fr:'Mot de passe',it:'Password',es:'Contraseña'},
+    play:{de:'Spiel',en:'Game',fr:'Jeu',it:'Gioco',es:'Juego'}, mission:{de:'Mission',en:'Mission',fr:'Mission',it:'Missione',es:'Misión'},
+    chat:{de:'Chat',en:'Chat',fr:'Chat',it:'Chat',es:'Chat'}, reject:{de:'Ablehnung',en:'Rejection',fr:'Refus',it:'Rifiuto',es:'Rechazo'},
+    cityrush:{de:'Rail Adventure',en:'Rail Adventure',fr:'Rail Adventure',it:'Rail Adventure',es:'Rail Adventure'},
+    landing:{de:'Startseite',en:'Start page',fr:'Accueil',it:'Pagina iniziale',es:'Inicio'},
+    'game-select':{de:'Spielauswahl',en:'Game selection',fr:'Sélection du jeu',it:'Selezione gioco',es:'Selección de juego'},
+    'new-game':{de:'Spiel erstellt',en:'Game created',fr:'Jeu créé',it:'Gioco creato',es:'Juego creado'},
+    dashboard:{de:'Dashboard',en:'Dashboard',fr:'Tableau de bord',it:'Dashboard',es:'Panel'},
+    'settings-gate':{de:'Einstellungen – Zugang',en:'Settings access',fr:'Accès aux réglages',it:'Accesso impostazioni',es:'Acceso a ajustes'},
+    settings:{de:'Einstellungen',en:'Settings',fr:'Réglages',it:'Impostazioni',es:'Ajustes'},
+  };
+  const lang=typeof gmLang==='string'&&labels[page]&&labels[page][gmLang]?gmLang:'de';
+  return labels[page]?.[lang]||page;
+}
+function _tdEffectiveTheme(theme,page){
+  if(!page||page==='all') return {...theme,vars:{...(theme.vars||{})}};
+  return {...theme,vars:{...(theme.vars||{}),...((theme.pages||{})[page]?.vars||{})}};
+}
+function _tdScopeOptions(){
+  const pages=_td.side==='gm'?TD_GM_PAGES:TD_PLAYER_PAGES;
+  return ['all',...((_td.side==='gm'||_td.kind==='global')?pages:[])];
+}
+function tdSelectPage(page){
+  if(!_td) return;
+  _td.page=_tdScopeOptions().includes(page)?page:'all';
+  const el=document.getElementById('theme-designer');
+  if(el) el.innerHTML=_tdHtml();
+  if(_td.side==='gm'){applyGmTheme(_gmTheme);renderGmPreview();}
+  else _tdPost();
+}
+function _tdTargetTheme(isGm){
+  const theme=isGm?_gmTheme:_td.theme;
+  if((isGm||_td.kind==='global')&&_td.page&&_td.page!=='all'){
+    theme.pages=theme.pages||{};
+    theme.pages[_td.page]=theme.pages[_td.page]||{vars:{}};
+    theme.pages[_td.page].vars=theme.pages[_td.page].vars||{};
+    return theme.pages[_td.page];
+  }
+  return theme;
+}
+function _tdPlayerPreviewPages(){
+  const pages=[
+    ['join','/join.html?preview=1&tdpage=join'],['join-existing','/join.html?preview=1&tdpage=join-existing'],['password','/join.html?preview=1&tdpage=password'],
+    ['play','/play.html?preview=1&pv=play&tdpage=play'],['mission','/play.html?preview=1&pv=detail&tdpage=mission'],
+    ['chat','/play.html?preview=1&pv=chat&tdpage=chat'],['reject','/play.html?preview=1&pv=reject&tdpage=reject'],
+    ['cityrush','/cityrush.html?preview=1&tdpage=cityrush'],
+  ];
+  const available=_td.kind==='global'?pages:(_td.kind==='location'?pages.slice(0,7):[pages[0],pages[7]]);
+  return available.filter(([key])=>_td.kind!=='global'||_td.page==='all'||key===_td.page)
+    .map(([key,src])=>[src,_tdPageLabel(key)]);
+}
 
 async function openThemeDesigner(kind, id){
   exitSelectionModes && exitSelectionModes();
   let row = null;
-  try {
-    const list = await API(kind==='location' ? '/api/locations' : '/api/cr/modes');
-    row = (list||[]).find(x => x.id === Number(id));
-  } catch(e){}
-  if(!row){ toast('Not found','error'); return; }
   let theme = {};
-  try { theme = row.theme ? JSON.parse(row.theme) : {}; } catch(e){ theme = {}; }
-  _td = { kind, id: Number(id), name: row.name||'', side:'player', theme: { vars: Object.assign({}, theme.vars||{}), logo: theme.logo||null, stamp: theme.stamp||'', wordmark: theme.wordmark||'', borderWidth: (theme.borderWidth!=null?theme.borderWidth:null) } };
+  if(kind==='global'){
+    try { const j=await fetch('/api/global-player-theme').then(r=>r.json()); theme=j.theme||{}; } catch(e){}
+    row={id:null,name:gmt('s-global-theme-label')||'Global player theme'};
+  } else {
+    try {
+      const list = await API(kind==='location' ? '/api/locations' : '/api/cr/modes');
+      row = (list||[]).find(x => x.id === Number(id));
+    } catch(e){}
+    if(!row){ toast('Not found','error'); return; }
+    try { theme = row.theme ? JSON.parse(row.theme) : {}; } catch(e){ theme = {}; }
+  }
+  _td = { kind, id: kind==='global'?null:Number(id), name: row.name||'', side:'player', page:'all', theme: { vars: Object.assign({}, theme.vars||{}), pages:Object.assign({},theme.pages||{}), logo: theme.logo||null, stamp: theme.stamp||'', wordmark: theme.wordmark||'', borderWidth: (theme.borderWidth!=null?theme.borderWidth:null) } };
   // Refresh the GM-side draft from the saved dashboard theme so the GM tab edits
   // the latest persisted colours.
   await loadGmTheme();
-  _gmTheme = { vars: Object.assign({}, _gmThemeSaved.vars||{}), stamp:_gmThemeSaved.stamp||'', wordmark:_gmThemeSaved.wordmark||'', logo:_gmThemeSaved.logo||null };
+  _gmTheme = { vars: Object.assign({}, _gmThemeSaved.vars||{}), pages:Object.assign({},_gmThemeSaved.pages||{}), stamp:_gmThemeSaved.stamp||'', wordmark:_gmThemeSaved.wordmark||'', logo:_gmThemeSaved.logo||null };
   let el = document.getElementById('theme-designer');
   if(!el){ el = document.createElement('div'); el.id = 'theme-designer'; document.body.appendChild(el); }
   el.innerHTML = _tdHtml();
@@ -8601,7 +8674,9 @@ async function openThemeDesigner(kind, id){
 }
 function _tdHtml(){
   const isGm = _td.side === 'gm';
-  const t = isGm ? _gmTheme : _td.theme;
+  const draft = isGm ? _gmTheme : _td.theme;
+  const usePages = isGm || _td.kind==='global';
+  const t = _tdEffectiveTheme(draft, usePages?_td.page:'all');
   const D = isGm ? GM_DEFAULTS : THEME_DEFAULTS;
   const bw = (t.borderWidth!=null?t.borderWidth:THEME_BW_DEFAULT);
   const rows = (isGm ? GM_GROUPS() : THEME_GROUPS()).map(g => `
@@ -8618,14 +8693,8 @@ function _tdHtml(){
         <code class="td-hex">px</code>
         <button class="td-reset" title="${esc(gmt('th-reset')||'Standard')}" onclick="tdBwReset()">↺</button></div>` : ''}
     </div>`).join('');
-  const prevPages = _td.kind==='location'
-    ? [['/join.html?preview=1', gmt('th-prev-join')||'Beitritt'],
-       ['/play.html?preview=1', gmt('th-prev-play')||'Spiel'],
-       ['/play.html?preview=1&pv=detail', gmt('th-prev-detail')||'Mission'],
-       ['/play.html?preview=1&pv=chat', gmt('th-prev-chat')||'Chat'],
-       ['/play.html?preview=1&pv=reject', gmt('th-prev-reject')||'Ablehnung']]
-    : [['/join.html?preview=1', gmt('th-prev-join')||'Beitritt'], ['/cityrush.html?preview=1', 'Rail Adventure']];
-  const brand = `<div class="td-group"><div class="td-glbl">${esc(gmt('th-g-brand')||'Logo & Text')}</div>
+  const prevPages = _tdPlayerPreviewPages();
+  const brand = (!usePages || _td.page==='all') ? `<div class="td-group"><div class="td-glbl">${esc(gmt('th-g-brand')||'Logo & Text')}</div>
           <div class="td-row"><span class="td-name">${esc(gmt('th-stamp')||'Kopfzeile (klein)')}</span>
             <input type="text" class="input" value="${esc(t.stamp||'')}" placeholder="Adventurerooms" oninput="tdText('stamp',this.value)"></div>
           <div class="td-row"><span class="td-name">${esc(gmt('th-wordmark')||'Wortmarke')}</span>
@@ -8636,7 +8705,7 @@ function _tdHtml(){
             <button class="btn btn-ghost btn-sm" id="td-logo-rm" style="${t.logo?'':'display:none;'}" onclick="tdRemoveLogo()">✕</button>
             <input type="file" id="td-logo-file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;" onchange="tdUploadLogo(this)"></div>
           <p style="font-size:.74rem;color:var(--text-muted);margin:.35rem 0 0;">${esc(gmt('th-hint')||'Leere Felder behalten den Standard. Änderungen erscheinen sofort in der Vorschau.')}</p>
-        </div>`;
+        </div>` : '';
   const gmPrev = `<div class="td-gmprev">
         <div class="gp-bar">
           <span class="gp-brand">${esc(_gmTheme.wordmark||'MiSSiONS')}</span>
@@ -8667,7 +8736,7 @@ function _tdHtml(){
           </div>
         </div>
       </div>`;
-  const preview = isGm
+  let preview = isGm
     ? `<div class="td-preview"><div class="td-gmwrap"></div><div class="td-gm-note">${esc(gmt('th-gm-note')||'Live-Vorschau des echten Dashboards. Speichern übernimmt Farben & Logo überall.')}</div></div>`
     : `<div class="td-preview">${prevPages.map(([src,lbl]) => `<div class="td-phone"><span class="td-lbl">${esc(lbl)}</span><div class="td-bezel"><iframe src="${src}"></iframe></div></div>`).join('')}</div>`;
   return `
@@ -8677,6 +8746,7 @@ function _tdHtml(){
         <button type="button" class="td-side ${!isGm?'active':''}" onclick="switchTdSide('player')">${esc(gmt('th-side-player')||'Spieler')}</button>
         <button type="button" class="td-side ${isGm?'active':''}" onclick="switchTdSide('gm')">${esc(gmt('th-side-gm')||'Dashboard')}</button>
       </div>
+      ${(isGm||_td.kind==='global')?`<label class="td-page-control"><span>${esc(({de:'Seite',en:'Page',fr:'Page',it:'Pagina',es:'Página'})[gmLang]||'Seite')}</span><select class="select" id="td-page-select" onchange="tdSelectPage(this.value)">${_tdScopeOptions().map(page=>`<option value="${page}" ${page===_td.page?'selected':''}>${esc(_tdPageLabel(page))}</option>`).join('')}</select></label>`:''}
       <button class="btn btn-ghost btn-sm" onclick="tdResetAll()">${esc(gmt('th-reset-all')||'Standard wiederherstellen')}</button>
       <button class="btn btn-ghost btn-sm" onclick="tdClose()">${esc(gmt('cancel')||'Abbrechen')}</button>
       <button class="btn btn-primary btn-sm" onclick="tdSave()">${esc(gmt('save')||'Speichern')}</button>
@@ -8693,6 +8763,7 @@ function _tdHtml(){
 function switchTdSide(side){
   if(!_td || _td.side===side) return;
   _td.side = side;
+  _td.page='all';
   const el = document.getElementById('theme-designer');
   if(el) el.innerHTML = _tdHtml();
   if(side==='gm'){ applyGmTheme(_gmTheme); applyGmBranding(_gmTheme); renderGmPreview(); }
@@ -8700,10 +8771,7 @@ function switchTdSide(side){
 }
 // Strip GM vars that equal the default so only real overrides are stored.
 function _gmTdTheme(){
-  const vars = {};
-  for(const [k,v] of Object.entries(_gmTheme.vars||{})){ if(v && v.toLowerCase() !== GM_DEFAULTS[k]) vars[k] = v; }
-  const out = {};
-  if(Object.keys(vars).length) out.vars = vars;
+  const out = _tdStoredTheme(_gmTheme,GM_DEFAULTS);
   if(_gmTheme.stamp && _gmTheme.stamp.trim()) out.stamp = _gmTheme.stamp.trim();
   if(_gmTheme.wordmark && _gmTheme.wordmark.trim()) out.wordmark = _gmTheme.wordmark.trim();
   if(_gmTheme.logo) out.logo = _gmTheme.logo;
@@ -8711,17 +8779,28 @@ function _gmTdTheme(){
 }
 // Current draft as a storable object, or null when everything is default.
 function _tdTheme(){
-  const t = _td.theme, out = {};
-  const vars = {};
-  for(const [k,v] of Object.entries(t.vars||{})){
-    if(v && v.toLowerCase() !== THEME_DEFAULTS[k]) vars[k] = v;
-  }
-  if(Object.keys(vars).length) out.vars = vars;
+  const t = _td.theme, out = _tdStoredTheme(t,THEME_DEFAULTS);
   if(t.logo) out.logo = t.logo;
   if(t.stamp && t.stamp.trim()) out.stamp = t.stamp.trim();
   if(t.wordmark && t.wordmark.trim()) out.wordmark = t.wordmark.trim();
   if(t.borderWidth!=null && t.borderWidth!==THEME_BW_DEFAULT) out.borderWidth = t.borderWidth;
   return Object.keys(out).length ? out : null;
+}
+function _tdStoredTheme(theme,defaults){
+  const out={}, base={};
+  for(const [k,v] of Object.entries(theme.vars||{})) if(v&&v.toLowerCase()!==String(defaults[k]||'').toLowerCase()) base[k]=v;
+  if(Object.keys(base).length) out.vars=base;
+  const pages={};
+  for(const [page,entry] of Object.entries(theme.pages||{})){
+    const vars={};
+    for(const [k,v] of Object.entries((entry&&entry.vars)||{})){
+      const inherited=(theme.vars||{})[k]||defaults[k];
+      if(v&&v.toLowerCase()!==String(inherited||'').toLowerCase()) vars[k]=v;
+    }
+    if(Object.keys(vars).length) pages[page]={vars};
+  }
+  if(Object.keys(pages).length) out.pages=pages;
+  return out;
 }
 function _tdPost(){
   if(!_td) return;
@@ -8767,9 +8846,13 @@ function _tdHoverRole(role){
   });
 }
 function tdVarInput(el){
-  const isGm = _td.side==='gm', T = isGm?_gmTheme:_td.theme, D = isGm?GM_DEFAULTS:THEME_DEFAULTS;
+  const isGm = _td.side==='gm', T = _tdTargetTheme(isGm), D = isGm?GM_DEFAULTS:THEME_DEFAULTS;
   const k = el.dataset.var, v = String(el.value).toLowerCase();
-  if(v === D[k]) delete T.vars[k]; else T.vars[k] = v;
+  const isPage=(isGm||_td.kind==='global')&&_td.page!=='all';
+  const base=isGm?_gmTheme:_td.theme;
+  const inherited=(base.vars||{})[k]||D[k];
+  if(isPage ? v===String(inherited).toLowerCase() : v===D[k]) delete T.vars[k]; else T.vars[k] = v;
+  if(isPage && !Object.keys(T.vars).length) delete base.pages[_td.page];
   const hex = document.getElementById('td-hex-'+k.replace(/-/g,''));
   if(hex) hex.textContent = v;
   if(isGm) applyGmTheme(_gmTheme); else _tdPost();
@@ -8785,12 +8868,16 @@ function tdBwReset(){
   _tdPost();
 }
 function tdVarReset(k){
-  const isGm = _td.side==='gm', T = isGm?_gmTheme:_td.theme, D = isGm?GM_DEFAULTS:THEME_DEFAULTS;
+  const isGm = _td.side==='gm', T = _tdTargetTheme(isGm), D = isGm?GM_DEFAULTS:THEME_DEFAULTS;
   delete T.vars[k];
+  const isPage=(isGm||_td.kind==='global')&&_td.page!=='all';
+  const base=isGm?_gmTheme:_td.theme;
+  if(isPage&&!Object.keys(T.vars).length) delete base.pages[_td.page];
+  const value=(_tdEffectiveTheme(base,isPage?_td.page:'all').vars||{})[k]||D[k];
   const inp = document.querySelector(`#theme-designer input[data-var="${k}"]`);
-  if(inp) inp.value = D[k];
+  if(inp) inp.value = value;
   const hex = document.getElementById('td-hex-'+k.replace(/-/g,''));
-  if(hex) hex.textContent = D[k];
+  if(hex) hex.textContent = value;
   if(isGm) applyGmTheme(_gmTheme); else _tdPost();
 }
 // Live effect after a branding (stamp/wordmark/logo) change on the active side.
@@ -8820,9 +8907,15 @@ function tdRemoveLogo(){
   _tdBrandLive();
 }
 async function tdResetAll(){
-  if(!await uiConfirm(gmt('th-reset-confirm'), {ok:gmt('th-reset')})) return;
-  if(_td.side==='gm'){ _gmTheme = { vars:{}, stamp:'', wordmark:'', logo:null }; applyGmTheme(_gmTheme); applyGmBranding(_gmTheme); }
-  else { _td.theme = { vars:{}, logo:null, stamp:'', wordmark:'', borderWidth:null }; _tdPost(); }
+  const isPage=(_td.side==='gm'||_td.kind==='global')&&_td.page!=='all';
+  const prompt=isPage?(({de:'Die Farben dieser Seite auf „Alle Seiten“ zurücksetzen?',en:'Reset this page to inherit from All pages?',fr:'Rétablir cette page selon Toutes les pages ?',it:'Ripristinare questa pagina da Tutte le pagine?',es:'¿Restablecer esta página para que herede de Todas las páginas?'})[gmLang]||'Reset this page to inherit from All pages?'):gmt('th-reset-confirm');
+  if(!await uiConfirm(prompt, {ok:gmt('th-reset')})) return;
+  if(isPage){
+    const base=_td.side==='gm'?_gmTheme:_td.theme;
+    if(base.pages) delete base.pages[_td.page];
+  } else if(_td.side==='gm'){ _gmTheme = { vars:{}, pages:{}, stamp:'', wordmark:'', logo:null }; applyGmBranding(_gmTheme); }
+  else { _td.theme = { vars:{}, pages:{}, logo:null, stamp:'', wordmark:'', borderWidth:null }; }
+  if(_td.side==='gm') applyGmTheme(_gmTheme); else _tdPost();
   const el = document.getElementById('theme-designer');
   if(el){ el.innerHTML = _tdHtml(); }
   if(_td.side==='gm') renderGmPreview();
@@ -8831,12 +8924,12 @@ async function tdSave(){
   if(_td.side==='gm'){
     const theme = _gmTdTheme();
     const res = await API('/api/gm-theme', {method:'PUT', body:{ theme: theme ? JSON.stringify(theme) : null }});
-    if(res && res.success){ _gmThemeSaved = { vars: Object.assign({}, _gmTheme.vars||{}), stamp:_gmTheme.stamp||'', wordmark:_gmTheme.wordmark||'', logo:_gmTheme.logo||null }; applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose(); }
+    if(res && res.success){ _gmThemeSaved = { vars: Object.assign({}, _gmTheme.vars||{}), pages:Object.assign({},_gmTheme.pages||{}), stamp:_gmTheme.stamp||'', wordmark:_gmTheme.wordmark||'', logo:_gmTheme.logo||null }; applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose(); }
     else toast((res&&res.error)||'Fehler','error');
     return;
   }
   const theme = _tdTheme();
-  const url = _td.kind==='location' ? `/api/locations/${_td.id}/theme` : `/api/cr/modes/${_td.id}/theme`;
+  const url = _td.kind==='global' ? '/api/global-player-theme' : (_td.kind==='location' ? `/api/locations/${_td.id}/theme` : `/api/cr/modes/${_td.id}/theme`);
   const res = await API(url, {method:'PUT', body:{ theme: theme ? JSON.stringify(theme) : null }});
   if(res && res.success){ toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose(); }
   else toast((res&&res.error)||'Fehler','error');

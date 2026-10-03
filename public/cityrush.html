@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.56">
-<script src="/js/theme.js?v=14"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.57">
+<script src="/js/theme.js?v=15"></script>
 <script src="/js/dialog.js?v=1"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -1906,6 +1906,7 @@ function crOpenSingleSpecial(){
 function openSpecialChooser(){
   popupMissionId = null;   // chooser isn't tied to one mission
   document.getElementById('cr-mission-popup').style.display = 'flex';
+  if(window.ArTheme) ArTheme.setPage('mission');
   const now = Date.now();
   const rows = specialMissions.map(m => {
     const done       = specialIsDone(m);
@@ -2047,6 +2048,7 @@ function openSpecialPopup(missionId){
   if(m && specialIsDone(m) && !(m.use_puzzle && _puzzleReady(m))){ toast('✓ ' + (t('completed')||'Erledigt'), 'info'); return; }
   popupMissionId = missionId;
   document.getElementById('cr-mission-popup').style.display = 'flex';
+  if(window.ArTheme) ArTheme.setPage('mission');
   refreshSpecialPopup();
 }
 function refreshSpecialPopup(){
@@ -2292,6 +2294,7 @@ function openMissionPopup(missionId){
   }
   popupMissionId = missionId;
   document.getElementById('cr-mission-popup').style.display = 'flex';
+  if(window.ArTheme) ArTheme.setPage('mission');
   refreshPopup();
   // Don't make the player wait for the next watchPosition tick to see GPS
   // status — fire an immediate check using the freshest fix we have.
@@ -2311,6 +2314,7 @@ function openMissionPopup(missionId){
 function closeMissionPopup(){
   popupMissionId = null;
   document.getElementById('cr-mission-popup').style.display = 'none';
+  if(window.ArTheme) ArTheme.setPage('cityrush');
 }
 function showCrRejection(message){
   const reason = document.getElementById('cr-rej-reason');
@@ -2323,10 +2327,12 @@ function showCrRejection(message){
   if(btn) btn.textContent = t('rej_btn')||'OK — Erneut versuchen';
   if(reason) reason.textContent = message || '';
   if(overlay) overlay.style.display = 'flex';
+  if(window.ArTheme) ArTheme.setPage('reject');
 }
 function closeCrRejection(){
   const overlay = document.getElementById('cr-rejection-overlay');
   if(overlay) overlay.style.display = 'none';
+  if(window.ArTheme) ArTheme.setPage('cityrush');
 }
 function refreshPopup(){
   if(popupMissionId == null) return;

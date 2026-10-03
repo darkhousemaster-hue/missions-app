@@ -719,6 +719,19 @@ const normTheme = t => {
       }
       if (Object.keys(vars).length) out.vars = vars;
     }
+    if (o.pages && typeof o.pages === 'object' && !Array.isArray(o.pages)) {
+      const pageKeys = new Set(['join','join-existing','password','play','mission','chat','reject','cityrush','landing','game-select','new-game','dashboard','settings-gate','settings']);
+      const pages = {};
+      for (const [page, value] of Object.entries(o.pages)) {
+        if (!pageKeys.has(page) || !value || typeof value !== 'object' || Array.isArray(value) || !value.vars || typeof value.vars !== 'object') continue;
+        const vars = {};
+        for (const [k, v] of Object.entries(value.vars)) {
+          if (/^--[a-z0-9-]{1,32}$/.test(k) && /^#[0-9a-fA-F]{3,8}$/.test(String(v))) vars[k] = String(v);
+        }
+        if (Object.keys(vars).length) pages[page] = { vars };
+      }
+      if (Object.keys(pages).length) out.pages = pages;
+    }
     if (typeof o.logo === 'string' && /^themes\/[\w.-]+$/.test(o.logo)) out.logo = o.logo;
     if (typeof o.stamp === 'string' && o.stamp.trim()) out.stamp = o.stamp.trim().slice(0, 60);
     if (typeof o.wordmark === 'string' && o.wordmark.trim()) out.wordmark = o.wordmark.trim().slice(0, 60);
@@ -746,6 +759,9 @@ const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(
 // so the theme designer (which only knows about the theme) uses these instead.
 const setLocationTheme = (id, t) => db.prepare('UPDATE locations SET theme=? WHERE id=?').run(normTheme(t), id);
 const setCrModeTheme   = (id, t) => db.prepare('UPDATE cr_modes SET theme=? WHERE id=?').run(normTheme(t), id);
+// Global player theme is the fallback for every location and Rail Adventure mode.
+const getGlobalPlayerTheme = () => { const v = getSetting('global_player_theme'); return v || null; };
+const setGlobalPlayerTheme = (t) => setSetting('global_player_theme', normTheme(t) || '');
 // Global GM dashboard theme (app-wide, independent of the per-location player
 // themes). Stored as a sanitized JSON string in settings; null = default look.
 const getGmTheme = () => { const v = getSetting('gm_theme'); return v || null; };
@@ -1555,7 +1571,7 @@ module.exports = {
   // else; reach for `_db` only when adding a new helper would be overkill.
   _db: db,
   getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
-  getGmTheme,setGmTheme,
+  getGmTheme,setGmTheme,getGlobalPlayerTheme,setGlobalPlayerTheme,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,reorderMissions,getGameRules,

@@ -587,7 +587,14 @@ app.get('/api/games/:id/theme', (req,res) => {
   let raw = null;
   if (game.location_id) { const loc = db.getLocation(game.location_id); raw = loc && loc.theme; }
   else { const cm = db.getGameCrMode(game.id); raw = cm && cm.theme; }
-  let theme = null; try { theme = raw ? JSON.parse(raw) : null; } catch(e) {}
+  const parseTheme = value => { try { return value ? JSON.parse(value) : null; } catch(e) { return null; } };
+  const base = parseTheme(db.getGlobalPlayerTheme()) || {};
+  const scoped = parseTheme(raw) || {};
+  const pages = { ...(base.pages||{}), ...(scoped.pages||{}) };
+  for(const key of Object.keys(pages)) pages[key] = { vars:{ ...((base.pages||{})[key]?.vars||{}), ...((scoped.pages||{})[key]?.vars||{}) } };
+  const theme = Object.keys(base).length || Object.keys(scoped).length
+    ? { ...base, ...scoped, vars: { ...(base.vars||{}), ...(scoped.vars||{}) }, pages }
+    : null;
   res.json({ theme });
 });
 // Theme save (GM-gated). Dedicated routes so the designer can write ONLY the
@@ -595,6 +602,16 @@ app.get('/api/games/:id/theme', (req,res) => {
 app.put('/api/locations/:id/theme', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.setLocationTheme(Number(req.params.id), req.body.theme ?? null);
+  res.json({success:true});
+});
+app.get('/api/global-player-theme', (req,res) => {
+  const t = db.getGlobalPlayerTheme();
+  let theme = null; if(t){ try{ theme = JSON.parse(t); }catch{ theme = null; } }
+  res.json({ theme });
+});
+app.put('/api/global-player-theme', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.setGlobalPlayerTheme(req.body.theme ?? null);
   res.json({success:true});
 });
 // Global GM dashboard theme (app-wide). Read is public (gm.html applies it on

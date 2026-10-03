@@ -8,6 +8,7 @@
 (function(){
   const qs      = new URLSearchParams(location.search);
   const preview = qs.get('preview') === '1';
+  const previewPage = preview ? qs.get('tdpage') : null;
   let gameId    = qs.get('game');
   if (!gameId && !preview) { try { gameId = sessionStorage.getItem('gameId'); } catch(e){} }
 
@@ -37,6 +38,7 @@
   }
 
   const appliedVars = [];
+  const appliedPageVars = [];
   function applyVars(vars){
     const root = document.documentElement;
     appliedVars.forEach(k => root.style.removeProperty(k));
@@ -45,6 +47,22 @@
     const all = Object.assign({}, vars, derived(vars));
     for (const [k,v] of Object.entries(all)){
       if (/^--[a-z0-9-]+$/i.test(k)) { root.style.setProperty(k, v); appliedVars.push(k); }
+    }
+  }
+  function currentPage(){
+    if(previewPage) return previewPage;
+    if(document.body && document.body.dataset.arThemePage) return document.body.dataset.arThemePage;
+    const file=location.pathname.split('/').pop();
+    return file==='join.html'?'join':(file==='cityrush.html'?'cityrush':'play');
+  }
+  function applyPageVars(vars){
+    const body=document.body;
+    if(body) appliedPageVars.forEach(k=>body.style.removeProperty(k));
+    appliedPageVars.length=0;
+    if(!body || !vars) return;
+    const all=Object.assign({},vars,derived(vars));
+    for(const [k,v] of Object.entries(all)){
+      if(/^--[a-z0-9-]+$/i.test(k)){body.style.setProperty(k,v);appliedPageVars.push(k);}
     }
   }
 
@@ -89,6 +107,7 @@
     theme = theme || {};
     current = theme;
     applyVars(theme.vars || null);
+    applyPageVars((theme.pages||{})[currentPage()]?.vars||null);
     // Border thickness is numeric, so it lives outside `vars` (which is hex-only).
     const root = document.documentElement;
     if (theme.borderWidth != null && theme.borderWidth !== '') root.style.setProperty('--border-width', theme.borderWidth + 'px');
@@ -100,7 +119,7 @@
     try { document.dispatchEvent(new CustomEvent('ar-theme-applied', { detail: theme })); } catch(e){}
   }
 
-  window.ArTheme = { preview, apply, logoUrl };
+  window.ArTheme = { preview, apply, logoUrl, setPage(page){ if(document.body) document.body.dataset.arThemePage=page; apply(current); } };
 
   if (preview){
     // Reverse hover: the designer asks us to outline the element(s) a hovered
@@ -109,7 +128,10 @@
       header:'.play-topbar, .join-header, .cr-topbar',
       tile:'.p-mission-card, .cr-tile', 'tile-active':'.p-mission-card, .cr-tile',
       'tile-text':'.mcard__title, .mcard__task, .cr-tile .name',
-      button:'.btn-primary, .btn-secondary, .md-btn', nav:'.icon-btn, .cr-icon-btn',
+      button:'.btn-primary, .btn-secondary, .md-btn',
+      'button-primary-text':'.join-cta .btn-primary, .md-actions .md-btn--primary',
+      'button-secondary-text':'.md-actions .md-btn--secondary',
+      'button-join-text':'.join-existing-link', nav:'.icon-btn, .cr-icon-btn',
       input:'.md-task, .name-field, .input',
       // notice covers the detail status note, the card's post-upload "awaiting
       // review" tag, the centered notice, and the rejection popup.
@@ -128,12 +150,30 @@
     function highlightRole(role){
       clearRoleHighlight();
       const sel = role && SEL_BY_ROLE[role]; if(!sel) return;
-      document.querySelectorAll(sel).forEach(el => {
+      let els = [...document.querySelectorAll(sel)];
+      if(role === 'text'){
+        // --text is inherited across most of the player UI. Highlight every
+        // visible text-bearing leaf using that variable, rather than only the
+        // title and name field where it was originally noticed.
+        const target = cssColor(getComputedStyle(document.documentElement).getPropertyValue('--text'));
+        els = [...document.querySelectorAll('body *')].filter(el => {
+          if(el.children.length || !el.getClientRects().length) return false;
+          return cssColor(getComputedStyle(el).color) === target;
+        });
+      }
+      els.forEach(el => {
         el.style.outline='3px solid #2ea3ff';
         el.style.outlineOffset='2px';
         el.style.boxShadow='0 0 0 3px #fff, 0 0 0 6px #2ea3ff, 0 0 20px 4px rgba(46,163,255,.95)';
         _hlEls.push(el);
       });
+    }
+    function cssColor(value){
+      const v=String(value||'').trim().toLowerCase();
+      if(/^#[0-9a-f]{3}$/.test(v)) return '#'+v.slice(1).split('').map(c=>c+c).join('');
+      if(/^#[0-9a-f]{6}$/.test(v)) return v;
+      const m=v.match(/^rgba?\(\s*(\d+)\D+(\d+)\D+(\d+)/);
+      return m ? `#${[m[1],m[2],m[3]].map(n=>Number(n).toString(16).padStart(2,'0')).join('')}` : v;
     }
     window.addEventListener('message', e => {
       if (e.origin !== location.origin) return;
@@ -146,7 +186,10 @@
     // must not navigate or open the camera when the GM mouses over it).
     const roleOf = el => {
       if (!el || !el.closest) return 'bg';
+      if (el.closest('.join-existing-link')) return 'button-join-text';
       // Action buttons have their own Button-fill colour.
+      if (el.closest('.md-actions .md-btn--primary, .join-cta .btn-primary')) return 'button-primary-text';
+      if (el.closest('.md-actions .md-btn--secondary')) return 'button-secondary-text';
       if (el.closest('.btn-primary, .btn-secondary, .md-btn')) return 'button';
       // Points pills (mission card + detail window) have their own colour.
       if (el.closest('.mcard__points, #md-points')) return 'points';

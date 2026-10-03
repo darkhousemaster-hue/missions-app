@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.56">
-<script src="/js/theme.js?v=14"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.57">
+<script src="/js/theme.js?v=15"></script>
 <script src="/js/dialog.js?v=1"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
@@ -200,9 +200,9 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .md-actions{display:flex;flex-direction:column;gap:10px;margin-top:22px;}
 .md-actions .md-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 16px;border-radius:10px;font:700 13px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:0;width:100%;}
 /* Detail-modal action buttons follow the same button model as .btn-primary/.btn-secondary. */
-.md-actions .md-btn--primary{background:var(--btn-bg,var(--orange));color:var(--btn-text,#fff);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
+.md-actions .md-btn--primary{background:var(--btn-bg,var(--orange));color:var(--btn-primary-text,var(--btn-text,#fff));box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
 .md-actions .md-btn--primary:hover{filter:brightness(1.08);}
-.md-actions .md-btn--secondary{background:var(--btn-bg,var(--surface2));color:var(--btn-text,#fff);border:1px solid var(--hairline);}
+.md-actions .md-btn--secondary{background:var(--btn-bg,var(--surface2));color:var(--btn-secondary-text,var(--btn-text,#fff));border:1px solid var(--hairline);}
 .md-actions .md-btn--secondary:hover{filter:brightness(1.08);}
 .md-actions .md-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
 /* Status notices (waiting-for-review / accepted / rejected). --notice-bg lets a
@@ -739,6 +739,7 @@ function cycleLang() {
 // ── View switching ────────────────────────────────────────────────────────────
 function showView(v) {
   currentView = v;
+  if(window.ArTheme) ArTheme.setPage(v==='chat'?'chat':'play');
   document.getElementById('view-missions').style.display = v==='missions' ? 'flex' : 'none';
   document.getElementById('view-chat').style.display     = v==='chat'     ? 'flex' : 'none';
   document.getElementById('view-rules').style.display    = v==='rules'    ? 'flex' : 'none';
@@ -1215,9 +1216,11 @@ function openMissionDetail(missionId) {
   }
 
   document.getElementById('mission-detail-modal').classList.add('is-open');
+  if(window.ArTheme) ArTheme.setPage('mission');
 }
 function closeMissionDetail() {
   document.getElementById('mission-detail-modal').classList.remove('is-open');
+  if(window.ArTheme) ArTheme.setPage(currentView==='chat'?'chat':'play');
   _openMissionId = null;
 }
 
@@ -1248,9 +1251,11 @@ function onAccepted(missionId) {
 function onRejected(missionId, message) {
   document.getElementById('rej-reason').textContent = message || '';
   document.getElementById('rejection-overlay').style.display = 'flex';
+  if(window.ArTheme) ArTheme.setPage('reject');
 }
 function closeRejection() {
   document.getElementById('rejection-overlay').style.display = 'none';
+  if(window.ArTheme) ArTheme.setPage('play');
   loadMissions();
 }
 

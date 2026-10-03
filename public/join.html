@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS — Join</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.56">
-<script src="/js/theme.js?v=14"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.57">
+<script src="/js/theme.js?v=15"></script>
 <script src="/js/dialog.js?v=1"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. The
@@ -87,7 +87,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
   width:100%; margin-top:12px; cursor:pointer; padding:12px 18px;
   font:700 13px/1 var(--body); letter-spacing:.06em; text-transform:uppercase;
   display:flex; align-items:center; justify-content:center; gap:8px;
-  background:transparent; color:var(--orange);
+  background:transparent; color:var(--btn-join-text,#fff);
   border:1.5px solid var(--orange); border-radius:10px;
   transition:background .15s;
 }
@@ -110,7 +110,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 #cta-password #password-submit { min-height:58px; }
 .join-existing-link { min-height:74px; }
 .join-cta .btn-primary {
-  background:var(--btn-bg,var(--orange)); color:var(--btn-text,#fff);
+  background:var(--btn-bg,var(--orange)); color:var(--btn-primary-text,var(--btn-text,#fff));
   box-shadow:0 10px 26px -10px var(--orange);
 }
 .join-cta .btn-primary:hover { background:#ff7438; }
@@ -288,7 +288,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
     <h3 class="je-title" id="password-title">Team-Passwort</h3>
     <p class="lead" id="password-lead">Wähle ein dreistelliges Passwort für dein Team.</p>
     <div>
-      <div class="label" id="password-label" style="text-align:center;margin-bottom:9px;">3 Ziffern</div>
+      <div class="label" id="password-label" style="text-align:center;margin-bottom:9px;">3 Zahlen</div>
       <div class="password-digits" role="group" aria-labelledby="password-label" aria-describedby="password-error">
         <input class="password-digit" id="team-password-1" type="password" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 1" autocomplete="off" oninput="handleTeamPasswordInput(this,0)" onkeydown="handleTeamPasswordKeydown(event,0)" onpaste="handleTeamPasswordPaste(event,0)">
         <input class="password-digit" id="team-password-2" type="password" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 2" autocomplete="off" oninput="handleTeamPasswordInput(this,1)" onkeydown="handleTeamPasswordKeydown(event,1)" onpaste="handleTeamPasswordPaste(event,1)">
@@ -386,7 +386,7 @@ const JOIN_T = {
        selfie_cta:'Tippen zum Aufnehmen', teamname:'Teamname', teamname_ph:'Teamname eingeben…',
        lang_label:'Sprache', join_existing:'Oder einem bestehenden Team beitreten', back:'Zurück',
        je_title:'Team beitreten', je_hint:'Du siehst dieselben Missionen und kannst unabhängig Medien einreichen.', no_teams:'Noch keine Teams in diesem Spiel.',
-       join_btn:'Beitreten', start:'Spiel beitreten', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.', password_title:'Team-Passwort', password_create:'Wähle ein dreistelliges Passwort für dein Team.', password_enter:'Gib das dreistellige Team-Passwort ein.', password_label:'3 Ziffern', password_next:'Weiter', password_save:'Passwort speichern', password_invalid:'Bitte genau drei Ziffern eingeben.', password_wrong:'Falsches Passwort. Bitte erneut versuchen.', support:'Technischer Support',
+       join_btn:'Beitreten', start:'Spiel beitreten', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.', password_title:'Team-Passwort', password_create:'Wähle ein dreistelliges Passwort für dein Team.', password_enter:'Gib das dreistellige Team-Passwort ein.', password_label:'3 Zahlen', password_next:'Weiter', password_save:'Passwort speichern', password_invalid:'Bitte genau drei Zahlen eingeben.', password_wrong:'Falsches Passwort. Bitte erneut versuchen.', support:'Technischer Support',
        waiting:'Warte…', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.',
        name_blocked:'Dieser Teamname ist nicht erlaubt. Bitte wähle einen anderen.', name_taken:'Teamname bereits vergeben. Bitte wähle einen anderen.',
        cam_denied:'Kamera-Zugriff abgelehnt.', cam_unavailable:'Kamera nicht verfügbar.',
@@ -632,7 +632,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Prefill the teamname so its typed text colour (the "Text" setting) is
     // visible + themeable in the preview, not just the grey placeholder.
     const tn = document.getElementById('team-name'); if (tn) tn.value = 'Demo Team';
-    show('create');
+    const page=new URLSearchParams(location.search).get('tdpage')||'join';
+    if(page==='join-existing'){
+      existingTeams=[{id:'preview-team',name:'Demo Team',score:5,selfie_path:null,password_set:true}];
+      showJoinExisting();
+    } else if(page==='password'){
+      supportPhone='+41 44 555 01 23';
+      showTeamPassword('join',{id:'preview-team',name:'Demo Team'});
+    } else showCreate();
     return;
   }
   // No game in the link: ask for the ID rather than call it invalid. The
@@ -777,7 +784,7 @@ function renderTechnicalSupport(){
   const el=document.getElementById('technical-support');
   if(!el) return;
   el.replaceChildren();
-  if(!supportPhone) return;
+  if(passwordAction!=='join' || !supportPhone) return;
   const label=document.createElement('span'); label.textContent=jt('support')+': ';
   const link=document.createElement('a'); link.textContent=supportPhone;
   link.href='tel:'+supportPhone.replace(/[^0-9+*#,;]/g,'');
@@ -986,6 +993,7 @@ function show(s) {
     document.getElementById('screen-' + n).style.display = n === s ? (n === 'loading' || n === 'error' ? 'block' : 'flex') : 'none';
   });
   if(s!=='team-password') document.getElementById('cta-password').style.display='none';
+  if(window.ArTheme) ArTheme.setPage(s==='join-existing'?'join-existing':(s==='team-password'?'password':'join'));
 }
 </script>
 </body>
