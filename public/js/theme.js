@@ -144,7 +144,20 @@
       logo:'.play-wordmark, .wordmark, .theme-logo', border:'.p-mission-card, .cr-tile',
     };
     let _hlEls = [];
+    let _hoverOutline;
     function clearRoleHighlight(){ _hlEls.forEach(el => { el.style.outline=''; el.style.outlineOffset=''; el.style.boxShadow=''; }); _hlEls = []; }
+    function outlineHoveredElement(el){
+      if(!el || !el.getBoundingClientRect){ if(_hoverOutline) _hoverOutline.style.display='none'; return; }
+      if(!_hoverOutline){
+        _hoverOutline=document.createElement('div');
+        _hoverOutline.setAttribute('aria-hidden','true');
+        _hoverOutline.style.cssText='position:fixed;z-index:2147483647;pointer-events:none;box-sizing:border-box;border:2px solid #fff;border-radius:4px;box-shadow:0 0 0 3px #2ea3ff,0 0 18px 5px rgba(46,163,255,.95);background:rgba(46,163,255,.08);';
+        document.body.appendChild(_hoverOutline);
+      }
+      const r=el.getBoundingClientRect();
+      if(!r.width || !r.height){ _hoverOutline.style.display='none'; return; }
+      Object.assign(_hoverOutline.style,{display:'block',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+    }
     // Bold, high-contrast double ring (white + blue + glow) so the highlight is
     // obvious on ANY themed background, including light/yellow ones.
     function highlightRole(role){
@@ -212,33 +225,29 @@
       if (el.closest('.wordmark, .play-wordmark, .theme-logo')) return 'logo';
       if (el.closest('.join-header, .play-topbar, .cr-topbar')) return 'header';
       // Text that doesn't live in one of the specifically themed components
-      // still belongs to a text colour setting, not the page background. Match
-      // its computed colour against the available text variables so secondary
-      // and muted labels keep pointing at their own controls.
+      // still belongs to a text colour setting, not the page background. Some
+      // pages alias --text-dim/--text-muted to --text, so only select a
+      // secondary setting when its actual colour is distinct from primary.
       const hasDirectText = [...el.childNodes].some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
       if (hasDirectText || (!el.children.length && el.textContent.trim())) {
         const style = getComputedStyle(el);
         const color = cssColor(style.color);
-        for (const [variable, role] of [
-          ['--text-dim','text-dim'], ['--text-muted','text-muted'],
-          ['--notice-text','notice'], ['--tile-text','tile-text'],
-          ['--btn-primary-text','button-primary-text'],
-          ['--btn-secondary-text','button-secondary-text'], ['--btn-join-text','button-join-text'],
-          ['--btn-text','button'], ['--points','points'], ['--nav','nav'], ['--logo-color','logo'], ['--text','text']
-        ]) {
-          const value = style.getPropertyValue(variable).trim();
-          if (value && cssColor(value) === color) return role;
-        }
+        const primary=cssColor(style.getPropertyValue('--text'));
+        const dim=cssColor(style.getPropertyValue('--text-dim'));
+        const muted=cssColor(style.getPropertyValue('--text-muted'));
+        if(color===dim && dim!==primary) return 'text-dim';
+        if(color===muted && muted!==primary) return 'text-muted';
         return 'text';
       }
       return 'bg';
     };
     let _lastRole;
     document.addEventListener('mousemove', e => {
+      outlineHoveredElement(e.target);
       const r = roleOf(e.target);
       if (r !== _lastRole) { _lastRole = r; try { parent.postMessage({ type:'ar-theme-hover', role:r }, location.origin); } catch(e){} }
     }, { passive:true });
-    document.addEventListener('mouseleave', () => { _lastRole = null; try { parent.postMessage({ type:'ar-theme-hover', role:null }, location.origin); } catch(e){} });
+    document.addEventListener('mouseleave', () => { _lastRole = null; outlineHoveredElement(null); try { parent.postMessage({ type:'ar-theme-hover', role:null }, location.origin); } catch(e){} });
     // Clicks are swallowed (no navigation), but first tell the designer to LOCK
     // the highlight for whatever was clicked so it stops following the cursor.
     document.addEventListener('click', e => {
