@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trail Studio</title>
 <script src="/js/dialog.js?v=1"></script>
+<script src="/js/at-design.js?v=1"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +17,7 @@
   --bg:oklch(0.175 0.004 60); --bg-sunk:oklch(0.145 0.004 60);
   --surface:oklch(0.235 0.005 60); --raised:oklch(0.275 0.006 60);
   --line:oklch(0.315 0.007 60); --line-soft:oklch(0.265 0.006 60);
-  --ink:oklch(0.955 0.006 85); --ink-2:oklch(0.700 0.009 75); --ink-3:oklch(0.545 0.009 75);
+  --ink:oklch(0.955 0.006 85); --ink-2:oklch(0.740 0.009 75); --ink-3:oklch(0.640 0.009 75);
   --accent:oklch(0.660 0.190 42); --accent-hi:oklch(0.730 0.185 46); --accent-sunk:oklch(0.300 0.060 42);
   --go:oklch(0.830 0.180 150); --warn:oklch(0.820 0.140 85); --stop:oklch(0.660 0.190 22);
   --t-start:oklch(0.800 0.150 150); --t-station:oklch(0.790 0.140 70);
@@ -62,6 +63,8 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 .pageprev .pp-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;font:500 12px/1.2 var(--body);color:var(--ink-2)}
 .pageprev iframe{flex:1;border:0;background:#fff;width:100%}
 .pageprev .pp-3d{flex:1;display:grid;place-items:center;min-height:0}
+.dthumb{position:relative;height:320px;border-radius:12px;overflow:hidden;background:#0B0F1A;border:1px solid var(--line);margin-bottom:12px}
+.dthumb[data-empty] span{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--ink-3);font:500 12px/1.5 var(--body)}
 .seg{display:flex;background:var(--surface);border-radius:var(--r-md);padding:3px;gap:2px;margin-left:auto}
 .seg button{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;border-radius:var(--r-sm);color:var(--ink-3)}
 .seg button[aria-pressed=true]{background:var(--raised);color:var(--ink)}
@@ -73,7 +76,7 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 .btn:hover{background:var(--line)}
 .btn.primary{background:var(--accent);color:oklch(0.99 0 0)}
 .btn.primary:hover{background:var(--accent-hi)}
-.btn.sm{padding:7px 10px;font-size:10px}
+.btn.sm{padding:7px 10px;font-size:11px}
 
 .body{display:grid;grid-template-columns:52px 1fr 372px;min-height:0}
 .rail{background:var(--bg-sunk);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;overflow:hidden}
@@ -173,7 +176,7 @@ body.embed .topbar{background:transparent;border-bottom:1px solid var(--line)}
 .panel{flex:1;overflow-y:auto;padding:15px 14px 22px}
 .panel[hidden]{display:none}
 .fld{margin-bottom:14px}
-.fld > label{display:block;font:700 9px/1 var(--body);letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.fld > label{display:block;font:600 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
 .hint{font:400 11px/1.45 var(--body);color:var(--ink-3);margin-top:6px;max-width:62ch}
 .split2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .split3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
@@ -308,7 +311,7 @@ const TIPS = {
   't-riddle':  ['Rätsel', 'Die Antwort, die akzeptiert wird, und wie streng verglichen wird.'],
   't-hints':   ['Hinweise', 'Die Hilfe, die sich von selbst öffnet. Ohne Spielleiter kann niemand nachfragen.'],
   't-fund':    ['Fundstücke', 'Was das Team hier findet: Dateien, eine Webseite, eine Nummer, eine Adresse, einen Brief. Es schaltet nichts frei, es macht die Geschichte greifbar.'],
-  't-style':   ['Stil', 'Aussehen dieses einen Bildschirms.'],
+  't-style':   ['Seite', 'Wie dieser Bildschirm für das Team aussieht: Hintergrundbild, eigene Knöpfe und Bild-Knöpfe, ein Video im Fernseher, Texte. Gestaltet im Seiten-Designer.'],
   't-choices': ['Zweige', 'Die Wege, die von dieser Weiche abgehen, und ihre Beschriftung.'],
   'f-media':   ['Datei', 'Ein Bild, eine Sprachaufnahme, ein Video oder ein PDF. Wird vorgeladen und läuft auch ohne Empfang.'],
   'f-page':    ['Webseite', 'Eine kleine echte Webseite, zum Beispiel die Seite der Firma aus der Geschichte: eine einzelne HTML-Datei mit allem drin. Sie läuft abgeschottet und kann im Spiel nichts lesen oder verändern.'],
@@ -447,7 +450,14 @@ async function loadTrails(){
   const pick = $('#trail-pick');
   pick.innerHTML = list.map(t => '<option value="'+t.id+'">'+esc(t.name)+(t.city?' · '+esc(t.city):'')+'</option>').join('')
     || '<option value="">Noch kein Trail</option>';
-  if(list.length){ pick.value = localStorage.getItem('at_trail') || list[0].id; await openTrail(pick.value); }
+  const q = new URLSearchParams(location.search);
+  const want = [q.get('trail'), localStorage.getItem('at_trail')].find(t => t && list.some(x => String(x.id) === String(t)));
+  if(list.length){
+    pick.value = want || list[0].id; await openTrail(pick.value);
+    // Coming back from the page designer: the part that was being designed.
+    const nid = Number(q.get('node'));
+    if(nid && NODES.some(x => x.id === nid)){ selId = nid; if(q.get('tab')) tab = q.get('tab'); render(); }
+  }
 }
 let _recentre = false;
 async function openTrail(id){
@@ -835,14 +845,14 @@ let tab = 'trigger';
 // answer and no location: it is a signpost that reads the next connected
 // station's coordinates, so offering it a radius would be a lie.
 const TABS = {
-  start:   [['text','Text'],['fund','Fundstücke'],['style','Stil']],
-  station: [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
-  riddle:  [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Stil']],
-  story:   [['story','Story'],['ort','Ort'],['fund','Fundstücke'],['style','Stil']],
-  arg:     [['fund','Fundstücke'],['text','Text'],['style','Stil']],
-  gate:    [['text','Text'],['choices','Zweige'],['style','Stil']],
+  start:   [['text','Text'],['fund','Fundstücke'],['style','Seite']],
+  station: [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Seite']],
+  riddle:  [['trigger','Auslöser'],['story','Story'],['riddle','Rätsel'],['hints','Hinweise'],['fund','Fundstücke'],['style','Seite']],
+  story:   [['story','Story'],['ort','Ort'],['fund','Fundstücke'],['style','Seite']],
+  arg:     [['fund','Fundstücke'],['text','Text'],['style','Seite']],
+  gate:    [['text','Text'],['choices','Zweige'],['style','Seite']],
   nav:     [['peilung','Peilung']],
-  end:     [['text','Text'],['fund','Fundstücke'],['style','Stil']],
+  end:     [['text','Text'],['fund','Fundstücke'],['style','Seite']],
 };
 const tabsFor = kind => TABS[kind] || TABS.station;
 function renderInspector(){
@@ -1225,11 +1235,22 @@ function renderPanel(n, l){
       + '<p class="hint">Das Kürzel markiert alles dahinter. Ein Baustein hinter „geld“ erscheint nur für Teams, die diesen Zweig gewählt haben.</p>';
   }
   else if(tab === 'style'){
-    const st = n.style || {};
-    p.innerHTML = '<p class="hint" style="margin:0 0 12px">Überschreibt das Trail-Thema nur für diesen Baustein.</p>'
-      + field('Akzentfarbe (hex)','f-accent',st.accent||'')
-      + field('Hintergrundbild (Pfad)','f-bgimg',st.bg||'',false,'Querformat, ungefähr 1200 × 800. Wird formatfüllend beschnitten.')
-      + '<div class="fld"><label>Abdunkeln %</label><input class="inp" id="f-scrim" value="'+(st.scrim==null?62:st.scrim)+'"></div>';
+    // The page itself is designed in its own room; here it is seen small.
+    const has = ATDesign.has(n.design);
+    p.innerHTML = '<div class="dthumb" id="d-thumb"'+(has ? '' : ' data-empty="1"')+'><div class="atd-stage"></div>'
+      + (has ? '' : '<span>Noch nicht gestaltet. Der Baustein sieht aus wie alle anderen.</span>') + '</div>'
+      + '<button class="btn primary" id="b-design" style="width:100%">'+(has ? 'Seite bearbeiten' : 'Seite gestalten')+'</button>'
+      + '<p class="hint">Im Seiten-Designer: Hintergrundbild, eigene Knöpfe und Bild-Knöpfe, ein Video im Fernseher, Texte. Alles frei platzierbar, in Ebenen, auch mit transparenten Bildern.</p>';
+    if(has){
+      const box = $('#d-thumb'), stage = box.querySelector('.atd-stage');
+      ATDesign.render(stage, n.design, { mode:'thumb', lang:L1(),
+        storyVideo: n.story_media === 'video' && n.story_media_path ? '/uploads/' + n.story_media_path : '' });
+      requestAnimationFrame(() => ATDesign.fit(stage, box));
+    }
+    $('#b-design').onclick = () => {
+      location.href = '/at-designer.html?node=' + n.id + '&trail=' + TRAIL.id
+        + (new URLSearchParams(location.search).get('embed') === '1' ? '&embed=1' : '');
+    };
   }
 }
 // Read the hint ladder back out of the DOM. Anything that re-renders the panel
@@ -1277,7 +1298,7 @@ async function saveNode(n){
   } else if(tab === 'hints'){
     body.hints = collectHints(n, l);
   } else if(tab === 'style'){
-    body.style = { accent: g('f-accent') || undefined, bg: g('f-bgimg') || undefined, scrim: Number(g('f-scrim')) };
+    // The page designer saves on its own.
   } else if(tab === 'text'){
     setI18n('title', g('f-title')); setI18n('task', g('f-task'));
   } else if(tab === 'peilung'){

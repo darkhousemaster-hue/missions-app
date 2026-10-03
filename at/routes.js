@@ -72,6 +72,11 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     return null;
   }
 
+  // The same rule as the renderer's: a design counts once anything about it
+  // differs from a plain page, a colour or a hidden top bar included.
+  const hasDesign = d => !!(d && typeof d === 'object' && ((Array.isArray(d.layers) && d.layers.length)
+    || (d.page && (d.page.image || d.page.chrome === false || (d.page.bg && d.page.bg !== '#0B0F1A')))));
+
   // ── Player payload ─────────────────────────────────────────────────────────
   // Everything the player app is allowed to know. Answers, post codes and
   // unreleased hints never leave the server: the quiz leak we fixed in Rail
@@ -154,6 +159,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
           depart: isDone ? at.pick(n.depart, lang) : '',
           trigger_kind: n.trigger_kind,
           story_media: n.story_media || 'text',
+          design: hasDesign(n.design) ? n.design : null,
           story_media_path: n.story_media_path || null,
           nav_mode: n.nav_mode,
           // Coordinates only go out when the node actually uses them, and only
@@ -390,7 +396,144 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
   });
 
   r.delete('/api/at/nodes/:id', gm, (req, res) => {
-    at.deleteNode(req.params.id); res.json({ success: true });
+    const gone = designFiles((at.getNode(req.params.id) || {}).design);
+    at.deleteNode(req.params.id);
+    dropUnusedDesignFiles(gone);
+    res.json({ success: true });
+  });
+
+  // ── Page designs ───────────────────────────────────────────────────────────
+  // A design arrives from the designer and leaves for every player's phone, so
+  // it is rebuilt here field by field: numbers clamped, choices from fixed
+  // lists, colours as colours, files only by the paths we issued, links only
+  // to the web. Anything else is dropped rather than stored.
+  const LANGS = ['de', 'en', 'fr', 'it', 'es'];
+  const dNum = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+  const dPick = (v, list, d) => list.includes(v) ? v : d;
+  const dColor = (v, d) => typeof v === 'string' && /^(#[0-9a-fA-F]{3,8}|transparent)$/.test(v) ? v : d;
+  const dFile = v => typeof v === 'string' && /^at\/[A-Za-z0-9._-]+$/.test(v) ? v : null;
+  const dText = (v, max) => {
+    const o = {};
+    if (v && typeof v === 'object') for (const k of LANGS) if (typeof v[k] === 'string') o[k] = v[k].slice(0, max);
+    return o;
+  };
+  const dUrl = v => { try { const u = new URL(String(v || '')); return /^https?:$/.test(u.protocol) ? u.href.slice(0, 2000) : ''; } catch (e) { return ''; } };
+  function cleanDesign(d) {
+    d = d && typeof d === 'object' ? d : {};
+    const pg = d.page && typeof d.page === 'object' ? d.page : {};
+    const out = {
+      v: 1,
+      page: { bg: dColor(pg.bg, '#0B0F1A'), image: dFile(pg.image), fit: dPick(pg.fit, ['cover', 'contain'], 'cover'),
+              chrome: pg.chrome !== false },
+      layers: [],
+    };
+    const seen = new Set();
+    for (const l of (Array.isArray(d.layers) ? d.layers : []).slice(0, 60)) {
+      if (!l || typeof l !== 'object') continue;
+      const type = dPick(l.type, ['image', 'button', 'video', 'text', 'content'], null);
+      const id = typeof l.id === 'string' && /^[A-Za-z0-9]{1,16}$/.test(l.id) && !seen.has(l.id) ? l.id : null;
+      if (!type || !id) continue;
+      seen.add(id);
+      const o = { id, type, name: String(l.name || '').slice(0, 40),
+        x: dNum(l.x, -100, 200, 0), y: dNum(l.y, -100, 200, 0), w: dNum(l.w, 0.5, 300, 30), h: dNum(l.h, 0.3, 300, 10),
+        rot: dNum(l.rot, -360, 360, 0), opacity: dNum(l.opacity, 0, 1, 1), hidden: !!l.hidden, locked: !!l.locked };
+      if (type === 'image') { o.src = dFile(l.src); o.fit = dPick(l.fit, ['fill', 'contain', 'cover'], 'fill'); }
+      if (type === 'button') {
+        o.label = dText(l.label, 80); o.src = dFile(l.src); o.fit = dPick(l.fit, ['fill', 'contain', 'cover'], 'contain');
+        o.bg = dColor(l.bg, '#E8B23A'); o.fg = dColor(l.fg, '#16120C'); o.border = dColor(l.border, null);
+        o.radius = dNum(l.radius, 0, 200, 12); o.size = dNum(l.size, 8, 72, 16);
+        const a = l.action && typeof l.action === 'object' ? l.action : {};
+        const act = dPick(a.do, ['primary', 'asset', 'url', 'video', 'branch', 'none'], 'primary');
+        o.action = { do: act };
+        if (act === 'asset') o.action.asset = dNum(a.asset, 0, 1e9, 0) | 0;
+        if (act === 'url') o.action.url = dUrl(a.url);
+        if (act === 'video') o.action.video = typeof a.video === 'string' && /^[A-Za-z0-9]{1,16}$/.test(a.video) ? a.video : '';
+        if (act === 'branch') o.action.to = dNum(a.to, 0, 1e9, 0) | 0;
+      }
+      if (type === 'video') {
+        o.src = l.src === 'story' ? 'story' : dFile(l.src);
+        o.fit = dPick(l.fit, ['cover', 'contain', 'fill'], 'cover'); o.radius = dNum(l.radius, 0, 200, 0);
+        o.controls = l.controls !== false; o.autoplay = !!l.autoplay; o.loop = !!l.loop;
+      }
+      if (type === 'text') {
+        o.text = dText(l.text, 2000); o.font = dPick(l.font, ['display', 'body', 'mono'], 'body');
+        o.size = dNum(l.size, 6, 160, 18); o.weight = dPick(Number(l.weight), [400, 600, 800], 600);
+        o.color = dColor(l.color, '#F4F1EA'); o.align = dPick(l.align, ['left', 'center', 'right'], 'left');
+        o.bg = dColor(l.bg, null); o.pad = dNum(l.pad, 0, 80, 0); o.radius = dNum(l.radius, 0, 200, 0); o.shadow = !!l.shadow;
+      }
+      if (type === 'content') {
+        const sh = l.show && typeof l.show === 'object' ? l.show : {};
+        o.show = { text: sh.text !== false, hints: sh.hints !== false, finds: sh.finds !== false, actions: sh.actions !== false };
+        o.bg = dColor(l.bg, '#141828DB'); o.fg = dColor(l.fg, null);
+        o.radius = dNum(l.radius, 0, 200, 16); o.pad = dNum(l.pad, 0, 80, 16);
+      }
+      out.layers.push(o);
+    }
+    return out;
+  }
+  // Files the designer uploaded for a design are named at/d-…; story media and
+  // finds are never touched here.
+  function designFiles(d) {
+    const out = new Set();
+    if (!d || typeof d !== 'object') return out;
+    const add = v => { if (typeof v === 'string' && /^at\/d-[A-Za-z0-9._-]+$/.test(v)) out.add(v); };
+    add(d.page && d.page.image);
+    for (const l of d.layers || []) add(l && l.src);
+    return out;
+  }
+  // Drop design files nothing uses any more. A copied design shares files, so
+  // every design is asked; and a file uploaded within the hour is spared, since
+  // the designer saves it into the design a moment after the upload.
+  function dropUnusedDesignFiles(candidates) {
+    const used = new Set();
+    for (const d of at.listAllDesigns()) for (const f of designFiles(d)) used.add(f);
+    const now = Date.now();
+    let names = [];
+    try { names = fs.readdirSync(AT_UPLOAD_DIR).filter(n => n.startsWith('d-')); } catch (e) { return; }
+    const want = new Set([...(candidates || [])].map(f => f.slice(3)));
+    for (const n of names) {
+      const rel = 'at/' + n;
+      if (used.has(rel)) continue;
+      const file = path.join(AT_UPLOAD_DIR, n);
+      let age = 0; try { age = now - fs.statSync(file).mtimeMs; } catch (e) { continue; }
+      if (want.has(n) || age > 3600 * 1000) { try { fs.unlinkSync(file); } catch (e) {} }
+    }
+  }
+  r.put('/api/at/nodes/:id/design', gm, (req, res) => {
+    const node = at.getNode(req.params.id);
+    if (!node) return res.status(404).json({ error: 'unknown_node' });
+    const clean = cleanDesign((req.body || {}).design);
+    const before = designFiles(node.design);
+    at.updateNode(node.id, { design: clean });
+    const after = designFiles(clean);
+    dropUnusedDesignFiles([...before].filter(f => !after.has(f)));
+    res.json({ success: true, design: clean });
+  });
+  r.delete('/api/at/nodes/:id/design', gm, (req, res) => {
+    const node = at.getNode(req.params.id);
+    if (!node) return res.status(404).json({ error: 'unknown_node' });
+    at.updateNode(node.id, { design: {} });
+    dropUnusedDesignFiles(designFiles(node.design));
+    res.json({ success: true });
+  });
+  // Pictures and videos for a design: transparent PNG and WebP keep their
+  // transparency, nothing is re-encoded.
+  const D_IMG = /\.(png|jpe?g|webp|gif)$/i, D_VID = /\.(mp4|webm|m4v)$/i;
+  r.post('/api/at/design-asset', upload.single('file'), (req, res) => {
+    const drop = () => { if (req.file) { try { fs.unlinkSync(req.file.path); } catch (e) {} } };
+    if (!isGmAuthed(req)) { drop(); return res.status(401).json({ error: 'Unauthorized' }); }
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+    const name = String(req.file.originalname || ''), mime = String(req.file.mimetype || '').toLowerCase();
+    const isImg = D_IMG.test(name) && /^image\/(png|jpeg|webp|gif)$/.test(mime);
+    const isVid = D_VID.test(name) && /^video\/(mp4|webm|x-m4v)$/.test(mime);
+    if (!isImg && !isVid) { drop(); return res.status(400).json({ error: 'unsupported_type' }); }
+    if (isImg && req.file.size > 15 * 1024 * 1024) { drop(); return res.status(400).json({ error: 'too_large' }); }
+    if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
+    const stored = 'd-' + req.file.filename;
+    const dest = path.join(AT_UPLOAD_DIR, stored);
+    try { fs.renameSync(req.file.path, dest); }
+    catch (e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+    res.json({ success: true, path: 'at/' + stored, kind: isImg ? 'image' : 'video' });
   });
 
   r.post('/api/at/trails/:id/edges', gm, (req, res) => {

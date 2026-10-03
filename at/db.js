@@ -128,6 +128,9 @@ try { db.exec("ALTER TABLE at_nodes ADD COLUMN story_media_path TEXT"); } catch 
 // Finds that are not files: a link, a number, an address, a letter. ref holds
 // the target, body the text (per language), meta the rest (file name, size,
 // the address a fake website shows, an email subject).
+// A page's own look, from the page designer: background, placed pictures,
+// buttons, video areas, text, and where the part's own content sits.
+try { db.exec("ALTER TABLE at_nodes ADD COLUMN design TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE at_assets ADD COLUMN ref TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE at_assets ADD COLUMN body TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE at_assets ADD COLUMN meta TEXT"); } catch (e) {}
@@ -199,7 +202,7 @@ const updateTrail = (id, p) => {
 const deleteTrail = id => { db.prepare('DELETE FROM at_trails WHERE id=?').run(Number(id)); };
 
 // ── Nodes ────────────────────────────────────────────────────────────────────
-const NODE_JSON = ['title', 'arrive', 'depart', 'task', 'answers', 'style'];
+const NODE_JSON = ['title', 'arrive', 'depart', 'task', 'answers', 'style', 'design'];
 function hydrateNode(n) {
   const out = { ...n, id: num(n.id), trail_id: num(n.trail_id) };
   for (const k of NODE_JSON) out[k] = J(n[k], k === 'answers' ? {} : (k === 'style' ? {} : {}));
@@ -232,7 +235,7 @@ const createNode = (trailId, p = {}) => {
 const NODE_FIELDS = ['kind', 'title', 'arrive', 'depart', 'task', 'trigger_kind', 'answers',
   'story_media', 'story_media_path',
   'answer_case_sensitive', 'post_code', 'lat', 'lng', 'radius_m', 'accuracy_max',
-  'nav_mode', 'x', 'y', 'style', 'points', 'skip_after_min', 'order_index'];
+  'nav_mode', 'x', 'y', 'style', 'points', 'skip_after_min', 'order_index', 'design'];
 const updateNode = (id, p) => {
   const cur = db.prepare('SELECT * FROM at_nodes WHERE id=?').get(Number(id));
   if (!cur) return false;
@@ -245,6 +248,9 @@ const updateNode = (id, p) => {
   return true;
 };
 const deleteNode = id => { db.prepare('DELETE FROM at_nodes WHERE id=?').run(Number(id)); };
+// Every saved design, for telling which uploaded design files are still used.
+const listAllDesigns = () => db.prepare("SELECT design FROM at_nodes WHERE design IS NOT NULL AND design <> '{}'")
+  .all().map(r => J(r.design, null)).filter(Boolean);
 
 // ── Edges ────────────────────────────────────────────────────────────────────
 const listEdges = trailId => db.prepare('SELECT * FROM at_edges WHERE trail_id=?')
@@ -422,7 +428,7 @@ const useHint = (runId, nodeId, n) => {
 module.exports = {
   pick, makeCode, normCode, J, TEST_CODE, isTestCode,
   listTrails, getTrail, createTrail, updateTrail, deleteTrail,
-  listNodes, getNode, createNode, updateNode, deleteNode,
+  listNodes, getNode, createNode, updateNode, deleteNode, listAllDesigns,
   listEdges, addEdge, removeEdge,
   listHints, setHints,
   listAssets, addAsset, getAsset, updateAsset, deleteAsset,

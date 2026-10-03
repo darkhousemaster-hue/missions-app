@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0E1118">
 <title>AdventureTrail</title>
 <script src="/js/dialog.js?v=1"></script>
+<script src="/js/at-design.js?v=1"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
@@ -128,6 +129,13 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
 .pagebar svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 .pagebar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pageframe{flex:1;width:100%;border:0;background:#fff}
+#v-play.designed{padding:0;overflow:hidden;position:relative}
+/* The top bar floats over a designed page, so the page gets the whole screen. */
+#v-play.designed .topbar{position:absolute;left:0;right:0;top:0;z-index:3;padding:max(14px,env(safe-area-inset-top)) 18px 22px;
+  background:linear-gradient(oklch(0.16 0.03 262 / .82),oklch(0.16 0.03 262 / 0))}
+#v-play.designed.nochrome .topbar{display:none}
+.atd-wrap{position:absolute;inset:0;overflow:hidden}
+.atd-fill{position:absolute;inset:-60px;background-size:cover;background-position:center;filter:blur(30px) brightness(.5);transform:scale(1.08)}
 .arbox{flex:1;min-height:0;display:grid;place-items:center;background:var(--card2);padding-top:env(safe-area-inset-top)}
 .arbox model-viewer{width:100%;height:100%;--poster-color:transparent}
 .arbtn{position:absolute;left:16px;right:16px;bottom:16px;width:auto}
@@ -430,7 +438,8 @@ function renderPlay(){
   // A beat can be read, watched or listened to. The text stays either way, as
   // subtitle and as the thing that gets translated.
   // A beat tied to a place keeps its recording for when the team gets there.
-  if(!holdsMedia(n)) body.push(mediaHtml(n));
+  // A design that plays the story video in its own frame shows it there instead.
+  if(!holdsMedia(n) && !(n.design && ATDesign.usesStory(n.design))) body.push(mediaHtml(n));
   if(n.task) body.push('<p class="story">'+esc(n.task)+'</p>');
 
   // Peilung: distance only, never an arrow. Which way is still the puzzle.
@@ -486,6 +495,7 @@ function renderPlay(){
   // button a team reaches for when the location check has just refused them.
   $('#play-foot').innerHTML = '<div id="solve-msg"></div>' + foot.join('');
   wire(n);
+  applyDesign(n);
 
   if(n.nav_mode === 'distance' && n.lat != null){ holdWake(); tickDistance(n); }
   else dropWake();
@@ -571,10 +581,91 @@ function mediaHtml(n){
 }
 // The departure text is what makes a trail feel like one story instead of a
 // list, so it gets the screen to itself before the next station.
+// ── Designed pages ───────────────────────────────────────────────────────────
+// A part with a design is shown on its own canvas: background, pictures,
+// buttons, video, text. The part's working content (text, answer field,
+// buttons, hints, finds) moves into the design's content box, so everything
+// that makes the part playable keeps working unchanged.
+let _dWatch = null;
+function undesign(){
+  const v = $('#v-play'), wrap = v.querySelector('.atd-wrap');
+  if(_dWatch){ _dWatch.disconnect(); _dWatch = null; }
+  const body = $('#play-body'), foot = $('#play-foot');
+  body.style.display = ''; foot.style.display = '';
+  if(!wrap) return;
+  v.appendChild(body); v.appendChild(foot);
+  wrap.remove();
+  v.classList.remove('designed', 'nochrome');
+}
+// Whatever a design hides, a team must always have a way on: an answer field,
+// the code from the sign and the skip offer for a lock, the choices for a fork,
+// a button for a plain page. If the design leaves no way, its content box is
+// put back.
+function playable(n, d){
+  const layers = d.layers || [];
+  const box = layers.find(l => l.type === 'content' && !l.hidden);
+  const actions = !!box && (!box.show || box.show.actions !== false);
+  if(['answer','code','qr','gps'].includes(n.trigger_kind) && n.kind !== 'nav' && n.kind !== 'gate') return actions;
+  if(n.kind === 'gate') return actions || layers.some(l => l.type === 'button' && !l.hidden && l.action && l.action.do === 'branch');
+  return actions || layers.some(l => l.type === 'button' && !l.hidden && (!l.action || l.action.do === 'primary'));
+}
+function applyDesign(n){
+  if(!n.design || !ATDesign.has(n.design)){ undesign(); return; }
+  let d = n.design;
+  if(!playable(n, d)){
+    d = JSON.parse(JSON.stringify(d));
+    const box = d.layers.find(l => l.type === 'content');
+    if(box){ box.hidden = false; box.show = Object.assign({}, box.show, { actions:true }); }
+    else d.layers.push({ id:'auto', type:'content', x:4, y:60, w:92, h:36, rot:0, opacity:1,
+                         show:{ text:true, hints:true, finds:true, actions:true }, bg:'#141828DB', radius:16, pad:16 });
+  }
+  const v = $('#v-play');
+  let wrap = v.querySelector('.atd-wrap');
+  if(!wrap){
+    wrap = document.createElement('div'); wrap.className = 'atd-wrap';
+    wrap.innerHTML = '<div class="atd-fill"></div><div class="atd-stage"></div>';
+    v.appendChild(wrap);
+  }
+  v.classList.add('designed');
+  v.classList.toggle('nochrome', !!(d.page && d.page.chrome === false));
+  const fill = wrap.querySelector('.atd-fill'), stage = wrap.querySelector('.atd-stage');
+  const img = ATDesign.media(d.page && d.page.image);
+  fill.style.backgroundImage = img ? 'url("' + img + '")' : '';
+  wrap.style.background = d.page && d.page.bg && d.page.bg !== 'transparent' ? d.page.bg : '';
+  // Keep the content's own nodes alive while the stage is rebuilt around them.
+  const body = $('#play-body'), foot = $('#play-foot');
+  v.appendChild(body); v.appendChild(foot);
+  ATDesign.render(stage, d, {
+    mode:'play', lang: (RUN && RUN.run && RUN.run.lang) || 'de',
+    storyVideo: n.story_media === 'video' && n.story_media_path ? '/uploads/' + n.story_media_path : '',
+    holdStory: holdsMedia(n),
+    content: () => { const c = document.createElement('div'); c.className = 'atd-content-in'; c.appendChild(body); c.appendChild(foot); return c; },
+    onAction: l => designAction(l),
+  });
+  if(!body.parentNode || !body.parentNode.classList.contains('atd-content-in')){ body.style.display = 'none'; foot.style.display = 'none'; }
+  else { body.style.display = ''; foot.style.display = ''; }
+  const refit = () => ATDesign.fit(stage, wrap);
+  refit();
+  if(_dWatch) _dWatch.disconnect();
+  if(typeof ResizeObserver === 'function'){ _dWatch = new ResizeObserver(refit); _dWatch.observe(wrap); }
+}
+function designAction(l){
+  const a = l.action || { do:'primary' };
+  if(a.do === 'primary'){ const b = $('#b-solve') || $('#b-here') || $('#b-next'); if(b) b.click(); }
+  else if(a.do === 'asset') openAsset(Number(a.asset));
+  else if(a.do === 'url' && /^https?:\/\//i.test(a.url || '')) window.open(a.url, '_blank', 'noopener');
+  else if(a.do === 'video'){
+    const vid = document.querySelector('.atd-l[data-layer="' + String(a.video).replace(/[^A-Za-z0-9]/g, '') + '"] video');
+    if(vid){ if(vid.paused) vid.play().catch(()=>{}); else vid.pause(); }
+  }
+  else if(a.do === 'branch'){ const c = document.querySelector('#play-body [data-to="' + (Number(a.to) | 0) + '"]'); if(c) c.click(); }
+}
+
 function showStory(node, backOnly){
   const txt = [node.arrive, node.depart].filter(Boolean);
   const media = holdsMedia(node) ? mediaHtml(node) : '';
   if(!txt.length && !media) return renderPlay();
+  undesign();
   show('v-play');
   $('#p-kick').textContent = KIND_LABEL[node.kind] || '';
   $('#p-title').textContent = node.title || '';
@@ -716,6 +807,7 @@ async function tickDistance(n){
 
 // ── End ──────────────────────────────────────────────────────────────────────
 function renderEnd(){
+  undesign();
   show('v-end');
   const done = (RUN.nodes||[]).filter(n => n.status !== 'open');
   $('#end-body').innerHTML =

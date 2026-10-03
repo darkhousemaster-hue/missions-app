@@ -39,7 +39,8 @@ tables stay, so nothing is lost.
 ## Removing it for good
 
 1. Delete the folder `at/`.
-2. Delete `public/at-studio.html` and `public/at-play.html`.
+2. Delete `public/at-studio.html`, `public/at-play.html`, `public/at-designer.html`
+   and `public/js/at-design.js`.
 3. In `server.js`, delete the block marked `── AdventureTrail ──`. It is six
    lines and touches nothing else.
 4. In `public/gm.html`, delete the three blocks marked
@@ -79,6 +80,9 @@ one twice returns the same run, which is what lets a team reload mid-trail.
   and the script that builds them (`node at/samples/build-samples.js`).
 - `public/at-studio.html` the trail editor (GM-gated).
 - `public/at-play.html` the player app.
+- `public/at-designer.html` the page designer, opened from a part's Seite tab.
+- `public/js/at-design.js` the one renderer for designed pages, shared by the
+  player, the designer and the studio's thumbnail.
 
 ## Design decisions worth knowing before changing anything
 
