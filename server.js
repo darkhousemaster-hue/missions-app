@@ -1053,7 +1053,7 @@ app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/submit', (req,res
   const m = db.getMission(Number(missionId));
   const sub = db.getSubmission(Number(teamId), Number(missionId));
   const have = db.mediaListOf(sub).length;
-  const need = Math.max(2, parseInt(m && m.multi_count,10)||2);
+  const need = Math.max(1, parseInt(m && m.multi_count,10)||2);
   const exact = !!(m && m.multi_mode === 'exact');
   if(m && m.multi_enabled){
     if(have < need || (exact && have > need)){

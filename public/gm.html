@@ -5101,7 +5101,7 @@ function missionModal(m,locs){
           </div>
           <div class="field" style="margin:0;">
             <label class="label">${gmt('mm-multi-count')}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('mm-multi-count-tip')}</span></i></label>
-            <div class="stepper"><button type="button" onclick="stepInput('m-multi-count',-1)">−</button><input id="m-multi-count" type="number" min="2" max="20" value="${m&&m.multi_count?m.multi_count:2}"><button type="button" onclick="stepInput('m-multi-count',1)">+</button></div>
+            <div class="stepper"><button type="button" onclick="stepInput('m-multi-count',-1)">−</button><input id="m-multi-count" type="number" min="1" max="20" value="${m&&m.multi_count?m.multi_count:2}"><button type="button" onclick="stepInput('m-multi-count',1)">+</button></div>
           </div>
         </div>
       </div>
