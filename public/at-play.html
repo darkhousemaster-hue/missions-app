@@ -80,7 +80,10 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
 .prog{display:flex;gap:3px;flex:0 0 auto}
 .prog i{width:14px;height:3px;border-radius:2px;background:var(--line)}
 .prog i.on{background:var(--gold)}
-.icobtn{flex:0 0 auto;width:36px;height:36px;border-radius:9px;background:var(--card);display:grid;place-items:center}
+.icobtn{flex:0 0 auto;width:36px;height:36px;border-radius:9px;background:var(--card);display:grid;place-items:center;position:relative}
+.icobtn .badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--gold);color:oklch(0.20 0.03 85);font:700 10px/17px var(--body);text-align:center}
+.qr{display:block;width:220px;height:220px;margin:16px auto 10px;border-radius:12px}
+.joincode{font:700 30px/1 var(--mono);letter-spacing:.14em;text-align:center;color:var(--gold);margin:4px 0 14px;font-variant-numeric:tabular-nums}
 .icobtn svg{width:17px;height:17px;stroke:var(--ink2);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
 
 .dist{text-align:center;padding:20px 0 10px}
@@ -192,7 +195,7 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
       <h1 id="start-title">Jetzt starten</h1>
       <p class="sm" id="start-sub"></p>
     </div>
-    <div class="foot"><button class="btn" id="b-start">Jetzt starten</button></div>
+    <div class="foot"><button class="btn" id="b-start">Jetzt starten</button><button class="btn ghost" id="b-start-team">Weitere Handys verbinden</button></div>
   </section>
 
   <!-- PLAY -->
@@ -200,6 +203,7 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
     <div class="topbar">
       <div class="t"><b id="p-kick">Station</b><span id="p-title"></span></div>
       <div class="prog" id="p-prog"></div>
+      <button class="icobtn" id="b-team" aria-label="Team: weitere Handys verbinden"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2A4.6 4.6 0 0 1 21 18.6"/></svg><span class="badge" id="team-n" hidden></span></button>
       <button class="icobtn" id="b-help" aria-label="Hilfe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.8 2.8 0 1 1 3.7 2.6c-.6.2-1 .8-1 1.5v.3"/><path d="M12 17.2v.2"/></svg></button>
     </div>
     <div class="mid" id="play-body"></div>
@@ -226,9 +230,14 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
 // Self-guided: there is no game master, so everything that gates progress is
 // decided by the server and every dead end has a way out.
 const $ = s => document.querySelector(s);
+// Each phone names itself once, so the team's other phones can tell its moves
+// from their own.
+let DEVICE = '';
+try { DEVICE = localStorage.getItem('at_device') || ''; if(!DEVICE){ DEVICE = Math.random().toString(36).slice(2, 12); localStorage.setItem('at_device', DEVICE); } }
+catch(e){ DEVICE = Math.random().toString(36).slice(2, 12); }
 const api = async (path, body) => {
   const r = await fetch('/api/at' + path, body === undefined
-    ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    ? {} : { method:'POST', headers:{'Content-Type':'application/json', 'X-AT-Device': DEVICE}, body: JSON.stringify(body) });
   const j = await r.json().catch(()=>({}));
   return { status:r.status, ...j };
 };
@@ -301,6 +310,7 @@ $('#b-redeem').addEventListener('click', async () => {
   localStorage.setItem('at_run', res.runId);
   runId = res.runId;
   await load();
+  listen();
   openIntro();
 });
 $('#b-join').addEventListener('click', () => {
@@ -310,7 +320,8 @@ $('#b-join').addEventListener('click', () => {
     localStorage.setItem('at_run', res.runId);
     runId = res.runId;
     await load();
-    RUN.run.started_at ? renderPlay() : openIntro();
+    listen();
+    joined();
   });
 });
 function fail(msg){ $('#r-err').innerHTML = '<div class="box bad"><b>Moment</b><p>'+esc(msg)+'</p></div>'; }
@@ -423,6 +434,7 @@ function sideNodes(){
 }
 
 function renderPlay(){
+  inStory = false;
   if(!RUN){ return; }
   if(RUN.run.finished_at) return renderEnd();
   const n = currentNode();
@@ -507,6 +519,7 @@ function wire(n){
   const solve = async payload => {
     const slot0 = $('#solve-msg'); if(slot0) slot0.innerHTML = '';
     const res = await api('/run/'+runId+'/node/'+n.id+'/solve', payload);
+    if(res.status === 409 && res.error === 'not_open'){ await load(); toast('Schon gelöst, auf einem anderen Handy.'); return renderPlay(); }
     if(res.ok){
       if(res.state) RUN = res.state;
       const done = (RUN.nodes||[]).find(x => x.id === n.id);
@@ -666,6 +679,7 @@ function showStory(node, backOnly){
   const media = holdsMedia(node) ? mediaHtml(node) : '';
   if(!txt.length && !media) return renderPlay();
   undesign();
+  inStory = true;
   show('v-play');
   $('#p-kick').textContent = KIND_LABEL[node.kind] || '';
   $('#p-title').textContent = node.title || '';
@@ -824,11 +838,80 @@ $('#b-help').addEventListener('click', () => {
     '<h2>Hilfe</h2>' +
     '<div class="box"><b>Die Ortung findet uns nicht</b><p>Zwischen hohen Häusern liegt der Fehler oft bei 30 m. Geht ein paar Schritte auf den offenen Platz, wartet fünf Sekunden und tippt nochmals. Oder nehmt den Code vom Schild am Posten, der funktioniert immer.</p></div>' +
     '<div class="box"><b>Wir stecken fest</b><p>Die Hinweise öffnen sich von selbst, je länger ihr am Posten seid. Der letzte verrät die Lösung.</p></div>' +
-    '<div class="box"><b>Das Handy ist fast leer</b><p>Beitritts-Code: <b>'+esc((RUN&&RUN.run.join_code)||'noch keiner')+'</b>. Damit steigt ein zweites Handy in denselben Trail ein.</p></div>' +
+    '<div class="box"><b>Das Handy ist fast leer</b><p>Oben auf das Team-Symbol tippen: mit dem QR-Code oder dem Beitritts-Code <b>'+esc((RUN&&RUN.run.join_code)||'')+'</b> steigt ein zweites Handy in denselben Trail ein, genau dort, wo ihr seid.</p></div>' +
     '<button class="btn ghost" id="b-sheet-close">Schliessen</button>';
   $('#sheet').classList.add('on');
   $('#b-sheet-close').onclick = () => $('#sheet').classList.remove('on');
 });
+
+// ── The team's other phones ──────────────────────────────────────────────────
+// Every phone listens to the run. When another phone moves it on, this one
+// fetches the new state and follows: the same part, the same story screen.
+let live = null, PHONES = 1, inStory = false, liveQueue = Promise.resolve();
+function listen(){
+  if(!runId || typeof EventSource !== 'function') return;
+  if(live && live.readyState !== 2 && live._run === runId) return;
+  if(live) live.close();
+  live = new EventSource('/api/at/run/' + encodeURIComponent(runId) + '/live?device=' + encodeURIComponent(DEVICE));
+  live._run = runId;
+  live.onmessage = e => { let ev; try { ev = JSON.parse(e.data); } catch(x){ return; } liveQueue = liveQueue.then(() => onLive(ev)).catch(() => {}); };
+}
+const phonesText = () => PHONES < 2 ? 'Gerade ist nur dieses Handy verbunden.' : 'Gerade sind ' + PHONES + ' Handys verbunden.';
+function setPhones(n){
+  PHONES = n || 1;
+  const b = $('#team-n'); if(b){ b.hidden = PHONES < 2; b.textContent = String(PHONES); }
+  const t = $('#team-phones'); if(t) t.textContent = phonesText();
+}
+const currentView = () => { const v = document.querySelector('.view.on'); return v ? v.id : ''; };
+async function onLive(ev){
+  if(!ev) return;
+  if(ev.type === 'presence'){ setPhones(ev.phones); return; }
+  if(ev.by === DEVICE) return;
+  const view = currentView();
+  const was = view === 'v-play' && !inStory && currentNode() ? currentNode().id : null;
+  const typed = $('#f-answer') ? $('#f-answer').value : '';
+  if(!(await load())) return;
+  if(RUN.run.finished_at) return renderEnd();
+  if(ev.type === 'start'){
+    if(view === 'v-start' || view === 'v-intro'){ preloadAssets(); toast('Euer Team hat gestartet.'); renderPlay(); }
+    return;
+  }
+  if(view !== 'v-play' || inStory) return;
+  if((ev.type === 'solve' || ev.type === 'skip' || ev.type === 'choose') && ev.node === was){
+    toast(ev.type === 'skip' ? 'Auf einem anderen Handy übersprungen.' : 'Auf einem anderen Handy gelöst.');
+    const done = (RUN.nodes || []).find(x => x.id === ev.node);
+    if(ev.type === 'solve' && done && (done.arrive || done.depart || (holdsMedia(done) && done.story_media_path))) return showStory(done);
+  }
+  renderPlay();
+  // A half-typed answer survives when the same part is still on screen.
+  const cur = currentNode();
+  if(typed && cur && cur.id === was && $('#f-answer')) $('#f-answer').value = typed;
+}
+// The way in for another phone: a QR code, and the code to type.
+function openTeam(){
+  if(!RUN) return;
+  const code = String(RUN.run.join_code || '');
+  const shown = code.length === 6 ? code.slice(0, 3) + ' ' + code.slice(3) : code;
+  $('#sheet').classList.remove('full');
+  $('#sheet-in').innerHTML = '<h2>Euer Team</h2>'
+    + '<p class="sm">Mehr Handys, mehr Augen. Alle sehen dasselbe, und was ein Handy löst, ist für alle gelöst.</p>'
+    + '<img class="qr" src="/api/at/run/' + encodeURIComponent(runId) + '/join-qr" alt="QR-Code zum Beitreten" width="220" height="220">'
+    + '<div class="joincode" aria-label="Beitritts-Code ' + esc(code.split('').join(' ')) + '">' + esc(shown) + '</div>'
+    + '<p class="sm">Mit dem zweiten Handy den QR-Code scannen. Oder dort den Trail öffnen, „Ich bin im Team“ wählen und den Code eintippen.</p>'
+    + '<p class="sm" id="team-phones">' + esc(phonesText()) + '</p>'
+    + '<button class="btn ghost" id="b-sheet-close">Schliessen</button>';
+  $('#sheet').classList.add('on');
+  $('#b-sheet-close').onclick = () => $('#sheet').classList.remove('on');
+}
+$('#b-team').addEventListener('click', openTeam);
+$('#b-start-team').addEventListener('click', openTeam);
+// A phone that joins mid-trail goes straight to where the team is.
+function joined(){
+  toast('Ihr seid im Team' + (RUN.run.team_name ? ' „' + RUN.run.team_name + '“' : '') + '.');
+  if(RUN.run.finished_at) return renderEnd();
+  if(RUN.run.started_at){ preloadAssets(); return renderPlay(); }
+  openIntro();
+}
 
 // ── Boot and resume ──────────────────────────────────────────────────────────
 async function load(){
@@ -841,13 +924,26 @@ async function load(){
 document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState !== 'visible' || !runId) return;
   if(wakeLock === null) holdWake();
-  if(await load()){ if(RUN.run.started_at) renderPlay(); }
+  if(await load()){ listen(); if(RUN.run.started_at && !inStory) renderPlay(); }
 });
 
 (async () => {
+  // Opened from a teammate's QR code: join their run, wherever it is.
+  const joinCode = new URLSearchParams(location.search).get('join');
+  if(joinCode){
+    history.replaceState(null, '', location.pathname);
+    const res = await api('/join', { code: joinCode });
+    if(!res.runId){ show('v-redeem'); return fail('Diesen Beitritts-Code kennen wir nicht. Bitte auf dem anderen Handy unter dem Team-Symbol nachsehen.'); }
+    localStorage.setItem('at_run', res.runId);
+    runId = res.runId;
+    if(!(await load())) return show('v-redeem');
+    listen();
+    return joined();
+  }
   runId = localStorage.getItem('at_run');
   if(!runId) return show('v-redeem');
   if(!(await load())) return show('v-redeem');
+  listen();
   if(RUN.run.finished_at) return renderEnd();
   if(RUN.run.started_at){ preloadAssets(); return renderPlay(); }
   openIntro();

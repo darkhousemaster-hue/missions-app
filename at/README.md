@@ -86,6 +86,11 @@ one twice returns the same run, which is what lets a team reload mid-trail.
 
 ## Design decisions worth knowing before changing anything
 
+- **Several phones, one run.** Each run has one live stream
+  (`/api/at/run/:id/live`, server-sent events). It only says what changed and on
+  which phone; every phone then fetches the state itself, so nothing a team must
+  not see travels on it. Up to twelve phones per run; a locked screen reconnects.
+
 - **The answer is the primary key to a station**, not a QR code. A team can
   only know what is carved on the facade by standing in front of it, so the
   answer proves arrival with no permission, no battery and nothing on the wall

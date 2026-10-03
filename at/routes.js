@@ -8,6 +8,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 const at = require('./db.js');
+const QRCode = require('qrcode');
 
 module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
   const r = express.Router();
@@ -201,7 +202,62 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     res.json({ runId: run.id, joinCode: run.join_code, reused: !!out.reused });
   });
 
-  // A second phone in the same team. Keeps a trail alive when a battery dies.
+  // ── Several phones, one team ───────────────────────────────────────────────
+  // Every phone of a team listens on one stream per run. When one phone moves
+  // the run on, the others hear about it within a moment and fetch the new
+  // state themselves: the stream only says what changed and which phone did
+  // it. A locked screen closes its stream, so the number of phones listening
+  // is told to everyone as phones come and go.
+  const live = new Map();                 // runId -> Set<{ res, device }>
+  const LIVE_MAX = 12;
+  const deviceOf = req => String(req.get('X-AT-Device') || req.query.device || '')
+    .replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
+  function broadcast(runId, ev) {
+    const set = live.get(runId); if (!set) return;
+    const line = 'data: ' + JSON.stringify(ev) + '\n\n';
+    for (const c of set) { try { c.res.write(line); } catch (e) {} }
+  }
+  function presence(runId) {
+    const set = live.get(runId);
+    broadcast(runId, { type: 'presence', phones: new Set([...(set || [])].map(c => c.device)).size });
+  }
+  const told = (req, run, ev) => broadcast(run.id, Object.assign({ by: deviceOf(req) }, ev));
+  r.get('/api/at/run/:runId/live', (req, res) => {
+    const run = requireRun(req, res); if (!run) return;
+    let set = live.get(run.id);
+    if (!set) { set = new Set(); live.set(run.id, set); }
+    if (set.size >= LIVE_MAX) return res.status(429).json({ error: 'too_many_phones' });
+    res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive', 'X-Accel-Buffering': 'no' });
+    res.write('retry: 3000\n\n');
+    const c = { res, device: deviceOf(req) || ('anon' + crypto.randomBytes(4).toString('hex')) };
+    set.add(c);
+    presence(run.id);
+    // Proxies close a stream that stays silent; a comment every 20 s keeps it open.
+    const beat = setInterval(() => { try { res.write(': ping\n\n'); } catch (e) {} }, 20000);
+    req.on('close', () => {
+      clearInterval(beat); set.delete(c);
+      if (!set.size) live.delete(run.id); else presence(run.id);
+    });
+  });
+  // The way in for another phone: a QR code that opens the trail straight
+  // into this run. Drawn here, so it works with the team's own address.
+  r.get('/api/at/run/:runId/join-qr', async (req, res) => {
+    const run = requireRun(req, res); if (!run) return;
+    if (!run.join_code) return res.status(404).end();
+    const proto = String(req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+    const host = String(req.get('host') || '').replace(/[^A-Za-z0-9.:\-\[\]]/g, '');
+    const url = `${proto === 'http' ? 'http' : 'https'}://${host}/at-play.html?join=${encodeURIComponent(run.join_code)}`;
+    try {
+      const svg = await QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#14110F', light: '#F4F1EA' } });
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      res.send(svg);
+    } catch (e) { res.status(500).end(); }
+  });
+
+  // A second phone in the same team. Keeps a trail alive when a battery dies,
+  // and gives a team more eyes.
   r.post('/api/at/join', (req, res) => {
     const run = at.findRunByJoinCode(req.body.code);
     if (!run) return res.status(404).json({ error: 'unknown_code' });
@@ -221,6 +277,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     // Open every root node so its hint clock begins.
     const nodes = at.listNodes(run.trail_id), edges = at.listEdges(run.trail_id);
     for (const n of nodes) if (!edges.some(e => e.to_node === n.id)) at.openNode(run.id, n.id);
+    told(req, run, { type: 'start' });
     res.json(playerView(at.getRun(run.id)));
   });
 
@@ -251,6 +308,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     if (node.post_code && typed && typed.toUpperCase().replace(/\s|-/g, '')
         === String(node.post_code).toUpperCase().replace(/\s|-/g, '')) {
       at.completeNode(run.id, node.id);
+      told(req, run, { type: 'solve', node: node.id });
       return res.json({ ok: true, via: 'post_code', state: playerView(run) });
     }
 
@@ -270,6 +328,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       const hit = accepted.filter(Boolean).some(a => norm(a) === norm(typed));
       if (!hit) return res.json({ ok: false, reason: 'wrong' });
       at.completeNode(run.id, node.id);
+      told(req, run, { type: 'solve', node: node.id });
       return res.json({ ok: true, via: 'answer', state: playerView(run) });
     }
 
@@ -292,10 +351,12 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
         return res.json({ ok: false, reason: 'too_far', distance: dist });
       }
       at.completeNode(run.id, node.id);
+      told(req, run, { type: 'solve', node: node.id });
       return res.json({ ok: true, via: 'gps', distance: dist, state: playerView(run) });
     }
 
     at.completeNode(run.id, node.id);
+    told(req, run, { type: 'solve', node: node.id });
     res.json({ ok: true, via: 'none', state: playerView(run) });
   });
 
@@ -320,6 +381,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
   r.post('/api/at/run/:runId/node/:nodeId/hint', (req, res) => {
     const run = requireRun(req, res); if (!run) return;
     at.useHint(run.id, Number(req.params.nodeId), Number(req.body.n) || 1);
+    told(req, run, { type: 'hint', node: Number(req.params.nodeId) });
     res.json(playerView(run));
   });
 
@@ -333,6 +395,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       return res.status(409).json({ error: 'too_early' });
     }
     at.completeNode(run.id, node.id, 'skipped');
+    told(req, run, { type: 'skip', node: node.id });
     res.json(playerView(run));
   });
 
@@ -344,18 +407,21 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     if (!branch) return res.status(400).json({ error: 'no_branch' });
     at.setRunBranch(run.id, branch);
     at.completeNode(run.id, Number(req.params.nodeId));
+    told(req, run, { type: 'choose', node: Number(req.params.nodeId) });
     res.json(playerView(at.getRun(run.id)));
   });
 
   r.post('/api/at/run/:runId/finish', (req, res) => {
     const run = requireRun(req, res); if (!run) return;
     at.finishRun(run.id);
+    told(req, run, { type: 'finish' });
     res.json(playerView(at.getRun(run.id)));
   });
 
   r.post('/api/at/run/:runId/lang', (req, res) => {
     const run = requireRun(req, res); if (!run) return;
     at.setRunLang(run.id, String(req.body.lang || 'de'));
+    told(req, run, { type: 'lang' });
     res.json(playerView(at.getRun(run.id)));
   });
 
