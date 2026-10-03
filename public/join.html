@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS — Join</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.59">
-<script src="/js/theme.js?v=17"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.61">
+<script src="/js/theme.js?v=20"></script>
 <script src="/js/dialog.js?v=1"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. The
@@ -111,7 +111,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 .join-existing-link { min-height:74px; }
 .join-cta .btn-primary {
   background:var(--btn-bg,var(--orange)); color:var(--btn-primary-text,var(--btn-text,#fff));
-  box-shadow:0 10px 26px -10px var(--orange);
+  box-shadow:0 10px 26px -10px var(--btn-bg,var(--orange));
 }
 .join-cta .btn-primary:hover { background:#ff7438; }
 .join-cta .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
@@ -143,11 +143,11 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 .team-row .pts { font:600 12px/1 var(--mono); color:var(--text-muted); }
 .team-row .join-btn {
   min-height:54px; padding:8px 14px; border-radius:10px;
-  background:var(--orange); color:#fff; border:0;
+  background:var(--btn-bg,var(--orange)); color:var(--btn-primary-text,var(--btn-text,#fff)); border:0;
   font:700 11px/1 var(--body); letter-spacing:.06em; text-transform:uppercase;
   cursor:pointer;
 }
-.team-row .join-btn:hover { background:#ff7438; }
+.team-row .join-btn:hover { filter:brightness(1.08); }
 
 #screen-loading, #screen-error { padding:40px 24px; text-align:center; color:var(--text-muted); }
 #screen-error h2 { color:var(--red-light); margin-bottom:8px; font:800 22px/1 var(--display); letter-spacing:.06em; text-transform:uppercase; }
@@ -296,7 +296,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
       </div>
     </div>
     <p class="error-msg" id="password-error" role="alert"></p>
-    <div id="technical-support" style="font:500 13px/1.5 var(--body);text-align:center;color:var(--text-muted);"></div>
+    <div id="technical-support" style="font:500 13px/1.5 var(--body);text-align:center;"></div>
   </div>
 
   <!-- Join existing team screen -->
@@ -785,7 +785,7 @@ function renderTechnicalSupport(){
   if(!el) return;
   el.replaceChildren();
   if(passwordAction!=='join' || !supportPhone) return;
-  const label=document.createElement('span'); label.textContent=jt('support')+': ';
+  const label=document.createElement('span'); label.textContent=jt('support')+': '; label.style.color='var(--text-muted)';
   const link=document.createElement('a'); link.textContent=supportPhone;
   link.href='tel:'+supportPhone.replace(/[^0-9+*#,;]/g,'');
   link.style.color='var(--orange)'; link.style.textDecoration='underline';

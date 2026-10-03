@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>Rail Adventure</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.59">
-<script src="/js/theme.js?v=17"></script>
+<link rel="stylesheet" href="/css/app.css?v=2.4.61">
+<script src="/js/theme.js?v=20"></script>
 <script src="/js/dialog.js?v=1"></script>
 <!-- Leaflet for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -515,7 +515,7 @@ body.is-frozen { padding-top:38px; transition:padding-top .15s; }
     display:flex; flex-direction:column; gap:.4rem;
     min-width:0; overflow:hidden; box-sizing:border-box; position:relative;
   }
-  .cr-tile:hover { border-color:rgba(255,255,255,.18); background:var(--surface2); }
+  .cr-tile:hover { border-color:rgba(255,255,255,.18); background:var(--tile-active,var(--surface2)); }
   .cr-tile.current { border-color:rgba(232,95,30,.55); box-shadow:0 0 0 1px rgba(232,95,30,.35) inset, 0 0 24px -8px rgba(232,95,30,.5); }
   .cr-tile.pending { border-color:rgba(232,95,30,.45); }
   .cr-tile.done    { border-color:rgba(74,222,128,.45); }

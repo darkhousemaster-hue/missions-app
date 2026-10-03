@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <title>MiSSiONS&#8203; — Spielleiter</title>
-<link rel="stylesheet" href="/css/app.css?v=2.4.59">
+<link rel="stylesheet" href="/css/app.css?v=2.4.61">
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
@@ -8421,10 +8421,10 @@ const THEME_GROUPS = () => [
     ['--surface',    gmt('th-v-tile')||'Kachel-Füllung','tile'],
     ['--tile-text',  gmt('th-v-tile-text')||'Kachel-Text','tile-text'],
     ['--tile-active',gmt('th-v-tile-active')||'Kachel angetippt','tile-active'],
-    ['--points-bg',  gmt('th-v-points-bg')||'Punkte-Füllung','points'],
+    ['--points-bg',  gmt('th-v-points-bg')||'Punkte-Füllung','points-bg'],
     ['--points',     gmt('th-v-points')||'Punkte-Text','points'] ]},
   { lbl: gmt('th-g-button')||'Buttons', vars: [
-    ['--btn-bg',    gmt('th-v-btn-bg')||'Button-Füllung','button'],
+    ['--btn-bg',    gmt('th-v-btn-bg')||'Button-Füllung','button-bg'],
     ['--btn-primary-text',gmt('th-v-btn-primary-text')||'Text: primärer Button','button-primary-text'],
     ['--btn-secondary-text',gmt('th-v-btn-secondary-text')||'Text: sekundärer Button','button-secondary-text'],
     ['--btn-join-text',gmt('th-v-btn-join-text')||'Text: Team beitreten','button-join-text'] ]},
@@ -8433,8 +8433,8 @@ const THEME_GROUPS = () => [
   { lbl: gmt('th-g-input')||'Eingabefelder', vars: [
     ['--input-bg',  gmt('th-v-input-bg')||'Feld-Füllung','input'] ]},
   { lbl: gmt('th-g-notice')||'Hinweise & Chat', vars: [
-    ['--notice-bg',   gmt('th-v-notice')||'Hinweis-Feld','notice'],
-    ['--notice-text', gmt('th-v-notice-text')||'Hinweis-Text','notice'],
+    ['--notice-bg',   gmt('th-v-notice')||'Hinweis-Feld','notice-bg'],
+    ['--notice-text', gmt('th-v-notice-text')||'Hinweis-Text','notice-text'],
     ['--chat-bubble', gmt('th-v-chat')||'Chat-Blase (Spieler)','chat'] ]},
   { lbl: gmt('th-g-text')||'Text', vars: [
     ['--text',      gmt('th-v-text')||'Text','text'],
@@ -8444,7 +8444,7 @@ const THEME_GROUPS = () => [
     ['--card-border', gmt('th-v-border')||'Rahmenfarbe','border'] ]},
   { lbl: gmt('th-g-accent')||'Akzente & Logo', vars: [
     ['--orange',    gmt('th-v-orange')||'Akzent','accent'],
-    ['--green',     gmt('th-v-green')||'Erfolg','accent'],
+    ['--green',     gmt('th-v-green')||'Erfolg','success'],
     ['--logo-color',gmt('th-v-logo')||'Logo & Wortmarke','logo'] ]},
 ];
 // ── GM dashboard theme (global, app-wide) ───────────────────────────────────
@@ -8569,22 +8569,52 @@ function _gmFitPreview(){
 window.addEventListener('resize', ()=>{ if(_td && _td.side==='gm') _gmFitPreview(); });
 // Reverse hover on the GM side: outline the dashboard element(s) a setting recolours.
 const GM_SEL = {
-  bg:'#screen-dashboard, #screen-landing, #screen-game-select, #screen-new-game, #screen-settings', bg2:'#dash-teams, #dash-panel', bg3:'#dash-topbar',
-  surface:'.icon-btn, .dt-topbar__back, .location-card, .mode-card', surface2:'#gm-chat-input, .gs-form-card',
-  border:'#dash-panel, .location-card, .mode-card, .gs-form-card', text:'.dt-wordmark, .timer-display, .landing-logo h1',
-  'text-dim':'#db-select-team', 'text-muted':'#db-teams, #db-games, .dt-topbar__gameid, .ll-section-title, .ll-section-title, .landing-logo p',
-  accent:'.tab.active, .chat-send, .location-card--cr', green:'#btn-timer-start', red:'#btn-delete-team',
+  bg:'#screen-dashboard, #screen-landing, #screen-game-select, #screen-new-game, #screen-settings-gate, #screen-settings',
+  bg2:'#dash-teams, #dash-panel', bg3:'#dash-topbar, .settings-topbar',
+  surface:'.icon-btn, .location-card, .mode-card, .gs-form-card, .card',
+  surface2:'#gm-chat-input, #gate-pw, #screen-settings .input, #screen-settings .select, .btn-primary, .btn-secondary',
+  border:'#dash-panel, .location-card, .mode-card, .gs-form-card, #gate-pw, #screen-settings .input',
+  text:'.dt-wordmark, .timer-display, .landing-logo h1, .location-card, .mode-card-title, .gs-form-card h1, .gs-form-card h2',
+  'text-dim':'#db-select-team, .dt-topbar__back, .location-card .ll-icon, .gs-form-card .subtitle',
+  'text-muted':'#db-teams, #db-games, .dt-topbar__gameid, .ll-section-title, .landing-logo p, .mode-card .mode-card-check',
+  accent:'.tab.active, .chat-send, .location-card--cr, .mode-card-check, .mode-card.is-selected, .settings-side .item.is-active',
+  green:'#btn-timer-start, .pill--green', red:'#btn-delete-team, .btn-danger, .pill--red',
 };
 let _gmHlEls = [];
-function _gmHighlight(role){
-  _gmHlEls.forEach(el=>{ el.style.outline=''; el.style.outlineOffset=''; el.style.boxShadow=''; }); _gmHlEls=[];
-  const wrap = document.querySelector('#theme-designer .td-gmwrap'); const sel = role && GM_SEL[role];
-  if(!wrap || !sel) return;
-  wrap.querySelectorAll(sel).forEach(el=>{
-    el.style.outline='3px solid #2ea3ff'; el.style.outlineOffset='2px';
-    el.style.boxShadow='0 0 0 3px #fff, 0 0 0 6px #2ea3ff, 0 0 20px 4px rgba(46,163,255,.95)';
-    _gmHlEls.push(el);
-  });
+function _gmHighlight(role,variable){
+  _gmHlEls.forEach(({el,old})=>{ for(const [k,v] of Object.entries(old)){ if(v.value)el.style.setProperty(k,v.value,v.priority);else el.style.removeProperty(k); } }); _gmHlEls=[];
+  const wrap=document.querySelector('#theme-designer .td-gmwrap');
+  if(!wrap) return;
+  let targets=[];
+  if(variable&&/^--[a-z0-9-]+$/i.test(variable)){
+    const magenta='#ff00d4';
+    const derived=variable==='--orange'?{'--orange-soft':'rgba(255,0,212,.14)','--orange-dim':'rgba(255,0,212,.55)','--glow-orange':'0 0 16px rgba(255,0,212,.45)','--btn-bg':magenta,'--team-color':magenta}
+      :variable==='--green'?{'--green-soft':'rgba(255,0,212,.14)','--green-dim':'rgba(255,0,212,.55)'}
+      :variable==='--red'?{'--red-light':'rgba(255,0,212,.85)','--glow-red':'0 0 12px rgba(255,0,212,.5)'}
+      :variable==='--text'?{'--hairline':'rgba(255,0,212,.08)'}:{};
+    const values={[variable]:magenta,...derived};
+    const roots=[...wrap.querySelectorAll('.td-gmscale > [id^="screen-"]')];
+    const props=['background-color','color','border-top-color','border-right-color','border-bottom-color','border-left-color','outline-color','text-decoration-color','fill','stroke','box-shadow','text-shadow','filter','accent-color'];
+    const read=el=>{const s=getComputedStyle(el);return props.map(k=>s.getPropertyValue(k)).join('|');};
+    const freeze=document.createElement('style');freeze.textContent='*,*::before,*::after{transition:none!important;animation:none!important;}';document.head.appendChild(freeze);
+    for(const root of roots){
+      const nodes=[root,...root.querySelectorAll('*')].filter(el=>el.getClientRects().length),before=nodes.map(read),saved={};
+      for(const [k,v] of Object.entries(values)){saved[k]={value:root.style.getPropertyValue(k),priority:root.style.getPropertyPriority(k)};root.style.setProperty(k,v,'important');}
+      void root.offsetHeight;
+      nodes.forEach((el,i)=>{if(read(el)!==before[i])targets.push(el);});
+      for(const [k,v] of Object.entries(saved)){if(v.value)root.style.setProperty(k,v.value,v.priority);else root.style.removeProperty(k);}
+    }
+    freeze.remove();
+  } else {
+    const sel=role&&GM_SEL[role]; if(!sel) return; targets=[...wrap.querySelectorAll(sel)];
+  }
+  for(const el of new Set(targets)){
+    const props=['outline','outline-offset','box-shadow'];
+    const old=Object.fromEntries(props.map(k=>[k,{value:el.style.getPropertyValue(k),priority:el.style.getPropertyPriority(k)}]));
+    el.style.setProperty('outline','3px solid #2ea3ff','important');el.style.setProperty('outline-offset','2px','important');
+    el.style.setProperty('box-shadow','0 0 0 3px #fff, 0 0 0 6px #2ea3ff, 0 0 20px 4px rgba(46,163,255,.95)','important');
+    _gmHlEls.push({el,old});
+  }
 }
 
 let _td = null;   // { kind, id, name, side, page, theme }
@@ -8683,7 +8713,7 @@ function _tdHtml(){
     <div class="td-group"><div class="td-glbl">${esc(g.lbl)}</div>
       ${g.vars.map(([k,lbl,role]) => {
         const cur = t.vars[k] || D[k];
-        return `<div class="td-row" data-role="${role||''}" onmouseenter="_tdHoverRole('${role||''}')" onmouseleave="_tdHoverRole('')"><span class="td-name">${esc(lbl)}</span>
+        return `<div class="td-row" data-role="${role||''}" onmouseenter="_tdHoverRole('${role||''}','${k}')" onmouseleave="_tdHoverRole('')"><span class="td-name">${esc(lbl)}</span>
           <input type="color" value="${esc(cur)}" data-var="${k}" oninput="tdVarInput(this)">
           <code class="td-hex" id="td-hex-${k.replace(/-/g,'')}">${esc(cur)}</code>
           <button class="td-reset" title="${esc(gmt('th-reset')||'Standard')}" onclick="tdVarReset('${k}')">↺</button></div>`;
@@ -8838,11 +8868,12 @@ function _tdHighlightRole(role){
 }
 // Reverse hover: when the GM hovers a setting row, ask both preview iframes to
 // outline the element(s) that setting recolours.
-function _tdHoverRole(role){
+function _tdHoverRole(role,variable){
   if(role) _tdHoverLock = null;   // hovering a setting releases a locked preview highlight
-  if(_td && _td.side==='gm'){ _gmHighlight(role||null); return; }   // GM side: outline the dashboard clone
+  if(_td && _td.side==='gm'){ _gmHighlight(role||null,variable||null); return; }   // GM side: outline the dashboard clone
+  const scope=_td&&_td.kind==='global'&&_td.page!=='all'?'page':'root';
   document.querySelectorAll('#theme-designer iframe').forEach(f => {
-    try { f.contentWindow.postMessage({type:'ar-theme-highlight', role:role||null}, location.origin); } catch(e){}
+    try { f.contentWindow.postMessage({type:'ar-theme-highlight', role:role||null,variable:variable||null,scope}, location.origin); } catch(e){}
   });
 }
 function tdVarInput(el){
