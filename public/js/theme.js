@@ -211,6 +211,26 @@
       if (el.closest('.icon-btn, .cr-icon-btn')) return 'nav';
       if (el.closest('.wordmark, .play-wordmark, .theme-logo')) return 'logo';
       if (el.closest('.join-header, .play-topbar, .cr-topbar')) return 'header';
+      // Text that doesn't live in one of the specifically themed components
+      // still belongs to a text colour setting, not the page background. Match
+      // its computed colour against the available text variables so secondary
+      // and muted labels keep pointing at their own controls.
+      const hasDirectText = [...el.childNodes].some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+      if (hasDirectText || (!el.children.length && el.textContent.trim())) {
+        const style = getComputedStyle(el);
+        const color = cssColor(style.color);
+        for (const [variable, role] of [
+          ['--text-dim','text-dim'], ['--text-muted','text-muted'],
+          ['--notice-text','notice'], ['--tile-text','tile-text'],
+          ['--btn-primary-text','button-primary-text'],
+          ['--btn-secondary-text','button-secondary-text'], ['--btn-join-text','button-join-text'],
+          ['--btn-text','button'], ['--points','points'], ['--nav','nav'], ['--logo-color','logo'], ['--text','text']
+        ]) {
+          const value = style.getPropertyValue(variable).trim();
+          if (value && cssColor(value) === color) return role;
+        }
+        return 'text';
+      }
       return 'bg';
     };
     let _lastRole;
