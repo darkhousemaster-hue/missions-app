@@ -39,8 +39,8 @@ tables stay, so nothing is lost.
 ## Removing it for good
 
 1. Delete the folder `at/`.
-2. Delete `public/at-studio.html`, `public/at-play.html`, `public/at-designer.html`
-   and `public/js/at-design.js`.
+2. Delete `public/at-studio.html`, `public/at-play.html`, `public/at-designer.html`,
+   `public/js/at-design.js` and `public/js/at-ar.js`.
 3. In `server.js`, delete the block marked `── AdventureTrail ──`. It is six
    lines and touches nothing else.
 4. In `public/gm.html`, delete the three blocks marked
@@ -77,14 +77,30 @@ one twice returns the same run, which is what lets a team reload mid-trail.
 - `db.js` schema and data layer. Creates its own tables on first require.
 - `routes.js` the Express router, mounted once.
 - `samples/` two 3D objects (a chest, a key) a manager can pick to try AR,
-  and the script that builds them (`node at/samples/build-samples.js`).
+  and the script that builds them (`node at/samples/build-samples.js`); and a
+  test pattern for pattern AR, an old town map (`marker.jpg`, its compiled
+  target `marker.mind`, `marker.json`), built by `build-marker.cjs`, which
+  needs Playwright: `NODE_PATH="$(npm root -g)" node at/samples/build-marker.cjs`.
 - `public/at-studio.html` the trail editor (GM-gated).
 - `public/at-play.html` the player app.
 - `public/at-designer.html` the page designer, opened from a part's Seite tab.
 - `public/js/at-design.js` the one renderer for designed pages, shared by the
   player, the designer and the studio's thumbnail.
+- `public/js/at-ar.js` pattern AR: compiling a pattern, the camera view, and
+  the studio's placement preview. An ES module; MindAR 1.2.5 and three.js
+  0.160.0 come from the CDN through the import map in the studio and player.
 
 ## Design decisions worth knowing before changing anything
+
+- **Pattern AR runs in the browser, on the camera feed.** MindAR tracks the
+  picture in plain JavaScript, so it works in Safari on the iPhone too, where
+  WebXR does not exist; no app, no GPS. The studio compiles the pattern in the
+  browser and stores the picture and its target together, so they always
+  match; its tracking points give the "gut / mittel / schwer erkennbar"
+  rating. The three.js version is pinned: this MindAR build imports
+  `sRGBEncoding`, which three.js dropped in 0.162. Pattern files are served by
+  their stored names (`/api/at/ar/:id/:file`), so a replaced file is a new
+  address and no phone tracks a stale pattern out of its cache.
 
 - **Several phones, one run.** Each run has one live stream
   (`/api/at/run/:id/live`, server-sent events). It only says what changed and on

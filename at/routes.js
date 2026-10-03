@@ -141,7 +141,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
           if (w.on === 'delay') return minutesHere >= (Number(w.minutes) || 0);
           return true;
         }).map(a => ({
-          id: a.id, kind: a.kind, path: a.kind === 'page' || a.kind === 'model' ? '' : a.path, title: a.title, preload: !!a.preload,
+          id: a.id, kind: a.kind, path: ['page', 'model', 'ar'].includes(a.kind) ? '' : a.path, title: a.title, preload: !!a.preload,
           ios: a.kind === 'model' ? !!(a.meta && a.meta.usdz) : undefined,
           ref: ['link', 'phone', 'email'].includes(a.kind) ? a.ref : undefined,
           body: a.kind === 'note' ? at.pick(a.body, lang) : undefined,
@@ -150,6 +150,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
           shown: a.kind === 'page' ? (a.meta && a.meta.display_url) || '' : undefined,
           name: a.kind === 'file' ? (a.meta && a.meta.name) || '' : undefined,
           size: a.kind === 'file' ? (a.meta && a.meta.size) || 0 : undefined,
+          ar: a.kind === 'ar' ? arView(a) : undefined,
         }));
 
         return {
@@ -353,6 +354,19 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       at.completeNode(run.id, node.id);
       told(req, run, { type: 'solve', node: node.id });
       return res.json({ ok: true, via: 'gps', distance: dist, state: playerView(run) });
+    }
+
+    if (kind === 'ar') {
+      // The camera found one of this part's patterns. Like a GPS fix, that is
+      // the phone's word; what is checked here is that the pattern belongs to
+      // this part and was out for the team to find.
+      const a = at.getAsset(Number(req.body.ar));
+      if (!a || a.kind !== 'ar' || a.node_id !== node.id || (a.appear_when || {}).on === 'solve') {
+        return res.json({ ok: false, reason: 'wrong' });
+      }
+      at.completeNode(run.id, node.id);
+      told(req, run, { type: 'solve', node: node.id });
+      return res.json({ ok: true, via: 'ar', state: playerView(run) });
     }
 
     at.completeNode(run.id, node.id);
@@ -736,6 +750,7 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       if (a.kind === 'page' && b.meta && b.meta.display_url !== undefined) {
         patch.meta = { ...a.meta, display_url: cleanShown(b.meta.display_url) };
       }
+      if (a.kind === 'ar' && b.meta && typeof b.meta === 'object') patch.meta = arPlacement(a.meta || {}, b.meta);
     }
     at.updateAsset(a.id, patch);
     res.json({ success: true });
@@ -819,6 +834,182 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     res.json({ success: true });
   });
 
+  // ── Pattern AR ─────────────────────────────────────────────────────────────
+  // A pattern is a picture the camera looks for, stored with the target the
+  // studio compiled from it (MindAR's .mind), and optionally something to show
+  // on it: a 3D object, a picture or a video. Every file has to be what its
+  // first bytes say, since all of them are served from our own origin.
+  const AR_SHOW = ['model', 'image', 'video'];
+  const AR_PLACE = ['stand', 'front', 'flat'];
+  const AR_IMAGE_MAX = 15 * 1024 * 1024, AR_MIND_MAX = 20 * 1024 * 1024, AR_VIDEO_MAX = 100 * 1024 * 1024;
+  const AR_TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+    '.mind': 'application/octet-stream', '.glb': 'model/gltf-binary', '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.webm': 'video/webm' };
+  const AR_EXT = { png: /\.png$/i, jpeg: /\.jpe?g$/i, webp: /\.webp$/i, glb: /\.glb$/i,
+    mp4: /\.(mp4|m4v)$/i, webm: /\.webm$/i, mind: /\.mind$/i };
+  function sniff(file) {
+    const b = Buffer.alloc(16);
+    try { const fd = fs.openSync(file, 'r'); fs.readSync(fd, b, 0, 16, 0); fs.closeSync(fd); } catch (e) { return null; }
+    const s = b.toString('latin1');
+    if (s.startsWith('\x89PNG\r\n\x1a\n')) return 'png';
+    if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpeg';
+    if (s.startsWith('RIFF') && s.slice(8, 12) === 'WEBP') return 'webp';
+    if (s.startsWith('glTF')) return 'glb';
+    if (s.slice(4, 8) === 'ftyp') return 'mp4';
+    if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'webm';
+    // MindAR writes a msgpack map whose first key is "v", its format version.
+    if (b[0] === 0x82 && b[1] === 0xa1 && b[2] === 0x76) return 'mind';
+    return null;
+  }
+  // One of the wanted kinds, when the bytes and the name agree.
+  const arKind = (f, kinds) => {
+    const k = sniff(f.path);
+    return k && kinds.includes(k) && AR_EXT[k].test(String(f.originalname || '')) ? k : null;
+  };
+  const unlinkRel = rel => { if (rel && !String(rel).includes('..')) { try { fs.unlinkSync(path.join(UPLOAD_DIR, rel)); } catch (e) {} } };
+  const keepUpload = f => {
+    if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
+    const dest = path.join(AT_UPLOAD_DIR, f.filename);
+    try { fs.renameSync(f.path, dest); }
+    catch (e) { fs.copyFileSync(f.path, dest); fs.unlinkSync(f.path); }
+    return `at/${f.filename}`;
+  };
+  const dropUploads = req => {
+    const all = [].concat(req.file || [], ...Object.values(req.files || {}));
+    for (const f of all) { try { fs.unlinkSync(f.path); } catch (e) {} }
+  };
+  // What a phone needs to find the pattern and show what sits on it. Files go
+  // by their stored names, so a replaced file is a new address and no phone
+  // keeps looking for yesterday's pattern out of its cache.
+  function arView(a) {
+    const m = a.meta || {};
+    const base = f => f ? path.basename(String(f)) : '';
+    return {
+      pattern: base(a.path), mind: base(m.mind), src: m.src ? base(m.src) : '',
+      show: m.src && AR_SHOW.includes(m.show) ? m.show : 'none',
+      place: AR_PLACE.includes(m.place) ? m.place : '',
+      scale: dNum(m.scale, 0.1, 10, 1), rot: dNum(m.rot, -180, 180, 0),
+      aspect: m.pw > 0 && m.ph > 0 ? m.ph / m.pw : 1,
+      hint: m.hint !== false,
+    };
+  }
+  const arPlacement = (cur, m) => ({ ...cur,
+    place: AR_PLACE.includes(m.place) ? m.place : cur.place,
+    scale: m.scale !== undefined ? Math.round(dNum(m.scale, 0.1, 10, 1) * 100) / 100 : cur.scale,
+    rot: m.rot !== undefined ? Math.round(dNum(m.rot, -180, 180, 0)) : cur.rot,
+    hint: m.hint !== undefined ? m.hint !== false : cur.hint,
+  });
+  // The picture and its compiled target arrive together, so they always match.
+  const arFields = upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mind', maxCount: 1 }]);
+  function patternUpload(req) {
+    const img = req.files && req.files.image && req.files.image[0];
+    const mind = req.files && req.files.mind && req.files.mind[0];
+    if (!img || !mind) return { error: 'no_file' };
+    if (!arKind(img, ['png', 'jpeg', 'webp']) || img.size > AR_IMAGE_MAX) return { error: 'bad_pattern' };
+    if (!arKind(mind, ['mind']) || mind.size > AR_MIND_MAX) return { error: 'bad_target' };
+    const b = req.body || {};
+    return { img, mind, meta: {
+      pw: dNum(b.pw, 1, 20000, 1) | 0, ph: dNum(b.ph, 1, 20000, 1) | 0,
+      points: dNum(b.points, 0, 100000, 0) | 0, quality: dPick(b.quality, ['good', 'ok', 'poor'], 'ok'),
+      name: cleanName(img.originalname),
+    } };
+  }
+  r.post('/api/at/nodes/:id/assets/ar', arFields, (req, res) => {
+    if (!isGmAuthed(req)) { dropUploads(req); return res.status(401).json({ error: 'Unauthorized' }); }
+    const node = at.getNode(req.params.id);
+    if (!node) { dropUploads(req); return res.status(404).json({ error: 'unknown_node' }); }
+    const f = patternUpload(req);
+    if (f.error) { dropUploads(req); return res.status(400).json({ error: f.error }); }
+    const id = at.addAsset(node.id, { kind: 'ar', path: keepUpload(f.img),
+      title: String((req.body && req.body.title) || 'AR-Muster').slice(0, 120),
+      meta: { ...f.meta, mind: keepUpload(f.mind), hint: true } });
+    res.json({ success: true, id });
+  });
+  r.post('/api/at/assets/:id/ar-pattern', arFields, (req, res) => {
+    if (!isGmAuthed(req)) { dropUploads(req); return res.status(401).json({ error: 'Unauthorized' }); }
+    const a = at.getAsset(req.params.id);
+    if (!a || a.kind !== 'ar') { dropUploads(req); return res.status(404).json({ error: 'unknown_asset' }); }
+    const f = patternUpload(req);
+    if (f.error) { dropUploads(req); return res.status(400).json({ error: f.error }); }
+    const old = [a.path, a.meta && a.meta.mind];
+    at.updateAsset(a.id, { path: keepUpload(f.img), meta: { ...a.meta, ...f.meta, mind: keepUpload(f.mind) } });
+    old.forEach(unlinkRel);
+    res.json({ success: true });
+  });
+  // The built-in test pattern, an old town map, made by at/samples/build-marker.cjs
+  // and compiled the way the studio compiles an upload. Each pick is a copy.
+  r.post('/api/at/nodes/:id/assets/ar-sample', gm, (req, res) => {
+    const node = at.getNode(req.params.id);
+    if (!node) return res.status(404).json({ error: 'unknown_node' });
+    const dir = path.join(__dirname, 'samples');
+    let meta;
+    try { meta = JSON.parse(fs.readFileSync(path.join(dir, 'marker.json'), 'utf8')); }
+    catch (e) { return res.status(404).json({ error: 'unknown_sample' }); }
+    if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
+    const copy = ext => {
+      const name = crypto.randomUUID() + ext;
+      fs.copyFileSync(path.join(dir, 'marker' + ext), path.join(AT_UPLOAD_DIR, name));
+      return `at/${name}`;
+    };
+    const id = at.addAsset(node.id, { kind: 'ar', path: copy('.jpg'), title: 'Testmuster (Beispiel)',
+      meta: { pw: meta.pw | 0, ph: meta.ph | 0, points: meta.points | 0, quality: dPick(meta.quality, ['good', 'ok', 'poor'], 'ok'),
+              name: 'testmuster.jpg', mind: copy('.mind'), hint: true, sample_pattern: true } });
+    res.json({ success: true, id });
+  });
+  // What appears on the pattern: a 3D object, a picture or a video, or one of
+  // the built-in 3D samples. Replacing it drops the old file.
+  r.post('/api/at/assets/:id/ar-content', upload.single('file'), (req, res) => {
+    if (!isGmAuthed(req)) { dropUploads(req); return res.status(401).json({ error: 'Unauthorized' }); }
+    const a = at.getAsset(req.params.id);
+    if (!a || a.kind !== 'ar') { dropUploads(req); return res.status(404).json({ error: 'unknown_asset' }); }
+    let next;
+    if (req.file) {
+      const k = arKind(req.file, ['glb', 'png', 'jpeg', 'webp', 'mp4', 'webm']);
+      if (!k) {
+        dropUploads(req);
+        return res.status(400).json({ error: /\.glb$/i.test(String(req.file.originalname || '')) ? 'not_glb' : 'unsupported_type' });
+      }
+      const show = k === 'glb' ? 'model' : k === 'mp4' || k === 'webm' ? 'video' : 'image';
+      if (req.file.size > (show === 'model' ? MODEL_MAX : show === 'video' ? AR_VIDEO_MAX : AR_IMAGE_MAX)) {
+        dropUploads(req); return res.status(400).json({ error: 'too_large' });
+      }
+      next = { show, src_name: cleanName(req.file.originalname), src_size: req.file.size, sample: null, src: keepUpload(req.file) };
+    } else {
+      const which = String((req.body || {}).sample || '');
+      if (!Object.prototype.hasOwnProperty.call(SAMPLES, which)) return res.status(400).json({ error: 'unknown_sample' });
+      const from = path.join(__dirname, 'samples', which + '.glb');
+      if (!fs.existsSync(from)) return res.status(404).json({ error: 'unknown_sample' });
+      if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
+      const name = crypto.randomUUID() + '.glb';
+      fs.copyFileSync(from, path.join(AT_UPLOAD_DIR, name));
+      next = { show: 'model', src_name: which + '.glb', src_size: fs.statSync(from).size, sample: which, src: `at/${name}` };
+    }
+    unlinkRel(a.meta && a.meta.src);
+    at.updateAsset(a.id, { meta: { ...a.meta, ...next } });
+    res.json({ success: true, show: next.show });
+  });
+  r.delete('/api/at/assets/:id/ar-content', gm, (req, res) => {
+    const a = at.getAsset(req.params.id);
+    if (!a || a.kind !== 'ar') return res.status(404).json({ error: 'unknown_asset' });
+    unlinkRel(a.meta && a.meta.src);
+    const meta = { ...a.meta };
+    for (const k of ['src', 'show', 'src_name', 'src_size', 'sample']) delete meta[k];
+    at.updateAsset(a.id, { meta });
+    res.json({ success: true });
+  });
+  // A team gets a pattern's files once the part holding it is in play, the
+  // studio with the GM login.
+  r.get('/api/at/ar/:id/:file', (req, res) => {
+    const a = at.getAsset(req.params.id);
+    if (!a || a.kind !== 'ar' || !canSeeAsset(req, a)) return res.status(404).end();
+    const m = a.meta || {};
+    const rel = [a.path, m.mind, m.src].find(f => f && path.basename(String(f)) === req.params.file);
+    if (!rel || String(rel).includes('..')) return res.status(404).end();
+    res.setHeader('Content-Type', AR_TYPES[path.extname(String(rel)).toLowerCase()] || 'application/octet-stream');
+    // A replaced file has a new name, so a copy here never goes stale.
+    res.setHeader('Cache-Control', 'private, max-age=604800, immutable');
+    res.sendFile(path.join(UPLOAD_DIR, rel), err => { if (err && !res.headersSent) res.status(404).end(); });
+  });
+
   function guessKind(mime) {
     if (/^audio\//.test(mime)) return 'audio';
     if (/^video\//.test(mime)) return 'video';
@@ -856,7 +1047,8 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
 
   r.delete('/api/at/assets/:id', gm, (req, res) => {
     const a = at.getAsset(req.params.id);
-    for (const rel of [a && a.path, a && a.meta && a.meta.usdz]) {
+    const m = (a && a.meta) || {};
+    for (const rel of [a && a.path, m.usdz, m.mind, m.src]) {
       if (rel && !String(rel).includes('..')) { try { fs.unlinkSync(path.join(UPLOAD_DIR, rel)); } catch (e) {} }
     }
     at.deleteAsset(req.params.id);
@@ -900,6 +1092,18 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
       }
       if (n.trigger_kind === 'gps' && (n.lat == null || n.lng == null)) {
         out.push({ level: 'error', node: n.id, msg: `„${name}“ wird per GPS geöffnet, hat aber keinen Ort.` });
+      }
+      const patterns = at.listAssets(n.id).filter(a => a.kind === 'ar');
+      if (n.trigger_kind === 'ar' && !patterns.some(a => (a.appear_when || {}).on !== 'solve')) {
+        out.push({ level: 'error', node: n.id, msg: `„${name}“ wird mit einem AR-Muster geöffnet, hat aber keins. Unter Fundstücke ein AR-Muster anlegen.` });
+      }
+      for (const a of patterns) {
+        if ((a.meta || {}).quality === 'poor') {
+          out.push({ level: 'warn', node: n.id, msg: `Das AR-Muster „${a.title}“ bei „${name}“ hat wenig Details. Die Kamera verliert es leicht.` });
+        }
+        if (n.trigger_kind !== 'ar' && !(a.meta || {}).src) {
+          out.push({ level: 'warn', node: n.id, msg: `Das AR-Muster „${a.title}“ bei „${name}“ zeigt nichts und öffnet nichts.` });
+        }
       }
       if (n.trigger_kind === 'answer') {
         const any = Object.values(n.answers || {}).some(v => (Array.isArray(v) ? v.length : String(v || '').trim()));

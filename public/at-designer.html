@@ -471,7 +471,7 @@ function playable(){
   const layers = D.layers || [];
   const box = layers.find(l => l.type === 'content' && !l.hidden);
   const actions = !!box && (!box.show || box.show.actions !== false);
-  if(['answer','code','qr','gps'].includes(NODE.trigger_kind) && NODE.kind !== 'nav' && NODE.kind !== 'gate') return actions;
+  if(['answer','code','qr','gps','ar'].includes(NODE.trigger_kind) && NODE.kind !== 'nav' && NODE.kind !== 'gate') return actions;
   if(NODE.kind === 'gate') return actions || layers.some(l => l.type === 'button' && !l.hidden && l.action && l.action.do === 'branch');
   return actions || layers.some(l => l.type === 'button' && !l.hidden && (!l.action || l.action.do === 'primary'));
 }
@@ -526,6 +526,7 @@ function placeholder(){
   if(NODE.kind === 'gate'){ EDGES.filter(e => e.from_node === NODE.id).forEach(e => foot.appendChild(btn(tr(e.label) || 'Weiter'))); }
   else if(['answer','code','qr'].includes(t)){ const i = document.createElement('div'); i.className = 'inp2'; i.textContent = 'Antwort eintippen'; foot.appendChild(i); foot.appendChild(btn('Prüfen')); }
   else if(t === 'gps'){ foot.appendChild(btn('Ich bin da')); foot.appendChild(btn('Code vom Schild eintippen', true)); }
+  else if(t === 'ar'){ foot.appendChild(btn('Kamera öffnen')); foot.appendChild(btn('Code vom Schild eintippen', true)); }
   else foot.appendChild(btn('Weiter'));
   c.appendChild(mid); c.appendChild(foot);
   return c;
@@ -835,11 +836,12 @@ function primaryLabel(){
   const t = NODE.trigger_kind;
   if(['answer','code','qr'].includes(t)) return 'Antwort prüfen';
   if(t === 'gps') return 'Ich bin da (Ort prüfen)';
+  if(t === 'ar') return 'Kamera öffnen (Muster suchen)';
   return 'Weiter';
 }
 function renderProps(){
   const P = $('#props'), l = sel();
-  const warn = playable() ? '' : '<div class="warnbox" role="status">' + (['answer','code','qr','gps'].includes(NODE.trigger_kind) || NODE.kind === 'gate'
+  const warn = playable() ? '' : '<div class="warnbox" role="status">' + (['answer','code','qr','gps','ar'].includes(NODE.trigger_kind) || NODE.kind === 'gate'
     ? 'Hier braucht das Team die Inhalt-Box mit Antwortfeld und Knöpfen. Ohne sie blendet der Spieler sie unten selbst ein.'
     : 'Ohne Inhalt-Box oder einen Knopf „Weiter“ kommt das Team hier nicht weiter. Der Spieler blendet die Inhalt-Box dann selbst ein.') + '</div>';
   if(!l){ P.innerHTML = warn + pageProps(); bindPage(); return; }

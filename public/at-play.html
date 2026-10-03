@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E1118">
 <title>AdventureTrail</title>
+<!-- Pattern AR: MindAR and the three.js it was built against, loaded on first use. -->
+<script type="importmap">{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "mindar-image-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js",
+  "mindar-image":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"
+}}</script>
 <script src="/js/dialog.js?v=1"></script>
 <script src="/js/at-design.js?v=1"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,6 +150,36 @@ p.sm{font-size:13px;line-height:1.5;color:var(--ink3)}
 .arbox model-viewer{width:100%;height:100%;--poster-color:transparent}
 .arbtn{position:absolute;left:16px;right:16px;bottom:16px;width:auto}
 .arhint{padding:10px 16px 0;margin:0}
+/* Pattern AR: the camera fills the screen, the words sit over it. */
+.sheet.ar .inner{position:relative;background:oklch(0.10 0.02 265)}
+.arstage{position:relative;flex:1;min-height:0;overflow:hidden;isolation:isolate}
+.sheet .arstage video{border-radius:0;margin:0;max-width:none}
+.arui{position:absolute;inset:0;z-index:3;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
+  padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom))}
+.artop{display:flex;align-items:center;gap:10px}
+.artop b{flex:1;min-width:0;font:800 22px/1.1 var(--display);letter-spacing:.02em;text-transform:uppercase;
+  text-shadow:0 1px 10px oklch(0.10 0.02 265 / .85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arclose{flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:oklch(0.14 0.02 265 / .76);display:grid;place-items:center;pointer-events:auto}
+.arclose svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2;fill:none;stroke-linecap:round}
+.arscan{position:absolute;left:50%;top:44%;width:min(68vw,320px,calc(46vh * var(--ar,1)));aspect-ratio:var(--ar,1);
+  transform:translate(-50%,-50%);transition:opacity .3s var(--ease)}
+.arscan i{position:absolute;width:30px;height:30px;border:3px solid var(--gold);animation:arpulse 1.8s var(--ease) infinite}
+.arscan i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0;border-radius:8px 0 0 0}
+.arscan i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0;border-radius:0 8px 0 0}
+.arscan i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0;border-radius:0 0 0 8px}
+.arscan i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 8px 0}
+.arscan.off{opacity:0}
+@keyframes arpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.arscan i{animation:none}}
+.arcard{pointer-events:auto;display:flex;align-items:center;gap:12px;background:oklch(0.15 0.03 265 / .9);
+  border:1px solid var(--line);border-radius:14px;padding:11px 13px;transition:border-color .3s var(--ease)}
+.sheet .arcard img{flex:0 0 auto;width:64px;height:48px;object-fit:contain;margin:0;border-radius:6px;background:var(--card2)}
+.arcard p{font:500 14px/1.45 var(--body)}
+.arcard.found{border-color:var(--go)}
+.arbtns{display:flex;flex-direction:column;gap:9px;margin-top:10px;pointer-events:auto}
+.arbtns:empty{display:none}
+.arbtns .btn + .btn{margin-top:0}
+.arbtns .btn.ghost{background:oklch(0.14 0.02 265 / .8);color:var(--ink)}
 
 .toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;
   background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:13px 15px;
@@ -405,6 +442,15 @@ function preloadAssets(){
     (n.assets||[]).forEach(a => {
       if(!a.preload) return;
       if(a.kind === 'model' && !seen.has(MV_SRC)){ seen.add(MV_SRC); fetch(MV_SRC, { cache:'force-cache', mode:'cors' }).catch(()=>{}); }
+      // A pattern needs the tracker, its target and whatever appears on it.
+      if(a.kind === 'ar' && a.ar){
+        if(!seen.has('ar')){ seen.add('ar'); arModule().catch(()=>{}); }
+        [a.ar.mind, a.ar.src, a.ar.hint ? a.ar.pattern : ''].filter(Boolean).forEach(f => {
+          const u = arUrl(a, f); if(seen.has(u)) return;
+          seen.add(u); fetch(u, { cache:'force-cache' }).catch(()=>{});
+        });
+        return;
+      }
       const u = a.kind === 'page' ? '/api/at/page/' + a.id + '?run=' + encodeURIComponent(runId)
               : a.kind === 'model' ? modelUrl(a, 'model.glb')
               : a.path ? '/uploads/' + a.path : '';
@@ -498,6 +544,9 @@ function renderPlay(){
   } else if(n.trigger_kind === 'gps'){
     foot.push('<button class="btn" id="b-here">Ich bin da</button>');
     foot.push('<button class="btn ghost" id="b-code">Code vom Schild eintippen</button>');
+  } else if(n.trigger_kind === 'ar'){
+    if((n.assets||[]).some(a => a.kind === 'ar')) foot.push('<button class="btn" id="b-scan">Kamera öffnen</button>');
+    foot.push('<button class="btn ghost" id="b-code">Code vom Schild eintippen</button>');
   } else {
     foot.push('<button class="btn" id="b-next">Weiter</button>');
   }
@@ -512,7 +561,7 @@ function renderPlay(){
   if(n.nav_mode === 'distance' && n.lat != null){ holdWake(); tickDistance(n); }
   else dropWake();
 }
-const FIND_ICON = {model:'<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12"/><path d="M21 7l-9 5-9-5"/>',image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/>',audio:'<path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>',doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M7 13h6M7 16h9"/>',file:'<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>',link:'<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',email:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',note:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h5"/>'};
+const FIND_ICON = {ar:'<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M12 7.5l4 2.2v4.6l-4 2.2-4-2.2V9.7z"/><path d="M12 12v4.5M8 9.7l4 2.3 4-2.3"/>',model:'<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12"/><path d="M21 7l-9 5-9-5"/>',image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4 4 3 3-2 4 3"/>',audio:'<path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',video:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>',doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',page:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M7 13h6M7 16h9"/>',file:'<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>',link:'<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',email:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',note:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h5"/>'};
 function assetIcon(kind){ return '<svg viewBox="0 0 24 24">' + (FIND_ICON[kind] || FIND_ICON.image) + '</svg>'; }
 
 function wire(n){
@@ -555,8 +604,10 @@ function wire(n){
   };
   const bc = $('#b-code');
   if(bc) bc.onclick = () => ask('Code vom Schild',
-    'Steht am Posten. Er funktioniert immer, auch ohne Standort.', 'z. B. PFALZ-74',
+    'Steht am Posten. Er funktioniert immer, auch ohne ' + (n.trigger_kind === 'ar' ? 'Kamera.' : 'Standort.'), 'z. B. PFALZ-74',
     async c => { solve({ code:c }); });
+  const bsc = $('#b-scan');
+  if(bsc) bsc.onclick = () => { const a = (n.assets||[]).find(x => x.kind === 'ar'); if(a) openAR(a); };
   const bn = $('#b-next');
   if(bn) bn.onclick = () => solve({});
   const bsk = $('#b-skip');
@@ -618,7 +669,7 @@ function playable(n, d){
   const layers = d.layers || [];
   const box = layers.find(l => l.type === 'content' && !l.hidden);
   const actions = !!box && (!box.show || box.show.actions !== false);
-  if(['answer','code','qr','gps'].includes(n.trigger_kind) && n.kind !== 'nav' && n.kind !== 'gate') return actions;
+  if(['answer','code','qr','gps','ar'].includes(n.trigger_kind) && n.kind !== 'nav' && n.kind !== 'gate') return actions;
   if(n.kind === 'gate') return actions || layers.some(l => l.type === 'button' && !l.hidden && l.action && l.action.do === 'branch');
   return actions || layers.some(l => l.type === 'button' && !l.hidden && (!l.action || l.action.do === 'primary'));
 }
@@ -664,7 +715,7 @@ function applyDesign(n){
 }
 function designAction(l){
   const a = l.action || { do:'primary' };
-  if(a.do === 'primary'){ const b = $('#b-solve') || $('#b-here') || $('#b-next'); if(b) b.click(); }
+  if(a.do === 'primary'){ const b = $('#b-solve') || $('#b-here') || $('#b-scan') || $('#b-next'); if(b) b.click(); }
   else if(a.do === 'asset') openAsset(Number(a.asset));
   else if(a.do === 'url' && /^https?:\/\//i.test(a.url || '')) window.open(a.url, '_blank', 'noopener');
   else if(a.do === 'video'){
@@ -694,6 +745,7 @@ function showStory(node, backOnly){
 
 // One in-app ask, in the trail's own skin, instead of a browser prompt.
 function ask(title, note, placeholder, onOk){
+  stopAR();
   $('#sheet-in').innerHTML =
     '<h2>'+esc(title)+'</h2>'
     + (note ? '<p class="sm">'+esc(note)+'</p>' : '')
@@ -720,7 +772,7 @@ function ask(title, note, placeholder, onOk){
 }
 
 const FIND_LABEL = { image:'Bild', audio:'Sprachaufnahme', video:'Video', doc:'Dokument', page:'Webseite',
-  file:'Download', link:'Link', phone:'Telefonnummer', email:'E-Mail-Adresse', note:'Brief', model:'3D-Objekt' };
+  file:'Download', link:'Link', phone:'Telefonnummer', email:'E-Mail-Adresse', note:'Brief', model:'3D-Objekt', ar:'AR-Muster' };
 // Google's 3D viewer: turns the object in the hand and hands it to the phone's
 // own AR (Quick Look on iPhone, Scene Viewer on Android). Loaded on first use,
 // and fetched ahead with the rest when a trail has a 3D object at all.
@@ -735,6 +787,7 @@ function findSub(a){
   if(a.kind === 'page') return a.shown || FIND_LABEL.page;
   if(a.kind === 'file') return [a.name, fmtSize(a.size)].filter(Boolean).join(' · ');
   if(a.kind === 'model') return '3D · in den Raum stellen';
+  if(a.kind === 'ar') return 'Kamera auf das Muster richten';
   return FIND_LABEL[a.kind] || '';
 }
 function findAsset(id){
@@ -744,6 +797,8 @@ function findAsset(id){
 // Each kind opens the way the real thing would: a call, a mail, a page, a file.
 function openAsset(id){
   const a = findAsset(id); if(!a) return;
+  stopAR();
+  if(a.kind === 'ar') return openAR(a);
   const sheet = $('#sheet');
   const url = a.path ? '/uploads/' + a.path : '';
   const card = (sub, action) => '<div class="fcard"><span class="ic">'+assetIcon(a.kind)+'</span>'
@@ -800,6 +855,140 @@ function openAsset(id){
 }
 
 
+// ── Pattern AR ───────────────────────────────────────────────────────────────
+// The camera looks for the pattern and pins onto it what the studio set. On a
+// part that opens with a pattern, finding it solves the part, on every phone.
+let arSession = null, arToken = 0, arPause = null, _arMod = null;
+// Import maps came to Safari with iOS 16.4; an older phone is told it cannot,
+// not that it has no reception.
+const arModule = () => _arMod || (_arMod = (HTMLScriptElement.supports && HTMLScriptElement.supports('importmap')
+  ? import('/js/at-ar.js') : Promise.reject(Object.assign(new Error('unsupported'), { code:'unsupported' })))
+  .catch(e => { _arMod = null; throw e; }));
+const arUrl = (a, f) => '/api/at/ar/' + a.id + '/' + encodeURIComponent(f) + '?run=' + encodeURIComponent(runId);
+const AR_ERR = {
+  denied:'Ohne Kamera geht es hier nicht. Erlaubt sie in den Einstellungen des Browsers und versucht es nochmals.',
+  nocamera:'Dieses Handy hat keine Kamera, die wir nutzen können. Ein anderes Handy im Team versuchen.',
+  busy:'Die Kamera wird gerade von einer anderen App benutzt. Diese schliessen und nochmals versuchen.',
+  unsupported:'Dieses Handy kann keine Muster erkennen. Ein anderes Handy im Team versuchen.',
+  offline:'Für die Kamera braucht es kurz Empfang. Sobald ihr Netz habt, nochmals versuchen.',
+  content:'Was hier erscheinen soll, konnte nicht geladen werden. Sobald ihr Netz habt, nochmals versuchen.',
+  camera:'Die Kamera konnte nicht starten. Nochmals versuchen.' };
+function stopAR(){
+  arToken++; arPause = null;
+  if(arSession){ const s = arSession; arSession = null; s.stop(); }
+  const sh = $('#sheet'); if(sh.classList.contains('ar')) sh.classList.remove('ar', 'full');
+}
+// iOS stops the camera of a page in the background; on return the view says so
+// and offers to start it again rather than showing a frozen picture.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'hidden' || !arSession) return;
+  const s = arSession; arSession = null; s.stop();
+  if(arPause) arPause();
+});
+function openAR(a){
+  const ar = a.ar || {};
+  const n = (RUN.nodes||[]).find(x => (x.assets||[]).some(y => y.id === a.id));
+  const solves = !!(n && n.status === 'open' && n.trigger_kind === 'ar' && n.kind !== 'nav');
+  const sheet = $('#sheet');
+  sheet.classList.add('on', 'full', 'ar');
+  $('#sheet-in').innerHTML = '<div class="arstage" id="arstage"></div><div class="arui">'
+    + '<div class="artop"><b>'+esc(a.title || FIND_LABEL.ar)+'</b>'
+    + '<button class="arclose" id="b-ar-close" aria-label="Schliessen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'
+    + '<div class="arscan" id="arscan" style="--ar:'+(1 / (ar.aspect || 1)).toFixed(4)+'" aria-hidden="true"><i></i><i></i><i></i><i></i></div>'
+    + '<div><div class="arcard" id="arcard">'+(ar.hint ? '<img src="'+esc(arUrl(a, ar.pattern))+'" alt="Das gesuchte Muster">' : '')
+    + '<p id="ar-st" role="status" aria-live="polite">Kamera startet …</p></div><div class="arbtns" id="arbtns"></div></div></div>';
+  const token = ++arToken;
+  const mine = () => token === arToken;
+  let found = false, solved = false, solving = false, idle = false, sound = false, tip = 0;
+  const say = t => { const e = $('#ar-st'); if(e && mine()) e.textContent = t; };
+  const look = ar.hint ? 'Richtet die Kamera auf dieses Bild.' : 'Richtet die Kamera auf das Muster.';
+  const leave = () => {
+    clearTimeout(tip); stopAR();
+    sheet.classList.remove('on', 'full'); $('#sheet-in').innerHTML = '';
+    if(!solved || !n) return;
+    const d = (RUN.nodes||[]).find(x => x.id === n.id);
+    if(d && d.status !== 'open' && (d.arrive || d.depart || (holdsMedia(d) && d.story_media_path))) return showStory(d);
+    renderPlay();
+  };
+  const buttons = () => {
+    if(!mine()) return;
+    const b = [];
+    if(solved) b.push('<button class="btn" id="b-ar-go">Weiter</button>');
+    if(idle) b.push('<button class="btn'+(solved ? ' ghost' : '')+'" id="b-ar-again">Kamera wieder starten</button>');
+    if(found && !idle && ar.show === 'video') b.push('<button class="btn ghost" id="b-ar-sound">'+(sound ? 'Ton aus' : 'Ton an')+'</button>');
+    if(solves && !solved) b.push('<button class="btn ghost" id="b-ar-code">Code vom Schild eintippen</button>');
+    $('#arbtns').innerHTML = b.join('');
+    const go = $('#b-ar-go'); if(go) go.onclick = leave;
+    const again = $('#b-ar-again'); if(again) again.onclick = start;
+    const snd = $('#b-ar-sound'); if(snd) snd.onclick = () => { sound = !sound; if(arSession) arSession.sound(sound); buttons(); };
+    const code = $('#b-ar-code'); if(code) code.onclick = () => {
+      clearTimeout(tip);
+      ask('Code vom Schild', 'Steht am Posten. Er funktioniert immer, auch ohne Kamera.', 'z. B. PFALZ-74', async c => {
+        const res = await api('/run/'+runId+'/node/'+n.id+'/solve', { code:c });
+        if(res.status === 409){ await load(); setTimeout(renderPlay, 0); return; }
+        if(!res.ok) return false;
+        if(res.state) RUN = res.state;
+        setTimeout(() => {
+          const d = (RUN.nodes||[]).find(x => x.id === n.id);
+          if(d && (d.arrive || d.depart || (holdsMedia(d) && d.story_media_path))) showStory(d); else renderPlay();
+        }, 0);
+      });
+    };
+  };
+  // Found on a part that opens with it: tell the server, once. Without a
+  // connection it tries again while the view is open.
+  const solve = async () => {
+    if(!solves || solved || solving || !mine()) return;
+    solving = true;
+    let res;
+    try { res = await api('/run/'+runId+'/node/'+n.id+'/solve', { ar: a.id }); } catch(e){ res = null; }
+    solving = false;
+    if(!mine()) return;
+    if(res && res.status === 409 && res.error === 'not_open'){ await load(); solved = true; say('Gefunden. Ein anderes Handy im Team war schneller.'); }
+    else if(res && res.ok){ if(res.state) RUN = res.state; solved = true; say('Gefunden! Damit ist die Station gelöst.'); }
+    else { say('Gefunden, aber gerade ohne Verbindung. Es wird gleich nochmals versucht.'); setTimeout(solve, 4000); }
+    buttons();
+  };
+  const hooks = {
+    onFound(){
+      if(!mine()) return;
+      found = true; clearTimeout(tip);
+      $('#arcard').classList.add('found'); $('#arscan').classList.add('off');
+      if(solves && !solved){ say('Gefunden!'); solve(); }
+      else if(!solved) say(ar.show === 'none' ? 'Gefunden. Das ist das gesuchte Muster.' : 'Gefunden.');
+      buttons();
+    },
+    onLost(){
+      if(!mine()) return;
+      $('#arcard').classList.remove('found'); $('#arscan').classList.remove('off');
+      if(!solved) say('Wieder auf das Muster richten.');
+    },
+  };
+  async function start(){
+    if(!mine()) return;
+    idle = false; say('Kamera startet …'); buttons();
+    try {
+      const A = await arModule().catch(e => { throw e && e.code ? e : Object.assign(new Error('offline'), { code:'offline' }); });
+      if(!mine()) return;
+      const h = await A.startAR($('#arstage'), { mind: arUrl(a, ar.mind), src: ar.src ? arUrl(a, ar.src) : '',
+        show: ar.show, place: ar.place, scale: ar.scale, rot: ar.rot, aspect: ar.aspect }, hooks);
+      if(!mine()){ h.stop(); return; }
+      arSession = h;
+      if(!solved) say(look);
+      buttons();
+      clearTimeout(tip);
+      tip = setTimeout(() => { if(mine() && !found && !idle) say(look + ' Das ganze Muster ins Bild nehmen und das Handy einen Moment ruhig halten.'); }, 15000);
+    } catch(e){
+      if(!mine()) return;
+      idle = true; say(AR_ERR[e && e.code] || AR_ERR.camera); buttons();
+    }
+  }
+  arPause = () => { if(!mine()) return; idle = true; found = false; clearTimeout(tip); say('Die Kamera ist pausiert.'); buttons(); };
+  $('#b-ar-close').onclick = leave;
+  $('#b-ar-close').focus();
+  start();
+}
+
 // Distance readout, refreshed while the page is open and the lock is held.
 let distT = null;
 async function tickDistance(n){
@@ -834,10 +1023,13 @@ $('#b-restart').addEventListener('click', () => { localStorage.removeItem('at_ru
 // Troubleshooting belongs here, not in the intro: it is only meaningful once
 // something has actually gone wrong.
 $('#b-help').addEventListener('click', () => {
+  stopAR();
+  const hasAR = ((RUN && RUN.nodes) || []).some(n => (n.assets||[]).some(a => a.kind === 'ar'));
   $('#sheet-in').innerHTML =
     '<h2>Hilfe</h2>' +
     '<div class="box"><b>Die Ortung findet uns nicht</b><p>Zwischen hohen Häusern liegt der Fehler oft bei 30 m. Geht ein paar Schritte auf den offenen Platz, wartet fünf Sekunden und tippt nochmals. Oder nehmt den Code vom Schild am Posten, der funktioniert immer.</p></div>' +
     '<div class="box"><b>Wir stecken fest</b><p>Die Hinweise öffnen sich von selbst, je länger ihr am Posten seid. Der letzte verrät die Lösung.</p></div>' +
+    (hasAR ? '<div class="box"><b>Die Kamera erkennt das Muster nicht</b><p>Das ganze Muster ins Bild nehmen, das Handy einen Moment ruhig halten und nicht zu schräg darauf schauen. Gegen Spiegelungen hilft ein Schritt zur Seite, bei Dämmerung mehr Licht. Und wenn gar nichts geht: der Code vom Schild.</p></div>' : '') +
     '<div class="box"><b>Das Handy ist fast leer</b><p>Oben auf das Team-Symbol tippen: mit dem QR-Code oder dem Beitritts-Code <b>'+esc((RUN&&RUN.run.join_code)||'')+'</b> steigt ein zweites Handy in denselben Trail ein, genau dort, wo ihr seid.</p></div>' +
     '<button class="btn ghost" id="b-sheet-close">Schliessen</button>';
   $('#sheet').classList.add('on');
@@ -890,6 +1082,7 @@ async function onLive(ev){
 // The way in for another phone: a QR code, and the code to type.
 function openTeam(){
   if(!RUN) return;
+  stopAR();
   const code = String(RUN.run.join_code || '');
   const shown = code.length === 6 ? code.slice(0, 3) + ' ' + code.slice(3) : code;
   $('#sheet').classList.remove('full');

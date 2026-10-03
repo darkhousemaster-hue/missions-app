@@ -40,7 +40,7 @@ db.exec(`
     task TEXT DEFAULT '{}',               -- i18n, what to do here
 
     -- how the node opens. 'answer' is the default and needs no permissions.
-    trigger_kind TEXT DEFAULT 'answer',   -- answer|gps|qr|code|none
+    trigger_kind TEXT DEFAULT 'answer',   -- answer|gps|qr|code|ar|none
     answers TEXT DEFAULT '{}',            -- i18n -> array of accepted spellings
     answer_case_sensitive INTEGER DEFAULT 0,
     post_code TEXT,                       -- printed on the post, always a way through
@@ -78,7 +78,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS at_assets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     node_id INTEGER NOT NULL REFERENCES at_nodes(id) ON DELETE CASCADE,
-    kind TEXT DEFAULT 'image',            -- audio|video|image|doc|page
+    kind TEXT DEFAULT 'image',            -- image|audio|video|doc|page|file|model|ar|link|phone|email|note
     path TEXT NOT NULL,
     title TEXT DEFAULT '',
     appear_when TEXT DEFAULT '{}',        -- {on:'arrive'|'solve'|'delay', minutes:n}
@@ -287,7 +287,7 @@ const addAsset = (nodeId, p) => num(db.prepare(
        S(p.appear_when || {}), p.preload === 0 ? 0 : 1, Number(p.order_index) || 0,
        p.ref == null ? null : String(p.ref), S(p.body || {}), S(p.meta || {})).lastInsertRowid);
 const getAsset = id => { const a = db.prepare('SELECT * FROM at_assets WHERE id=?').get(Number(id)); return a ? hydrateAsset(a) : null; };
-const ASSET_FIELDS = ['title', 'ref', 'body', 'meta', 'appear_when', 'preload'];
+const ASSET_FIELDS = ['title', 'path', 'ref', 'body', 'meta', 'appear_when', 'preload'];
 const updateAsset = (id, p) => {
   const cur = db.prepare('SELECT * FROM at_assets WHERE id=?').get(Number(id));
   if (!cur) return false;
