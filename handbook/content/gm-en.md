@@ -93,6 +93,10 @@ location (most recent first), each one with its ID, date, status
 **Open** on any of them to jump into its dashboard, handy when you
 accidentally navigated away.
 
+## Team passwords
+
+Beside **Start game**, the **Team password** switch is on by default. It applies to the game you are about to create. When it is on, each new team chooses a three-digit numeric password after entering its team details; anyone joining that team from another phone must enter the same code. When it is off, players can create or join teams without a code. Once a team has set its password, you can see the three digits beside its name in the dashboard. The support phone configured in Settings can also appear as a clickable **Technical support** link on the player's password screen.
+
 # The dashboard
 
 ::shot:m-03-dashboard

@@ -95,6 +95,10 @@ stato (in attesa / in corso / in pausa / terminata) e la modalità in
 cui gira. Tocca **Apri** su una qualsiasi per saltare nel suo
 dashboard; utile se sei uscito per sbaglio.
 
+## Password delle squadre
+
+Accanto ad **Avvia la partita**, l’interruttore **Password squadra** è attivo per impostazione predefinita. Si applica alla partita che stai per creare. Quando è attivo, ogni nuova squadra sceglie una password numerica di tre cifre dopo aver inserito i propri dati; chi si unisce alla stessa squadra da un altro telefono deve inserire quel codice. Disattivalo per consentire di creare o raggiungere squadre senza codice. Dopo che una squadra ha impostato la password, le tre cifre appaiono accanto al suo nome nella dashboard. Il numero di assistenza configurato nelle impostazioni può essere mostrato ai giocatori anche come link cliccabile **Assistenza tecnica** nella schermata della password.
+
 # Il dashboard
 
 ::shot:m-03-dashboard

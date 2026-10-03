@@ -176,6 +176,14 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .team-chip-gm{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 6px;background:var(--surface);border:1px solid var(--hairline);border-radius:10px;position:relative;min-width:150px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;}
 .team-chip-gm:hover{border-color:rgba(255,255,255,.18);}
 .team-chip-gm.active{background:var(--orange-soft);border-color:var(--orange);box-shadow:inset 0 0 0 1px var(--orange);}
+.tchip__password{font:700 10px/1 var(--mono);color:var(--orange);letter-spacing:.08em;margin-top:3px;}
+.gs-start-row{display:flex;align-items:stretch;gap:.75rem;}
+.gs-start-row #btn-new-game{flex:1;min-width:0;width:auto;}
+.gs-password-option{box-sizing:border-box;width:190px;min-width:190px;flex:0 0 190px;display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:.55rem;padding:.45rem .7rem;background:var(--surface2);border:1px solid var(--hairline);border-radius:10px;color:var(--text-dim);font:700 10px/1.2 var(--body);letter-spacing:.08em;text-align:left;text-transform:uppercase;}
+.gs-password-control{display:flex;flex:0 0 auto;flex-direction:row;align-items:center;gap:.45rem;}
+.gs-password-option .toggle{appearance:none;border:0;padding:0;display:inline-block;flex:0 0 auto;}
+.gs-password-option .state{display:inline-block;flex:0 0 3.5em;width:3.5em;text-align:center;font:700 9px/1 var(--mono);color:var(--orange);}
+@media(max-width:420px){.gs-start-row{gap:.45rem}.gs-password-option{width:150px;min-width:150px;flex-basis:150px;padding:.4rem}.gs-password-option .state{flex-basis:3.5em;width:3.5em}.gs-start-row #btn-new-game{padding-left:.5rem;padding-right:.5rem;font-size:11px;}.gs-password-option>span{max-width:46px;}}
 /* ── Player theme designer (per location / RA mode) ─────────────────────────
    Full-screen editor: field groups left, two live phone previews right.
    Sits above the settings modal; the GM dashboard itself is never themed. */
@@ -575,10 +583,19 @@ body.sel-cr #crms-toolbar{display:flex !important;}
           <option value="">— Modus wählen —</option>
         </select>
       </div>
-      <button class="btn btn-primary btn-full btn-lg" onclick="createNewGame()" id="btn-new-game">
-        <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span id="gs-new-txt">Neues Spiel</span>
-      </button>
+      <div class="gs-start-row">
+        <div class="gs-password-option" aria-label="Team-Passwort-Einstellung">
+          <span>Team-Passwort</span>
+          <div class="gs-password-control">
+            <button type="button" class="toggle is-on" id="gs-password-toggle" role="switch" aria-checked="true" aria-label="Team-Passwort aktivieren" onclick="toggleNewGamePasswords(event)"></button>
+            <span class="state" id="gs-password-state">JA</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="createNewGame()" id="btn-new-game">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span id="gs-new-txt">Neues Spiel</span>
+        </button>
+      </div>
     </div>
     <div class="gs-section-head">
       <div class="sidebar-title" id="gs-recent">Letzte Spiele</div>
@@ -901,6 +918,14 @@ body.sel-cr #crms-toolbar{display:flex !important;}
               <input id="s-public-url" class="input" type="text" placeholder="https://xxx.trycloudflare.com">
               <button class="btn" onclick="detectTunnel()"><span id="s-detect">Erkennen</span></button>
             </div>
+          </div>
+
+          <div class="label">
+            <span id="s-support-phone-label">Telefonnummer für technischen Support</span>
+            <span class="help">Wird auf der Team-Passwortseite als anklickbare Telefonnummer angezeigt.</span>
+          </div>
+          <div class="control">
+            <input id="s-support-phone" class="input" type="tel" autocomplete="tel" placeholder="+41 00 000 00 00">
           </div>
 
           <div class="label">
@@ -2258,6 +2283,20 @@ function paintGameSelectLabels(){
   // whole point of the tiles: no mode is selected for you.
   const btn = document.getElementById('btn-new-game');
   if(btn) btn.disabled = !isCr && !selectedModeId;
+  paintNewGamePasswordToggle();
+}
+let newGamePasswordsEnabled=true;
+function paintNewGamePasswordToggle(){
+  const b=document.getElementById('gs-password-toggle'),state=document.getElementById('gs-password-state');
+  if(!b) return;
+  b.classList.toggle('is-on',newGamePasswordsEnabled);
+  b.setAttribute('aria-checked',String(newGamePasswordsEnabled));
+  if(state) state.textContent=newGamePasswordsEnabled?'JA':'NEIN';
+}
+function toggleNewGamePasswords(event){
+  event.preventDefault();event.stopPropagation();
+  newGamePasswordsEnabled=!newGamePasswordsEnabled;
+  paintNewGamePasswordToggle();
 }
 // Used by the two COPY buttons on the new-game screen. We toggle just the
 // inner <span> (not the whole button) so the icon-less "Copy" / "Copied!"
@@ -2287,6 +2326,7 @@ async function copyToClipboard(text, btn){
 async function selectCityRushLocation(){
   selectedLocationId='cityrush';
   selectedLocationName=''; selectedModeId=null; selectedModeName='';
+  newGamePasswordsEnabled=true;
   // Rail Adventure keeps its own route dropdown: it has no per-location mode
   // tiles, and its picker already starts blank, so it forces a real choice.
   // Paint the screen before revealing it: everything after the fetch below
@@ -2309,6 +2349,7 @@ async function selectLocation(id,name){
   selectedLocationId=id;
   selectedLocationName=name;
   selectedModeId=null; selectedModeName='';
+  newGamePasswordsEnabled=true;
   paintGameSelectLabels();
   showScreen('screen-game-select');
   await Promise.all([renderModeTiles(id), loadGames(id)]);
@@ -2434,7 +2475,7 @@ async function createNewGame(){
   if(isCityRush && !crModeId){toast(gmt('pick-cr-mode')||'Bitte Rail Adventure Modus auswählen','warning');btn.disabled=false;return;}
   // For Rail Adventure, use a virtual location_id of 0 (no location needed)
   const locId = isCityRush ? null : selectedLocationId;
-  const res=await API('/api/games',{method:'POST',body:{location_id:locId,mode_id:modeId,cr_mode_id:crModeId,is_cityrush:isCityRush?1:0}});
+  const res=await API('/api/games',{method:'POST',body:{location_id:locId,mode_id:modeId,cr_mode_id:crModeId,is_cityrush:isCityRush?1:0,password_enabled:newGamePasswordsEnabled?1:0}});
   btn.disabled=false;
   if(res.error){toast(res.error,'error');btn.disabled=false;return;}
   currentGameId=res.id; currentQRData=res.qrCode; currentJoinUrl=res.joinUrl;
@@ -2741,6 +2782,11 @@ async function openDashboard(gameId){
     refreshGmMarkerLabels();
     toast(`${team.name} beigetreten!`,'success');
   });
+  socket.on('team_password_updated',async()=>{
+    if(!currentGame) return;
+    if(!(await ensureGmPasswordAccess())) return;
+    try{const refreshed=await API(`/api/games/${currentGameId}`);currentGame.teams=refreshed.teams||[];renderTeamsBar(currentGame.teams);}catch(e){}
+  });
   socket.on('submission_new',onSubmissionNew);
   socket.on('submission_reviewed',onSubmissionReviewed);
   socket.on('rankings_update',renderRankings);
@@ -2793,9 +2839,25 @@ function goToDashboardBack(){
 }
 
 let currentGame=null;
+async function ensureGmPasswordAccess(){
+  if(gmToken) return true;
+  const pw=settingsPassword||await uiPrompt(gmt('sg-pw-label'));
+  if(!pw) return false;
+  const verified=await API('/api/settings/verify',{method:'POST',body:{password:pw}});
+  if(!verified.valid){toast(gmt('wrong-pw')||'Wrong password.','error');return false;}
+  settingsPassword=pw;
+  if(verified.token){gmToken=verified.token;sessionStorage.setItem('gm_token',verified.token);}
+  return !!gmToken;
+}
 async function refreshDashboard(gameId){
   currentGame=await API(`/api/games/${gameId}`);
-  const game=currentGame;
+  let game=currentGame;
+  if(!gmToken && game.password_enabled && game.teams.some(t=>t.password_set)){
+    if(await ensureGmPasswordAccess()){
+      currentGame=await API(`/api/games/${gameId}`);
+      game=currentGame;
+    }
+  }
   // Rail Adventure only UI bits (map tab on the right rail, freeze/thaw on the
   // team header) are hidden for MiSSiONS games. Re-evaluated on every
   // refresh in case the game type ever flips mid-session.
@@ -2952,6 +3014,7 @@ function _teamChipInner(t){
     <div class="tchip__body">
       <div class="tchip__name">${esc(t.name)}</div>
       <div class="tchip__score" id="tscore-${t.id}">${t.score||0} PT</div>
+      ${t.password ? `<div class="tchip__password">PW · ${esc(t.password)}</div>` : ''}
     </div>
     <span class="cr-frozen-tag" id="tfrozen-${t.id}" style="display:none;">❄️ <span class="rem"></span></span>
     <span class="tchip__dot notif-dot" id="notif-${t.id}" style="display:none;"></span>`;
@@ -4386,6 +4449,7 @@ async function applyBrandLogo(){
 async function loadSettings(){
   const s=await API('/api/settings');
   document.getElementById('s-public-url').value=s.public_url||'';
+  const supportPhoneEl=document.getElementById('s-support-phone'); if(supportPhoneEl) supportPhoneEl.value=s.support_phone||'';
   // Unset means "not configured yet" — show the 25s default the server applies.
   const _mb=document.getElementById('s-maxmb');
   if(_mb) _mb.value = (s.max_upload_mb===''||s.max_upload_mb==null) ? 100 : s.max_upload_mb;
@@ -4479,7 +4543,7 @@ async function saveGeneralSettings(){
   const max_upload_mb=Math.max(1, Math.min(200, parseInt(_mbRaw,10)||100));
   const _vlRaw=document.getElementById('s-vidlen')?.value;
   const max_video_seconds=Math.max(0, Math.min(600, parseInt(_vlRaw,10)||0));
-  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,max_video_seconds,max_upload_mb,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es,github_url,logo_mode}});
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,support_phone:document.getElementById('s-support-phone')?.value.trim()||'',max_video_seconds,max_upload_mb,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es,github_url,logo_mode}});
   if(res.success) applyBrandLogo();
   toast(res.success?(gmt('saved')||'Gespeichert!'):res.error,res.success?'success':'error');
 }

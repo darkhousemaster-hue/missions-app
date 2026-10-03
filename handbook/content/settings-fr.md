@@ -72,6 +72,8 @@ par langue ; le bouton **🌐 Auto** remplit les langues vides à
 partir de celle dans laquelle tu as commencé. Sauvegarde avant
 de quitter l’onglet.
 
+**Numéro d’assistance technique.** Saisissez le numéro que les joueurs peuvent appeler en cas de problème avec un mot de passe d’équipe. Il apparaît sous forme de lien **Assistance technique** cliquable sur la page du mot de passe. Laissez le champ vide pour masquer le lien.
+
 # Sécurité
 
 ::shot:adm-03-security

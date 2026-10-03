@@ -65,6 +65,8 @@ is shown to every player. Type it once per language, the **🌐 Auto**
 button fills in the empty languages from whichever language you
 started in. Save before leaving the tab.
 
+**Technical support phone.** Enter the number players should call if they need help with a team password. It appears as a clickable **Technical support** link on the password screen; leave the field empty to hide the link.
+
 # Security
 
 ::shot:adm-03-security

@@ -155,6 +155,23 @@ function isGmAuthed(req){
   return false;
 }
 
+const TEAM_ACCESS_TTL = 30 * 24 * 60 * 60 * 1000;
+function requestCookie(req,name){
+  const prefix=encodeURIComponent(name)+'=';
+  return String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(prefix))?.slice(prefix.length)||'';
+}
+function hasTeamPasswordAccess(req,teamId){
+  const token=requestCookie(req,`team_access_${teamId}`);
+  return !!token && db.hasTeamJoinSession(teamId,token);
+}
+function grantTeamPasswordAccess(req,res,teamId){
+  const token=crypto.randomBytes(32).toString('hex');
+  const expiresAt=Date.now()+TEAM_ACCESS_TTL;
+  db.createTeamJoinSession(teamId,token,expiresAt);
+  const secure=req.secure || req.headers['x-forwarded-proto']==='https' ? '; Secure' : '';
+  res.append('Set-Cookie',`team_access_${teamId}=${token}; Path=/; Max-Age=${Math.floor(TEAM_ACCESS_TTL/1000)}; HttpOnly; SameSite=Lax${secure}`);
+}
+
 // ── A team belongs to its game ──────────────────────────────────────────────
 // A player is known by nothing more than the team ID in their link, and team
 // IDs simply count up. Lookups went by team ID alone, so editing the link let
@@ -685,7 +702,13 @@ app.get('/api/games', (req,res) => {
   }
   res.json(db.getGames(req.query.location_id));
 });
-app.get('/api/games/:id', (req,res) => { const g=db.getGameFull(req.params.id); g?res.json(g):res.status(404).json({error:'Not found'}); });
+app.get('/api/games/:id', (req,res) => {
+  const g=db.getGameFull(req.params.id);
+  if(!g) return res.status(404).json({error:'Not found'});
+  if(!isGmAuthed(req)) g.teams = g.teams.map(({password, password_setup_token, ...team}) => ({...team, password_set:!!password, password_pending:!!password_setup_token}));
+  else g.teams = g.teams.map(({password_setup_token, ...team}) => team);
+  res.json(g);
+});
 
 app.post('/api/games', (req,res) => {
   const {location_id, mode_id} = req.body;
@@ -707,7 +730,8 @@ app.post('/api/games', (req,res) => {
     timerSecs = ((mode && mode.timer_default) || (location && location.timer_default) || 60) * 60;
   }
   const gameId     = uuidv4().slice(0,8).toUpperCase();
-  db.createGame({id:gameId, location_id:location_id||null, mode_id:mode_id||1, timer_duration:timerSecs, missions:missionIds});
+  const passwordEnabled = !(req.body.password_enabled === false || req.body.password_enabled === 0 || req.body.password_enabled === '0');
+  db.createGame({id:gameId, location_id:location_id||null, mode_id:mode_id||1, timer_duration:timerSecs, password_enabled:passwordEnabled?1:0, missions:missionIds});
   if(req.body.cr_mode_id) db.linkCrMode(gameId, req.body.cr_mode_id);
   // Play statistics: one denormalized row per game, written at creation so it
   // survives the 72h game cleanup.
@@ -851,19 +875,42 @@ app.post('/api/games/:gameId/teams', (req,res) => {
   const existingTeams=db.getTeams(req.params.gameId);
   const nameTaken=existingTeams.some(t=>t.name.toLowerCase()===rawName.toLowerCase());
   if(nameTaken) return res.status(400).json({error:'Team name already taken. Please choose a different name.', error_code:'taken'});
+  const setupToken = game.password_enabled ? uuidv4() : null;
   const teamId=db.createTeam({
     game_id:req.params.gameId,
     name:rawName,
     gps_anchor_key: req.body.gps_anchor_key || req.body.gpsAnchorKey || null,
+    password_setup_token: setupToken,
   });
   const team=db.getTeam(teamId);
   try { db.bumpGameStatTeams(req.params.gameId); } catch(e){}
-  io.to(`gm_${req.params.gameId}`).emit('team_joined',team);
+  io.to(`gm_${req.params.gameId}`).emit('team_joined',{...team,password_setup_token:undefined});
   // Refresh the GM rankings so a newly-joined team appears immediately — joins
   // alone don't change scores, so without this the list stayed at whoever was
   // present on the last score event.
   io.to(`gm_${req.params.gameId}`).emit('rankings_update', db.getRankings(req.params.gameId));
-  res.json(team);
+  res.json({...team,password_setup_token:setupToken});
+});
+app.post('/api/games/:gameId/teams/:teamId/password', (req,res) => {
+  const game=db.getGame(req.params.gameId), team=db.getTeam(req.params.teamId);
+  if(!game || !team || team.game_id!==game.id) return res.status(404).json({error:'Team not found'});
+  if(!game.password_enabled) return res.json({success:true,required:false});
+  const password=String(req.body.password||'');
+  if(!/^\d{3}$/.test(password)) return res.status(400).json({error:'Enter exactly 3 digits.'});
+  if(!team.password_setup_token || req.body.setup_token!==team.password_setup_token) return res.status(403).json({error:'Team setup expired. Please create the team again.'});
+  db.updateTeamPassword(team.id,password);
+  grantTeamPasswordAccess(req,res,team.id);
+  io.to(`gm_${game.id}`).emit('team_password_updated',{teamId:team.id});
+  res.json({success:true});
+});
+app.post('/api/games/:gameId/teams/:teamId/verify-password', (req,res) => {
+  const game=db.getGame(req.params.gameId), team=db.getTeam(req.params.teamId);
+  if(!game || !team || team.game_id!==game.id) return res.status(404).json({error:'Team not found'});
+  if(!game.password_enabled) return res.json({success:true});
+  const password=String(req.body.password||'');
+  if(!/^\d{3}$/.test(password) || !team.password || team.password!==password) return res.status(401).json({error:'Incorrect password.'});
+  grantTeamPasswordAccess(req,res,team.id);
+  res.json({success:true});
 });
 app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   const team=db.getTeam(req.params.teamId);
@@ -876,6 +923,9 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   // location; CityRush games (no location_id) read from the CR mode.
   // Either way, fall back to all five supported languages if unset.
   const game = db.getGame(req.params.gameId);
+  if(game && game.password_enabled && (team.password || team.password_setup_token) && !isGmAuthed(req) && !hasTeamPasswordAccess(req,team.id)){
+    return res.status(403).json({error:'Team password required.',password_required:true});
+  }
   let allowed_langs = 'de,en,fr,it,es';
   // Custom (GM-defined) languages live on the MiSSiONS location. Surface them
   // so the player's language cycler can offer them and fall content back to
@@ -903,7 +953,8 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   const rawMaxMb = db.getSetting('max_upload_mb');
   const max_upload_mb = rawMaxMb === null || rawMaxMb === undefined || rawMaxMb === ''
     ? 100 : Math.max(1, Math.min(MAX_UPLOAD_MB, parseInt(rawMaxMb, 10) || 100));
-  res.json({...team, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null});
+  const {password, password_setup_token, ...publicTeam}=team;
+  res.json({...publicTeam, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null});
 });
 // Deleting a team is GM work, and GM work never needs the Settings login,
 // which is for managers only. It answered 401 to a GM who had not unlocked

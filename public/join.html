@@ -63,6 +63,10 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
   padding:0;
 }
 .name-field input::placeholder { color:#9B9690; text-transform:uppercase; font-family:var(--display); letter-spacing:.04em; }
+.password-digits{display:flex;justify-content:center;gap:12px;margin:4px 0 2px;}
+.password-digits input{width:64px!important;height:64px;flex:0 0 64px;background:var(--input-bg,var(--surface2));border:1px solid var(--hairline);border-radius:10px;color:var(--text);font:700 30px/1 var(--mono);letter-spacing:0;text-align:center;text-transform:none;padding:0;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.035);}
+.password-digits input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,95,30,.16);}
+.password-digits input::placeholder{color:var(--text-muted);}
 
 .lang-section { text-align:center; }
 .lang-label { font:600 10px/1 var(--body); letter-spacing:.22em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
@@ -102,6 +106,9 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   border-radius:10px; border:0; cursor:pointer;
 }
+#cta-create #btn-join { min-height:117px; }
+#cta-password #password-submit { min-height:58px; }
+.join-existing-link { min-height:74px; }
 .join-cta .btn-primary {
   background:var(--btn-bg,var(--orange)); color:var(--btn-text,#fff);
   box-shadow:0 10px 26px -10px var(--orange);
@@ -135,7 +142,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
 .team-row .name { flex:1; font:700 14px/1 var(--display); letter-spacing:.04em; text-transform:uppercase; color:var(--text); }
 .team-row .pts { font:600 12px/1 var(--mono); color:var(--text-muted); }
 .team-row .join-btn {
-  padding:8px 14px; border-radius:10px;
+  min-height:54px; padding:8px 14px; border-radius:10px;
   background:var(--orange); color:#fff; border:0;
   font:700 11px/1 var(--body); letter-spacing:.06em; text-transform:uppercase;
   cursor:pointer;
@@ -274,6 +281,24 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
     <p class="error-msg" id="error-msg"></p>
   </div>
 
+  <div id="screen-team-password" class="join-body" style="display:none;">
+    <button class="back-link" id="password-back" onclick="backFromTeamPassword()">
+      <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg><span id="password-back-label">Zurück</span>
+    </button>
+    <h3 class="je-title" id="password-title">Team-Passwort</h3>
+    <p class="lead" id="password-lead">Wähle ein dreistelliges Passwort für dein Team.</p>
+    <div>
+      <div class="label" id="password-label" style="text-align:center;margin-bottom:9px;">3 Ziffern</div>
+      <div class="password-digits" role="group" aria-labelledby="password-label" aria-describedby="password-error">
+        <input class="password-digit" id="team-password-1" type="password" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 1" autocomplete="off" oninput="handleTeamPasswordInput(this,0)" onkeydown="handleTeamPasswordKeydown(event,0)" onpaste="handleTeamPasswordPaste(event,0)">
+        <input class="password-digit" id="team-password-2" type="password" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 2" autocomplete="off" oninput="handleTeamPasswordInput(this,1)" onkeydown="handleTeamPasswordKeydown(event,1)" onpaste="handleTeamPasswordPaste(event,1)">
+        <input class="password-digit" id="team-password-3" type="password" inputmode="numeric" pattern="[0-9]" maxlength="1" aria-label="Digit 3" autocomplete="off" oninput="handleTeamPasswordInput(this,2)" onkeydown="handleTeamPasswordKeydown(event,2)" onpaste="handleTeamPasswordPaste(event,2)">
+      </div>
+    </div>
+    <p class="error-msg" id="password-error" role="alert"></p>
+    <div id="technical-support" style="font:500 13px/1.5 var(--body);text-align:center;color:var(--text-muted);"></div>
+  </div>
+
   <!-- Join existing team screen -->
   <div id="screen-join-existing" class="join-body" style="display:none;">
     <button class="back-link" onclick="showCreate()">
@@ -301,6 +326,9 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
     </button>
   </div>
+  <div class="join-cta" id="cta-password" style="display:none;">
+    <button class="btn btn-primary" id="password-submit" onclick="submitTeamPassword()"><span id="password-submit-label">Weiter</span></button>
+  </div>
 </div>
 
 <!-- Selfie camera modal -->
@@ -326,6 +354,11 @@ const params = new URLSearchParams(window.location.search);
 const gameId = params.get('game');
 let existingTeams = [];
 let isCityRush = false;
+let gamePasswordEnabled = true;
+let supportPhone = '';
+let pendingTeam = null;
+let passwordAction = 'create';
+let passwordTeam = null;
 
 // ── i18n ──────────────────────────────────────────────────────────────────
 const JOIN_LANGS = ['de','en','fr','it','es'];
@@ -353,7 +386,7 @@ const JOIN_T = {
        selfie_cta:'Tippen zum Aufnehmen', teamname:'Teamname', teamname_ph:'Teamname eingeben…',
        lang_label:'Sprache', join_existing:'Oder einem bestehenden Team beitreten', back:'Zurück',
        je_title:'Team beitreten', je_hint:'Du siehst dieselben Missionen und kannst unabhängig Medien einreichen.', no_teams:'Noch keine Teams in diesem Spiel.',
-       join_btn:'Beitreten', start:'Spiel beitreten', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.',
+       join_btn:'Beitreten', start:'Spiel beitreten', enter_name:'Bitte Teamnamen eingeben.', min_chars:'Name muss mind. 2 Zeichen haben.', password_title:'Team-Passwort', password_create:'Wähle ein dreistelliges Passwort für dein Team.', password_enter:'Gib das dreistellige Team-Passwort ein.', password_label:'3 Ziffern', password_next:'Weiter', password_save:'Passwort speichern', password_invalid:'Bitte genau drei Ziffern eingeben.', password_wrong:'Falsches Passwort. Bitte erneut versuchen.', support:'Technischer Support',
        waiting:'Warte…', conn_err:'Verbindungsfehler. Bitte erneut versuchen.', err_default:'Fehler. Bitte erneut versuchen.',
        name_blocked:'Dieser Teamname ist nicht erlaubt. Bitte wähle einen anderen.', name_taken:'Teamname bereits vergeben. Bitte wähle einen anderen.',
        cam_denied:'Kamera-Zugriff abgelehnt.', cam_unavailable:'Kamera nicht verfügbar.',
@@ -366,7 +399,7 @@ const JOIN_T = {
        selfie_cta:'Tap to capture', teamname:'Team name', teamname_ph:'Type a team name…',
        lang_label:'Language', join_existing:'Or join an existing team', back:'Back',
        je_title:'Join an existing team', je_hint:'You see the same missions and can submit media independently.', no_teams:'No teams in this game yet.',
-       join_btn:'Join', start:'Join game', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.',
+       join_btn:'Join', start:'Join game', enter_name:'Please enter a team name.', min_chars:'Name must be at least 2 characters.', password_title:'Team password', password_create:'Choose a three-digit password for your team.', password_enter:'Enter the team’s three-digit password.', password_label:'3 digits', password_next:'Continue', password_save:'Save password', password_invalid:'Enter exactly three digits.', password_wrong:'Incorrect password. Try again.', support:'Technical support',
        waiting:'Waiting…', conn_err:'Connection error. Please try again.', err_default:'Error. Please try again.',
        name_blocked:'That team name isn’t allowed. Please choose another.', name_taken:'Team name already taken. Please choose another.',
        cam_denied:'Camera access denied.', cam_unavailable:'Camera not available.',
@@ -379,7 +412,7 @@ const JOIN_T = {
        selfie_cta:'Toucher pour capturer', teamname:'Nom d’équipe', teamname_ph:'Saisir le nom de l’équipe…',
        lang_label:'Langue', join_existing:'Ou rejoindre une équipe existante', back:'Retour',
        je_title:'Rejoindre une équipe', je_hint:'Tu vois les mêmes missions et peux envoyer des médias indépendamment.', no_teams:'Aucune équipe dans cette partie pour le moment.',
-       join_btn:'Rejoindre', start:'Rejoindre la partie', enter_name:'Saisis un nom d’équipe.', min_chars:'Le nom doit faire au moins 2 caractères.',
+       join_btn:'Rejoindre', start:'Rejoindre la partie', enter_name:'Saisis un nom d’équipe.', min_chars:'Le nom doit faire au moins 2 caractères.', password_title:'Mot de passe de l’équipe', password_create:'Choisis un mot de passe à trois chiffres pour ton équipe.', password_enter:'Saisis le mot de passe à trois chiffres de l’équipe.', password_label:'3 chiffres', password_next:'Continuer', password_save:'Enregistrer', password_invalid:'Saisis exactement trois chiffres.', password_wrong:'Mot de passe incorrect. Réessaie.', support:'Assistance technique',
        waiting:'Attente…', conn_err:'Erreur de connexion. Réessaie.', err_default:'Erreur. Réessaie.',
        name_blocked:'Ce nom d’équipe n’est pas autorisé. Choisis-en un autre.', name_taken:'Nom d’équipe déjà pris. Choisis-en un autre.',
        cam_denied:'Accès caméra refusé.', cam_unavailable:'Caméra non disponible.',
@@ -392,7 +425,7 @@ const JOIN_T = {
        selfie_cta:'Tocca per scattare', teamname:'Nome squadra', teamname_ph:'Inserisci il nome…',
        lang_label:'Lingua', join_existing:'Oppure unisciti a una squadra esistente', back:'Indietro',
        je_title:'Unisciti a una squadra', je_hint:'Vedi le stesse missioni e puoi inviare media in modo indipendente.', no_teams:'Ancora nessuna squadra in questa partita.',
-       join_btn:'Unisciti', start:'Entra nella partita', enter_name:'Inserisci il nome della squadra.', min_chars:'Il nome deve avere almeno 2 caratteri.',
+       join_btn:'Unisciti', start:'Entra nella partita', enter_name:'Inserisci il nome della squadra.', min_chars:'Il nome deve avere almeno 2 caratteri.', password_title:'Password della squadra', password_create:'Scegli una password di tre cifre per la squadra.', password_enter:'Inserisci la password di tre cifre della squadra.', password_label:'3 cifre', password_next:'Continua', password_save:'Salva password', password_invalid:'Inserisci esattamente tre cifre.', password_wrong:'Password errata. Riprova.', support:'Assistenza tecnica',
        waiting:'Attendi…', conn_err:'Errore di connessione. Riprova.', err_default:'Errore. Riprova.',
        name_blocked:'Questo nome squadra non è consentito. Scegline un altro.', name_taken:'Nome squadra già in uso. Scegline un altro.',
        cam_denied:'Accesso fotocamera negato.', cam_unavailable:'Fotocamera non disponibile.',
@@ -405,7 +438,7 @@ const JOIN_T = {
        selfie_cta:'Toca para capturar', teamname:'Nombre del equipo', teamname_ph:'Escribe el nombre…',
        lang_label:'Idioma', join_existing:'O únete a un equipo existente', back:'Volver',
        je_title:'Unirse a un equipo', je_hint:'Verás las mismas misiones y podrás enviar contenido de forma independiente.', no_teams:'Aún no hay equipos en esta partida.',
-       join_btn:'Unirse', start:'Unirse a la partida', enter_name:'Introduce el nombre del equipo.', min_chars:'El nombre debe tener al menos 2 caracteres.',
+       join_btn:'Unirse', start:'Unirse a la partida', enter_name:'Introduce el nombre del equipo.', min_chars:'El nombre debe tener al menos 2 caracteres.', password_title:'Contraseña del equipo', password_create:'Elige una contraseña de tres cifras para tu equipo.', password_enter:'Introduce la contraseña de tres cifras del equipo.', password_label:'3 cifras', password_next:'Continuar', password_save:'Guardar contraseña', password_invalid:'Introduce exactamente tres cifras.', password_wrong:'Contraseña incorrecta. Inténtalo de nuevo.', support:'Asistencia técnica',
        waiting:'Esperando…', conn_err:'Error de conexión. Inténtalo de nuevo.', err_default:'Error. Inténtalo de nuevo.',
        name_blocked:'Ese nombre de equipo no está permitido. Elige otro.', name_taken:'Nombre de equipo ya en uso. Elige otro.',
        cam_denied:'Acceso a cámara denegado.', cam_unavailable:'Cámara no disponible.',
@@ -447,6 +480,11 @@ function _applyJoinTranslations() {
   $('back-label').textContent = jt('back');
   $('je-title').textContent = jt('je_title');
   $('je-hint').textContent = jt('je_hint');
+  $('password-title').textContent = jt('password_title');
+  $('password-back-label').textContent = jt('back');
+  $('password-label').textContent = jt('password_label');
+  $('password-submit-label').textContent = jt(passwordAction === 'create' ? 'password_save' : 'password_next');
+  $('password-lead').textContent = jt(passwordAction === 'create' ? 'password_create' : 'password_enter');
   $('btn-join-label').textContent = jt('start');
   $('sm-retake-lbl').textContent = jt('sm_retake');
   $('sm-accept-lbl').textContent = jt('sm_accept');
@@ -610,10 +648,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const storedTeam = sessionStorage.getItem('teamId');
   if (storedGame === gameId && storedTeam) {
     ensureCrPlayerKey();
-    const g = await fetch('/api/games/' + gameId).then(r => r.json()).catch(() => null);
-    const pg = (g && g.crMode) ? '/cityrush.html' : '/play.html';
-    window.location.href = pg + '?game=' + gameId + '&team=' + storedTeam + '&lang=' + joinLang;
-    return;
+    const authorized=await fetch(`/api/games/${gameId}/teams/${storedTeam}`).then(r=>r.ok).catch(()=>false);
+    if(authorized){
+      const g = await fetch('/api/games/' + gameId).then(r => r.json()).catch(() => null);
+      const pg = (g && g.crMode) ? '/cityrush.html' : '/play.html';
+      window.location.href = pg + '?game=' + gameId + '&team=' + storedTeam + '&lang=' + joinLang;
+      return;
+    }
+    sessionStorage.removeItem('teamId'); sessionStorage.removeItem('teamName'); sessionStorage.removeItem('gameId');
   }
 
   try {
@@ -641,6 +683,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     existingTeams = game.teams || [];
+    gamePasswordEnabled = game.password_enabled !== 0;
+    try { const settings=await fetch('/api/settings').then(r=>r.json()); supportPhone=settings.support_phone||''; } catch(e) {}
+    renderTechnicalSupport();
     refreshJoinExistingVisibility();
 
     showCreate();
@@ -706,6 +751,8 @@ function renderTeamsList() {
     const btn = document.createElement('button');
     btn.className = 'join-btn';
     btn.textContent = jt('join_btn');
+    btn.disabled = !!(gamePasswordEnabled && team.password_pending);
+    if(btn.disabled){btn.textContent=jt('waiting');btn.title=jt('waiting');}
     btn.addEventListener('click', () => joinExisting(team.id, team.name));
     row.appendChild(btn);
 
@@ -716,12 +763,97 @@ function renderTeamsList() {
 function showCreate() {
   show('create');
   document.getElementById('cta-create').style.display = 'flex';
+  document.getElementById('cta-password').style.display = 'none';
   refreshJoinExistingVisibility();
 }
 function showJoinExisting() {
   show('join-existing');
   document.getElementById('cta-create').style.display = 'none';
+  document.getElementById('cta-password').style.display = 'none';
   renderTeamsList();
+}
+
+function renderTechnicalSupport(){
+  const el=document.getElementById('technical-support');
+  if(!el) return;
+  el.replaceChildren();
+  if(!supportPhone) return;
+  const label=document.createElement('span'); label.textContent=jt('support')+': ';
+  const link=document.createElement('a'); link.textContent=supportPhone;
+  link.href='tel:'+supportPhone.replace(/[^0-9+*#,;]/g,'');
+  link.style.color='var(--orange)'; link.style.textDecoration='underline';
+  el.append(label,link);
+}
+
+function teamPasswordInputs(){return [1,2,3].map(n=>document.getElementById('team-password-'+n));}
+function readTeamPassword(){return teamPasswordInputs().map(input=>input.value).join('');}
+function clearTeamPassword(){teamPasswordInputs().forEach(input=>input.value='');}
+function handleTeamPasswordInput(input,index){
+  const digits=String(input.value||'').replace(/\D/g,'');
+  if(digits.length>1){
+    const fields=teamPasswordInputs();
+    digits.slice(0,3-index).split('').forEach((digit,offset)=>{fields[index+offset].value=digit;});
+    fields[Math.min(2,index+digits.length)].focus();
+    return;
+  }
+  input.value=digits.slice(0,1);
+  if(input.value && index<2) teamPasswordInputs()[index+1].focus();
+}
+function handleTeamPasswordPaste(event,index){
+  const digits=(event.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');
+  if(!digits) return;
+  event.preventDefault();
+  const fields=teamPasswordInputs();
+  digits.slice(0,3-index).split('').forEach((digit,offset)=>{fields[index+offset].value=digit;});
+  fields[Math.min(2,index+digits.length)].focus();
+}
+function handleTeamPasswordKeydown(event,index){
+  if(event.key==='Enter'){event.preventDefault();submitTeamPassword();}
+  else if(event.key==='Backspace' && !event.currentTarget.value && index>0) teamPasswordInputs()[index-1].focus();
+  else if(event.key==='ArrowLeft' && index>0){event.preventDefault();teamPasswordInputs()[index-1].focus();}
+  else if(event.key==='ArrowRight' && index<2){event.preventDefault();teamPasswordInputs()[index+1].focus();}
+}
+
+function showTeamPassword(action,team=null){
+  passwordAction=action; passwordTeam=team;
+  clearTeamPassword();
+  document.getElementById('password-error').textContent='';
+  document.getElementById('password-submit-label').textContent=jt(action==='create'?'password_save':'password_next');
+  document.getElementById('password-back').style.display=action==='create'?'none':'inline-flex';
+  document.getElementById('password-lead').textContent=jt(action==='create'?'password_create':'password_enter');
+  document.getElementById('cta-create').style.display='none';
+  document.getElementById('cta-password').style.display='flex';
+  renderTechnicalSupport(); show('team-password');
+  document.getElementById('team-password-1').focus();
+}
+function backFromTeamPassword(){
+  if(passwordAction==='create'){
+    if(pendingTeam){ document.getElementById('cta-password').style.display='none'; showTeamPassword('create'); }
+    else showCreate();
+  } else showJoinExisting();
+}
+function openPlayerGame(team){
+  sessionStorage.setItem('teamId',String(team.id)); sessionStorage.setItem('teamName',team.name); sessionStorage.setItem('gameId',gameId);
+  const pg=isCityRush?'/cityrush.html':'/play.html';
+  window.location.href=pg+'?game='+gameId+'&team='+team.id+'&lang='+joinLang;
+}
+async function submitTeamPassword(){
+  const err=document.getElementById('password-error');
+  const password=readTeamPassword();
+  if(!/^\d{3}$/.test(password)){err.textContent=jt('password_invalid');document.getElementById('team-password-1').focus();return;}
+  const btn=document.getElementById('password-submit'); btn.disabled=true; err.textContent='';
+  try{
+    if(passwordAction==='create'){
+      const res=await fetch(`/api/games/${gameId}/teams/${pendingTeam.id}/password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password,setup_token:pendingTeam.password_setup_token})}).then(r=>r.json());
+      if(!res.success) throw new Error(res.error||jt('err_default'));
+      const team=pendingTeam; pendingTeam=null; openPlayerGame(team);
+    }else{
+      const res=await fetch(`/api/games/${gameId}/teams/${passwordTeam.id}/verify-password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})}).then(r=>r.json());
+      if(!res.success) throw new Error(jt('password_wrong'));
+      openPlayerGame(passwordTeam);
+    }
+  }catch(e){err.textContent=e.message||jt('conn_err');}
+  finally{btn.disabled=false;}
 }
 
 async function joinAsNew() {
@@ -765,11 +897,9 @@ async function joinAsNew() {
       } catch (e) { /* swallow — selfie is best-effort */ }
     }
 
-    sessionStorage.setItem('teamId',   String(res.id));
-    sessionStorage.setItem('teamName', res.name);
-    sessionStorage.setItem('gameId',   gameId);
-    const targetPage = isCityRush ? '/cityrush.html' : '/play.html';
-    window.location.href = targetPage + '?game=' + gameId + '&team=' + res.id + '&lang=' + joinLang;
+    if(gamePasswordEnabled){ pendingTeam=res; showTeamPassword('create'); return; }
+
+    openPlayerGame(res);
   } catch (e) {
     err.textContent = jt('conn_err');
     btn.disabled = false; lbl.textContent = jt('start');
@@ -783,6 +913,9 @@ async function joinExisting(teamId, teamName) {
   if (_joinInFlight) return;
   _joinInFlight = true;
   const err = document.getElementById('error-msg');
+  const selected=existingTeams.find(t=>Number(t.id)===Number(teamId))||{id:teamId,name:teamName};
+  if(gamePasswordEnabled && selected.password_pending){_joinInFlight=false;err.textContent=jt('waiting');return;}
+  if(gamePasswordEnabled && selected.password_set){_joinInFlight=false;showTeamPassword('join',selected);return;}
   try {
     ensureCrPlayerKey();
     // If the player captured a selfie before deciding to join an existing
@@ -794,11 +927,7 @@ async function joinExisting(teamId, teamName) {
         await fetch('/api/games/' + gameId + '/teams/' + teamId + '/selfie', { method: 'POST', body: fd });
       } catch (e) { /* swallow — selfie is best-effort */ }
     }
-    sessionStorage.setItem('teamId',   String(teamId));
-    sessionStorage.setItem('teamName', teamName);
-    sessionStorage.setItem('gameId',   gameId);
-    const pg = isCityRush ? '/cityrush.html' : '/play.html';
-    window.location.href = pg + '?game=' + gameId + '&team=' + teamId + '&lang=' + joinLang;
+    openPlayerGame(selected);
   } catch (e) {
     _joinInFlight = false;
     if (err) err.textContent = jt('conn_err');
@@ -853,9 +982,10 @@ function setCodeError(key) {
 window.addEventListener('pageshow', e => { if (e.persisted) setCodeBusy(false); });
 
 function show(s) {
-  ['loading', 'error', 'code', 'create', 'join-existing'].forEach(n => {
+  ['loading', 'error', 'code', 'create', 'join-existing', 'team-password'].forEach(n => {
     document.getElementById('screen-' + n).style.display = n === s ? (n === 'loading' || n === 'error' ? 'block' : 'flex') : 'none';
   });
+  if(s!=='team-password') document.getElementById('cta-password').style.display='none';
 }
 </script>
 </body>

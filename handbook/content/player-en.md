@@ -73,6 +73,10 @@ can still submit independently.
 This link only appears once at least one team has already joined the
 game; before that you only see the create-new flow.
 
+## Joining with a team password
+
+When team passwords are enabled, creating a team takes one extra step: after entering the team details, choose a **three-digit number** using the three boxes and save it. Remember it and share it with anyone who will use another phone on your team. To join an existing team, tap **Join** next to its name and enter that team's three-digit password. If the GM has configured a support number, the password screen shows a clickable **Technical support** link.
+
 # The player home
 
 ::shot:m-03-home

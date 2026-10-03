@@ -56,6 +56,7 @@ db.exec(`
     timer_started_at INTEGER,
     timer_paused_elapsed INTEGER DEFAULT 0,
     timer_running INTEGER DEFAULT 0,
+    password_enabled INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER DEFAULT (unixepoch()*1000));
   CREATE TABLE IF NOT EXISTS game_missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +67,13 @@ db.exec(`
     game_id TEXT REFERENCES games(id) ON DELETE CASCADE,
     name TEXT NOT NULL, score INTEGER DEFAULT 0,
     joined_at INTEGER DEFAULT (unixepoch()*1000),
-    gps_anchor_key TEXT);
+    gps_anchor_key TEXT,
+    password TEXT,
+    password_setup_token TEXT);
+  CREATE TABLE IF NOT EXISTS team_join_sessions (
+    token TEXT PRIMARY KEY,
+    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL);
   CREATE TABLE IF NOT EXISTS team_missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
@@ -341,6 +348,9 @@ try { db.exec("ALTER TABLE teams ADD COLUMN selfie_rotation INTEGER DEFAULT 0");
 // UPLOAD_DIR (e.g. "ABC12345/collage.mp4"). generated_at is a unix-epoch ms.
 try { db.exec("ALTER TABLE games ADD COLUMN collage_path TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE games ADD COLUMN collage_generated_at INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE games ADD COLUMN password_enabled INTEGER NOT NULL DEFAULT 1"); } catch(e) {}
+try { db.exec("ALTER TABLE teams ADD COLUMN password TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE teams ADD COLUMN password_setup_token TEXT"); } catch(e) {}
 // Per-location allowed languages. Stored as a comma-separated list (e.g.
 // "de,en,fr"). Players joining a game at this location only see these
 // languages in the cycler — the rest are hidden. Default is all five
@@ -799,9 +809,9 @@ const getGames        = locationId => locationId
   ? db.prepare(`${GAMES_SELECT} WHERE g.location_id=? ORDER BY g.created_at DESC`).all(locationId)
   : db.prepare(`${GAMES_SELECT} ORDER BY g.created_at DESC`).all();
 
-const createGame = ({id, location_id, mode_id=1, timer_duration, missions}) => {
+const createGame = ({id, location_id, mode_id=1, timer_duration, password_enabled=1, missions}) => {
   runTx(()=>{
-    db.prepare('INSERT INTO games(id,location_id,mode_id,timer_duration) VALUES(?,?,?,?)').run(id,location_id,mode_id||1,timer_duration);
+    db.prepare('INSERT INTO games(id,location_id,mode_id,timer_duration,password_enabled) VALUES(?,?,?,?,?)').run(id,location_id,mode_id||1,timer_duration,password_enabled?1:0);
     const ins=db.prepare('INSERT INTO game_missions(game_id,mission_id) VALUES(?,?)');
     missions.forEach(mId=>ins.run(id,mId));
   });
@@ -854,8 +864,14 @@ function selectMissions(location, modeId) {
 // ── Teams ─────────────────────────────────────────────────────────────────────
 const getTeam  = id => db.prepare('SELECT * FROM teams WHERE id=?').get(id);
 const getTeams = gameId => db.prepare('SELECT * FROM teams WHERE game_id=? ORDER BY joined_at').all(gameId);
-const createTeam = ({game_id, name, gps_anchor_key=null}) => {
-  const teamId=num(db.prepare('INSERT INTO teams(game_id,name,gps_anchor_key) VALUES(?,?,?)').run(game_id,name,gps_anchor_key||null).lastInsertRowid);
+const updateTeamPassword = (id,password) => db.prepare('UPDATE teams SET password=?,password_setup_token=NULL WHERE id=?').run(password,id);
+const createTeamJoinSession = (teamId,token,expiresAt) => {
+  db.prepare('DELETE FROM team_join_sessions WHERE expires_at<?').run(Date.now());
+  db.prepare('INSERT INTO team_join_sessions(token,team_id,expires_at) VALUES(?,?,?)').run(token,teamId,expiresAt);
+};
+const hasTeamJoinSession = (teamId,token) => !!db.prepare('SELECT 1 FROM team_join_sessions WHERE team_id=? AND token=? AND expires_at>?').get(teamId,token,Date.now());
+const createTeam = ({game_id, name, gps_anchor_key=null, password_setup_token=null}) => {
+  const teamId=num(db.prepare('INSERT INTO teams(game_id,name,gps_anchor_key,password_setup_token) VALUES(?,?,?,?)').run(game_id,name,gps_anchor_key||null,password_setup_token).lastInsertRowid);
   const gms=db.prepare('SELECT id,mission_id FROM game_missions WHERE game_id=?').all(game_id);
   const ins=db.prepare('INSERT INTO team_missions(team_id,mission_id,game_mission_id) VALUES(?,?,?)');
   runTx(()=>gms.forEach(gm=>ins.run(teamId,gm.mission_id,gm.id)));
@@ -1546,7 +1562,7 @@ module.exports = {
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,
-  getTeam,getTeams,createTeam,deleteTeam,getRankings,
+  getTeam,getTeams,createTeam,updateTeamPassword,createTeamJoinSession,hasTeamJoinSession,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
   submitMission,mediaListOf,addMissionDraftMedia,removeMissionDraftMedia,submitMissionDraft,acceptSubmission,rejectSubmission,
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,

@@ -79,6 +79,10 @@ kann weiterhin unabhängig Medien einreichen.
 Dieser Link erscheint erst, wenn mindestens ein Team beigetreten
 ist; davor seht ihr nur den „Neu erstellen"-Flow.
 
+## Teams mit Passwort beitreten
+
+Wenn Team-Passwörter aktiviert sind, kommt beim Erstellen eines Teams ein Schritt dazu: Nach den Teamangaben legst du in den drei Kästchen ein **dreistelliges Zahlenpasswort** fest und speicherst es. Merke es dir und teile es mit allen, die mit einem weiteren Handy im Team spielen. Um einem bestehenden Team beizutreten, tippe neben seinem Namen auf **Beitreten** und gib dessen dreistelliges Passwort ein. Wenn der GM eine Supportnummer hinterlegt hat, zeigt die Passwortseite den anklickbaren Link **Technischer Support**.
+
 # Die Spielerübersicht
 
 ::shot:m-03-home

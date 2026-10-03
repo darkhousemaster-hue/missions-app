@@ -72,6 +72,8 @@ una volta per lingua, il pulsante **🌐 Auto** riempie le lingue
 vuote da quella in cui hai cominciato. Salva prima di lasciare la
 scheda.
 
+**Numero per l’assistenza tecnica.** Inserisci il numero che i giocatori possono chiamare se hanno problemi con la password della squadra. Apparirà come link cliccabile **Assistenza tecnica** nella schermata della password. Lascia il campo vuoto per nascondere il link.
+
 # Sicurezza
 
 ::shot:adm-03-security

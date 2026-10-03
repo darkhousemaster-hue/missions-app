@@ -94,6 +94,10 @@ estado (esperando / jugando / en pausa / terminada) y el modo en el
 que corre. Toca **Abrir** en cualquiera para saltar a su panel; útil
 si saliste por error.
 
+## Contraseñas de equipo
+
+Junto a **Iniciar partida**, el interruptor **Contraseña de equipo** está activado de forma predeterminada. Se aplica a la partida que vas a crear. Cuando está activado, cada equipo nuevo elige una contraseña numérica de tres cifras después de introducir sus datos; quien se una al mismo equipo desde otro teléfono debe introducir ese código. Desactívalo para permitir crear equipos o unirse a ellos sin código. Cuando un equipo ya ha establecido su contraseña, sus tres cifras aparecen junto al nombre en el panel de control. El teléfono de asistencia configurado en Ajustes también puede aparecer como enlace clicable de **Asistencia técnica** en la pantalla de contraseña del jugador.
+
 # El panel de control
 
 ::shot:m-03-dashboard

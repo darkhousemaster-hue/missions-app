@@ -72,6 +72,8 @@ Escríbelo una vez por idioma; el botón **🌐 Auto** rellena los
 idiomas vacíos a partir del que empezaste. Guarda antes de salir
 de la pestaña.
 
+**Teléfono de asistencia técnica.** Introduce el número al que pueden llamar los jugadores si tienen problemas con la contraseña de un equipo. Aparecerá como enlace clicable de **Asistencia técnica** en la pantalla de contraseña. Deja el campo vacío para ocultar el enlace.
+
 # Seguridad
 
 ::shot:adm-03-security

@@ -77,6 +77,10 @@ telefono può continuare a inviare in modo indipendente.
 Questo link compare solo dopo che almeno una squadra è entrata;
 prima vedete solo il flusso di creazione.
 
+## Accedere con la password della squadra
+
+Quando le password delle squadre sono attive, la creazione di una squadra richiede un passaggio in più: dopo aver inserito i dati della squadra, scegli un **codice numerico di tre cifre** nelle tre caselle e salvalo. Ricordalo e condividilo con chi userà un altro telefono nella tua squadra. Per unirti a una squadra esistente, tocca **Unisciti** accanto al suo nome e inserisci il codice di tre cifre. Se il GM ha configurato un numero di assistenza, la schermata della password mostra il link cliccabile **Assistenza tecnica**.
+
 # La home del giocatore
 
 ::shot:m-03-home

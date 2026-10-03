@@ -97,6 +97,10 @@ et le mode dans lequel elle tourne. Touche **Ouvrir** sur l'une
 d'elles pour sauter dans son tableau de bord ; pratique quand tu as
 quitté la page par accident.
 
+## Mots de passe d’équipe
+
+À côté de **Lancer la partie**, l’interrupteur **Mot de passe d’équipe** est activé par défaut. Il s’applique à la partie que vous allez créer. Lorsqu’il est activé, chaque nouvelle équipe choisit un code numérique à trois chiffres après avoir renseigné ses informations ; toute personne qui rejoint cette équipe depuis un autre téléphone doit saisir le même code. Désactivez-le pour permettre de créer ou rejoindre des équipes sans code. Une fois le mot de passe défini, ses trois chiffres s’affichent à côté du nom de l’équipe dans le tableau de bord. Le numéro d’assistance configuré dans les réglages peut aussi apparaître sous forme de lien **Assistance technique** cliquable sur la page du mot de passe.
+
 # Le tableau de bord
 
 ::shot:m-03-dashboard

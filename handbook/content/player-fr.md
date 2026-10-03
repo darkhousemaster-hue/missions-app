@@ -78,6 +78,10 @@ indépendamment.
 Ce lien n’apparaît qu’une fois qu’au moins une équipe a rejoint ;
 avant cela vous ne voyez que le flux de création.
 
+## Rejoindre une équipe protégée par un mot de passe
+
+Lorsque les mots de passe d’équipe sont activés, la création d’une équipe comporte une étape supplémentaire : après avoir saisi les informations de l’équipe, choisissez un **code numérique à trois chiffres** dans les trois cases, puis enregistrez-le. Mémorisez-le et communiquez-le aux personnes qui utiliseront un autre téléphone dans votre équipe. Pour rejoindre une équipe existante, touchez **Rejoindre** à côté de son nom et saisissez son code à trois chiffres. Si le GM a configuré un numéro d’assistance, la page du mot de passe affiche un lien **Assistance technique** cliquable.
+
 # L’accueil joueur
 
 ::shot:m-03-home

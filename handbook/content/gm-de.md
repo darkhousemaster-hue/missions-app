@@ -96,6 +96,10 @@ spielt / pausiert / beendet) und dem Modus, in dem sie laufen.
 **Öffnen** springt direkt ins Dashboard, praktisch, wenn du
 versehentlich weg-navigiert hast.
 
+## Team-Passwörter
+
+Neben **Spiel starten** ist der Schalter **Team-Passwort** standardmässig eingeschaltet. Er gilt für das Spiel, das du gerade anlegst. Wenn er eingeschaltet ist, legt jedes neue Team nach den Teamangaben ein dreistelliges Zahlenpasswort fest; wer mit einem weiteren Handy beitreten möchte, muss dieses Passwort eingeben. Ist der Schalter aus, können Spieler Teams ohne Passwort erstellen oder ihnen beitreten. Sobald ein Team sein Passwort festgelegt hat, siehst du die drei Ziffern im Dashboard neben seinem Namen. Eine in den Einstellungen hinterlegte Supportnummer kann auf der Passwortseite der Spieler auch als anklickbarer Link **Technischer Support** erscheinen.
+
 # Das Dashboard
 
 ::shot:m-03-dashboard

@@ -63,6 +63,8 @@ sehen alle Spieler diese Nachricht. Tipp sie in jeder Sprache ein,
 der **🌐 Auto**-Knopf füllt die leeren Sprachen aus der ersten
 ausgefüllten heraus. Vor dem Verlassen des Tabs **Speichern** drücken.
 
+**Telefonnummer für technischen Support.** Trage die Nummer ein, die Spieler bei Problemen mit einem Team-Passwort anrufen können. Sie erscheint auf der Passwortseite als anklickbarer Link **Technischer Support**. Bleibt das Feld leer, wird der Link ausgeblendet.
+
 # Sicherheit
 
 ::shot:adm-03-security

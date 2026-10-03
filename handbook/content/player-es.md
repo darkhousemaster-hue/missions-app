@@ -77,6 +77,10 @@ enviando de forma independiente.
 Este enlace solo aparece cuando al menos un equipo ya se ha unido;
 antes solo veis el flujo de crear nuevo.
 
+## Unirse con contraseña de equipo
+
+Cuando las contraseñas de equipo están activadas, crear un equipo tiene un paso más: después de introducir los datos del equipo, elige un **código numérico de tres cifras** en las tres casillas y guárdalo. Recuérdalo y compártelo con quienes usarán otro teléfono en vuestro equipo. Para unirte a un equipo existente, toca **Unirse** junto a su nombre e introduce su código de tres cifras. Si el GM ha configurado un teléfono de asistencia, la pantalla de contraseña muestra un enlace clicable de **Asistencia técnica**.
+
 # El inicio del jugador
 
 ::shot:m-03-home
