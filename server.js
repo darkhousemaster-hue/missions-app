@@ -609,6 +609,17 @@ app.put('/api/locations/:id/theme', (req,res) => {
   db.setLocationTheme(Number(req.params.id), req.body.theme ?? null);
   res.json({success:true});
 });
+app.get('/api/locations/:id/gm-theme', (req,res) => {
+  res.setHeader('Cache-Control','no-store');
+  const raw=db.getLocationGmTheme(Number(req.params.id));
+  let theme=null; if(raw){ try{ theme=JSON.parse(raw); }catch(e){} }
+  res.json({theme});
+});
+app.put('/api/locations/:id/gm-theme', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.setLocationGmTheme(Number(req.params.id), req.body.theme ?? null);
+  res.json({success:true});
+});
 app.get('/api/global-player-theme', (req,res) => {
   const t = db.getGlobalPlayerTheme();
   let theme = null; if(t){ try{ theme = JSON.parse(t); }catch{ theme = null; } }

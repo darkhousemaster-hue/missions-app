@@ -35,6 +35,7 @@ db.exec(`
     allow_indoor INTEGER DEFAULT 1,
     use_location_theme INTEGER NOT NULL DEFAULT 0,
     support_phone TEXT,
+    gm_theme TEXT,
     created_at INTEGER DEFAULT (unixepoch()*1000));
   CREATE TABLE IF NOT EXISTS missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -360,12 +361,14 @@ try { db.exec("ALTER TABLE teams ADD COLUMN password_setup_token TEXT"); } catch
 try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,en,fr,it,es'"); } catch(e) {}
 // Per-location / per-RA-mode player colour scheme. JSON:
 //   { vars:{"--bg":"#101010",...}, logo:"themes/x.png"|null, stamp:"...", wordmark:"..." }
-// NULL = the built-in default look (what shipped before theming). Only the
-// player pages (join/play/cityrush) consume it; the GM dashboard is never themed.
+// NULL = inherit the global player scheme (or the built-in defaults when off).
+// GM post-location colors are stored separately in locations.gm_theme.
 try { db.exec("ALTER TABLE locations ADD COLUMN theme TEXT"); } catch(e) {}
 // Defaults to global player colors; adding the column preserves every existing theme and location setting.
 try { db.exec("ALTER TABLE locations ADD COLUMN use_location_theme INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE locations ADD COLUMN support_phone TEXT"); } catch(e) {}
+// Separate per-location GM colors from the player theme and global GM theme.
+try { db.exec("ALTER TABLE locations ADD COLUMN gm_theme TEXT"); } catch(e) {}
 // Move the legacy global phone to the sole location when unambiguous. Keep the
 // old setting as a fallback for games without a location and for multi-location installs.
 try {
@@ -779,12 +782,27 @@ const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(
 // Dedicated theme setters — the generic update mappers rewrite every column,
 // so the theme designer (which only knows about the theme) uses these instead.
 const setLocationTheme = (id, t) => db.prepare('UPDATE locations SET theme=? WHERE id=?').run(normTheme(t), id);
+const LOCATION_GM_THEME_PAGES = new Set(['game-select','new-game','dashboard']);
+const normLocationGmTheme = t => {
+  const normalized = normTheme(t);
+  if (!normalized) return null;
+  try {
+    const theme = JSON.parse(normalized);
+    if (theme.pages) {
+      for (const page of Object.keys(theme.pages)) if (!LOCATION_GM_THEME_PAGES.has(page)) delete theme.pages[page];
+      if (!Object.keys(theme.pages).length) delete theme.pages;
+    }
+    return Object.keys(theme).length ? JSON.stringify(theme) : null;
+  } catch(e) { return null; }
+};
+const getLocationGmTheme = id => { const row=getLocation(id); return row && row.gm_theme || null; };
+const setLocationGmTheme = (id, t) => db.prepare('UPDATE locations SET gm_theme=? WHERE id=?').run(normLocationGmTheme(t), id);
 const setCrModeTheme   = (id, t) => db.prepare('UPDATE cr_modes SET theme=? WHERE id=?').run(normTheme(t), id);
 // Global player theme is the fallback for every location and Rail Adventure mode.
 const getGlobalPlayerTheme = () => { const v = getSetting('global_player_theme'); return v || null; };
 const setGlobalPlayerTheme = (t) => setSetting('global_player_theme', normTheme(t) || '');
-// Global GM dashboard theme (app-wide, independent of the per-location player
-// themes). Stored as a sanitized JSON string in settings; null = default look.
+// Global GM theme is the base across pages. A location may override its
+// game-select, new-game, and dashboard pages in locations.gm_theme.
 const getGmTheme = () => { const v = getSetting('gm_theme'); return v || null; };
 const setGmTheme = (t) => setSetting('gm_theme', normTheme(t) || '');
 
@@ -1596,7 +1614,7 @@ module.exports = {
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,reorderMissions,getGameRules,
-  getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,setCrModeTheme,
+  getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,getLocationGmTheme,setLocationGmTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,updateTeamPassword,createTeamJoinSession,hasTeamJoinSession,deleteTeam,getRankings,

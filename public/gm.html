@@ -2332,6 +2332,7 @@ async function selectCityRushLocation(){
   selectedLocationId='cityrush';
   selectedLocationName=''; selectedModeId=null; selectedModeName='';
   newGamePasswordsEnabled=true;
+  await loadLocationGmTheme(null);
   // Rail Adventure keeps its own route dropdown: it has no per-location mode
   // tiles, and its picker already starts blank, so it forces a real choice.
   // Paint the screen before revealing it: everything after the fetch below
@@ -2355,6 +2356,7 @@ async function selectLocation(id,name){
   selectedLocationName=name;
   selectedModeId=null; selectedModeName='';
   newGamePasswordsEnabled=true;
+  await loadLocationGmTheme(id);
   paintGameSelectLabels();
   showScreen('screen-game-select');
   await Promise.all([renderModeTiles(id), loadGames(id)]);
@@ -8478,11 +8480,13 @@ const GM_GROUPS = () => [
 ];
 let _gmTheme = { vars:{}, pages:{} };        // editable draft while the designer is open
 let _gmThemeSaved = { vars:{}, pages:{} };   // the persisted theme currently applied across GM pages
+let _gmLocationTheme = null;                 // active location's post-selection GM overrides
 function _gmAlpha(hex,a){ hex=String(hex).replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex.slice(0,6),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 const GM_PAGE_SELECTORS = {
   landing:'#screen-landing', 'game-select':'#screen-game-select', 'new-game':'#screen-new-game',
   dashboard:'#screen-dashboard', 'settings-gate':'#screen-settings-gate', settings:'#screen-settings',
 };
+const GM_LOCATION_PAGES = ['game-select','new-game','dashboard'];
 const GM_ALL_PAGE_SELECTOR = Object.values(GM_PAGE_SELECTORS).join(',');
 function _gmColorDecl(vars){
   const decl=[]; const add=(k,v)=>decl.push(`${k}:${v};`);
@@ -8494,12 +8498,21 @@ function _gmColorDecl(vars){
   if(r){add('--red-light',_gmAlpha(r,.85));add('--glow-red',`0 0 12px ${_gmAlpha(r,.5)}`);}
   return decl.join('');
 }
-function applyGmTheme(theme){
+function applyGmTheme(theme, locationTheme=null){
   const vars=(theme&&theme.vars)||{};
   const rules=[`${GM_ALL_PAGE_SELECTOR}{${_gmColorDecl(vars)}}`];
   for(const [page,selector] of Object.entries(GM_PAGE_SELECTORS)){
     const overrides=(theme&&theme.pages&&theme.pages[page]&&theme.pages[page].vars)||{};
     if(Object.keys(overrides).length) rules.push(`${selector}{${_gmColorDecl({...vars,...overrides})}}`);
+  }
+  if(locationTheme){
+    for(const page of GM_LOCATION_PAGES){
+      const selector=GM_PAGE_SELECTORS[page];
+      const globalPage=(theme&&theme.pages&&theme.pages[page]&&theme.pages[page].vars)||{};
+      const locationPage=(locationTheme.pages&&locationTheme.pages[page]&&locationTheme.pages[page].vars)||{};
+      const merged={...vars,...globalPage,...(locationTheme.vars||{}),...locationPage};
+      if(Object.keys(merged).length) rules.push(`${selector}{${_gmColorDecl(merged)}}`);
+    }
   }
   let st = document.getElementById('gm-theme-style');
   if(!st){ st = document.createElement('style'); st.id='gm-theme-style'; document.head.appendChild(st); }
@@ -8525,14 +8538,29 @@ function _setWordmark(wm, stamp, word, logo){
   }
 }
 function applyGmBranding(theme){ _setWordmark(document.querySelector('#screen-dashboard .dt-wordmark'), theme&&theme.stamp, theme&&theme.wordmark, theme&&theme.logo); }
+function applyActiveGmBranding(){
+  const local=_gmLocationTheme||{};
+  applyGmBranding({stamp:local.stamp||_gmThemeSaved.stamp,wordmark:local.wordmark||_gmThemeSaved.wordmark,logo:local.logo||_gmThemeSaved.logo});
+}
+async function loadLocationGmTheme(locationId){
+  if(!locationId||locationId==='cityrush') _gmLocationTheme=null;
+  else {
+    try{
+      const j=await fetch(`/api/locations/${encodeURIComponent(locationId)}/gm-theme`,{cache:'no-store'}).then(r=>r.ok?r.json():null);
+      _gmLocationTheme=(j&&j.theme)||null;
+    }catch(e){ _gmLocationTheme=null; }
+  }
+  applyGmTheme(_gmThemeSaved,_gmLocationTheme);
+  applyActiveGmBranding();
+}
 async function loadGmTheme(){
   try{
     const j = await fetch('/api/gm-theme', {cache:'no-store'}).then(r=>r.json());
     const th = (j && j.theme) || {};
     _gmThemeSaved = { vars: Object.assign({}, th.vars||{}), pages: Object.assign({},th.pages||{}), stamp: th.stamp||'', wordmark: th.wordmark||'', logo: th.logo||null };
   }catch(e){ _gmThemeSaved = { vars:{}, pages:{} }; }
-  applyGmTheme(_gmThemeSaved);
-  applyGmBranding(_gmThemeSaved);
+  applyGmTheme(_gmThemeSaved,_gmLocationTheme);
+  applyActiveGmBranding();
 }
 loadGmTheme();
 // The GM-side preview is a live, view-only clone of the REAL dashboard
@@ -8542,7 +8570,7 @@ function renderGmPreview(){
   const wrap = document.querySelector('#theme-designer .td-gmwrap');
   if(!wrap) return;
   wrap.innerHTML = '';
-  const allPages = [
+  const allPages = _td.kind==='location' ? GM_LOCATION_PAGES.map(key=>[key,GM_PAGE_SELECTORS[key].slice(1)]) : [
     ['landing','screen-landing'], ['game-select','screen-game-select'],
     ['new-game','screen-new-game'], ['dashboard','screen-dashboard'],
     ['settings-gate','screen-settings-gate'], ['settings','screen-settings'],
@@ -8557,8 +8585,22 @@ function renderGmPreview(){
     title.className='td-gmpage-title'; title.textContent=_tdPageLabel(key);
     const clone=src.cloneNode(true);
     clone.style.display=id==='screen-dashboard'?'grid':'flex'; clone.style.width='1280px'; clone.style.height='760px'; clone.style.pointerEvents='none';
+    if(_td.kind==='location'&&key==='dashboard'){
+      const local=_td.gmTheme||{};
+      _setWordmark(clone.querySelector('.dt-wordmark'),local.stamp||_gmThemeSaved.stamp,local.wordmark||_gmThemeSaved.wordmark,local.logo||_gmThemeSaved.logo);
+    }
     const scaler=document.createElement('div'); scaler.className='td-gmscale'; scaler.appendChild(clone);
     page.append(title,scaler); wrap.appendChild(page);
+  }
+  if(_td.kind==='location'){
+    const local=_td.gmTheme||{}, rules=[];
+    for(const key of GM_LOCATION_PAGES){
+      const globalPage=(_gmThemeSaved.pages&&_gmThemeSaved.pages[key]&&_gmThemeSaved.pages[key].vars)||{};
+      const localPage=(local.pages&&local.pages[key]&&local.pages[key].vars)||{};
+      const vars={...(_gmThemeSaved.vars||{}),...globalPage,...(local.vars||{}),...localPage};
+      rules.push(`#theme-designer .td-gmwrap ${GM_PAGE_SELECTORS[key]}{${_gmColorDecl(vars)}}`);
+    }
+    const style=document.createElement('style'); style.textContent=rules.join('\n'); wrap.appendChild(style);
   }
   _gmFitPreview();
 }
@@ -8647,23 +8689,21 @@ function _tdEffectiveTheme(theme,page){
   return {...theme,vars:{...(theme.vars||{}),...((theme.pages||{})[page]?.vars||{})}};
 }
 function _tdScopeOptions(){
-  // Only the global colour editor can target global player pages or GM pages.
-  // Location and Rail Adventure themes are player-only and apply to all their
-  // supported player views together.
-  if(_td.kind!=='global') return ['all'];
-  return ['all',...(_td.side==='gm'?TD_GM_PAGES:TD_PLAYER_PAGES)];
+  if(_td.kind==='global') return ['all',...(_td.side==='gm'?TD_GM_PAGES:TD_PLAYER_PAGES)];
+  if(_td.kind==='location'&&_td.side==='gm') return ['all',...GM_LOCATION_PAGES];
+  return ['all'];
 }
 function tdSelectPage(page){
   if(!_td) return;
   _td.page=_tdScopeOptions().includes(page)?page:'all';
   const el=document.getElementById('theme-designer');
   if(el) el.innerHTML=_tdHtml();
-  if(_td.side==='gm'){applyGmTheme(_gmTheme);renderGmPreview();}
+  if(_td.side==='gm'){if(_td.kind==='global')applyGmTheme(_gmTheme);renderGmPreview();}
   else _tdPost();
 }
 function _tdTargetTheme(isGm){
-  const theme=isGm&&_td.kind==='global'?_gmTheme:_td.theme;
-  if(_td.kind==='global'&&_td.page&&_td.page!=='all'){
+  const theme=isGm?_tdGmDraft():_td.theme;
+  if((isGm||_td.kind==='global')&&_td.page&&_td.page!=='all'){
     theme.pages=theme.pages||{};
     theme.pages[_td.page]=theme.pages[_td.page]||{vars:{}};
     theme.pages[_td.page].vars=theme.pages[_td.page].vars||{};
@@ -8671,6 +8711,7 @@ function _tdTargetTheme(isGm){
   }
   return theme;
 }
+function _tdGmDraft(){ return _td.kind==='location'?_td.gmTheme:_gmTheme; }
 function _tdPlayerPreviewPages(){
   const pages=[
     ['join','/join.html?preview=1&tdpage=join'],['join-existing','/join.html?preview=1&tdpage=join-existing'],['password','/join.html?preview=1&tdpage=password'],
@@ -8698,21 +8739,22 @@ async function openThemeDesigner(kind, id){
     if(!row){ toast('Not found','error'); return; }
     try { theme = row.theme ? JSON.parse(row.theme) : {}; } catch(e){ theme = {}; }
   }
-  _td = { kind, id: kind==='global'?null:Number(id), name: row.name||'', side:'player', page:'all', theme: { vars: Object.assign({}, theme.vars||{}), pages:Object.assign({},theme.pages||{}), logo: theme.logo||null, stamp: theme.stamp||'', wordmark: theme.wordmark||'', borderWidth: (theme.borderWidth!=null?theme.borderWidth:null) } };
-  // Refresh the separate GM draft only in the global editor. Location and
-  // Rail Adventure editors must never load or write global dashboard colors.
+  let gmTheme={};
   if(kind==='global'){
     await loadGmTheme();
     _gmTheme = { vars: Object.assign({}, _gmThemeSaved.vars||{}), pages:Object.assign({},_gmThemeSaved.pages||{}), stamp:_gmThemeSaved.stamp||'', wordmark:_gmThemeSaved.wordmark||'', logo:_gmThemeSaved.logo||null };
+  } else if(kind==='location'){
+    try { const j=await fetch(`/api/locations/${encodeURIComponent(id)}/gm-theme`,{cache:'no-store'}).then(r=>r.json()); gmTheme=j.theme||{}; } catch(e){}
   }
+  _td = { kind, id: kind==='global'?null:Number(id), name: row.name||'', side:'player', page:'all', theme: { vars: Object.assign({}, theme.vars||{}), pages:Object.assign({},theme.pages||{}), logo: theme.logo||null, stamp: theme.stamp||'', wordmark: theme.wordmark||'', borderWidth: (theme.borderWidth!=null?theme.borderWidth:null) }, gmTheme:{vars:Object.assign({},gmTheme.vars||{}),pages:Object.assign({},gmTheme.pages||{}),stamp:gmTheme.stamp||'',wordmark:gmTheme.wordmark||'',logo:gmTheme.logo||null} };
   let el = document.getElementById('theme-designer');
   if(!el){ el = document.createElement('div'); el.id = 'theme-designer'; document.body.appendChild(el); }
   el.innerHTML = _tdHtml();
   el.classList.add('open');
 }
 function _tdHtml(){
-  const isGm = _td.kind === 'global' && _td.side === 'gm';
-  const draft = isGm ? _gmTheme : _td.theme;
+  const isGm = _td.side === 'gm' && (_td.kind==='global'||_td.kind==='location');
+  const draft = isGm ? (_td.kind==='location'?_td.gmTheme:_gmTheme) : _td.theme;
   const usePages = isGm || _td.kind==='global';
   const t = _tdEffectiveTheme(draft, usePages?_td.page:'all');
   const D = isGm ? GM_DEFAULTS : THEME_DEFAULTS;
@@ -8780,11 +8822,11 @@ function _tdHtml(){
   return `
     <div class="td-top">
       <h3>🎨 ${esc(gmt('th-title')||'Farbschema')}${isGm?'':' — '+esc(_td.name)}</h3>
-      ${_td.kind==='global'?`<div class="td-sides">
+      ${(_td.kind==='global'||_td.kind==='location')?`<div class="td-sides">
         <button type="button" class="td-side ${!isGm?'active':''}" onclick="switchTdSide('player')">${esc(gmt('th-side-player')||'Spieler')}</button>
         <button type="button" class="td-side ${isGm?'active':''}" onclick="switchTdSide('gm')">${esc(gmt('th-side-gm')||'Dashboard')}</button>
       </div>`:''}
-      ${_td.kind==='global'?`<label class="td-page-control"><span>${esc(({de:'Seite',en:'Page',fr:'Page',it:'Pagina',es:'Página'})[gmLang]||'Seite')}</span><select class="select" id="td-page-select" onchange="tdSelectPage(this.value)">${_tdScopeOptions().map(page=>`<option value="${page}" ${page===_td.page?'selected':''}>${esc(_tdPageLabel(page))}</option>`).join('')}</select></label>`:''}
+      ${(isGm||_td.kind==='global')?`<label class="td-page-control"><span>${esc(({de:'Seite',en:'Page',fr:'Page',it:'Pagina',es:'Página'})[gmLang]||'Seite')}</span><select class="select" id="td-page-select" onchange="tdSelectPage(this.value)">${_tdScopeOptions().map(page=>`<option value="${page}" ${page===_td.page?'selected':''}>${esc(_tdPageLabel(page))}</option>`).join('')}</select></label>`:''}
       <button class="btn btn-ghost btn-sm" onclick="tdResetAll()">${esc(gmt('th-reset-all')||'Standard wiederherstellen')}</button>
       <button class="btn btn-ghost btn-sm" onclick="tdClose()">${esc(gmt('cancel')||'Abbrechen')}</button>
       <button class="btn btn-primary btn-sm" onclick="tdSave()">${esc(gmt('save')||'Speichern')}</button>
@@ -8799,14 +8841,16 @@ function _tdHtml(){
 }
 // Switch the designer between the player theme and the GM dashboard theme.
 function switchTdSide(side){
-  if(!_td || (side==='gm' && _td.kind!=='global')) return;
+  if(!_td || (side==='gm' && !['global','location'].includes(_td.kind))) return;
   if(!_td || _td.side===side) return;
   _td.side = side;
   _td.page='all';
   const el = document.getElementById('theme-designer');
   if(el) el.innerHTML = _tdHtml();
-  if(side==='gm'){ applyGmTheme(_gmTheme); applyGmBranding(_gmTheme); renderGmPreview(); }
-  else { applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); _tdPost(); }
+  if(side==='gm'){
+    if(_td.kind==='global'){ applyGmTheme(_gmTheme); applyGmBranding(_gmTheme); }
+    renderGmPreview();
+  } else { applyGmTheme(_gmThemeSaved,_gmLocationTheme); applyActiveGmBranding(); _tdPost(); }
 }
 // Strip GM vars that equal the default so only real overrides are stored.
 function _gmTdTheme(){
@@ -8814,6 +8858,17 @@ function _gmTdTheme(){
   if(_gmTheme.stamp && _gmTheme.stamp.trim()) out.stamp = _gmTheme.stamp.trim();
   if(_gmTheme.wordmark && _gmTheme.wordmark.trim()) out.wordmark = _gmTheme.wordmark.trim();
   if(_gmTheme.logo) out.logo = _gmTheme.logo;
+  return Object.keys(out).length ? out : null;
+}
+function _tdLocationGmTheme(){
+  const out = _tdStoredTheme(_td.gmTheme,GM_DEFAULTS);
+  if(out.pages){
+    for(const page of Object.keys(out.pages)) if(!GM_LOCATION_PAGES.includes(page)) delete out.pages[page];
+    if(!Object.keys(out.pages).length) delete out.pages;
+  }
+  if(_td.gmTheme.stamp && _td.gmTheme.stamp.trim()) out.stamp = _td.gmTheme.stamp.trim();
+  if(_td.gmTheme.wordmark && _td.gmTheme.wordmark.trim()) out.wordmark = _td.gmTheme.wordmark.trim();
+  if(_td.gmTheme.logo) out.logo = _td.gmTheme.logo;
   return Object.keys(out).length ? out : null;
 }
 // Current draft as a storable object, or null when everything is default.
@@ -8889,13 +8944,13 @@ function tdVarInput(el){
   const isGm = _td.side==='gm', T = _tdTargetTheme(isGm), D = isGm?GM_DEFAULTS:THEME_DEFAULTS;
   const k = el.dataset.var, v = String(el.value).toLowerCase();
   const isPage=(isGm||_td.kind==='global')&&_td.page!=='all';
-  const base=isGm?_gmTheme:_td.theme;
+  const base=isGm?_tdGmDraft():_td.theme;
   const inherited=(base.vars||{})[k]||D[k];
   if(isPage ? v===String(inherited).toLowerCase() : v===D[k]) delete T.vars[k]; else T.vars[k] = v;
   if(isPage && !Object.keys(T.vars).length) delete base.pages[_td.page];
   const hex = document.getElementById('td-hex-'+k.replace(/-/g,''));
   if(hex) hex.textContent = v;
-  if(isGm) applyGmTheme(_gmTheme); else _tdPost();
+  if(isGm){ if(_td.kind==='global'){applyGmTheme(_gmTheme);applyGmBranding(_gmTheme);} renderGmPreview(); } else _tdPost();
 }
 function tdBorderWidth(v){
   _td.theme.borderWidth = Math.max(0, Math.min(8, Math.round(Number(v))||0));
@@ -8911,18 +8966,18 @@ function tdVarReset(k){
   const isGm = _td.side==='gm', T = _tdTargetTheme(isGm), D = isGm?GM_DEFAULTS:THEME_DEFAULTS;
   delete T.vars[k];
   const isPage=(isGm||_td.kind==='global')&&_td.page!=='all';
-  const base=isGm?_gmTheme:_td.theme;
+  const base=isGm?_tdGmDraft():_td.theme;
   if(isPage&&!Object.keys(T.vars).length) delete base.pages[_td.page];
   const value=(_tdEffectiveTheme(base,isPage?_td.page:'all').vars||{})[k]||D[k];
   const inp = document.querySelector(`#theme-designer input[data-var="${k}"]`);
   if(inp) inp.value = value;
   const hex = document.getElementById('td-hex-'+k.replace(/-/g,''));
   if(hex) hex.textContent = value;
-  if(isGm) applyGmTheme(_gmTheme); else _tdPost();
+  if(isGm){ if(_td.kind==='global'){applyGmTheme(_gmTheme);applyGmBranding(_gmTheme);} renderGmPreview(); } else _tdPost();
 }
 // Live effect after a branding (stamp/wordmark/logo) change on the active side.
-function _tdBrandLive(){ if(_td.side==='gm'){ applyGmBranding(_gmTheme); renderGmPreview(); } else _tdPost(); }
-function tdText(field, val){ (_td.side==='gm'?_gmTheme:_td.theme)[field] = val; _tdBrandLive(); }
+function _tdBrandLive(){ if(_td.side==='gm'){ if(_td.kind==='global'){applyGmBranding(_gmTheme);} renderGmPreview(); } else _tdPost(); }
+function tdText(field, val){ (_td.side==='gm'?_tdGmDraft():_td.theme)[field] = val; _tdBrandLive(); }
 async function tdUploadLogo(input){
   const file = input.files && input.files[0];
   if(!file) return;
@@ -8933,7 +8988,7 @@ async function tdUploadLogo(input){
   try {
     const r = await fetch('/api/theme-logo', {method:'POST', headers, body:form}).then(r=>r.json());
     if(r && r.path){
-      (_td.side==='gm'?_gmTheme:_td.theme).logo = r.path;
+      (_td.side==='gm'?_tdGmDraft():_td.theme).logo = r.path;
       const st = document.getElementById('td-logo-state'); if(st) st.textContent = '✓';
       const rm = document.getElementById('td-logo-rm'); if(rm) rm.style.display = '';
       _tdBrandLive();
@@ -8941,35 +8996,41 @@ async function tdUploadLogo(input){
   } catch(e){ toast('Upload fehlgeschlagen','error'); }
 }
 function tdRemoveLogo(){
-  (_td.side==='gm'?_gmTheme:_td.theme).logo = null;
+  (_td.side==='gm'?_tdGmDraft():_td.theme).logo = null;
   const st = document.getElementById('td-logo-state'); if(st) st.textContent = '–';
   const rm = document.getElementById('td-logo-rm'); if(rm) rm.style.display = 'none';
   _tdBrandLive();
 }
 async function tdResetAll(){
-  if(_td.side==='gm'&&_td.kind!=='global') return;
-  const isPage=_td.kind==='global'&&_td.page!=='all';
+  const isPage=(_td.side==='gm'||_td.kind==='global')&&_td.page!=='all';
   const prompt=isPage?(({de:'Die Farben dieser Seite auf „Alle Seiten“ zurücksetzen?',en:'Reset this page to inherit from All pages?',fr:'Rétablir cette page selon Toutes les pages ?',it:'Ripristinare questa pagina da Tutte le pagine?',es:'¿Restablecer esta página para que herede de Todas las páginas?'})[gmLang]||'Reset this page to inherit from All pages?'):gmt('th-reset-confirm');
   if(!await uiConfirm(prompt, {ok:gmt('th-reset')})) return;
   if(isPage){
-    const base=_td.side==='gm'?_gmTheme:_td.theme;
+    const base=_td.side==='gm'?_tdGmDraft():_td.theme;
     if(base.pages) delete base.pages[_td.page];
-  } else if(_td.side==='gm'){ _gmTheme = { vars:{}, pages:{}, stamp:'', wordmark:'', logo:null }; applyGmBranding(_gmTheme); }
+  } else if(_td.side==='gm'){
+    if(_td.kind==='location') _td.gmTheme = {vars:{},pages:{},stamp:'',wordmark:'',logo:null};
+    else { _gmTheme = { vars:{}, pages:{}, stamp:'', wordmark:'', logo:null }; applyGmBranding(_gmTheme); }
+  }
   else { _td.theme = { vars:{}, pages:{}, logo:null, stamp:'', wordmark:'', borderWidth:null }; }
-  if(_td.side==='gm') applyGmTheme(_gmTheme); else _tdPost();
+  if(_td.side==='gm'){ if(_td.kind==='global') applyGmTheme(_gmTheme); } else _tdPost();
   const el = document.getElementById('theme-designer');
   if(el){ el.innerHTML = _tdHtml(); }
   if(_td.side==='gm') renderGmPreview();
 }
 async function tdSave(){
   if(_td.side==='gm'){
-    if(_td.kind!=='global'){
-      toast(gmt('th-gm-global-only')||'Dashboard colors are only available in the global editor.','error');
-      return;
+    const isLocation=_td.kind==='location', draft=_tdGmDraft();
+    const theme=isLocation?_tdLocationGmTheme():_gmTdTheme();
+    const url=isLocation?`/api/locations/${_td.id}/gm-theme`:'/api/gm-theme';
+    const res = await API(url, {method:'PUT', body:{ theme: theme ? JSON.stringify(theme) : null }});
+    if(res && res.success){
+      if(isLocation){
+        if(String(selectedLocationId)===String(_td.id)) _gmLocationTheme={vars:{...(draft.vars||{})},pages:{...(draft.pages||{})},stamp:draft.stamp||'',wordmark:draft.wordmark||'',logo:draft.logo||null};
+        applyGmTheme(_gmThemeSaved,_gmLocationTheme); applyActiveGmBranding();
+      } else { _gmThemeSaved = { vars: Object.assign({}, draft.vars||{}), pages:Object.assign({},draft.pages||{}), stamp:draft.stamp||'', wordmark:draft.wordmark||'', logo:draft.logo||null }; applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); }
+      toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose();
     }
-    const theme = _gmTdTheme();
-    const res = await API('/api/gm-theme', {method:'PUT', body:{ theme: theme ? JSON.stringify(theme) : null }});
-    if(res && res.success){ _gmThemeSaved = { vars: Object.assign({}, _gmTheme.vars||{}), pages:Object.assign({},_gmTheme.pages||{}), stamp:_gmTheme.stamp||'', wordmark:_gmTheme.wordmark||'', logo:_gmTheme.logo||null }; applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose(); }
     else toast((res&&res.error)||'Fehler','error');
     return;
   }
@@ -8984,8 +9045,8 @@ function tdClose(){
   if(el){ el.classList.remove('open'); el.innerHTML=''; }
   _td = null;
   // Revert any unsaved live GM-theme edits back to the persisted dashboard look.
-  applyGmTheme(_gmThemeSaved);
-  applyGmBranding(_gmThemeSaved);
+  applyGmTheme(_gmThemeSaved,_gmLocationTheme);
+  applyActiveGmBranding();
 }
 
 const _TUT = {
