@@ -611,9 +611,10 @@ app.put('/api/locations/:id/theme', (req,res) => {
 });
 app.get('/api/locations/:id/gm-theme', (req,res) => {
   res.setHeader('Cache-Control','no-store');
-  const raw=db.getLocationGmTheme(Number(req.params.id));
+  const location=db.getLocation(Number(req.params.id));
+  const raw=location&&location.gm_theme;
   let theme=null; if(raw){ try{ theme=JSON.parse(raw); }catch(e){} }
-  res.json({theme});
+  res.json({theme,enabled:!!(location&&Number(location.use_location_theme)===1)});
 });
 app.put('/api/locations/:id/gm-theme', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
@@ -989,6 +990,15 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
     ? 100 : Math.max(1, Math.min(MAX_UPLOAD_MB, parseInt(rawMaxMb, 10) || 100));
   const {password, password_setup_token, ...publicTeam}=team;
   res.json({...publicTeam, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null});
+});
+// GM dashboard detail is intentionally separate from the player team endpoint:
+// a GM who has not unlocked manager Settings must still be able to review
+// submissions. Keep this response game-scoped and omit team password fields.
+app.get('/api/gm/games/:gameId/teams/:teamId', (req,res) => {
+  const game=db.getGame(req.params.gameId), team=db.getTeam(req.params.teamId);
+  if(!game || !team || String(team.game_id)!==String(game.id)) return res.status(404).json({error:'Team not found'});
+  const {password,password_setup_token,...publicTeam}=team;
+  res.json({...publicTeam,missions:db.getTeamMissions(team.id),freeze:db.activeFreezeFor(game.id,team.id),timer:getTimerState(game)});
 });
 // Deleting a team is GM work, and GM work never needs the Settings login,
 // which is for managers only. It answered 401 to a GM who had not unlocked

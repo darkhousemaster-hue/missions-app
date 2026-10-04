@@ -3046,7 +3046,15 @@ async function selectTeam(teamId){
   document.getElementById('no-team-selected').style.display='none';
   const detail=document.getElementById('team-detail');
   detail.style.display='block';
-  const data=await API(`/api/games/${currentGameId}/teams/${teamId}`);
+  let data;
+  try {
+    data=await API(`/api/gm/games/${currentGameId}/teams/${teamId}`);
+    if(!data || data.error || !Array.isArray(data.missions)) throw new Error((data&&data.error)||'Team detail unavailable');
+  } catch(e) {
+    const list=document.getElementById('team-missions-list');
+    if(list) list.innerHTML=`<div class="empty"><p>${esc(gmt('team-load-failed')||'Missionen konnten nicht geladen werden. Bitte Team erneut auswählen.')}</p></div>`;
+    return;
+  }
   // Set --team-color so the team-detail-head ::before stripe paints in
   // the right colour. The old whole-panel `.team-color-bar` left border
   // is dropped — mockup 07 only stripes the header row.
@@ -4947,12 +4955,12 @@ async function editLocation(id){
     </div>
     ${_locExtraFields(l)}
     <div class="field">
-      <label class="label">🎨 ${gmt('th-label')||'Farbschema (Spieler)'}</label>
-      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('th-hint-loc')||'Eigenes Aussehen der Spieler-App für diesen Standort. Standard = aktuelles Design.'}</p>
+      <label class="label">🎨 ${gmLang==='de'?'Farbschema (Spieler & Dashboard)':gmLang==='fr'?'Thème (joueurs et tableau de bord)':gmLang==='it'?'Tema (giocatori e dashboard)':gmLang==='es'?'Tema (jugadores y panel)':'Theme (players & dashboard)'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmLang==='de'?'Eigenes Farbschema für Spieler-App und GM-Seiten nach der Standortwahl.':'Location colors for the player app and GM screens after choosing this location.'}</p>
       <button class="btn btn-secondary" onclick="openThemeDesigner('location',${id})">${gmt('th-open')||'Farbschema bearbeiten'}</button>
       <div class="toggle-row" style="margin-top:.65rem;" onclick="toggleLocationTheme(this.querySelector('.toggle'))">
         <div><div class="toggle-row-text">${gmLang==='de'?'Standort-Farbschema verwenden':gmLang==='fr'?'Utiliser le thème du lieu':gmLang==='it'?'Usa il tema della sede':gmLang==='es'?'Usar el tema de la ubicación':'Use location theme'}</div>
-        <div class="toggle-row-sub">${gmLang==='de'?'Ersetzt das globale Spieler-Farbschema für diesen Standort.':gmLang==='fr'?'Remplace le thème global des joueurs pour ce lieu.':gmLang==='it'?'Sostituisce il tema globale dei giocatori per questa sede.':gmLang==='es'?'Reemplaza el tema global de jugadores en esta ubicación.':'Replaces the global player theme for this location.'}</div></div>
+        <div class="toggle-row-sub">${gmLang==='de'?'Ersetzt das globale Farbschema für diesen Standort, ohne die gespeicherten Farben zu löschen.':gmLang==='fr'?'Remplace le thème global pour ce lieu sans supprimer les couleurs enregistrées.':gmLang==='it'?'Sostituisce il tema globale per questa sede senza eliminare i colori salvati.':gmLang==='es'?'Reemplaza el tema global de esta ubicación sin borrar los colores guardados.':'Replaces the global theme for this location without deleting its saved colors.'}</div></div>
         <div class="toggle ${Number(l&&l.use_location_theme)===1?'is-on':''}" role="switch" aria-checked="${Number(l&&l.use_location_theme)===1?'true':'false'}" onclick="event.stopPropagation();toggleLocationTheme(this)"></div>
       </div>
       <input type="checkbox" id="loc-use-theme" ${Number(l&&l.use_location_theme)===1?'checked':''} style="display:none;">
@@ -8481,6 +8489,7 @@ const GM_GROUPS = () => [
 let _gmTheme = { vars:{}, pages:{} };        // editable draft while the designer is open
 let _gmThemeSaved = { vars:{}, pages:{} };   // the persisted theme currently applied across GM pages
 let _gmLocationTheme = null;                 // active location's post-selection GM overrides
+let _gmLocationThemeEnabled = false;          // follows the location's Use location theme toggle
 function _gmAlpha(hex,a){ hex=String(hex).replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex.slice(0,6),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 const GM_PAGE_SELECTORS = {
   landing:'#screen-landing', 'game-select':'#screen-game-select', 'new-game':'#screen-new-game',
@@ -8543,12 +8552,13 @@ function applyActiveGmBranding(){
   applyGmBranding({stamp:local.stamp||_gmThemeSaved.stamp,wordmark:local.wordmark||_gmThemeSaved.wordmark,logo:local.logo||_gmThemeSaved.logo});
 }
 async function loadLocationGmTheme(locationId){
-  if(!locationId||locationId==='cityrush') _gmLocationTheme=null;
+  if(!locationId||locationId==='cityrush'){ _gmLocationTheme=null; _gmLocationThemeEnabled=false; }
   else {
     try{
       const j=await fetch(`/api/locations/${encodeURIComponent(locationId)}/gm-theme`,{cache:'no-store'}).then(r=>r.ok?r.json():null);
-      _gmLocationTheme=(j&&j.theme)||null;
-    }catch(e){ _gmLocationTheme=null; }
+      _gmLocationThemeEnabled=!!(j&&j.enabled);
+      _gmLocationTheme=_gmLocationThemeEnabled?(j.theme||null):null;
+    }catch(e){ _gmLocationTheme=null; _gmLocationThemeEnabled=false; }
   }
   applyGmTheme(_gmThemeSaved,_gmLocationTheme);
   applyActiveGmBranding();
@@ -9026,7 +9036,7 @@ async function tdSave(){
     const res = await API(url, {method:'PUT', body:{ theme: theme ? JSON.stringify(theme) : null }});
     if(res && res.success){
       if(isLocation){
-        if(String(selectedLocationId)===String(_td.id)) _gmLocationTheme={vars:{...(draft.vars||{})},pages:{...(draft.pages||{})},stamp:draft.stamp||'',wordmark:draft.wordmark||'',logo:draft.logo||null};
+        if(String(selectedLocationId)===String(_td.id)) _gmLocationTheme=_gmLocationThemeEnabled?{vars:{...(draft.vars||{})},pages:{...(draft.pages||{})},stamp:draft.stamp||'',wordmark:draft.wordmark||'',logo:draft.logo||null}:null;
         applyGmTheme(_gmThemeSaved,_gmLocationTheme); applyActiveGmBranding();
       } else { _gmThemeSaved = { vars: Object.assign({}, draft.vars||{}), pages:Object.assign({},draft.pages||{}), stamp:draft.stamp||'', wordmark:draft.wordmark||'', logo:draft.logo||null }; applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); }
       toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose();
