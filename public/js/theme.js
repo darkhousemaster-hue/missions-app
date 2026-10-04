@@ -9,8 +9,13 @@
   const qs      = new URLSearchParams(location.search);
   const preview = qs.get('preview') === '1';
   const previewPage = preview ? qs.get('tdpage') : null;
+  const pageFile = location.pathname.split('/').pop();
   let gameId    = qs.get('game');
-  if (!gameId && !preview) { try { gameId = sessionStorage.getItem('gameId'); } catch(e){} }
+  // The join landing can be opened without a game so a team can enter a code.
+  // A leftover session game must not apply that location's colors before a
+  // location/game has been chosen. Play and CityRush still use the session as
+  // a fallback for their internal links, which may omit the game query.
+  if (!gameId && !preview && pageFile !== 'join.html') { try { gameId = sessionStorage.getItem('gameId'); } catch(e){} }
 
   function hexToRgb(h){
     h = String(h).replace('#','');
@@ -52,8 +57,7 @@
   function currentPage(){
     if(previewPage) return previewPage;
     if(document.body && document.body.dataset.arThemePage) return document.body.dataset.arThemePage;
-    const file=location.pathname.split('/').pop();
-    return file==='join.html'?'join':(file==='cityrush.html'?'cityrush':'play');
+    return pageFile==='join.html'?'join':(pageFile==='cityrush.html'?'cityrush':'play');
   }
   function applyPageVars(vars){
     const body=document.body;
