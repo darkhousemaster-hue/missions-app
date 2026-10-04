@@ -691,7 +691,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     existingTeams = game.teams || [];
     gamePasswordEnabled = game.password_enabled !== 0;
-    try { const settings=await fetch('/api/settings').then(r=>r.json()); supportPhone=settings.support_phone||''; } catch(e) {}
+    supportPhone=game.location ? (game.location.support_phone||'') : '';
+    // CityRush games do not have a location, so retain their legacy global
+    // support contact. Location games use only that location's phone number.
+    if(!game.location){ try { const settings=await fetch('/api/settings').then(r=>r.json()); supportPhone=settings.support_phone||''; } catch(e) {} }
     renderTechnicalSupport();
     refreshJoinExistingVisibility();
 

@@ -34,6 +34,7 @@ db.exec(`
     allow_video INTEGER DEFAULT 1,
     allow_indoor INTEGER DEFAULT 1,
     use_location_theme INTEGER NOT NULL DEFAULT 0,
+    support_phone TEXT,
     created_at INTEGER DEFAULT (unixepoch()*1000));
   CREATE TABLE IF NOT EXISTS missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -364,6 +365,20 @@ try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,e
 try { db.exec("ALTER TABLE locations ADD COLUMN theme TEXT"); } catch(e) {}
 // Defaults to global player colors; adding the column preserves every existing theme and location setting.
 try { db.exec("ALTER TABLE locations ADD COLUMN use_location_theme INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE locations ADD COLUMN support_phone TEXT"); } catch(e) {}
+// Move the legacy global phone to the sole location when unambiguous. Keep the
+// old setting as a fallback for games without a location and for multi-location installs.
+try {
+  const done = db.prepare("SELECT value FROM settings WHERE key='support_phone_location_migration_v1'").get();
+  const locs = db.prepare('SELECT id,support_phone FROM locations ORDER BY id').all();
+  if (!done && locs.length) {
+    const legacy = db.prepare("SELECT value FROM settings WHERE key='support_phone'").get();
+    if (locs.length === 1 && legacy && String(legacy.value||'').trim() && !String(locs[0].support_phone||'').trim()) {
+      db.prepare('UPDATE locations SET support_phone=? WHERE id=?').run(String(legacy.value).trim(), locs[0].id);
+    }
+    db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('support_phone_location_migration_v1','1')").run();
+  }
+} catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN theme TEXT"); } catch(e) {}
 // MiSSiONS mission ordering: the GM can drag-reorder missions in the settings
 // list; when the mode has no_randomize=1, selectMissions returns them in this
@@ -744,11 +759,12 @@ const normTheme = t => {
     return json.length > 20000 ? null : json;
   } catch (e) { return null; }
 };
-const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize=0,use_location_theme=0}) => {
+const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize=0,use_location_theme=0,support_phone}) => {
   const langs = normLangs(allowed_langs);
-  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs,theme,custom_langs,no_randomize,use_location_theme) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs,normTheme(theme),normCustomLangs(custom_langs),no_randomize?1:0,(use_location_theme===true||Number(use_location_theme)===1)?1:0).lastInsertRowid);
+  const phone = support_phone == null ? null : String(support_phone).trim() || null;
+  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs,theme,custom_langs,no_randomize,use_location_theme,support_phone) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs,normTheme(theme),normCustomLangs(custom_langs),no_randomize?1:0,(use_location_theme===true||Number(use_location_theme)===1)?1:0,phone).lastInsertRowid);
 };
-const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize,use_location_theme}) => {
+const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize,use_location_theme,support_phone}) => {
   // theme/custom_langs/no_randomize===undefined → keep the stored value (the
   // normal editor may not send them); explicit null/'' clears; a value replaces it.
   const cur = getLocation(id) || {};
@@ -756,7 +772,8 @@ const updateLocation = (id,{name,missions_count,min_location_missions,allow_phot
   const cl = custom_langs === undefined ? (cur.custom_langs || null) : normCustomLangs(custom_langs);
   const nr = no_randomize === undefined ? (cur.no_randomize?1:0) : (no_randomize?1:0);
   const useTheme = use_location_theme === undefined ? (cur.use_location_theme?1:0) : ((use_location_theme===true||Number(use_location_theme)===1)?1:0);
-  return db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=?,theme=?,custom_langs=?,no_randomize=?,use_location_theme=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),th,cl,nr,useTheme,id);
+  const phone = support_phone === undefined ? (cur.support_phone || null) : (support_phone == null ? null : String(support_phone).trim() || null);
+  return db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=?,theme=?,custom_langs=?,no_randomize=?,use_location_theme=?,support_phone=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),th,cl,nr,useTheme,phone,id);
 };
 const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(id);
 // Dedicated theme setters — the generic update mappers rewrite every column,
