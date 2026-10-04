@@ -8647,8 +8647,11 @@ function _tdEffectiveTheme(theme,page){
   return {...theme,vars:{...(theme.vars||{}),...((theme.pages||{})[page]?.vars||{})}};
 }
 function _tdScopeOptions(){
-  const pages=_td.side==='gm'?TD_GM_PAGES:TD_PLAYER_PAGES;
-  return ['all',...((_td.side==='gm'||_td.kind==='global')?pages:[])];
+  // Only the global colour editor can target global player pages or GM pages.
+  // Location and Rail Adventure themes are player-only and apply to all their
+  // supported player views together.
+  if(_td.kind!=='global') return ['all'];
+  return ['all',...(_td.side==='gm'?TD_GM_PAGES:TD_PLAYER_PAGES)];
 }
 function tdSelectPage(page){
   if(!_td) return;
@@ -8659,8 +8662,8 @@ function tdSelectPage(page){
   else _tdPost();
 }
 function _tdTargetTheme(isGm){
-  const theme=isGm?_gmTheme:_td.theme;
-  if((isGm||_td.kind==='global')&&_td.page&&_td.page!=='all'){
+  const theme=isGm&&_td.kind==='global'?_gmTheme:_td.theme;
+  if(_td.kind==='global'&&_td.page&&_td.page!=='all'){
     theme.pages=theme.pages||{};
     theme.pages[_td.page]=theme.pages[_td.page]||{vars:{}};
     theme.pages[_td.page].vars=theme.pages[_td.page].vars||{};
@@ -8696,17 +8699,19 @@ async function openThemeDesigner(kind, id){
     try { theme = row.theme ? JSON.parse(row.theme) : {}; } catch(e){ theme = {}; }
   }
   _td = { kind, id: kind==='global'?null:Number(id), name: row.name||'', side:'player', page:'all', theme: { vars: Object.assign({}, theme.vars||{}), pages:Object.assign({},theme.pages||{}), logo: theme.logo||null, stamp: theme.stamp||'', wordmark: theme.wordmark||'', borderWidth: (theme.borderWidth!=null?theme.borderWidth:null) } };
-  // Refresh the GM-side draft from the saved dashboard theme so the GM tab edits
-  // the latest persisted colours.
-  await loadGmTheme();
-  _gmTheme = { vars: Object.assign({}, _gmThemeSaved.vars||{}), pages:Object.assign({},_gmThemeSaved.pages||{}), stamp:_gmThemeSaved.stamp||'', wordmark:_gmThemeSaved.wordmark||'', logo:_gmThemeSaved.logo||null };
+  // Refresh the separate GM draft only in the global editor. Location and
+  // Rail Adventure editors must never load or write global dashboard colors.
+  if(kind==='global'){
+    await loadGmTheme();
+    _gmTheme = { vars: Object.assign({}, _gmThemeSaved.vars||{}), pages:Object.assign({},_gmThemeSaved.pages||{}), stamp:_gmThemeSaved.stamp||'', wordmark:_gmThemeSaved.wordmark||'', logo:_gmThemeSaved.logo||null };
+  }
   let el = document.getElementById('theme-designer');
   if(!el){ el = document.createElement('div'); el.id = 'theme-designer'; document.body.appendChild(el); }
   el.innerHTML = _tdHtml();
   el.classList.add('open');
 }
 function _tdHtml(){
-  const isGm = _td.side === 'gm';
+  const isGm = _td.kind === 'global' && _td.side === 'gm';
   const draft = isGm ? _gmTheme : _td.theme;
   const usePages = isGm || _td.kind==='global';
   const t = _tdEffectiveTheme(draft, usePages?_td.page:'all');
@@ -8775,11 +8780,11 @@ function _tdHtml(){
   return `
     <div class="td-top">
       <h3>🎨 ${esc(gmt('th-title')||'Farbschema')}${isGm?'':' — '+esc(_td.name)}</h3>
-      <div class="td-sides">
+      ${_td.kind==='global'?`<div class="td-sides">
         <button type="button" class="td-side ${!isGm?'active':''}" onclick="switchTdSide('player')">${esc(gmt('th-side-player')||'Spieler')}</button>
         <button type="button" class="td-side ${isGm?'active':''}" onclick="switchTdSide('gm')">${esc(gmt('th-side-gm')||'Dashboard')}</button>
-      </div>
-      ${(isGm||_td.kind==='global')?`<label class="td-page-control"><span>${esc(({de:'Seite',en:'Page',fr:'Page',it:'Pagina',es:'Página'})[gmLang]||'Seite')}</span><select class="select" id="td-page-select" onchange="tdSelectPage(this.value)">${_tdScopeOptions().map(page=>`<option value="${page}" ${page===_td.page?'selected':''}>${esc(_tdPageLabel(page))}</option>`).join('')}</select></label>`:''}
+      </div>`:''}
+      ${_td.kind==='global'?`<label class="td-page-control"><span>${esc(({de:'Seite',en:'Page',fr:'Page',it:'Pagina',es:'Página'})[gmLang]||'Seite')}</span><select class="select" id="td-page-select" onchange="tdSelectPage(this.value)">${_tdScopeOptions().map(page=>`<option value="${page}" ${page===_td.page?'selected':''}>${esc(_tdPageLabel(page))}</option>`).join('')}</select></label>`:''}
       <button class="btn btn-ghost btn-sm" onclick="tdResetAll()">${esc(gmt('th-reset-all')||'Standard wiederherstellen')}</button>
       <button class="btn btn-ghost btn-sm" onclick="tdClose()">${esc(gmt('cancel')||'Abbrechen')}</button>
       <button class="btn btn-primary btn-sm" onclick="tdSave()">${esc(gmt('save')||'Speichern')}</button>
@@ -8794,6 +8799,7 @@ function _tdHtml(){
 }
 // Switch the designer between the player theme and the GM dashboard theme.
 function switchTdSide(side){
+  if(!_td || (side==='gm' && _td.kind!=='global')) return;
   if(!_td || _td.side===side) return;
   _td.side = side;
   _td.page='all';
@@ -8941,7 +8947,8 @@ function tdRemoveLogo(){
   _tdBrandLive();
 }
 async function tdResetAll(){
-  const isPage=(_td.side==='gm'||_td.kind==='global')&&_td.page!=='all';
+  if(_td.side==='gm'&&_td.kind!=='global') return;
+  const isPage=_td.kind==='global'&&_td.page!=='all';
   const prompt=isPage?(({de:'Die Farben dieser Seite auf „Alle Seiten“ zurücksetzen?',en:'Reset this page to inherit from All pages?',fr:'Rétablir cette page selon Toutes les pages ?',it:'Ripristinare questa pagina da Tutte le pagine?',es:'¿Restablecer esta página para que herede de Todas las páginas?'})[gmLang]||'Reset this page to inherit from All pages?'):gmt('th-reset-confirm');
   if(!await uiConfirm(prompt, {ok:gmt('th-reset')})) return;
   if(isPage){
@@ -8956,6 +8963,10 @@ async function tdResetAll(){
 }
 async function tdSave(){
   if(_td.side==='gm'){
+    if(_td.kind!=='global'){
+      toast(gmt('th-gm-global-only')||'Dashboard colors are only available in the global editor.','error');
+      return;
+    }
     const theme = _gmTdTheme();
     const res = await API('/api/gm-theme', {method:'PUT', body:{ theme: theme ? JSON.stringify(theme) : null }});
     if(res && res.success){ _gmThemeSaved = { vars: Object.assign({}, _gmTheme.vars||{}), pages:Object.assign({},_gmTheme.pages||{}), stamp:_gmTheme.stamp||'', wordmark:_gmTheme.wordmark||'', logo:_gmTheme.logo||null }; applyGmTheme(_gmThemeSaved); applyGmBranding(_gmThemeSaved); toast(gmt('th-saved')||'Farbschema gespeichert!','success'); tdClose(); }
