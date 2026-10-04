@@ -320,7 +320,7 @@
       try { parent.postMessage({ type:'ar-theme-ready' }, location.origin); } catch(e){}
     }, { once:true });
   } else if (gameId){
-    fetch('/api/games/' + encodeURIComponent(gameId) + '/theme')
+    fetch('/api/games/' + encodeURIComponent(gameId) + '/theme', {cache:'no-store'})
       .then(r => r.ok ? r.json() : null)
       .then(j => { if (j && j.theme) apply(j.theme); })
       .catch(() => {});

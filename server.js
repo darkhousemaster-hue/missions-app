@@ -584,11 +584,16 @@ app.delete('/api/locations/:id', (req,res) => {
 app.get('/api/games/:id/theme', (req,res) => {
   const game = db.getGame(req.params.id);
   if(!game) return res.status(404).json({error:'Not found'});
-  let raw = null;
-  if (game.location_id) { const loc = db.getLocation(game.location_id); raw = loc && loc.theme; }
-  else { const cm = db.getGameCrMode(game.id); raw = cm && cm.theme; }
+  res.setHeader('Cache-Control', 'no-store');
+  let raw = null, useLocationTheme = false;
+  if (game.location_id) {
+    const loc = db.getLocation(game.location_id);
+    useLocationTheme = !!(loc && Number(loc.use_location_theme) === 1);
+    // An enabled location scheme fully replaces the global player scheme.
+    raw = useLocationTheme ? (loc && loc.theme) : null;
+  } else { const cm = db.getGameCrMode(game.id); raw = cm && cm.theme; }
   const parseTheme = value => { try { return value ? JSON.parse(value) : null; } catch(e) { return null; } };
-  const base = parseTheme(db.getGlobalPlayerTheme()) || {};
+  const base = useLocationTheme ? {} : (parseTheme(db.getGlobalPlayerTheme()) || {});
   const scoped = parseTheme(raw) || {};
   const pages = { ...(base.pages||{}), ...(scoped.pages||{}) };
   for(const key of Object.keys(pages)) pages[key] = { vars:{ ...((base.pages||{})[key]?.vars||{}), ...((scoped.pages||{})[key]?.vars||{}) } };
@@ -617,6 +622,7 @@ app.put('/api/global-player-theme', (req,res) => {
 // Global GM dashboard theme (app-wide). Read is public (gm.html applies it on
 // load); write requires GM auth.
 app.get('/api/gm-theme', (req,res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const t = db.getGmTheme();
   let theme = null; if(t){ try{ theme = JSON.parse(t); }catch{ theme = null; } }
   res.json({ theme });

@@ -33,6 +33,7 @@ db.exec(`
     allow_photo INTEGER DEFAULT 1,
     allow_video INTEGER DEFAULT 1,
     allow_indoor INTEGER DEFAULT 1,
+    use_location_theme INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER DEFAULT (unixepoch()*1000));
   CREATE TABLE IF NOT EXISTS missions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -361,6 +362,8 @@ try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,e
 // NULL = the built-in default look (what shipped before theming). Only the
 // player pages (join/play/cityrush) consume it; the GM dashboard is never themed.
 try { db.exec("ALTER TABLE locations ADD COLUMN theme TEXT"); } catch(e) {}
+// Defaults to global player colors; adding the column preserves every existing theme and location setting.
+try { db.exec("ALTER TABLE locations ADD COLUMN use_location_theme INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN theme TEXT"); } catch(e) {}
 // MiSSiONS mission ordering: the GM can drag-reorder missions in the settings
 // list; when the mode has no_randomize=1, selectMissions returns them in this
@@ -741,18 +744,19 @@ const normTheme = t => {
     return json.length > 20000 ? null : json;
   } catch (e) { return null; }
 };
-const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize=0}) => {
+const createLocation = ({name,missions_count=10,min_location_missions=3,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize=0,use_location_theme=0}) => {
   const langs = normLangs(allowed_langs);
-  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs,theme,custom_langs,no_randomize) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs,normTheme(theme),normCustomLangs(custom_langs),no_randomize?1:0).lastInsertRowid);
+  return num(db.prepare('INSERT INTO locations(name,timer_default,missions_count,min_location_missions,allow_photo,allow_video,allow_indoor,allowed_langs,theme,custom_langs,no_randomize,use_location_theme) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(name,60,missions_count,min_location_missions,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,langs,normTheme(theme),normCustomLangs(custom_langs),no_randomize?1:0,(use_location_theme===true||Number(use_location_theme)===1)?1:0).lastInsertRowid);
 };
-const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize}) => {
+const updateLocation = (id,{name,missions_count,min_location_missions,allow_photo=1,allow_video=1,allow_indoor=1,allowed_langs,theme,custom_langs,no_randomize,use_location_theme}) => {
   // theme/custom_langs/no_randomize===undefined → keep the stored value (the
   // normal editor may not send them); explicit null/'' clears; a value replaces it.
   const cur = getLocation(id) || {};
   const th = theme === undefined ? (cur.theme || null) : normTheme(theme);
   const cl = custom_langs === undefined ? (cur.custom_langs || null) : normCustomLangs(custom_langs);
   const nr = no_randomize === undefined ? (cur.no_randomize?1:0) : (no_randomize?1:0);
-  return db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=?,theme=?,custom_langs=?,no_randomize=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),th,cl,nr,id);
+  const useTheme = use_location_theme === undefined ? (cur.use_location_theme?1:0) : ((use_location_theme===true||Number(use_location_theme)===1)?1:0);
+  return db.prepare('UPDATE locations SET name=?,missions_count=?,min_location_missions=?,allow_photo=?,allow_video=?,allow_indoor=?,allowed_langs=?,theme=?,custom_langs=?,no_randomize=?,use_location_theme=? WHERE id=?').run(name,missions_count||10,min_location_missions||0,allow_photo?1:0,allow_video?1:0,allow_indoor?1:0,normLangs(allowed_langs),th,cl,nr,useTheme,id);
 };
 const deleteLocation = id => db.prepare('DELETE FROM locations WHERE id=?').run(id);
 // Dedicated theme setters — the generic update mappers rewrite every column,

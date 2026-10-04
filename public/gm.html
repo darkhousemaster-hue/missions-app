@@ -4925,7 +4925,7 @@ function showAddLocation(){
 }
 async function saveNewLocation(){
   const name=document.getElementById('loc-name').value.trim();if(!name){toast(gmt('name-required')||'Name fehlt','error');return;}
-  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0,allowed_langs:readLocLangs(),no_randomize:document.getElementById('loc-norand')?.checked?1:0,custom_langs:JSON.stringify(_locCustLangs)}});
+  const res=await API('/api/locations',{method:'POST',body:{password:settingsPassword,name,missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo').checked?1:0,allow_video:document.getElementById('loc-allow-video').checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor').checked?1:0,allowed_langs:readLocLangs(),no_randomize:document.getElementById('loc-norand')?.checked?1:0,use_location_theme:document.getElementById('loc-use-theme')?.checked?1:0,custom_langs:JSON.stringify(_locCustLangs)}});
   if(res.success){closeModal();loadLocationsSettings();loadMissionFilter();toast(gmt('created')||'Erstellt!','success');}
 }
 async function editLocation(id){
@@ -4964,7 +4964,7 @@ async function editLocation(id){
   locCustLangInit(l);
 }
 async function saveEditLocation(id){
-  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0,allowed_langs:readLocLangs(),no_randomize:document.getElementById('loc-norand')?.checked?1:0,custom_langs:JSON.stringify(_locCustLangs)}});
+  const res=await API(`/api/locations/${id}`,{method:'PUT',body:{password:settingsPassword,name:document.getElementById('loc-name').value.trim(),missions_count:+document.getElementById('loc-max').value,min_location_missions:+document.getElementById('loc-min-loc').value,allow_photo:document.getElementById('loc-allow-photo')?.checked?1:0,allow_video:document.getElementById('loc-allow-video')?.checked?1:0,allow_indoor:document.getElementById('loc-allow-indoor')?.checked?1:0,allowed_langs:readLocLangs(),no_randomize:document.getElementById('loc-norand')?.checked?1:0,use_location_theme:document.getElementById('loc-use-theme')?.checked?1:0,custom_langs:JSON.stringify(_locCustLangs)}});
   if(res.success){closeModal();loadLocationsSettings();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteLocation(id){
@@ -4983,6 +4983,11 @@ function _locExtraFields(l){
       <label class="label">${gmt('mode-norand-label')||'Reihenfolge'}</label>
       <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmt('loc-norand-hint')||'An: Missionen erscheinen in der angeordneten Reihenfolge (Missionsliste ziehen zum Sortieren). Aus: zufällig wie bisher.'}</p>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">${checkPillRow([{id:'loc-norand', label:'🔢 '+(gmt('mode-norand-pill')||'Nicht zufällig'), isOn:l&&l.no_randomize===1}])}</div>
+    </div>
+    <div class="field">
+      <label class="label">🎨 ${gmLang==='de'?'Standort-Farbschema verwenden':gmLang==='fr'?'Utiliser le thème du lieu':gmLang==='it'?'Usa il tema della sede':gmLang==='es'?'Usar el tema de la ubicación':'Use location theme'}</label>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .4rem 0;">${gmLang==='de'?'Wenn aktiviert, ersetzt das Farbschema dieses Standorts das globale Spieler-Farbschema.':gmLang==='fr'?'Activé, le thème de ce lieu remplace le thème global des joueurs.':gmLang==='it'?'Se attivo, il tema di questa sede sostituisce il tema globale dei giocatori.':gmLang==='es'?'Al activarlo, el tema de esta ubicación reemplaza el tema global de jugadores.':'When enabled, this location theme replaces the global player theme.'}</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">${checkPillRow([{id:'loc-use-theme', label:gmLang==='de'?'🎨 Standort-Farbschema':gmLang==='fr'?'🎨 Thème du lieu':gmLang==='it'?'🎨 Tema della sede':gmLang==='es'?'🎨 Tema de ubicación':'🎨 Location theme', isOn:Number(l&&l.use_location_theme)===1}])}</div>
     </div>
     <div class="field">
       <label class="label">🌐 ${gmt('cl-label')||'Eigene Sprachen'}</label>
@@ -8524,7 +8529,7 @@ function _setWordmark(wm, stamp, word, logo){
 function applyGmBranding(theme){ _setWordmark(document.querySelector('#screen-dashboard .dt-wordmark'), theme&&theme.stamp, theme&&theme.wordmark, theme&&theme.logo); }
 async function loadGmTheme(){
   try{
-    const j = await fetch('/api/gm-theme').then(r=>r.json());
+    const j = await fetch('/api/gm-theme', {cache:'no-store'}).then(r=>r.json());
     const th = (j && j.theme) || {};
     _gmThemeSaved = { vars: Object.assign({}, th.vars||{}), pages: Object.assign({},th.pages||{}), stamp: th.stamp||'', wordmark: th.wordmark||'', logo: th.logo||null };
   }catch(e){ _gmThemeSaved = { vars:{}, pages:{} }; }
