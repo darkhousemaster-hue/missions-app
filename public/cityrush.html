@@ -4156,15 +4156,57 @@ async function _crSendMedia(form){
   }
 }
 
+async function crNormalizeUploadImage(blob){
+  const originalName=String(blob&&blob.name||'');
+  const ext=(originalName.match(/\.[^.]+$/)||[''])[0].toLowerCase();
+  const supportedExt=new Set(['.jpg','.jpeg','.png','.gif','.webp']);
+  const supportedMime=new Set(['image/jpeg','image/png','image/gif','image/webp']);
+  const type=String(blob&&blob.type||'').toLowerCase();
+  if(supportedExt.has(ext)&&(!type||supportedMime.has(type))) return {blob,filename:originalName};
+  let bitmap=null, img=null, objectUrl=null;
+  try {
+    if(typeof createImageBitmap==='function'){
+      try { bitmap=await createImageBitmap(blob); } catch(e) {}
+    }
+    if(!bitmap){
+      objectUrl=URL.createObjectURL(blob);
+      img=new Image();
+      await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('unsupported image'));img.src=objectUrl;});
+    }
+    const width=bitmap?bitmap.width:img.naturalWidth, height=bitmap?bitmap.height:img.naturalHeight;
+    if(!width||!height) throw new Error('invalid image dimensions');
+    // Keep the GM dashboard on browser-safe image formats and cap huge camera
+    // originals to a still-sharp 4096 px long edge during format conversion.
+    const scale=Math.min(1,4096/Math.max(width,height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(width*scale)); canvas.height=Math.max(1,Math.round(height*scale));
+    const ctx=canvas.getContext('2d');
+    if(!ctx) throw new Error('canvas unavailable');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(bitmap||img,0,0,canvas.width,canvas.height);
+    const jpeg=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));
+    if(!jpeg) throw new Error('image conversion failed');
+    const base=originalName.replace(/\.[^.]+$/,'')||'upload';
+    return {blob:jpeg,filename:`${base}.jpg`};
+  } catch(e) { return null; }
+  finally { if(bitmap&&bitmap.close) bitmap.close(); if(objectUrl) URL.revokeObjectURL(objectUrl); }
+}
+
 async function crUploadBlob(blob){
   // Direct upload without camera (gallery selected)
   if(blob && blob.size > MAX_UPLOAD_BYTES){ crTooLargeToast(blob.size); return; }
   if(blob && blob.type.startsWith('video') && await crVideoTooLong(blob)) return;
   const isVid = blob.type.startsWith('video');
   const ext = isVid ? 'mp4' : 'jpg';
-  const filename = blob.name || `capture.${ext}`;
+  let uploadBlob=blob;
+  let filename = blob.name || `capture.${ext}`;
+  if(!isVid){
+    const normalized=await crNormalizeUploadImage(blob);
+    if(!normalized){ toast(lang==='de'?'Dieses Bildformat kann hier nicht angezeigt werden. Bitte ein JPEG-, PNG- oder WebP-Bild wählen.':'This image format cannot be shown here. Please choose a JPEG, PNG, or WebP image.','error'); return; }
+    uploadBlob=normalized.blob; filename=normalized.filename||filename;
+  }
   const form = new FormData();
-  form.append('media', blob, filename);
+  form.append('media', uploadBlob, filename);
   if(captureMode==='team' && captureTargetTeamId){
     form.append('teamId', teamId);
     form.append('targetTeamId', captureTargetTeamId);
