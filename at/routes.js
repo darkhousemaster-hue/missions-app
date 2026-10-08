@@ -440,6 +440,18 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
   });
 
   // ════════════════════════════ STUDIO ══════════════════════════════════════
+  // ── Files ──────────────────────────────────────────────────────────────────
+  // Every file a find owns: its own, plus what some kinds keep beside it (the
+  // iPhone copy of a 3D object, a pattern's target and what appears on it).
+  const assetFiles = a => { const m = (a && a.meta) || {}; return [a && a.path, m.usdz, m.mind, m.src].filter(Boolean); };
+  // What a part leaves behind: the files of its finds and its own recording.
+  // Its design files are not here; a copied design shares them, so they go
+  // through dropUnusedDesignFiles.
+  const nodeFiles = n => n ? [...at.listAssets(n.id).flatMap(assetFiles), n.story_media_path].filter(Boolean) : [];
+  function unlinkRel(rel) {
+    if (rel && !String(rel).includes('..')) { try { fs.unlinkSync(path.join(UPLOAD_DIR, rel)); } catch (e) {} }
+  }
+
   r.get('/api/at/trails', gm, (req, res) => res.json(at.listTrails()));
 
   r.post('/api/at/trails', gm, (req, res) => {
@@ -460,8 +472,16 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     res.json({ success: at.updateTrail(req.params.id, req.body || {}) });
   });
 
+  // Deleting a trail or a part used to delete only rows: every upload stayed on
+  // the disk for good. Now the files go with them, once the rows are gone.
   r.delete('/api/at/trails/:id', gm, (req, res) => {
-    at.deleteTrail(req.params.id); res.json({ success: true });
+    const nodes = at.listNodes(req.params.id);
+    const files = nodes.flatMap(nodeFiles);
+    const designs = new Set(nodes.flatMap(n => [...designFiles(n.design)]));
+    at.deleteTrail(req.params.id);
+    files.forEach(unlinkRel);
+    dropUnusedDesignFiles(designs);
+    res.json({ success: true });
   });
 
   r.post('/api/at/trails/:id/nodes', gm, (req, res) => {
@@ -476,8 +496,11 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
   });
 
   r.delete('/api/at/nodes/:id', gm, (req, res) => {
-    const gone = designFiles((at.getNode(req.params.id) || {}).design);
+    const node = at.getNode(req.params.id);
+    const files = nodeFiles(node);
+    const gone = designFiles((node || {}).design);
     at.deleteNode(req.params.id);
+    files.forEach(unlinkRel);
     dropUnusedDesignFiles(gone);
     res.json({ success: true });
   });
@@ -865,7 +888,6 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
     const k = sniff(f.path);
     return k && kinds.includes(k) && AR_EXT[k].test(String(f.originalname || '')) ? k : null;
   };
-  const unlinkRel = rel => { if (rel && !String(rel).includes('..')) { try { fs.unlinkSync(path.join(UPLOAD_DIR, rel)); } catch (e) {} } };
   const keepUpload = f => {
     if (!fs.existsSync(AT_UPLOAD_DIR)) fs.mkdirSync(AT_UPLOAD_DIR, { recursive: true });
     const dest = path.join(AT_UPLOAD_DIR, f.filename);
@@ -1047,11 +1069,8 @@ module.exports = function createAtRouter({ upload, UPLOAD_DIR, isGmAuthed }) {
 
   r.delete('/api/at/assets/:id', gm, (req, res) => {
     const a = at.getAsset(req.params.id);
-    const m = (a && a.meta) || {};
-    for (const rel of [a && a.path, m.usdz, m.mind, m.src]) {
-      if (rel && !String(rel).includes('..')) { try { fs.unlinkSync(path.join(UPLOAD_DIR, rel)); } catch (e) {} }
-    }
     at.deleteAsset(req.params.id);
+    assetFiles(a).forEach(unlinkRel);
     res.json({ success: true });
   });
 
