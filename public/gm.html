@@ -6857,17 +6857,15 @@ function crPreviewScanImage(e){
   crCompileMindTarget(f);
 }
 function _fileToImage(file){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=URL.createObjectURL(file); }); }
+// MindAR 1.2.5 ships as an ES module that imports its own chunks. Loaded as a
+// classic <script> it threw before setting window.MINDAR, so every compile
+// failed. It is imported instead; a failed import may be retried.
 let _mindCompilerP=null;
 function _loadMindCompiler(){
   if(window.MINDAR&&window.MINDAR.IMAGE&&window.MINDAR.IMAGE.Compiler) return Promise.resolve(window.MINDAR.IMAGE.Compiler);
-  if(_mindCompilerP) return _mindCompilerP;
-  _mindCompilerP=new Promise((res,rej)=>{
-    const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
-    s.onload=()=>{ const C=window.MINDAR&&window.MINDAR.IMAGE&&window.MINDAR.IMAGE.Compiler; C?res(C):rej(new Error('Compiler missing on MINDAR global')); };
-    s.onerror=()=>rej(new Error('Failed to load MindAR'));
-    document.head.appendChild(s);
-  });
+  if(!_mindCompilerP) _mindCompilerP=import('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js')
+    .then(mod=>{ if(!mod.Compiler) throw new Error('Compiler missing in MindAR module'); return mod.Compiler; })
+    .catch(e=>{ _mindCompilerP=null; throw e; });
   return _mindCompilerP;
 }
 async function crCompileMindTarget(file){

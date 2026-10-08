@@ -3264,7 +3264,7 @@ async function openScanOverlay(m, isSpecial){
     return;
   }
   if(isImage){
-    _scanStop=await startArLoop(video, '/uploads/'+m.scan_target, ()=>{ handleScanResult(m, null, true, !!isSpecial, setStatus, fragEl); }, setStatus);
+    _scanStop=await startArLoop(video, '/uploads/'+m.scan_target, ()=>handleScanResult(m, null, true, !!isSpecial, setStatus, fragEl), setStatus);
   } else {
     _scanStop=await startQrLoop(video, async (code)=> await handleScanResult(m, code, false, !!isSpecial, setStatus, fragEl), setStatus);
   }
@@ -3346,8 +3346,11 @@ function _finishScanMission(m, res, isSpecial){
 function _loadScanScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('load '+src)); document.head.appendChild(s); }); }
 let _jsqrP=null;
 function loadJsQR(){ if(window.jsQR) return Promise.resolve(window.jsQR); if(!_jsqrP) _jsqrP=_loadScanScript('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js').then(()=>window.jsQR); return _jsqrP; }
+// MindAR 1.2.5 is an ES module: as a classic <script> it threw before setting
+// window.MINDAR and the AR scan never started. Imported, it works; a failed
+// import may be retried.
 let _mindRtP=null;
-function loadMindARImage(){ if(window.MINDAR&&window.MINDAR.IMAGE) return Promise.resolve(window.MINDAR.IMAGE); if(!_mindRtP) _mindRtP=_loadScanScript('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js').then(()=>window.MINDAR.IMAGE); return _mindRtP; }
+function loadMindARImage(){ if(window.MINDAR&&window.MINDAR.IMAGE) return Promise.resolve(window.MINDAR.IMAGE); if(!_mindRtP) _mindRtP=import('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js').then(mod=>({ Controller:mod.Controller, Compiler:mod.Compiler, UI:mod.UI })).catch(e=>{ _mindRtP=null; throw e; }); return _mindRtP; }
 
 // QR loop: native BarcodeDetector if present, else jsQR on sampled frames.
 async function startQrLoop(video, onCode, setStatus){
@@ -3384,9 +3387,16 @@ async function startArLoop(video, mindUrl, onDetect, setStatus){
   let stopped=false, controller=null, fired=false;
   try{
     const IMAGE=await loadMindARImage();
+    // MindAR copies each frame at the video element's width and height
+    // attributes, which a plain <video> does not have; without them it only
+    // ever saw blank frames and never found the picture.
+    if(!video.videoWidth) await new Promise(r=>{ video.addEventListener('loadedmetadata', r, {once:true}); setTimeout(r, 4000); });
+    video.setAttribute('width', video.videoWidth||1280); video.setAttribute('height', video.videoHeight||720);
     controller=new IMAGE.Controller({
       inputWidth: video.videoWidth||1280, inputHeight: video.videoHeight||720,
-      onUpdate:(data)=>{ if(stopped||fired) return; if(data && data.type==='updateMatrix' && data.worldMatrix){ fired=true; onDetect(); } },
+      // One report per sighting. If the server could not take it (no signal),
+      // the next sighting a moment later tries again.
+      onUpdate:(data)=>{ if(stopped||fired) return; if(data && data.type==='updateMatrix' && data.worldMatrix){ fired=true; Promise.resolve(onDetect()).then(keep=>{ if(keep&&!stopped) setTimeout(()=>{ fired=false; }, 1500); }, ()=>{ if(!stopped) setTimeout(()=>{ fired=false; }, 1500); }); } },
     });
     await controller.addImageTargets(mindUrl);
     await controller.dummyRun(video);
