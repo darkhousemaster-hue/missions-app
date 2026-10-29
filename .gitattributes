@@ -1,0 +1,3 @@
+# Vendored third-party bundles stay byte-exact: they hold raw newlines inside
+# template strings, which an LF to CRLF conversion would change.
+public/js/vendor/** -text
