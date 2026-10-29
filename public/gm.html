@@ -9,13 +9,18 @@
 <style>
 body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 #app{display:flex;flex-direction:column;flex:1;overflow:hidden;}
-/* Landing — first sight every session. Body has overflow:hidden, so the
-   whole screen MUST fit in the viewport without scrolling. Spacing is
-   tuned for ~700px-tall viewports (small laptops) and only gets airier
-   from there via `clamp()` on the wordmark and the gap. Logo height
-   matches v1.2.0 (160px) per explicit request — the brand mark reads
-   at a glance. */
-#screen-landing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(.85rem,2.2vh,1.6rem);padding:clamp(.75rem,2vh,1.5rem) 1.5rem;overflow:hidden;}
+/* Landing: first sight every session. Spacing is tuned for ~700px-tall
+   viewports (small laptops) and only gets airier from there via `clamp()`
+   on the wordmark and the gap. Logo height matches v1.2.0 (160px) per
+   explicit request, so the brand mark reads at a glance. With more tiles
+   than fit, the landing scrolls itself (body is overflow:hidden). It
+   centres with auto margins, because justify-content:center would push the
+   overflow off both ends and cut off the settings button. The top padding
+   keeps the wide logo clear of the version + language bar (absolute, top
+   right) once overflowing tiles move it up to the top. */
+#screen-landing{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:clamp(.85rem,2.2vh,1.6rem);padding:3.5rem 1.5rem clamp(.75rem,2vh,1.5rem);overflow-y:auto;}
+#screen-landing>.landing-logo{margin-top:auto;}
+#screen-landing>.ll-settings-btn{margin-bottom:auto;}
 .landing-logo{text-align:center;display:flex;flex-direction:column;align-items:center;gap:.55rem;}
 .landing-logo img{height:clamp(110px,18vh,160px);width:auto;}
 .landing-logo h1{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,5.5vh,3.6rem);letter-spacing:.06em;line-height:.95;color:var(--red);margin:0;}
@@ -410,7 +415,9 @@ body.sel-cr #crms-toolbar{display:flex !important;}
 
   /* Landing: top-align with enough top padding to clear the absolutely-positioned
      version + language pills, so the centered logo can't collide with them. */
-  #screen-landing{padding:64px .9rem 1.5rem;justify-content:flex-start;}
+  #screen-landing{padding:64px .9rem 1.5rem;}
+  #screen-landing>.landing-logo{margin-top:0;}
+  #screen-landing>.ll-settings-btn{margin-bottom:0;}
   .landing-logo img{height:auto;max-height:84px;max-width:72%;}
   .landing-logo h1{font-size:clamp(2rem,11vw,3rem);}
 
@@ -559,7 +566,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       </div>
     </div>
   </div>
-  <button class="btn btn-ghost btn-sm" onclick="showSettingsGate()">⚙ <span id="ll-settings">Einstellungen</span></button>
+  <button class="btn btn-ghost btn-sm ll-settings-btn" onclick="showSettingsGate()">⚙ <span id="ll-settings">Einstellungen</span></button>
 </div>
 
 <!-- GAME SELECT -->
