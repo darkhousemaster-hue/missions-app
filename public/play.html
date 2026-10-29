@@ -1308,6 +1308,10 @@ async function openSelfieCamera() {
   await startStream();
 }
 
+// Photos ask the camera for a sharp stream. Given no size, browsers hand out
+// 640×480 frames, so a photo never got near its 2000 px cap. 4:3 like a phone
+// photo; `ideal` never fails, a camera that can't do it gives its nearest size.
+const PHOTO_RES = { width: { ideal: 2560 }, height: { ideal: 1920 } };
 async function startStream() {
   if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
   const facingMode = useFront ? 'user' : 'environment';
@@ -1328,7 +1332,7 @@ async function startStream() {
     }
   } else {
     try {
-      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, ...PHOTO_RES } });
     } catch(e) {
       toast(t('cam_denied')||'Kamerazugriff verweigert', 'error');
       closeCamera();
@@ -1388,13 +1392,13 @@ async function doCapture() {
       }
     }
   } else {
-    // Photo — cap the canvas to a sane max edge so low-RAM phones don't run
-    // out of memory: a 12MP frame is a ~48MB canvas buffer before the JPEG
-    // encode even starts, which is enough to OOM a budget device.
+    // Photo: 2000 px on the long edge, sharp on a PC screen. The cap also keeps
+    // low-RAM phones from running out of memory: a 12MP frame is a ~48MB canvas
+    // buffer before the JPEG encode even starts, enough to OOM a budget device.
     const video  = document.getElementById('cam-preview');
     const sw = video.videoWidth  || 1280;
     const sh = video.videoHeight || 720;
-    const MAX = 1600;
+    const MAX = 2000;
     const scale = Math.min(1, MAX / Math.max(sw, sh));
     const cw = Math.max(1, Math.round(sw * scale));
     const ch = Math.max(1, Math.round(sh * scale));

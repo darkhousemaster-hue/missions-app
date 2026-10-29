@@ -1534,12 +1534,16 @@ let _selfieStream = null;
 let _selfieBlob   = null;
 let _selfieFront  = true;
 let _selfieDone   = false;
+// Photos ask the camera for a sharp stream. Given no size, browsers hand out
+// 640×480 frames, so a photo never got near its 2000 px cap. 4:3 like a phone
+// photo; `ideal` never fails, a camera that can't do it gives its nearest size.
+const PHOTO_RES = { width: { ideal: 2560 }, height: { ideal: 1920 } };
 
 async function _startSelfieCamera(){
   try {
     if(_selfieStream) _selfieStream.getTracks().forEach(t => t.stop());
     _selfieStream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode: _selfieFront ? 'user' : 'environment'}, audio:false,
+      video:{facingMode: _selfieFront ? 'user' : 'environment', ...PHOTO_RES}, audio:false,
     });
     document.getElementById('cr-selfie-video').srcObject = _selfieStream;
   } catch(e){
@@ -1549,10 +1553,10 @@ async function _startSelfieCamera(){
 function crSelfieFlip(){ _selfieFront = !_selfieFront; _startSelfieCamera(); }
 function crSelfieCapture(){
   const v = document.getElementById('cr-selfie-video');
-  // Cap the canvas to a 1600px edge so low-RAM phones don't run out of memory
-  // allocating a full-resolution bitmap of the camera frame.
+  // 2000 px on the long edge, like mission photos. The cap also keeps low-RAM
+  // phones from running out of memory on a full-size frame.
   const sw = v.videoWidth || 720, sh = v.videoHeight || 720;
-  const scale = Math.min(1, 1600/Math.max(sw, sh));
+  const scale = Math.min(1, 2000/Math.max(sw, sh));
   const cw = Math.max(1, Math.round(sw*scale)), ch = Math.max(1, Math.round(sh*scale));
   const canvas = document.createElement('canvas');
   canvas.width  = cw;
@@ -4013,7 +4017,7 @@ async function startCrStream(){
         toast(t('no_mic')||'Mikrofon nicht verfügbar – kein Ton','warning');
       }
     } else {
-      cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode}, audio:false});
+      cameraStream = await navigator.mediaDevices.getUserMedia({video:{facingMode, ...PHOTO_RES}, audio:false});
     }
     document.getElementById('cr-cam-preview').srcObject = cameraStream;
     const pv = document.getElementById('cr-cam-preview');
@@ -4067,11 +4071,11 @@ function crCapture(){
     } catch(e){ toast((t('capture_failed')||'Aufnahme nicht möglich:')+' '+e.message,'error'); }
     return;
   }
-  // Photo path — cap the canvas to a 1600px edge so low-RAM phones don't run
-  // out of memory allocating a full-resolution bitmap of the camera frame.
+  // Photo path: 2000 px on the long edge, sharp on a PC screen. The cap also
+  // keeps low-RAM phones from running out of memory on a full-size frame.
   const video = document.getElementById('cr-cam-preview');
   const sw = video.videoWidth||1280, sh = video.videoHeight||720;
-  const scale = Math.min(1, 1600/Math.max(sw, sh));
+  const scale = Math.min(1, 2000/Math.max(sw, sh));
   const cw = Math.max(1, Math.round(sw*scale)), ch = Math.max(1, Math.round(sh*scale));
   const canvas = document.createElement('canvas');
   canvas.width = cw; canvas.height = ch;

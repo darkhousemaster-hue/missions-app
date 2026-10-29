@@ -548,6 +548,10 @@ _applyJoinTranslations();
 // new team id. If capture is skipped, team creation still succeeds.
 let selfieStream = null;
 let selfieFacing = 'user';
+// Ask the camera for a sharp stream. Given no size, browsers hand out 640×480
+// frames, so the selfie never got near its 2000 px cap. `ideal` never fails, a
+// camera that can't do it gives its nearest size.
+const SELFIE_RES = { width: { ideal: 2560 }, height: { ideal: 1920 } };
 let selfieBlob   = null;
 let selfieObjectUrl = null;
 
@@ -559,7 +563,7 @@ async function openSelfieCamera() {
   document.getElementById('selfie-video').style.display = 'block';
   document.getElementById('selfie-shot').style.display = 'none';
   try {
-    selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: selfieFacing }, audio: false });
+    selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: selfieFacing, ...SELFIE_RES }, audio: false });
     document.getElementById('selfie-video').srcObject = selfieStream;
   } catch (e) {
     uiAlert(e.name === 'NotAllowedError' ? jt('cam_denied') : jt('cam_unavailable'));
@@ -583,7 +587,7 @@ async function flipSelfieCamera() {
   selfieFacing = selfieFacing === 'user' ? 'environment' : 'user';
   if (selfieStream) selfieStream.getTracks().forEach(t => t.stop());
   try {
-    selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: selfieFacing }, audio: false });
+    selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: selfieFacing, ...SELFIE_RES }, audio: false });
     document.getElementById('selfie-video').srcObject = selfieStream;
   } catch (e) { /* ignore */ }
 }
@@ -593,7 +597,7 @@ function takeSelfie() {
   const canvas = document.createElement('canvas');
   // Square crop centered on the video so the selfie matches the round preview.
   const side = Math.min(v.videoWidth, v.videoHeight);
-  const out  = Math.min(side, 1600);   // cap output so low-RAM phones don't OOM
+  const out  = Math.min(side, 2000);   // cap output so low-RAM phones don't OOM
   canvas.width = out; canvas.height = out;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(v, (v.videoWidth - side)/2, (v.videoHeight - side)/2, side, side, 0, 0, out, out);
