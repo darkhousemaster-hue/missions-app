@@ -418,6 +418,10 @@ try { db.exec("ALTER TABLE modes ADD COLUMN tile_title_color TEXT"); } catch(e) 
 try { db.exec("ALTER TABLE modes ADD COLUMN look TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN meeting_required INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE games ADD COLUMN meeting_point TEXT"); } catch(e) {}
+// A mission's own tile picture for the Christmas look (path under uploads/;
+// NULL = the standard one). Not the task image, which is a separate reference
+// picture players open with "Bild ansehen".
+try { db.exec("ALTER TABLE missions ADD COLUMN tile_image TEXT"); } catch(e) {}
 // One-time backfill: before 'paused' existed, pausing left status='active' with
 // the clock stopped. Those games are indistinguishable from running ones in the
 // game list (they showed as "waiting") and the idle sweep would never see them.
@@ -478,9 +482,15 @@ try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_en TEXT DEFAULT
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_fr TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_it TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_es TEXT DEFAULT ''"); } catch(e) {}
-// The mode a rule is for (NULL = every mode of its game): a MiSSiONS mode for
-// game_kind 'missions', a Rail Adventure route for 'cityrush'.
+// The modes a rule is for, as a JSON array of ids (NULL = every mode of its
+// game): MiSSiONS modes for game_kind 'missions', Rail Adventure routes for
+// 'cityrush'. 2.7.0 had a single mode_id; it is moved over once and cleared.
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN mode_id INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN mode_ids TEXT"); } catch(e) {}
+try { db.exec("UPDATE automated_messages SET mode_ids='['||mode_id||']', mode_id=NULL WHERE mode_id IS NOT NULL"); } catch(e) {}
+// The GM's own order of the rules in Settings (drag to sort). 0 everywhere
+// keeps the old order (latest trigger first) until someone drags.
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
 // Per-language copy of a stored chat message (JSON {de,en,fr,it,es}), set only
 // for automated broadcasts. NULL for normal/DM messages. On reload the player
 // picks its own language from here; the GM dashboard keeps using `content`.
@@ -849,6 +859,7 @@ const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id
 // Partial setter — task image is uploaded separately, so don't round-trip the
 // whole mission (updateMission rewrites every field). Pass null to remove it.
 const setMissionTaskImage = (id, p) => db.prepare('UPDATE missions SET task_image=? WHERE id=?').run(p||null, id);
+const setMissionTileImage = (id, p) => db.prepare('UPDATE missions SET tile_image=? WHERE id=?').run(p||null, id);
 
 // ── Games ─────────────────────────────────────────────────────────────────────
 const getGame         = id => db.prepare('SELECT * FROM games WHERE id=?').get(id);
@@ -1018,7 +1029,7 @@ const getTeamMissions = teamId => db.prepare(`
   SELECT tm.*, m.name as mission_name, m.name_de, m.name_en, m.name_fr, m.name_it, m.name_es,
     m.description_de, m.description_en, m.description_fr, m.description_it, m.description_es,
     m.task_de, m.task_en, m.task_fr, m.task_it, m.task_es,
-    m.media_type, m.points, m.is_indoor, m.task_image, m.custom_i18n,
+    m.media_type, m.points, m.is_indoor, m.task_image, m.tile_image, m.custom_i18n,
     m.multi_enabled, m.multi_mode, m.multi_count
   FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
   WHERE tm.team_id=? ORDER BY tm.id`).all(teamId);
@@ -1138,6 +1149,15 @@ const getStatsSummary = (fromMs, toMs) => {
 // game matches game_kind (+ location for missions), the text is auto-broadcast.
 const _amKind = k => (k==='cityrush' ? 'cityrush' : 'missions');
 const _amLoc  = l => (l!=null && l!=='' ? Number(l) : null);
+// A rule's modes as stored: sorted unique ids in JSON, NULL for "all modes".
+// Takes an array, a JSON or comma string, or one id.
+const _amModeList = v => {
+  let a = v;
+  if(typeof a === 'string'){ try { a = JSON.parse(a); } catch(e) { a = a.split(','); } }
+  if(!Array.isArray(a)) a = (a == null || a === '') ? [] : [a];
+  const ids = [...new Set(a.map(Number).filter(n => Number.isInteger(n) && n > 0))].sort((x, y) => x - y);
+  return ids.length ? JSON.stringify(ids) : null;
+};
 const _AM_LANGS = ['de','en','fr','it','es'];
 // Pick the base/legacy `message` from the five language fields: prefer German,
 // then any non-empty language. Keeps the NOT NULL `message` column meaningful
@@ -1146,7 +1166,12 @@ const _amBase = langs => {
   for(const l of _AM_LANGS){ const v=String(langs['message_'+l]||'').trim(); if(v) return v; }
   return '';
 };
-const getAutoMessages   = () => db.prepare('SELECT * FROM automated_messages ORDER BY trigger_seconds DESC, id').all();
+const getAutoMessages   = () => db.prepare('SELECT * FROM automated_messages ORDER BY order_index, trigger_seconds DESC, id').all();
+// Writes the order the GM dragged the rules into.
+const reorderAutoMessages = (orderedIds=[]) => {
+  const stmt = db.prepare('UPDATE automated_messages SET order_index=? WHERE id=?');
+  runTx(() => orderedIds.forEach((id, i) => stmt.run(i + 1, Number(id))));
+};
 const createAutoMessage = (d={}) => {
   // Accept either the new per-language fields or a single legacy `message`
   // (mapped onto German) so older callers keep working.
@@ -1154,8 +1179,11 @@ const createAutoMessage = (d={}) => {
   _AM_LANGS.forEach(l => { langs['message_'+l] = String(d['message_'+l] ?? '').trim(); });
   if(!langs.message_de && d.message) langs.message_de = String(d.message).trim();
   const base = _amBase(langs);
-  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,mode_id,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
-    .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind), _amLoc(d.location_id), _amLoc(d.mode_id),
+  // New rules go to the end of the GM's order.
+  const next = (Number(db.prepare('SELECT MAX(order_index) mx FROM automated_messages').get()?.mx) || 0) + 1;
+  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,mode_ids,order_index,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')
+    .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind), _amLoc(d.location_id),
+      _amModeList(d.mode_ids!==undefined ? d.mode_ids : d.mode_id), next,
       base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es).lastInsertRowid);
 };
 const updateAutoMessage = (id,d={}) => {
@@ -1170,14 +1198,16 @@ const updateAutoMessage = (id,d={}) => {
   if(d.message!=null && d.message_de==null) langs.message_de = String(d.message); // legacy single-field update
   const base = _amBase(langs) || (d.message!=null?String(d.message):cur.message) || '';
   const kind = d.game_kind!=null?_amKind(d.game_kind):cur.game_kind;
-  // A mode id belongs to one game's list, so switching the game drops it.
-  const modeId = d.mode_id!==undefined ? _amLoc(d.mode_id) : (kind!==cur.game_kind ? null : cur.mode_id);
-  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,mode_id=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
+  // Mode ids belong to one game's list, so switching the game drops them.
+  const modeIds = d.mode_ids!==undefined ? _amModeList(d.mode_ids)
+                : d.mode_id!==undefined ? _amModeList(d.mode_id)
+                : (kind!==cur.game_kind ? null : cur.mode_ids);
+  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,mode_id=NULL,mode_ids=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
     d.enabled!=null?(d.enabled?1:0):cur.enabled,
     d.trigger_seconds!=null?Math.max(0,parseInt(d.trigger_seconds)||0):cur.trigger_seconds,
     kind,
     d.location_id!==undefined?_amLoc(d.location_id):cur.location_id,
-    modeId,
+    modeIds,
     base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es, id);
 };
 const deleteAutoMessage = id => db.prepare('DELETE FROM automated_messages WHERE id=?').run(id);
@@ -1638,14 +1668,14 @@ module.exports = {
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,setModeLook,setGameMeetingPoint,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,getLocationGmTheme,setLocationGmTheme,setCrModeTheme,
-  getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
+  getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,setMissionTileImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,updateTeamPassword,createTeamJoinSession,hasTeamJoinSession,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
   submitMission,mediaListOf,addMissionDraftMedia,removeMissionDraftMedia,submitMissionDraft,acceptSubmission,rejectSubmission,
   setSubmissionRotation,setCrSubmissionRotation,setTeamSelfieRotation,
   saveMessage,getMessages,
-  getAutoMessages,createAutoMessage,updateAutoMessage,deleteAutoMessage,
+  getAutoMessages,createAutoMessage,updateAutoMessage,deleteAutoMessage,reorderAutoMessages,
   recordGameStat,bumpGameStatTeams,markGameStatStarted,markGameStatEnded,dropGameStat,getStatsSummary,
   getCrModes,getCrMode,createCrMode,updateCrMode,deleteCrMode,reorderCrModes,
   getCrMissions,getCrMission,createCrMission,updateCrMission,deleteCrMission,reorderCrMissions,parseAnswerList,

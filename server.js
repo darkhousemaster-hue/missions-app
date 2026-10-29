@@ -690,6 +690,12 @@ app.post('/api/automated-messages', (req,res) => {
   // skips messages whose text is still blank.
   res.json({id: db.createAutoMessage(req.body||{}), success:true});
 });
+// Before '/:id', or Express would read "reorder" as an id. Body: { order: [id, ...] }.
+app.put('/api/automated-messages/reorder', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  db.reorderAutoMessages(Array.isArray(req.body.order) ? req.body.order : []);
+  res.json({success:true});
+});
 app.put('/api/automated-messages/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   db.updateAutoMessage(Number(req.params.id), req.body); res.json({success:true});
@@ -710,7 +716,14 @@ app.get('/api/missions', (req,res) => {
   const {mode_id, location_id} = req.query;
   const mId = mode_id ? Number(mode_id) : undefined;
   const lId = location_id === 'null' ? null : location_id ? Number(location_id) : undefined;
-  res.json(db.getMissions(mId, lId));
+  const list = db.getMissions(mId, lId);
+  // Christmas modes: the standard tile picture a mission without its own shows,
+  // so the mission editor can show it too.
+  for(const mode of db.getModes().filter(x => x.look === 'christmas')){
+    const std = xmasStdTiles(mode.id);
+    list.forEach(m => { if(m.mode_id === mode.id && std.has(m.id)) m.std_tile = xmasTileUrl(std.get(m.id)); });
+  }
+  res.json(list);
 });
 app.post('/api/missions', (req,res) => {
   const {password,...d}=req.body;
@@ -1003,13 +1016,12 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   const mode = game ? db.getMode(game.mode_id) : null;
   const look = mode && mode.look === 'christmas' ? 'christmas' : null;
   let missions = db.getTeamMissions(req.params.teamId);
-  // Christmas look: a standard mission without its own picture shows the
-  // standard one, so the tiles are never empty for them.
-  if(look) missions = missions.map(m => {
-    if(m.task_image) return m;
-    const s = xmasMatch(m);
-    return s ? {...m, std_image: `/assets/christmas/missions/${encodeURIComponent(path.basename(s.image))}`} : m;
-  });
+  // Christmas look: a mission without its own tile picture shows a standard
+  // one (see xmasStdTiles), so no tile is empty.
+  if(look){
+    const std = xmasStdTiles(game.mode_id);
+    missions = missions.map(m => (m.tile_image || !std.has(m.mission_id)) ? m : {...m, std_tile: xmasTileUrl(std.get(m.mission_id))});
+  }
   res.json({...publicTeam, missions, freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null,
     look, meeting_point: (game && game.meeting_point) || null});
 });
@@ -1685,19 +1697,92 @@ function xmasMatch(m){
   const keys = [m.name_de, m.mission_name, m.name, m.name_en, m.name_fr, m.name_it, m.name_es].map(xmasKey).filter(Boolean);
   return xmasSet().find(s => keys.includes(xmasKey(s.title))) || null;
 }
-// Gives a mission its own copy of the standard picture, like an upload, so
-// replacing it in the mission editor works as usual and never touches the
-// originals.
+const xmasTileUrl = f => `/assets/christmas/missions/${encodeURIComponent(path.basename(f))}`;
+// Standard tile pictures for a mode's missions without one of their own: the
+// poster picture of the same title first, then, so no tile is empty, the
+// poster pictures nobody uses yet in the missions' order (round again when
+// there are more missions than pictures). Per mode, so a mission shows the
+// same picture in every game. Map: mission id -> picture file.
+function xmasStdTiles(modeId){
+  const set = xmasSet(), out = new Map();
+  if(!set.length) return out;
+  const used = new Set(), rest = [];
+  for(const m of db.getMissions(modeId)){            // in the mode's order
+    const s = xmasMatch(m);
+    if(s) used.add(s.image);
+    if(m.tile_image) continue;
+    if(s) out.set(m.id, s.image); else rest.push(m);
+  }
+  const free = set.map(s => s.image).filter(f => !used.has(f));
+  const pool = free.length ? free : set.map(s => s.image);
+  rest.forEach((m, i) => out.set(m.id, pool[i % pool.length]));
+  return out;
+}
+// Gives a mission its own copy of the standard picture as its tile picture,
+// like an upload, so replacing it in the mission editor works as usual and
+// never touches the originals.
 function giveXmasPicture(s, missionId){
-  const destDir = path.join(UPLOAD_DIR, 'task_images');
+  const destDir = path.join(UPLOAD_DIR, 'tile_images');
   const file = `${uuidv4()}${path.extname(s.image) || '.webp'}`;
   try {
     if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive:true});
     fs.copyFileSync(path.join(XMAS_DIR, path.basename(s.image)), path.join(destDir, file));
-    db.setMissionTaskImage(missionId, `task_images/${file}`);
+    db.setMissionTileImage(missionId, `tile_images/${file}`);
     return true;
   } catch(e) { console.warn('[christmas-set] picture not copied:', s.image, e.message); return false; }
 }
+// 2.6.38 and 2.7.0 put the standard pictures into the task image, which is a
+// different thing (the reference picture behind "Bild ansehen"). Moved once to
+// the tile picture: a task image that is byte for byte one of the standard
+// pictures can only have been put there by the Christmas set.
+(function moveXmasTaskImages(){
+  if(db.getSetting('xmas_tiles_moved') === '1') return;
+  try {
+    const std = new Map();                           // file size -> hashes
+    for(const s of xmasSet()){
+      const b = fs.readFileSync(path.join(XMAS_DIR, path.basename(s.image)));
+      if(!std.has(b.length)) std.set(b.length, new Set());
+      std.get(b.length).add(crypto.createHash('sha256').update(b).digest('hex'));
+    }
+    let moved = 0;
+    for(const m of db.getMissions()){
+      if(!m.task_image || m.tile_image || String(m.task_image).includes('..')) continue;
+      const f = path.join(UPLOAD_DIR, m.task_image);
+      let size; try { size = fs.statSync(f).size; } catch(e) { continue; }
+      const hashes = std.get(size); if(!hashes) continue;
+      if(hashes.has(crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex'))){
+        db.setMissionTileImage(m.id, m.task_image); db.setMissionTaskImage(m.id, null); moved++;
+      }
+    }
+    db.setSetting('xmas_tiles_moved', '1');
+    if(moved) console.log(`[christmas] moved ${moved} standard pictures from task image to tile picture`);
+  } catch(e) { console.warn('[christmas] moving tile pictures failed:', e.message); }
+})();
+// A mission's own tile picture, separate from its task image. POST with
+// clear=1 and no file goes back to the standard picture.
+app.post('/api/missions/:id/tile-image', upload.single('image'), (req,res) => {
+  const drop = () => { if(req.file) { try { fs.unlinkSync(req.file.path); } catch(e) {} } };
+  if(!isGmAuthed(req)){ drop(); return res.status(401).json({error:'Unauthorized'}); }
+  const m = db.getMission(req.params.id);
+  if(!m){ drop(); return res.status(404).json({error:'Not found'}); }
+  let rel = null;
+  if(req.file){
+    if(!TILE_TYPES.has(String(req.file.mimetype||'').toLowerCase())){ drop(); return res.status(400).json({error:'Unsupported image type'}); }
+    const destDir = path.join(UPLOAD_DIR, 'tile_images');
+    if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive:true});
+    const dest = path.join(destDir, req.file.filename);
+    try { fs.renameSync(req.file.path, dest); } catch(e) { fs.copyFileSync(req.file.path, dest); fs.unlinkSync(req.file.path); }
+    rel = `tile_images/${req.file.filename}`;
+  } else if(req.body.clear !== '1') return res.status(400).json({error:'No file'});
+  // Remove the old picture unless another mission still shows it (a copied mission).
+  const old = m.tile_image;
+  if(old && !String(old).includes('..') && !db.getMissions().some(x => x.id !== m.id && (x.tile_image === old || x.task_image === old))){
+    try { fs.unlinkSync(path.join(UPLOAD_DIR, old)); } catch(e) {}
+  }
+  db.setMissionTileImage(m.id, rel);
+  io.emit('settings_updated', {type:'missions'});
+  res.json({success:true, tile_image: rel});
+});
 // Adds the missing standard missions to a mode and gives the ones it already
 // has their picture when they have none yet, so a second press changes nothing.
 app.post('/api/modes/:id/christmas-set', (req,res) => {
@@ -1710,7 +1795,7 @@ app.post('/api/modes/:id/christmas-set', (req,res) => {
   let added = 0, pictured = 0;
   for(const s of set){
     const same = existing.find(m => xmasMatch(m) === s);
-    if(same){ if(!same.task_image && giveXmasPicture(s, same.id)) pictured++; continue; }
+    if(same){ if(!same.tile_image && giveXmasPicture(s, same.id)) pictured++; continue; }
     const id = db.createMission({mode_id: mode.id, name: s.title, name_de: s.title, task_de: s.text,
       media_type: s.media_type === 'video' ? 'video' : 'photo', points: s.points || 1});
     giveXmasPicture(s, id);
@@ -2458,9 +2543,11 @@ function _fireAutoMessages(game, remaining, autoMsgs){
     if(!_AM_LANGS.some(l => langMsgs[l])) continue;   // skip blank (unfinished) rows
     if(m.game_kind !== kind) continue;
     if(kind==='missions' && m.location_id!=null && Number(m.location_id)!==Number(game.location_id)) continue;
-    if(m.mode_id!=null){
+    let ids = [];
+    if(m.mode_ids){ try { ids = JSON.parse(m.mode_ids); } catch(e) { ids = []; } }
+    if(Array.isArray(ids) && ids.length){
       if(modeId===undefined) modeId = kind==='cityrush' ? ((db.getGameCrMode(game.id)||{}).id ?? null) : game.mode_id;
-      if(Number(m.mode_id)!==Number(modeId)) continue;
+      if(!ids.map(Number).includes(Number(modeId))) continue;
     }
     if(remaining <= m.trigger_seconds){ sent.add(m.id); _sendAutoBroadcast(game.id, langMsgs); }
   }
