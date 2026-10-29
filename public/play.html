@@ -329,7 +329,7 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 .go-meet-text{font:600 1.15rem/1.4 var(--body);color:var(--text);margin-bottom:1rem;overflow-wrap:anywhere;white-space:pre-line;}
 .go-meet-text:empty{display:none;}
 .go-meet-btns{display:flex;flex-direction:column;gap:.6rem;}
-.go-meet-btns .btn{width:100%;justify-content:center;text-decoration:none;}
+.go-meet-btns .btn{width:100%;justify-content:center;text-align:center;white-space:normal;text-decoration:none;}
 
 /* ── Christmas look: only on body.look-xmas, which only modes set to it get.
    Colours stay the location's: the scene is painted in its text colour, the
@@ -372,7 +372,7 @@ body.look-xmas .p-mission-card.xcard{display:flex;flex-direction:column;align-it
 .xcard__head.green,.md-xhead.green{background:var(--x-green);}
 .xstar{position:absolute;left:-8px;top:-11px;width:42px;height:42px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));}
 .xstar text{font:700 17px var(--x-banner);fill:#1b1610;}
-.xcard__img{position:relative;margin:6px 6px 0;border-radius:9px;aspect-ratio:1.1;background:var(--surface2) center/cover no-repeat;
+.xcard__img{position:relative;margin:6px 6px 0;border-radius:9px;aspect-ratio:1.1;min-height:120px;background:var(--surface2) center/cover no-repeat;
   display:flex;align-items:center;justify-content:center;color:var(--text);}
 .xcard__img>.icon{width:34px;height:34px;opacity:.3;}
 .xcard__state{position:absolute;right:6px;top:6px;padding:5px 8px;border-radius:999px;font:700 10.5px/1 var(--body);letter-spacing:.04em;text-transform:uppercase;}
@@ -391,8 +391,10 @@ body.look-xmas .md-close{z-index:2;color:#fff;background:rgba(0,0,0,.25);border-
 .md-xhead{position:relative;display:flex;align-items:center;min-height:56px;margin:0 -22px 14px;padding:10px 48px 10px 56px;border-radius:16px 16px 0 0;
   color:#fff;font:700 21px/1.1 var(--x-banner);}
 .md-xhead .xstar{left:10px;top:8px;width:40px;height:40px;}
-.md-ximg{width:100%;aspect-ratio:1.15;border-radius:12px;background:var(--surface2) center/cover no-repeat;margin:2px 0 4px;cursor:zoom-in;}
-body.look-xmas .md-label:has(+ .md-desc:empty),body.look-xmas .md-desc:empty{display:none;}
+.md-ximg{width:100%;aspect-ratio:1.15;min-height:200px;border-radius:12px;background:var(--surface2) center/cover no-repeat;margin:2px 0 4px;cursor:zoom-in;}
+/* two rules: a browser without :has() drops the whole rule it appears in */
+body.look-xmas .md-desc:empty{display:none;}
+body.look-xmas .md-label:has(+ .md-desc:empty){display:none;}
 /* snow: four blurred, seamless layers drifting at different depths; above the
    screen, under every dialog, never in the way of a tap */
 .xsnow{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60;}
@@ -619,7 +621,7 @@ const T = {
   de: {
     times_up:'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.',
     description:'Beschreibung', task:'Aufgabe',
-    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!', error_generic:'Etwas ist schiefgelaufen', view_image:'Bild ansehen', rejected:'✗ Abgelehnt', meet_title:'Treffpunkt', meet_google:'In Google Maps öffnen', meet_apple:'In Apple Karten öffnen', meet_open:'Karte öffnen',
+    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!', error_generic:'Etwas ist schiefgelaufen', view_image:'Bild ansehen', rejected:'✗ Abgelehnt', meet_title:'Treffpunkt', meet_google:'Google Maps', meet_apple:'Apple Maps', meet_open:'Karte öffnen',
     rules:'REGELN', rules_back:'← Zurück', send:'Senden', chat_ph:'Nachricht an Gamemaster…',
     pending:'⏳ Wird geprüft', accepted:'✓ Angenommen',
     take_photo:'Foto aufnehmen', take_video:'Video aufnehmen',
@@ -643,7 +645,7 @@ const T = {
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
     description:'Description', task:'Task',
-    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!', error_generic:'Something went wrong', view_image:'View image', rejected:'✗ Rejected', meet_title:'Meeting point', meet_google:'Open in Google Maps', meet_apple:'Open in Apple Maps', meet_open:'Open map',
+    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!', error_generic:'Something went wrong', view_image:'View image', rejected:'✗ Rejected', meet_title:'Meeting point', meet_google:'Google Maps', meet_apple:'Apple Maps', meet_open:'Open map',
     rules:'RULES', rules_back:'← Back', send:'Send', chat_ph:'Message to Gamemaster…',
     pending:'⏳ Awaiting review', accepted:'✓ Accepted',
     take_photo:'Take photo', take_video:'Take video',
@@ -664,7 +666,7 @@ const T = {
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
   fr: {
-    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !', error_generic:'Une erreur est survenue', view_image:'Voir l\'image', rejected:'✗ Refusée', meet_title:'Point de rendez-vous', meet_google:'Ouvrir dans Google Maps', meet_apple:'Ouvrir dans Plans', meet_open:'Ouvrir la carte',
+    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !', error_generic:'Une erreur est survenue', view_image:'Voir l\'image', rejected:'✗ Refusée', meet_title:'Point de rendez-vous', meet_google:'Google Maps', meet_apple:'Apple Maps', meet_open:'Ouvrir la carte',
     rules:'RÈGLES', rules_back:'← Retour', send:'Envoyer', chat_ph:'Message au Gamemaster…',
     pending:'⏳ En attente', accepted:'✓ Accepté',
     take_photo:'Prendre photo', take_video:'Enregistrer vidéo',
@@ -687,7 +689,7 @@ const T = {
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
   it: {
-    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!', error_generic:'Si è verificato un errore', view_image:'Vedi immagine', rejected:'✗ Rifiutata', meet_title:'Punto d’incontro', meet_google:'Apri in Google Maps', meet_apple:'Apri in Mappe', meet_open:'Apri la mappa',
+    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!', error_generic:'Si è verificato un errore', view_image:'Vedi immagine', rejected:'✗ Rifiutata', meet_title:'Punto d’incontro', meet_google:'Google Maps', meet_apple:'Apple Maps', meet_open:'Apri la mappa',
     rules:'REGOLE', rules_back:'← Indietro', send:'Invia', chat_ph:'Messaggio al Gamemaster…',
     pending:'⏳ In attesa', accepted:'✓ Accettato',
     take_photo:'Scatta foto', take_video:'Registra video',
@@ -712,7 +714,7 @@ const T = {
   es: {
     times_up:'¡Se acabó el tiempo! Volved al punto de encuentro acordado.',
     description:'Descripción', task:'Tarea',
-    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!', error_generic:'Algo salió mal', view_image:'Ver imagen', rejected:'✗ Rechazada', meet_title:'Punto de encuentro', meet_google:'Abrir en Google Maps', meet_apple:'Abrir en Mapas de Apple', meet_open:'Abrir el mapa',
+    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!', error_generic:'Algo salió mal', view_image:'Ver imagen', rejected:'✗ Rechazada', meet_title:'Punto de encuentro', meet_google:'Google Maps', meet_apple:'Apple Maps', meet_open:'Abrir el mapa',
     rules:'REGLAS', rules_back:'← Volver', send:'Enviar', chat_ph:'Mensaje al Gamemaster…',
     pending:'⏳ Pendiente de revisión', accepted:'✓ Aceptado',
     take_photo:'Hacer foto', take_video:'Grabar vídeo',
@@ -1077,9 +1079,13 @@ function applyLook(look){
 // number star, as on the mission poster.
 const xTone = i => ((Math.floor(i / 2) + i) % 2) ? 'green' : 'red';
 const xStar = n => `<svg class="xstar" viewBox="0 0 48 48" aria-hidden="true"><polygon points="24 2 30.5 16.4 46 18 34.3 28.6 37.6 44 24 36.1 10.4 44 13.7 28.6 2 18 17.5 16.4" fill="var(--x-gold)" stroke="#a8781a" stroke-width="1.5" stroke-linejoin="round"/><text x="24" y="31" text-anchor="middle">${n}</text></svg>`;
-// The picture's URL goes into a style and an onclick, so quotes and brackets
-// are encoded too (encodeURI leaves them as they are).
-const xPic = m => m.task_image ? `/uploads/${encodeURI(m.task_image).replace(/['()]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase())}` : '';
+// The mission's own picture, else the standard one the server matched for a
+// standard Christmas mission. The URL goes into a style and an onclick, so
+// quotes and brackets are encoded too (encodeURI leaves them as they are).
+const xPic = m => {
+  const url = m.task_image ? `/uploads/${encodeURI(m.task_image)}` : (m.std_image || '');
+  return url.replace(/['()]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+};
 // A poster-style tile: number star, banner, the mission's picture (its task
 // image), type and points. Same id, states and upload bar as the regular card.
 function xmasCard(m, i) {

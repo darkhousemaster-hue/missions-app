@@ -478,6 +478,9 @@ try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_en TEXT DEFAULT
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_fr TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_it TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_es TEXT DEFAULT ''"); } catch(e) {}
+// The mode a rule is for (NULL = every mode of its game): a MiSSiONS mode for
+// game_kind 'missions', a Rail Adventure route for 'cityrush'.
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN mode_id INTEGER"); } catch(e) {}
 // Per-language copy of a stored chat message (JSON {de,en,fr,it,es}), set only
 // for automated broadcasts. NULL for normal/DM messages. On reload the player
 // picks its own language from here; the GM dashboard keeps using `content`.
@@ -1151,8 +1154,8 @@ const createAutoMessage = (d={}) => {
   _AM_LANGS.forEach(l => { langs['message_'+l] = String(d['message_'+l] ?? '').trim(); });
   if(!langs.message_de && d.message) langs.message_de = String(d.message).trim();
   const base = _amBase(langs);
-  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?)')
-    .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind), _amLoc(d.location_id),
+  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,mode_id,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+    .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind), _amLoc(d.location_id), _amLoc(d.mode_id),
       base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es).lastInsertRowid);
 };
 const updateAutoMessage = (id,d={}) => {
@@ -1166,11 +1169,15 @@ const updateAutoMessage = (id,d={}) => {
   });
   if(d.message!=null && d.message_de==null) langs.message_de = String(d.message); // legacy single-field update
   const base = _amBase(langs) || (d.message!=null?String(d.message):cur.message) || '';
-  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
+  const kind = d.game_kind!=null?_amKind(d.game_kind):cur.game_kind;
+  // A mode id belongs to one game's list, so switching the game drops it.
+  const modeId = d.mode_id!==undefined ? _amLoc(d.mode_id) : (kind!==cur.game_kind ? null : cur.mode_id);
+  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,mode_id=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
     d.enabled!=null?(d.enabled?1:0):cur.enabled,
     d.trigger_seconds!=null?Math.max(0,parseInt(d.trigger_seconds)||0):cur.trigger_seconds,
-    d.game_kind!=null?_amKind(d.game_kind):cur.game_kind,
+    kind,
     d.location_id!==undefined?_amLoc(d.location_id):cur.location_id,
+    modeId,
     base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es, id);
 };
 const deleteAutoMessage = id => db.prepare('DELETE FROM automated_messages WHERE id=?').run(id);

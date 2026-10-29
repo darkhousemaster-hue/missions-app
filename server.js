@@ -1002,7 +1002,15 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   // GM typed in, which the end screen shows.
   const mode = game ? db.getMode(game.mode_id) : null;
   const look = mode && mode.look === 'christmas' ? 'christmas' : null;
-  res.json({...publicTeam, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null,
+  let missions = db.getTeamMissions(req.params.teamId);
+  // Christmas look: a standard mission without its own picture shows the
+  // standard one, so the tiles are never empty for them.
+  if(look) missions = missions.map(m => {
+    if(m.task_image) return m;
+    const s = xmasMatch(m);
+    return s ? {...m, std_image: `/assets/christmas/missions/${encodeURIComponent(path.basename(s.image))}`} : m;
+  });
+  res.json({...publicTeam, missions, freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null,
     look, meeting_point: (game && game.meeting_point) || null});
 });
 // GM dashboard detail is intentionally separate from the player team endpoint:
@@ -1660,34 +1668,56 @@ app.post('/api/missions/:id/task-image', upload.single('image'), (req,res) => {
   io.emit('settings_updated', {type:'missions'});
   res.json({success:true, task_image: rel});
 });
-// The 16 standard Christmas missions (the mission poster) with their pictures,
-// added to a mode in one go. Each picture is copied into task_images/ like an
-// upload, so replacing it in the mission editor works as usual and never
-// touches the originals in public/assets/christmas/missions/. A mission whose
-// name the mode already has is skipped, so a second press adds nothing.
+// ── The 16 standard Christmas missions (the mission poster) ─────────────────
+// public/assets/christmas/missions/: one picture per mission plus missions.json.
+// A mission counts as one of them when its title matches, ignoring case,
+// punctuation, umlaut spelling and a number in front ("1. KI Weihnachtswitz"
+// is "KI-Weihnachtswitz"), in any of its languages.
+const XMAS_DIR = path.join(PUBLIC_DIR, 'assets', 'christmas', 'missions');
+let _xmasSet = null;
+function xmasSet(){
+  if(!_xmasSet){ try { _xmasSet = JSON.parse(fs.readFileSync(path.join(XMAS_DIR, 'missions.json'), 'utf8')); } catch(e) { _xmasSet = []; } }
+  return _xmasSet;
+}
+const xmasKey = s => String(s || '').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+  .replace(/^[\s#]*\d+[\s.):-]*/, '').replace(/[^a-z0-9]/g, '');
+function xmasMatch(m){
+  const keys = [m.name_de, m.mission_name, m.name, m.name_en, m.name_fr, m.name_it, m.name_es].map(xmasKey).filter(Boolean);
+  return xmasSet().find(s => keys.includes(xmasKey(s.title))) || null;
+}
+// Gives a mission its own copy of the standard picture, like an upload, so
+// replacing it in the mission editor works as usual and never touches the
+// originals.
+function giveXmasPicture(s, missionId){
+  const destDir = path.join(UPLOAD_DIR, 'task_images');
+  const file = `${uuidv4()}${path.extname(s.image) || '.webp'}`;
+  try {
+    if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive:true});
+    fs.copyFileSync(path.join(XMAS_DIR, path.basename(s.image)), path.join(destDir, file));
+    db.setMissionTaskImage(missionId, `task_images/${file}`);
+    return true;
+  } catch(e) { console.warn('[christmas-set] picture not copied:', s.image, e.message); return false; }
+}
+// Adds the missing standard missions to a mode and gives the ones it already
+// has their picture when they have none yet, so a second press changes nothing.
 app.post('/api/modes/:id/christmas-set', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const mode = db.getMode(Number(req.params.id));
   if(!mode) return res.status(404).json({error:'Mode not found'});
-  const dir = path.join(PUBLIC_DIR, 'assets', 'christmas', 'missions');
-  let set;
-  try { set = JSON.parse(fs.readFileSync(path.join(dir, 'missions.json'), 'utf8')); }
-  catch(e) { return res.status(500).json({error:'Christmas set missing'}); }
-  const have = new Set(db.getMissions(mode.id).map(m => String(m.name_de || m.name || '').trim().toLowerCase()));
-  const destDir = path.join(UPLOAD_DIR, 'task_images');
-  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive:true});
-  let added = 0;
+  const set = xmasSet();
+  if(!set.length) return res.status(500).json({error:'Christmas set missing'});
+  const existing = db.getMissions(mode.id);
+  let added = 0, pictured = 0;
   for(const s of set){
-    if(have.has(String(s.title).trim().toLowerCase())) continue;
+    const same = existing.find(m => xmasMatch(m) === s);
+    if(same){ if(!same.task_image && giveXmasPicture(s, same.id)) pictured++; continue; }
     const id = db.createMission({mode_id: mode.id, name: s.title, name_de: s.title, task_de: s.text,
       media_type: s.media_type === 'video' ? 'video' : 'photo', points: s.points || 1});
-    const file = `${uuidv4()}${path.extname(s.image) || '.webp'}`;
-    try { fs.copyFileSync(path.join(dir, path.basename(s.image)), path.join(destDir, file)); db.setMissionTaskImage(id, `task_images/${file}`); }
-    catch(e) {}
+    giveXmasPicture(s, id);
     added++;
   }
-  if(added) io.emit('settings_updated', {type:'missions'});
-  res.json({success:true, added});
+  if(added || pictured) io.emit('settings_updated', {type:'missions'});
+  res.json({success:true, added, pictured});
 });
 // Meeting point of a game: typed in by the GM on the dashboard (no manager
 // login, like every GM action) and shown to the teams when the game ends. Sent
@@ -2421,12 +2451,17 @@ function _fireAutoMessages(game, remaining, autoMsgs){
   // RA games are identified by a cr_game_links row (there is no is_cityrush column).
   const kind = db.isCrGame(game.id) ? 'cityrush' : 'missions';
   let sent = _autoSent[game.id]; if(!sent){ sent = _autoSent[game.id] = new Set(); }
+  let modeId;   // looked up only when a rule names a mode
   for(const m of autoMsgs){
     if(sent.has(m.id)) continue;
     const langMsgs = _amLangMap(m);
     if(!_AM_LANGS.some(l => langMsgs[l])) continue;   // skip blank (unfinished) rows
     if(m.game_kind !== kind) continue;
     if(kind==='missions' && m.location_id!=null && Number(m.location_id)!==Number(game.location_id)) continue;
+    if(m.mode_id!=null){
+      if(modeId===undefined) modeId = kind==='cityrush' ? ((db.getGameCrMode(game.id)||{}).id ?? null) : game.mode_id;
+      if(Number(m.mode_id)!==Number(modeId)) continue;
+    }
     if(remaining <= m.trigger_seconds){ sent.add(m.id); _sendAutoBroadcast(game.id, langMsgs); }
   }
 }
