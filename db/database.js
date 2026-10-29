@@ -411,6 +411,13 @@ try { db.exec("ALTER TABLE team_missions ADD COLUMN media_paths TEXT"); } catch(
 try { db.exec("ALTER TABLE modes ADD COLUMN tile_image TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN tile_show_title INTEGER DEFAULT 1"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN tile_title_color TEXT"); } catch(e) {}
+// Christmas look. modes.look 'christmas' switches the player screen to it (NULL
+// = the regular look); modes.meeting_required makes the GM enter a meeting
+// point before the timer can start. The game keeps it in games.meeting_point
+// and the teams see it when the game ends.
+try { db.exec("ALTER TABLE modes ADD COLUMN look TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE modes ADD COLUMN meeting_required INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE games ADD COLUMN meeting_point TEXT"); } catch(e) {}
 // One-time backfill: before 'paused' existed, pausing left status='active' with
 // the clock stopped. Those games are indistinguishable from running ones in the
 // game list (they showed as "waiting") and the idle sweep would never see them.
@@ -644,6 +651,15 @@ const updateMode = (id, {name, ruleset_id, timer_default, location_id, tile_show
 // The tile image is written only by the upload/clear endpoints, never by a
 // normal mode save, so editing a mode can't silently drop its artwork.
 const setModeTileImage = (id, rel) => db.prepare('UPDATE modes SET tile_image=? WHERE id=?').run(rel || null, Number(id));
+// Look and meeting-point switch, each written only when sent, so a save from a
+// page that doesn't know them leaves them as they are.
+const setModeLook = (id, {look, meeting_required}) => {
+  if(look !== undefined) db.prepare('UPDATE modes SET look=? WHERE id=?').run(look === 'christmas' ? 'christmas' : null, Number(id));
+  if(meeting_required !== undefined) db.prepare('UPDATE modes SET meeting_required=? WHERE id=?')
+    .run(meeting_required === true || meeting_required === 1 || meeting_required === '1' ? 1 : 0, Number(id));
+};
+const setGameMeetingPoint = (id, text) => db.prepare('UPDATE games SET meeting_point=? WHERE id=?')
+  .run(String(text || '').trim().slice(0, 300) || null, id);
 const deleteMode = id => { if(Number(id)===1) throw new Error("Cannot delete default mode"); db.prepare('DELETE FROM modes WHERE id=?').run(id); };
 const reorderModes = (orderedIds=[]) => {
   const stmt = db.prepare('UPDATE modes SET order_index=? WHERE id=?');
@@ -1613,7 +1629,7 @@ module.exports = {
   getGmTheme,setGmTheme,getGlobalPlayerTheme,setGlobalPlayerTheme,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
-  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,reorderMissions,getGameRules,
+  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,setModeLook,setGameMeetingPoint,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,getLocationGmTheme,setLocationGmTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,

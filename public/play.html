@@ -322,6 +322,90 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 /* New GM message: flash the whole chat button orange (not just the small dot). */
 @keyframes chatBtnFlash{ 50%{ background-color:var(--orange); border-color:var(--orange); color:#fff; box-shadow:0 0 16px -2px var(--orange); } }
 .chat-flash{ animation:chatBtnFlash .7s ease-in-out infinite; }
+
+/* ── Meeting point on the end screen (modes that ask for one) ── */
+.go-meet{margin-top:1.4rem;width:min(420px,100%);padding:1.1rem 1.1rem 1.2rem;border:1px solid var(--hairline);border-radius:16px;background:var(--surface);}
+.go-meet-label{font:700 11px/1 var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.55rem;}
+.go-meet-text{font:600 1.15rem/1.4 var(--body);color:var(--text);margin-bottom:1rem;overflow-wrap:anywhere;white-space:pre-line;}
+.go-meet-text:empty{display:none;}
+.go-meet-btns{display:flex;flex-direction:column;gap:.6rem;}
+.go-meet-btns .btn{width:100%;justify-content:center;text-decoration:none;}
+
+/* ── Christmas look: only on body.look-xmas, which only modes set to it get.
+   Colours stay the location's: the scene is painted in its text colour, the
+   title and timer in its logo colour; only the tile banners and number stars
+   add red, green and gold. ── */
+@font-face{font-family:'HomeChristmas';src:url('/assets/christmas/homechristmas.woff2') format('woff2');font-display:swap;}
+body.look-xmas{--x-red:#a8201a;--x-green:#1f4f2c;--x-gold:#f3c12f;--x-banner:'Oswald','Bebas Neue','Arial Narrow',sans-serif;}
+/* header: the Christmas-market scene behind it, buttons on the first row and
+   the title block centred on its own row (the three buttons are wider than
+   the points pill, which pushed a middle column off centre) */
+body.look-xmas .play-topbar{position:relative;grid-template-columns:1fr 1fr;grid-template-areas:"left right" "center center";gap:0 8px;min-height:190px;padding:12px 12px 10px;overflow:hidden;}
+body.look-xmas .play-topbar::before{content:'';position:absolute;inset:0;background:var(--text);opacity:.9;pointer-events:none;
+  -webkit-mask:url('/assets/christmas/scene.webp') center bottom/cover no-repeat;mask:url('/assets/christmas/scene.webp') center bottom/cover no-repeat;}
+body.look-xmas .play-topbar>*{position:relative;z-index:1;}
+body.look-xmas .ph-left{grid-area:left;}
+body.look-xmas .ph-right{grid-area:right;}
+body.look-xmas .ph-center{grid-area:center;justify-self:center;margin-top:-2px;}
+body.look-xmas .ph-center::before{content:'';position:absolute;inset:-14px -34px -10px;z-index:-1;pointer-events:none;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--bg3) 78%,transparent) 55%,transparent);}
+body.look-xmas .score-pill,body.look-xmas .ph-right .icon-btn{background:var(--bg3);box-shadow:0 2px 10px rgba(0,0,0,.45);}
+body.look-xmas .ar-stamp,body.look-xmas .play-wordmark,body.look-xmas .play-timer{text-shadow:0 0 4px var(--bg3),0 0 12px var(--bg3),0 0 24px var(--bg3),0 0 34px var(--bg3);}
+body.look-xmas .ar-stamp{color:var(--text);}
+body.look-xmas .play-wordmark{font-family:'HomeChristmas',Georgia,serif;font-weight:400;font-size:34px;letter-spacing:.01em;line-height:1.05;}
+body.look-xmas .ph-meta{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:1px;}
+body.look-xmas .ph-sep{display:none;}
+/* the timer: big, in the title's font and colour; every digit gets the same
+   width so the time doesn't wobble while it counts down */
+body.look-xmas .play-timer{font-family:'HomeChristmas',Georgia,serif;font-size:40px;line-height:1;color:var(--logo-color,var(--red));}
+body.look-xmas .play-timer .d{display:inline-block;width:.6em;text-align:center;}
+body.look-xmas .play-timer .c{display:inline-block;width:.32em;text-align:center;}
+body.look-xmas .play-timer.paused{opacity:.6;}
+body.look-xmas .play-team-name{display:inline-block;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--bg3) 86%,transparent);color:var(--text);font-size:10.5px;letter-spacing:.08em;}
+/* mission tiles, poster style: number star, red or green banner, picture */
+body.look-xmas #missions-list{display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;padding-top:8px;}
+body.look-xmas .p-mission-card.xcard{display:flex;flex-direction:column;align-items:stretch;padding:0;gap:0;border-radius:14px;}
+.xcard__head{position:relative;display:flex;align-items:center;min-height:46px;padding:6px 9px 6px 36px;border-radius:13px 13px 0 0;color:#fff;
+  font:700 15.5px/1.06 var(--x-banner);letter-spacing:.01em;text-wrap:balance;overflow-wrap:anywhere;}
+.xcard__head .indoor .icon{width:14px;height:14px;margin-left:4px;vertical-align:-2px;}
+.xcard__head.red,.md-xhead.red{background:var(--x-red);}
+.xcard__head.green,.md-xhead.green{background:var(--x-green);}
+.xstar{position:absolute;left:-8px;top:-11px;width:42px;height:42px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));}
+.xstar text{font:700 17px var(--x-banner);fill:#1b1610;}
+.xcard__img{position:relative;margin:6px 6px 0;border-radius:9px;aspect-ratio:1.1;background:var(--surface2) center/cover no-repeat;
+  display:flex;align-items:center;justify-content:center;color:var(--text);}
+.xcard__img>.icon{width:34px;height:34px;opacity:.3;}
+.xcard__state{position:absolute;right:6px;top:6px;padding:5px 8px;border-radius:999px;font:700 10.5px/1 var(--body);letter-spacing:.04em;text-transform:uppercase;}
+.xcard__state.pending{background:rgba(20,16,10,.85);color:#ffcf6b;border:1px solid rgba(255,207,107,.45);}
+.xcard__state.accepted{background:rgba(10,30,18,.88);color:var(--green);border:1px solid rgba(74,222,128,.5);}
+.xcard__state.rejected{background:rgba(40,10,10,.88);color:var(--red-light);border:1px solid rgba(212,43,43,.5);}
+.p-mission-card.xcard.accepted .xcard__img{filter:saturate(.55) brightness(.75);}
+.xcard__foot{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 9px 9px;font-size:12px;color:var(--text);}
+.xcard__type{display:inline-flex;align-items:center;gap:5px;opacity:.85;}
+.xcard__type .icon{width:16px;height:16px;}
+.xcard .upload-bar{margin:0 9px 8px;}
+/* tapping a tile: the same banner and number on the detail, picture big */
+body.look-xmas .md-card{padding-top:0;}
+body.look-xmas .md-grab,body.look-xmas .md-card .md-title{display:none;}
+body.look-xmas .md-close{z-index:2;color:#fff;background:rgba(0,0,0,.25);border-radius:50%;top:12px;}
+.md-xhead{position:relative;display:flex;align-items:center;min-height:56px;margin:0 -22px 14px;padding:10px 48px 10px 56px;border-radius:16px 16px 0 0;
+  color:#fff;font:700 21px/1.1 var(--x-banner);}
+.md-xhead .xstar{left:10px;top:8px;width:40px;height:40px;}
+.md-ximg{width:100%;aspect-ratio:1.15;border-radius:12px;background:var(--surface2) center/cover no-repeat;margin:2px 0 4px;cursor:zoom-in;}
+body.look-xmas .md-label:has(+ .md-desc:empty),body.look-xmas .md-desc:empty{display:none;}
+/* snow: four blurred, seamless layers drifting at different depths; above the
+   screen, under every dialog, never in the way of a tap */
+.xsnow{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60;}
+.xs-sway{position:absolute;inset:0;animation:xs-sway var(--sw) ease-in-out infinite alternate;}
+.xsnow i{position:absolute;left:-60px;right:-60px;top:calc(-1 * var(--t));bottom:0;background-size:var(--t) var(--t);animation:xs-fall var(--d) linear infinite;will-change:transform;}
+.xs-haze{--t:512px;--d:60s;background-image:url('/assets/christmas/snow-haze.png');}
+.xs-far{--t:512px;--d:34s;background-image:url('/assets/christmas/snow-far.png');opacity:.8;}
+.xs-mid{--t:512px;--d:14s;background-image:url('/assets/christmas/snow-mid.png');opacity:.8;}
+.xs-near{--t:768px;--d:7s;background-image:url('/assets/christmas/snow-near.png');opacity:.85;}
+.xs-w1{--sw:9s;--sx:20px;} .xs-w2{--sw:7s;--sx:8px;} .xs-w3{--sw:5.5s;--sx:16px;animation-delay:-2s;} .xs-w4{--sw:4.2s;--sx:30px;animation-delay:-1s;}
+@keyframes xs-fall{to{transform:translate3d(0,var(--t),0);}}
+@keyframes xs-sway{from{transform:translate3d(calc(-1 * var(--sx)),0,0);}to{transform:translate3d(var(--sx),0,0);}}
+@media (prefers-reduced-motion:reduce){.xsnow{display:none;}}
 </style>
 </head>
 <body>
@@ -485,6 +569,12 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 <div id="gameover-overlay">
   <h1 id="go-title">ZEIT ABGELAUFEN</h1>
   <p id="go-msg"></p>
+  <!-- Meeting point the GM typed in (modes that ask for one), with map buttons. -->
+  <div class="go-meet" id="go-meet" style="display:none;">
+    <div class="go-meet-label" id="go-meet-label"></div>
+    <div class="go-meet-text" id="go-meet-text"></div>
+    <div class="go-meet-btns" id="go-meet-btns"></div>
+  </div>
 </div>
 
 <div class="toast-container" id="toast-container"></div>
@@ -529,7 +619,7 @@ const T = {
   de: {
     times_up:'Die Zeit ist abgelaufen! Bitte zum vereinbarten Treffpunkt zurückkehren.',
     description:'Beschreibung', task:'Aufgabe',
-    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!', error_generic:'Etwas ist schiefgelaufen', view_image:'Bild ansehen',
+    photo:'Foto', video:'Video', indoor:'Drinnen', take_selfie:'Team-Selfie aufnehmen', selfie_saved:'Selfie gespeichert!', error_generic:'Etwas ist schiefgelaufen', view_image:'Bild ansehen', rejected:'✗ Abgelehnt', meet_title:'Treffpunkt', meet_google:'In Google Maps öffnen', meet_apple:'In Apple Karten öffnen', meet_open:'Karte öffnen',
     rules:'REGELN', rules_back:'← Zurück', send:'Senden', chat_ph:'Nachricht an Gamemaster…',
     pending:'⏳ Wird geprüft', accepted:'✓ Angenommen',
     take_photo:'Foto aufnehmen', take_video:'Video aufnehmen',
@@ -553,7 +643,7 @@ const T = {
   en: {
     times_up:'Zeit abgelaufen! Bitte zum Treffpunkt gehen.',
     description:'Description', task:'Task',
-    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!', error_generic:'Something went wrong', view_image:'View image',
+    photo:'photo', video:'video', indoor:'indoor', take_selfie:'Take team selfie', selfie_saved:'Selfie saved!', error_generic:'Something went wrong', view_image:'View image', rejected:'✗ Rejected', meet_title:'Meeting point', meet_google:'Open in Google Maps', meet_apple:'Open in Apple Maps', meet_open:'Open map',
     rules:'RULES', rules_back:'← Back', send:'Send', chat_ph:'Message to Gamemaster…',
     pending:'⏳ Awaiting review', accepted:'✓ Accepted',
     take_photo:'Take photo', take_video:'Take video',
@@ -574,7 +664,7 @@ const T = {
     flip:'🔄 Flip', you:'You', no_missions:'No missions found.', no_rules:'No rules set.',
   },
   fr: {
-    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !', error_generic:'Une erreur est survenue', view_image:'Voir l\'image',
+    photo:'photo', video:'vidéo', indoor:'intérieur', take_selfie:'Photo d\'équipe', selfie_saved:'Selfie enregistré !', error_generic:'Une erreur est survenue', view_image:'Voir l\'image', rejected:'✗ Refusée', meet_title:'Point de rendez-vous', meet_google:'Ouvrir dans Google Maps', meet_apple:'Ouvrir dans Plans', meet_open:'Ouvrir la carte',
     rules:'RÈGLES', rules_back:'← Retour', send:'Envoyer', chat_ph:'Message au Gamemaster…',
     pending:'⏳ En attente', accepted:'✓ Accepté',
     take_photo:'Prendre photo', take_video:'Enregistrer vidéo',
@@ -597,7 +687,7 @@ const T = {
     flip:'🔄 Retourner', you:'Moi', no_missions:'Aucune mission.', no_rules:'Aucune règle.',
   },
   it: {
-    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!', error_generic:'Si è verificato un errore', view_image:'Vedi immagine',
+    photo:'foto', video:'video', indoor:'al chiuso', take_selfie:'Selfie di squadra', selfie_saved:'Selfie salvato!', error_generic:'Si è verificato un errore', view_image:'Vedi immagine', rejected:'✗ Rifiutata', meet_title:'Punto d’incontro', meet_google:'Apri in Google Maps', meet_apple:'Apri in Mappe', meet_open:'Apri la mappa',
     rules:'REGOLE', rules_back:'← Indietro', send:'Invia', chat_ph:'Messaggio al Gamemaster…',
     pending:'⏳ In attesa', accepted:'✓ Accettato',
     take_photo:'Scatta foto', take_video:'Registra video',
@@ -622,7 +712,7 @@ const T = {
   es: {
     times_up:'¡Se acabó el tiempo! Volved al punto de encuentro acordado.',
     description:'Descripción', task:'Tarea',
-    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!', error_generic:'Algo salió mal', view_image:'Ver imagen',
+    photo:'foto', video:'vídeo', indoor:'interior', take_selfie:'Selfie de equipo', selfie_saved:'¡Selfie guardado!', error_generic:'Algo salió mal', view_image:'Ver imagen', rejected:'✗ Rechazada', meet_title:'Punto de encuentro', meet_google:'Abrir en Google Maps', meet_apple:'Abrir en Mapas de Apple', meet_open:'Abrir el mapa',
     rules:'REGLAS', rules_back:'← Volver', send:'Enviar', chat_ph:'Mensaje al Gamemaster…',
     pending:'⏳ Pendiente de revisión', accepted:'✓ Aceptado',
     take_photo:'Hacer foto', take_video:'Grabar vídeo',
@@ -837,6 +927,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!gameId || !teamId) { location.replace('/join.html' + (gameId ? '?game=' + encodeURIComponent(gameId) : '')); return; }
 
   document.getElementById('team-name-text').textContent = teamName;
+  try { if (sessionStorage.getItem('look_' + gameId) === 'christmas') applyLook('christmas'); } catch(e) {}
   applyTranslations();
   showView('missions');
 
@@ -884,6 +975,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     showGameOver((messages&&messages[lang])||message||'');
   });
   socket.on('settings_updated', () => { loadMissions(); });
+  // The GM set or changed the meeting point; the end screen shows it live.
+  socket.on('meeting_point', ({ text }) => { _meetingPoint = text || null; paintMeetingPoint(); });
 
   // Fix Android keyboard pushing input off screen.
   // We re-anchor both <body> and the fixed chat overlay to the visual viewport
@@ -922,8 +1015,14 @@ function updateTimer({ remaining, running, started }) {
   const el = document.getElementById('player-timer');
   const m  = Math.floor(remaining/60).toString().padStart(2,'0');
   const s  = (remaining%60).toString().padStart(2,'0');
-  el.textContent = `${m}:${s}`;
+  paintTimerText(el, `${m}:${s}`);
   el.className = 'play-timer' + (remaining<=60&&running?' urgent' : !running?' paused':'');
+}
+// The Christmas look's timer font has digits of different widths, so each one
+// gets its own fixed-width box there; the regular look stays plain text.
+function paintTimerText(el, txt){
+  if (_look === 'christmas') el.innerHTML = [...String(txt)].map(ch => ch === ':' ? '<span class="c">:</span>' : `<span class="d">${esc(ch)}</span>`).join('');
+  else el.textContent = txt;
 }
 // A 403 from a play endpoint means either "not started yet" or "time is up".
 // The server says which; without reading it every refusal claimed the game had
@@ -946,8 +1045,87 @@ function ensureTimerStarted() {
 // Cache the latest mission payload by id so the detail modal can read full
 // mission data on tap without re-fetching from the server.
 let _missionMap = {};
+// ── Christmas look ────────────────────────────────────────────────────────────
+// Only for modes set to it (the team payload's `look`); every other mode keeps
+// the regular screen. Remembered per game for this tab, so a reload paints the
+// Christmas header straight away instead of flashing the regular one first.
+let _look = null, _missionNo = {};
+function applyLook(look){
+  const xmas = look === 'christmas';
+  _look = xmas ? 'christmas' : null;
+  try { sessionStorage.setItem('look_' + gameId, _look || ''); } catch(e) {}
+  document.body.classList.toggle('look-xmas', xmas);
+  let snow = document.getElementById('xsnow');
+  if (xmas && !snow) {
+    snow = document.createElement('div');
+    snow.id = 'xsnow'; snow.className = 'xsnow'; snow.setAttribute('aria-hidden', 'true');
+    snow.innerHTML = '<div class="xs-sway xs-w1"><i class="xs-haze"></i></div><div class="xs-sway xs-w2"><i class="xs-far"></i></div>'
+      + '<div class="xs-sway xs-w3"><i class="xs-mid"></i></div><div class="xs-sway xs-w4"><i class="xs-near"></i></div>';
+    document.body.appendChild(snow);
+    // the tile banners' typeface, fetched only for this look
+    if (!document.getElementById('xfont')) {
+      const l = document.createElement('link');
+      l.id = 'xfont'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&display=swap';
+      document.head.appendChild(l);
+    }
+  } else if (!xmas && snow) snow.remove();
+  const tm = document.getElementById('player-timer');
+  if (tm) paintTimerText(tm, tm.textContent);
+}
+// Red and green banners in a checkerboard across the two columns, and the gold
+// number star, as on the mission poster.
+const xTone = i => ((Math.floor(i / 2) + i) % 2) ? 'green' : 'red';
+const xStar = n => `<svg class="xstar" viewBox="0 0 48 48" aria-hidden="true"><polygon points="24 2 30.5 16.4 46 18 34.3 28.6 37.6 44 24 36.1 10.4 44 13.7 28.6 2 18 17.5 16.4" fill="var(--x-gold)" stroke="#a8781a" stroke-width="1.5" stroke-linejoin="round"/><text x="24" y="31" text-anchor="middle">${n}</text></svg>`;
+// The picture's URL goes into a style and an onclick, so quotes and brackets
+// are encoded too (encodeURI leaves them as they are).
+const xPic = m => m.task_image ? `/uploads/${encodeURI(m.task_image).replace(/['()]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase())}` : '';
+// A poster-style tile: number star, banner, the mission's picture (its task
+// image), type and points. Same id, states and upload bar as the regular card.
+function xmasCard(m, i) {
+  const status = m.status || 'open';
+  const name   = mField(m,'name') || m.mission_name || m.name || '';
+  const isVid  = m.media_type === 'video';
+  const indoor = m.is_indoor ? `<span class="indoor">${ICONS.house}</span>` : '';
+  const state  = (status === 'pending' || status === 'accepted' || status === 'rejected')
+    ? `<span class="xcard__state ${status}">${esc(t(status))}</span>` : '';
+  const pic    = xPic(m);
+  return `<div class="p-mission-card xcard ${status}" id="mc-${m.mission_id}" onclick="openMissionDetail(${m.mission_id})" role="button" tabindex="0">
+    <div class="xcard__head ${xTone(i)}">${xStar(i + 1)}<span>${esc(name)}${indoor}</span></div>
+    <div class="xcard__img"${pic ? ` style="background-image:url('${pic}')"` : ''}>${pic ? '' : (isVid ? ICONS.video : ICONS.camera)}${state}</div>
+    <div class="xcard__foot"><span class="xcard__type">${isVid ? ICONS.video : ICONS.camera}${esc(t(isVid ? 'video' : 'photo'))}</span><span class="mcard__points">+${m.points}pt</span></div>
+    <div class="upload-bar" id="ub-${m.mission_id}"><div class="upload-fill" id="uf-${m.mission_id}"></div></div>
+  </div>`;
+}
+
+// ── Meeting point ─────────────────────────────────────────────────────────────
+// Typed in by the GM for modes that ask for one; shown on the end screen with
+// map buttons, Apple Maps first on an iPhone and Google Maps first elsewhere.
+// A pasted map link opens as it is.
+let _meetingPoint = null;
+function paintMeetingPoint(){
+  const box = document.getElementById('go-meet');
+  if (!box) return;
+  const txt = String(_meetingPoint || '').trim();
+  box.style.display = txt ? '' : 'none';
+  if (!txt) return;
+  document.getElementById('go-meet-label').textContent = t('meet_title');
+  const isUrl = /^https?:\/\/\S+$/i.test(txt);
+  document.getElementById('go-meet-text').textContent = isUrl ? '' : txt;
+  const q = encodeURIComponent(txt);
+  const google = `<a class="btn btn-primary btn-lg" href="https://www.google.com/maps/search/?api=1&amp;query=${q}" target="_blank" rel="noopener">${esc(t('meet_google'))}</a>`;
+  const apple  = `<a class="btn btn-secondary btn-lg" href="https://maps.apple.com/?q=${q}" target="_blank" rel="noopener">${esc(t('meet_apple'))}</a>`;
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  document.getElementById('go-meet-btns').innerHTML = isUrl
+    ? `<a class="btn btn-primary btn-lg" href="${esc(txt)}" target="_blank" rel="noopener">${esc(t('meet_open'))}</a>`
+    : (ios ? apple + google : google + apple);
+}
+
 async function loadMissions() {
   const data = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
+  applyLook(data.look);
+  _meetingPoint = data.meeting_point || null;
+  paintMeetingPoint();
   // Custom (GM-defined) languages for this location. Set before setAllowedLangs
   // so the cycler includes them.
   customLangs = Array.isArray(data.custom_langs) ? data.custom_langs : [];
@@ -957,6 +1135,9 @@ async function loadMissions() {
     _timerStarted = !!data.timer.started;
     _timeOver = !!data.timer.started && data.timer.remaining <= 0;
   }
+  // A reload after the end loses the end screen; bring it back when it has a
+  // meeting point to show (games without one behave as before).
+  if (_timeOver && _meetingPoint && document.getElementById('gameover-overlay').style.display !== 'flex') showGameOver('');
   if (typeof data.max_video_seconds === 'number') MAX_VIDEO_SECONDS = data.max_video_seconds;
   if (typeof data.max_upload_mb === 'number') setMaxUploadMb(data.max_upload_mb);
   // Apply the location's allowed-language restriction. Safe to call on every
@@ -985,7 +1166,8 @@ async function loadMissions() {
     return;
   }
   _missionMap = Object.fromEntries(data.missions.map(m => [m.mission_id, m]));
-  list.innerHTML = data.missions.map(m => missionCard(m)).join('');
+  _missionNo = Object.fromEntries(data.missions.map((m, i) => [m.mission_id, i + 1]));
+  list.innerHTML = data.missions.map((m, i) => missionCard(m, i)).join('');
   // If the detail modal happens to be open on a mission whose status just
   // changed (e.g. submission accepted via socket), repaint it in place.
   const open = document.getElementById('mission-detail-modal');
@@ -997,7 +1179,8 @@ async function loadMissions() {
 // Mockup 01 .mcard pattern. Whole card is tappable to open the detail
 // modal. Status (done / pending / accepted / rejected) drives the border
 // tint and the top-right overlay (green check, "PENDING" tag, etc).
-function missionCard(m) {
+function missionCard(m, i) {
+  if (_look === 'christmas') return xmasCard(m, i || 0);
   const icon   = m.media_type==='video' ? ICONS.video : ICONS.camera;
   const desc   = mField(m,'description');
   const task   = mField(m,'task');
@@ -1153,6 +1336,16 @@ function openMissionDetail(missionId) {
   document.getElementById('md-task-label').textContent = t('task') || 'Aufgabe';
   document.getElementById('md-desc').textContent = desc;
   document.getElementById('md-task').textContent = task;
+  // Christmas look: the tile's banner and number on top, the picture big.
+  const mdCard = document.querySelector('#mission-detail-modal .md-card');
+  mdCard.querySelectorAll('.md-xhead,.md-ximg').forEach(e => e.remove());
+  if (_look === 'christmas') {
+    const n = _missionNo[missionId] || 1;
+    mdCard.insertAdjacentHTML('afterbegin', `<div class="md-xhead ${xTone(n - 1)}">${xStar(n)}<span>${esc(name)}</span></div>`);
+    const pic = xPic(m);
+    if (pic) document.getElementById('md-desc-label').insertAdjacentHTML('beforebegin',
+      `<div class="md-ximg" style="background-image:url('${pic}')" onclick="openLightbox('${pic}',false)"></div>`);
+  }
 
   // Status note (pending / accepted / rejected) + media thumb if uploaded.
   const stateArea = document.getElementById('md-state-area');
@@ -1210,8 +1403,9 @@ function openMissionDetail(missionId) {
   } else {
     actions.innerHTML = '';
   }
-  // Optional task reference image → a "View image" button (only when one exists).
-  if (m.task_image) {
+  // Optional task reference image → a "View image" button (only when one exists;
+  // the Christmas look already shows it big).
+  if (m.task_image && _look !== 'christmas') {
     actions.insertAdjacentHTML('afterbegin', `<button type="button" class="md-btn md-btn--secondary" onclick="openLightbox('/uploads/${esc(m.task_image)}',false)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> ${esc(t('view_image')||'Bild ansehen')}</button>`);
   }
 
@@ -1816,6 +2010,7 @@ function showGameOver(message) {
   const ci=document.getElementById('chat-input');
   if(ci) ci.placeholder=t('chat_ph');
   document.getElementById('go-msg').textContent   = message || '';
+  paintMeetingPoint();
   document.getElementById('gameover-overlay').style.display = 'flex';
 }
 

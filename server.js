@@ -24,7 +24,14 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req,file,cb) => { const d=path.join(UPLOAD_DIR,req.params.gameId||'misc'); fs.mkdirSync(d,{recursive:true}); cb(null,d); },
-  filename: (req,file,cb) => { const ext=path.extname(file.originalname).toLowerCase()||(file.mimetype.includes('video')?'.mp4':'.jpg'); cb(null,`${uuidv4()}${ext}`); }
+  // The extension comes from the uploader's own file name, so only a plain one
+  // (.jpg, .heic, .mov…) is kept: a name like "a.jpg'x" would carry a quote into
+  // every page that prints the stored path.
+  filename: (req,file,cb) => {
+    let ext=path.extname(file.originalname).toLowerCase();
+    if(!/^\.[a-z0-9]{1,8}$/.test(ext)) ext=file.mimetype.includes('video')?'.mp4':'.jpg';
+    cb(null,`${uuidv4()}${ext}`);
+  }
 });
 const upload       = multer({ storage, limits: { fileSize: 200*1024*1024 } });
 const uploadSingle = multer({ dest: path.join(UPLOAD_DIR,'templates'), limits: { fileSize: 20*1024*1024 } });
@@ -478,6 +485,7 @@ app.post('/api/modes', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   const id = db.createMode(req.body.name, req.body.ruleset_id||1, req.body.timer_default||60, req.body.location_id, {tile_show_title: req.body.tile_show_title, tile_title_color: req.body.tile_title_color});
   if(req.body.no_randomize !== undefined) db.setModeNoRandomize(id, req.body.no_randomize);
+  db.setModeLook(id, req.body);
   res.json({id,success:true});
 });
 // NOTE: must be declared before '/api/modes/:id' or Express treats "reorder"
@@ -533,6 +541,7 @@ app.put('/api/modes/:id', (req,res) => {
     // PUT must not require name/ruleset (updateMode rejects an undefined name).
     if(req.body.name !== undefined) db.updateMode(req.params.id, req.body);
     if(req.body.no_randomize !== undefined) db.setModeNoRandomize(Number(req.params.id), req.body.no_randomize);
+    db.setModeLook(req.params.id, req.body);
     res.json({success:true});
   }
   catch(e) { res.status(400).json({error:e.message}); }
@@ -989,7 +998,12 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   const max_upload_mb = rawMaxMb === null || rawMaxMb === undefined || rawMaxMb === ''
     ? 100 : Math.max(1, Math.min(MAX_UPLOAD_MB, parseInt(rawMaxMb, 10) || 100));
   const {password, password_setup_token, ...publicTeam}=team;
-  res.json({...publicTeam, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null});
+  // The mode's player look (null = the regular one) and the meeting point the
+  // GM typed in, which the end screen shows.
+  const mode = game ? db.getMode(game.mode_id) : null;
+  const look = mode && mode.look === 'christmas' ? 'christmas' : null;
+  res.json({...publicTeam, missions:db.getTeamMissions(req.params.teamId), freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null,
+    look, meeting_point: (game && game.meeting_point) || null});
 });
 // GM dashboard detail is intentionally separate from the player team endpoint:
 // a GM who has not unlocked manager Settings must still be able to review
@@ -1308,6 +1322,11 @@ app.post('/api/games/:gameId/timer', (req,res) => {
   if(!game) return res.status(404).json({error:'Not found'});
   const now=Date.now();
   if(action==='start' && !game.timer_running) {
+    // A mode that asks for a meeting point doesn't start without one. Rail
+    // Adventure games only borrow a placeholder mode, so they never wait.
+    const mode = db.getMode(game.mode_id);
+    if(mode && mode.meeting_required && !game.meeting_point && !db.getGameCrMode(game.id))
+      return res.status(409).json({error:'meeting_point_required'});
     db.updateGame(req.params.gameId,{timer_started_at: now-(game.timer_paused_elapsed||0), timer_running:1, status:'active', paused_at:null});
     try { db.markGameStatStarted(req.params.gameId); } catch(e){}
   } else if(action==='pause' && game.timer_running && game.timer_started_at) {
@@ -1640,6 +1659,47 @@ app.post('/api/missions/:id/task-image', upload.single('image'), (req,res) => {
   db.setMissionTaskImage(req.params.id, rel);
   io.emit('settings_updated', {type:'missions'});
   res.json({success:true, task_image: rel});
+});
+// The 16 standard Christmas missions (the mission poster) with their pictures,
+// added to a mode in one go. Each picture is copied into task_images/ like an
+// upload, so replacing it in the mission editor works as usual and never
+// touches the originals in public/assets/christmas/missions/. A mission whose
+// name the mode already has is skipped, so a second press adds nothing.
+app.post('/api/modes/:id/christmas-set', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  const mode = db.getMode(Number(req.params.id));
+  if(!mode) return res.status(404).json({error:'Mode not found'});
+  const dir = path.join(PUBLIC_DIR, 'assets', 'christmas', 'missions');
+  let set;
+  try { set = JSON.parse(fs.readFileSync(path.join(dir, 'missions.json'), 'utf8')); }
+  catch(e) { return res.status(500).json({error:'Christmas set missing'}); }
+  const have = new Set(db.getMissions(mode.id).map(m => String(m.name_de || m.name || '').trim().toLowerCase()));
+  const destDir = path.join(UPLOAD_DIR, 'task_images');
+  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive:true});
+  let added = 0;
+  for(const s of set){
+    if(have.has(String(s.title).trim().toLowerCase())) continue;
+    const id = db.createMission({mode_id: mode.id, name: s.title, name_de: s.title, task_de: s.text,
+      media_type: s.media_type === 'video' ? 'video' : 'photo', points: s.points || 1});
+    const file = `${uuidv4()}${path.extname(s.image) || '.webp'}`;
+    try { fs.copyFileSync(path.join(dir, path.basename(s.image)), path.join(destDir, file)); db.setMissionTaskImage(id, `task_images/${file}`); }
+    catch(e) {}
+    added++;
+  }
+  if(added) io.emit('settings_updated', {type:'missions'});
+  res.json({success:true, added});
+});
+// Meeting point of a game: typed in by the GM on the dashboard (no manager
+// login, like every GM action) and shown to the teams when the game ends. Sent
+// live, so a change after the end still reaches the end screen.
+app.put('/api/games/:gameId/meeting-point', (req,res) => {
+  const game = db.getGame(req.params.gameId);
+  if(!game) return res.status(404).json({error:'Not found'});
+  db.setGameMeetingPoint(game.id, req.body && req.body.text);
+  const text = db.getGame(game.id).meeting_point || null;
+  io.to(`game_${game.id}`).emit('meeting_point', {text});
+  io.to(`gm_${game.id}`).emit('meeting_point', {text});
+  res.json({success:true, meeting_point: text});
 });
 app.post('/api/cr/missions/:id/task-image', upload.single('image'), (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});

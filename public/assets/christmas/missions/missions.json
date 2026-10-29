@@ -1,0 +1,194 @@
+[
+  {
+    "number": 1,
+    "title": "Weihnachtslied",
+    "text": "Findet etwas, das zu einer Textstelle eines Weihnachtsliedes passt. Zeigt es in einem Video, während ihr die entsprechende Stelle singt!",
+    "media_type": "video",
+    "points": 1,
+    "image": "01-weihnachtslied.webp",
+    "size": [
+      480,
+      408
+    ]
+  },
+  {
+    "number": 2,
+    "title": "Regungslos",
+    "text": "Ein Teammitglied steht auf dem Weihnachtsmarkt 20 s lang vollkommen regungslos da, während andere Leute vorbeigehen.",
+    "media_type": "video",
+    "points": 1,
+    "image": "02-regungslos.webp",
+    "size": [
+      462,
+      414
+    ]
+  },
+  {
+    "number": 3,
+    "title": "Das teuerste Produkt",
+    "text": "Findet einen Gegenstand, der teurer ist als alle, die die anderen Gruppen bisher eingereicht haben. Fotografiert den Gegenstand zusammen mit seinem Preis!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "03-das-teuerste-produkt.webp",
+    "size": [
+      472,
+      388
+    ]
+  },
+  {
+    "number": 4,
+    "title": "Sternsuche",
+    "text": "Findet einen Stern auf dem Weihnachtsmarkt und macht ein Team-Selfie mit ihm!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "04-sternsuche.webp",
+    "size": [
+      466,
+      472
+    ]
+  },
+  {
+    "number": 5,
+    "title": "Cool",
+    "text": "Ein Teammitglied trägt fürs Wetter viel zu wenig Kleidung und tut 20 s lang so, als wäre ihm überhaupt nicht kalt!",
+    "media_type": "video",
+    "points": 1,
+    "image": "05-cool.webp",
+    "size": [
+      478,
+      444
+    ]
+  },
+  {
+    "number": 6,
+    "title": "Lebkuchen-Baum",
+    "text": "Beisst einen Lebkuchen oder Cookie so an, dass am Ende ein erkennbarer Weihnachtsbaum übrig bleibt. Fotografiert das Ergebnis!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "06-lebkuchen-baum.webp",
+    "size": [
+      460,
+      414
+    ]
+  },
+  {
+    "number": 7,
+    "title": "KI-Weihnachtswitz",
+    "text": "Gebt einer KI drei Wörter, die zu Weihnachten passen, und lasst sie daraus einen Witz schreiben. Eine Person erzählt den Witz den anderen. Niemand darf lachen oder sonst irgendwie reagieren!",
+    "media_type": "video",
+    "points": 1,
+    "image": "07-ki-weihnachtswitz.webp",
+    "size": [
+      470,
+      334
+    ]
+  },
+  {
+    "number": 8,
+    "title": "NETHCANHIEW",
+    "text": "Sagt zu zweit das Wort «WEIHNACHTEN» synchron, Buchstabe für Buchstabe rückwärts auswendig auf!",
+    "media_type": "video",
+    "points": 1,
+    "image": "08-nethcanhiew.webp",
+    "size": [
+      464,
+      428
+    ]
+  },
+  {
+    "number": 9,
+    "title": "Riesen-Weihnachtsbaum",
+    "text": "Macht ein Teambild vor einem Weihnachtsbaum, der mehr als dreimal so gross ist wie ihr!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "09-riesen-weihnachtsbaum.webp",
+    "size": [
+      478,
+      494
+    ]
+  },
+  {
+    "number": 10,
+    "title": "Kugelteam",
+    "text": "Macht ein verzerrtes Teambild, auf dem ihr euch alle in der spiegelnden Oberfläche einer Weihnachtsbaumkugel erkennt!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "10-kugelteam.webp",
+    "size": [
+      464,
+      462
+    ]
+  },
+  {
+    "number": 11,
+    "title": "Weihnachtskopf",
+    "text": "Macht ein Foto, auf dem der Kopf eines Teammitglieds scheinbar durch einen Weihnachtsgegenstand ersetzt wurde!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "11-weihnachtskopf.webp",
+    "size": [
+      470,
+      438
+    ]
+  },
+  {
+    "number": 12,
+    "title": "Die Schönheit des Hässlichen",
+    "text": "Bittet jemanden, ein Foto von euch auf dem schönen Weihnachtsmarkt zu machen, aber stellt euch dafür absichtlich vor den hässlichstmöglichen Hintergrund in der Umgebung!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "12-die-schoenheit-des-haesslichen.webp",
+    "size": [
+      474,
+      394
+    ]
+  },
+  {
+    "number": 13,
+    "title": "Das perfekte Geschenk",
+    "text": "Findet einen Gegenstand, der offensichtlich ein sehr schlechtes Weihnachtsgeschenk für eure Eltern wäre. Macht ein Foto, auf dem ihr ihn grinsend als Geschenk anbietet!",
+    "media_type": "photo",
+    "points": 1,
+    "image": "13-das-perfekte-geschenk.webp",
+    "size": [
+      476,
+      452
+    ]
+  },
+  {
+    "number": 14,
+    "title": "Zurück aus der Zukunft",
+    "text": "Dreht ein 20-sekündiges Video im Stil eines Dokumentarfilms aus der Zukunft, in dem erklärt wird, wie die Menschen in den 2020er-Jahren Weihnachten feierten.",
+    "media_type": "video",
+    "points": 1,
+    "image": "14-zurueck-aus-der-zukunft.webp",
+    "size": [
+      464,
+      460
+    ]
+  },
+  {
+    "number": 15,
+    "title": "Die Antwort",
+    "text": "Stellt vor der Kamera eine Frage und schwenkt dann auf einen Lebkuchen, auf dem eine passende Antwort zu lesen ist!",
+    "media_type": "video",
+    "points": 1,
+    "image": "15-die-antwort.webp",
+    "size": [
+      470,
+      510
+    ]
+  },
+  {
+    "number": 16,
+    "title": "In vino veritas",
+    "text": "Wünscht euren Mitspielern nach jedem Schluck Glühwein etwas Weihnachtliches. Spielt dabei mit jedem der drei Schlücke immer betrunkener und dramatischer! Maximal 20 s.",
+    "media_type": "video",
+    "points": 1,
+    "image": "16-in-vino-veritas.webp",
+    "size": [
+      470,
+      444
+    ]
+  }
+]
