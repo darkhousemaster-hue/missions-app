@@ -500,3 +500,15 @@ p{color:var(--text-dim);}small{font-size:.8rem;color:var(--text-muted);}
 .lang-panels{margin-bottom:.5rem;}
 .lang-panel{display:none;}
 .lang-panel.is-active{display:block;}
+/* Video shrink (js/video-shrink.js): the card shown while a picked video is
+   made smaller on the phone before it goes up. Above every modal, below the
+   toasts and the GM's notices. */
+.vshrink{position:fixed;inset:0;z-index:1900;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:rgba(0,0,0,.78);}
+.vshrink-card{width:min(21rem,100%);background:var(--surface);border:1px solid var(--border);border-radius:calc(var(--radius)*2);padding:1.4rem 1.25rem 1rem;text-align:center;color:var(--text);font-family:var(--body);}
+.vshrink-title{font-weight:700;font-size:1.05rem;margin:0 0 .3rem;}
+.vshrink-hint{font-size:.85rem;color:var(--text-dim);margin:0 0 1.1rem;}
+.vshrink-track{height:6px;border-radius:3px;background:var(--border);overflow:hidden;}
+.vshrink-fill{height:100%;background:var(--btn-bg);transform:scaleX(0);transform-origin:left;transition:transform .3s cubic-bezier(.25,1,.5,1);}
+.vshrink-pct{margin:.55rem 0 0;font:600 .8rem/1 var(--mono);color:var(--text-dim);font-variant-numeric:tabular-nums;}
+.vshrink-cancel{margin-top:.8rem;}
+@media (prefers-reduced-motion:reduce){.vshrink-fill{transition:none;}}
