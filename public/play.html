@@ -312,11 +312,14 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 /* ── Game over ── */
 #gameover-overlay {
   position:fixed; inset:0; background:rgba(0,0,0,.97); z-index:1600;
-  display:none; flex-direction:column; align-items:center; justify-content:center;
-  text-align:center; padding:2rem;
+  display:none; flex-direction:column; align-items:center; justify-content:flex-start;
+  text-align:center; padding:2rem; overflow-y:auto;
 }
+/* Centred while it fits. Taller than the phone (long messages), it scrolls from the top. */
+#gameover-overlay::before, #gameover-overlay::after { content:''; flex:1 0 0; }
 #gameover-overlay h1 { font-size:clamp(3rem,12vw,6rem); color:var(--red); letter-spacing:.1em; }
 #gameover-overlay p  { font-size:1.1rem; max-width:480px; margin:1rem auto; color:var(--text-dim); }
+#go-extra p { color:var(--text); white-space:pre-line; overflow-wrap:anywhere; }
 
 @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.5} }
 /* New GM message: flash the whole chat button orange (not just the small dot). */
@@ -561,6 +564,8 @@ body.look-xmas .md-label:has(+ .md-desc:empty){display:none;}
 <div id="gameover-overlay">
   <h1 id="go-title">ZEIT ABGELAUFEN</h1>
   <p id="go-msg"></p>
+  <!-- Auto messages set to Restzeit 0, and anything the GM sends after the end. -->
+  <div id="go-extra"></div>
   <!-- Meeting point the GM typed in (modes that ask for one), with map buttons. -->
   <div class="go-meet" id="go-meet" style="display:none;">
     <div class="go-meet-label" id="go-meet-label"></div>
@@ -962,13 +967,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   socket.on('mission_accepted', ({ missionId }) => onAccepted(missionId));
   socket.on('mission_rejected', ({ missionId, message }) => onRejected(missionId, message));
   socket.on('chat_message', onChatMessage);
-  socket.on('game_ended',   ({ messages, message }) => {
+  socket.on('game_ended',   ({ messages, message, silent }) => {
     _timeOver = true;
-    showGameOver((messages&&messages[lang])||message||'');
+    // silent: the timeout message is turned off in the GM's settings.
+    if (silent) showEndIfMeeting();
+    else showGameOver((messages&&messages[lang])||message||'');
   });
   socket.on('settings_updated', () => { loadMissions(); });
   // The GM set or changed the meeting point; the end screen shows it live.
-  socket.on('meeting_point', ({ text }) => { _meetingPoint = text || null; paintMeetingPoint(); });
+  socket.on('meeting_point', ({ text }) => { _meetingPoint = text || null; paintMeetingPoint(); showEndIfMeeting(); });
 
   // Fix Android keyboard pushing input off screen.
   // We re-anchor both <body> and the fixed chat overlay to the visual viewport
@@ -1146,6 +1153,12 @@ function xmasCard(m, i) {
 // map buttons, Apple Maps first on an iPhone and Google Maps first elsewhere.
 // A pasted map link opens as it is.
 let _meetingPoint = null;
+// Messages set to Restzeit 0, sent along when the page loads after the end.
+let _endMessages = [];
+// A meeting point always brings up the end screen, even with the timeout message off.
+function showEndIfMeeting(){
+  if (_timeOver && _meetingPoint && document.getElementById('gameover-overlay').style.display !== 'flex') showGameOver('');
+}
 function paintMeetingPoint(){
   const box = document.getElementById('go-meet');
   if (!box) return;
@@ -1178,9 +1191,10 @@ async function loadMissions() {
     _timerStarted = !!data.timer.started;
     _timeOver = !!data.timer.started && data.timer.remaining <= 0;
   }
+  _endMessages = data.end_messages || [];
   // A reload after the end loses the end screen; bring it back when it has a
   // meeting point to show (games without one behave as before).
-  if (_timeOver && _meetingPoint && document.getElementById('gameover-overlay').style.display !== 'flex') showGameOver('');
+  showEndIfMeeting();
   if (typeof data.max_video_seconds === 'number') MAX_VIDEO_SECONDS = data.max_video_seconds;
   if (typeof data.max_upload_mb === 'number') setMaxUploadMb(data.max_upload_mb);
   // Apply the location's allowed-language restriction. Safe to call on every
@@ -1937,6 +1951,9 @@ function onChatMessage(msg) {
   // "new message" popup on top for the same event — the transcript entry and
   // the unread flash still happen.
   if (msg.rejection) { if (currentView !== 'chat') startChatFlash(); else _seenGm = _gmCount; return; }
+  // The end screen has no way out: a popup would open behind it and the chat
+  // can't be reached, so anything arriving now has to show on the screen itself.
+  if (document.getElementById('gameover-overlay').style.display === 'flex') { addEndMessage(text); return; }
   if (currentView !== 'chat') {
     startChatFlash();
     document.getElementById('msg-popup-text').textContent = text;
@@ -2052,8 +2069,15 @@ function showGameOver(message) {
   const ci=document.getElementById('chat-input');
   if(ci) ci.placeholder=t('chat_ph');
   document.getElementById('go-msg').textContent   = message || '';
+  document.getElementById('go-extra').textContent = '';
+  _endMessages.forEach(m => addEndMessage(_msgText({ messages: m, content: m.de })));
   paintMeetingPoint();
   document.getElementById('gameover-overlay').style.display = 'flex';
+}
+function addEndMessage(text) {
+  const p = document.createElement('p');
+  p.textContent = text;
+  document.getElementById('go-extra').appendChild(p);
 }
 
 // ── Util ──────────────────────────────────────────────────────────────────────

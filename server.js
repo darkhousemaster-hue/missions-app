@@ -1036,8 +1036,12 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
     const std = xmasStdTiles(game.mode_id);
     missions = missions.map(m => (m.tile_image || !std.has(m.mission_id)) ? m : {...m, std_tile: xmasTileUrl(std.get(m.mission_id))});
   }
-  res.json({...publicTeam, missions, freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer: game ? getTimerState(game) : null,
-    look, meeting_point: (game && game.meeting_point) || null});
+  const timer = game ? getTimerState(game) : null;
+  // Messages set to Restzeit 0, for an end screen that comes back after a reload.
+  const end_messages = timer && timer.started && timer.remaining<=0
+    ? _amRulesFor(game, _amEndRules(db.getAutoMessages())).map(r => r.langMsgs) : [];
+  res.json({...publicTeam, missions, freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer,
+    look, meeting_point: (game && game.meeting_point) || null, end_messages});
 });
 // GM dashboard detail is intentionally separate from the player team endpoint:
 // a GM who has not unlocked manager Settings must still be able to review
@@ -2546,13 +2550,13 @@ function _sendAutoBroadcast(gameId, langMsgs){
     io.to(`game_${gameId}`).emit('chat_message', {id:msgId, content:base, messages:langMsgs, fromGm:1, teamId:null, gameId, timestamp:Date.now(), auto:true});
   }catch(e){ console.warn('auto-broadcast failed', e); }
 }
-function _fireAutoMessages(game, remaining, autoMsgs){
+// The rules that apply to this game, with their text per language.
+function _amRulesFor(game, rules){
   // RA games are identified by a cr_game_links row (there is no is_cityrush column).
   const kind = db.isCrGame(game.id) ? 'cityrush' : 'missions';
-  let sent = _autoSent[game.id]; if(!sent){ sent = _autoSent[game.id] = new Set(); }
+  const out = [];
   let modeId;   // looked up only when a rule names a mode
-  for(const m of autoMsgs){
-    if(sent.has(m.id)) continue;
+  for(const m of rules){
     const langMsgs = _amLangMap(m);
     if(!_AM_LANGS.some(l => langMsgs[l])) continue;   // skip blank (unfinished) rows
     if(m.game_kind !== kind) continue;
@@ -2565,9 +2569,21 @@ function _fireAutoMessages(game, remaining, autoMsgs){
       if(modeId===undefined) modeId = kind==='cityrush' ? ((db.getGameCrMode(game.id)||{}).id ?? null) : game.mode_id;
       if(!ids.includes(Number(modeId))) continue;
     }
-    if(remaining <= m.trigger_seconds){ sent.add(m.id); _sendAutoBroadcast(game.id, langMsgs); }
+    out.push({rule:m, langMsgs});
+  }
+  return out;
+}
+function _fireAutoMessages(game, remaining, autoMsgs){
+  let sent = _autoSent[game.id]; if(!sent){ sent = _autoSent[game.id] = new Set(); }
+  for(const {rule, langMsgs} of _amRulesFor(game, autoMsgs.filter(m => !sent.has(m.id)))){
+    if(remaining <= rule.trigger_seconds){ sent.add(rule.id); _sendAutoBroadcast(game.id, langMsgs); }
   }
 }
+// Restzeit 0 means "when the time runs out".
+const _amEndRules = rules => rules.filter(m => m.enabled && !m.trigger_seconds);
+// The timeout message can be turned off in Settings. The game still ends, but
+// the player page brings up no end screen for it ("silent").
+const _timeoutMsgOff = () => db.getSetting('timeout_enabled') === '0';
 
 // Timer broadcast
 setInterval(() => {
@@ -2578,7 +2594,6 @@ setInterval(() => {
     io.to(`gm_${game.id}`).emit('timer_update',state);
     if(autoMsgs.length && state.running && state.remaining>0) _fireAutoMessages(game, state.remaining, autoMsgs);
     if(state.remaining<=0) {
-      delete _autoSent[game.id];
       db.updateGame(game.id,{timer_running:0,status:'ended'});
       try { db.markGameStatEnded(game.id); } catch(e){}
       // Pick timeout message for the game's language (fallback chain)
@@ -2594,8 +2609,12 @@ setInterval(() => {
         it: db.getSetting('timeout_text_it')||'Il tempo è scaduto!',
         es: db.getSetting('timeout_text_es')||'¡Se acabó el tiempo!'
       };
-      io.to(`game_${game.id}`).emit('game_ended',{messages:langMsgs, message:msg});
+      io.to(`game_${game.id}`).emit('game_ended', _timeoutMsgOff() ? {silent:true} : {messages:langMsgs, message:msg});
       io.to(`gm_${game.id}`).emit('game_ended',{});
+      // After game_ended on purpose: with the end screen already up, the player
+      // page shows these on it, because a popup would open behind it.
+      _fireAutoMessages(game, 0, _amEndRules(autoMsgs));
+      delete _autoSent[game.id];
     }
   });
 },1000);
@@ -2610,7 +2629,7 @@ cron.schedule('*/5 * * * *', () => {
   db.getStalePausedGames(cutoff).forEach(game => {
     db.updateGame(game.id, { timer_running:0, status:'ended' });
     try { db.markGameStatEnded(game.id); } catch(e){}
-    io.to(`game_${game.id}`).emit('game_ended', {});
+    io.to(`game_${game.id}`).emit('game_ended', _timeoutMsgOff() ? {silent:true} : {});
     io.to(`gm_${game.id}`).emit('game_ended', {});
   });
 });
