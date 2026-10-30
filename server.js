@@ -552,9 +552,15 @@ app.put('/api/modes/:id', (req,res) => {
   }
   catch(e) { res.status(400).json({error:e.message}); }
 });
+// The database refuses to delete a location, mode or mission a game still uses.
+// Say how many games, so the GM page can explain it instead of getting a bare 500.
+const refuseIfInUse = (res, games) => { if(!games) return false; res.status(409).json({error:'in_use_by_games', games}); return true; };
 app.delete('/api/modes/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  try { db.deleteMode(req.params.id); res.json({success:true}); }
+  try {
+    if(refuseIfInUse(res, db.countGamesUsingMode(req.params.id))) return;
+    db.deleteMode(req.params.id); res.json({success:true});
+  }
   catch(e) { res.status(400).json({error:e.message}); }
 });
 
@@ -590,6 +596,7 @@ app.put('/api/locations/:id', (req,res) => {
 });
 app.delete('/api/locations/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(refuseIfInUse(res, db.countGamesUsingLocation(req.params.id))) return;
   db.deleteLocation(req.params.id); res.json({success:true});
 });
 
@@ -749,6 +756,7 @@ app.put('/api/missions/:id', (req,res) => {
 });
 app.delete('/api/missions/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  if(refuseIfInUse(res, db.countGamesUsingMission(req.params.id))) return;
   db.deleteMission(req.params.id);
   io.emit('settings_updated', {type:'missions'});
   res.json({success:true});

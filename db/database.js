@@ -860,6 +860,15 @@ const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name
     (multi_count===undefined?(cur.multi_count||2):Math.max(1,parseInt(multi_count,10)||2)), id);
 };
 const deleteMission = id => db.prepare('DELETE FROM missions WHERE id=?').run(id);
+// Games and their mission lists point at these rows with no cascade, so SQLite
+// refuses to delete a location, mode or mission while a game still uses it. A
+// location's or mode's missions go with it, so games using those count as well.
+const _gamesUsingSql = (own, missions) => `SELECT COUNT(*) AS n FROM games WHERE ${own} OR id IN (
+    SELECT game_id FROM game_missions WHERE mission_id IN (${missions})
+    UNION SELECT t.game_id FROM team_missions tm JOIN teams t ON t.id=tm.team_id WHERE tm.mission_id IN (${missions}))`;
+const countGamesUsingLocation = id => db.prepare(_gamesUsingSql('location_id=?','SELECT id FROM missions WHERE location_id=?')).get(id,id,id).n;
+const countGamesUsingMode     = id => db.prepare(_gamesUsingSql('mode_id=?','SELECT id FROM missions WHERE mode_id=?')).get(id,id,id).n;
+const countGamesUsingMission  = id => db.prepare(_gamesUsingSql('0','?')).get(id,id).n;
 // Partial setter — task image is uploaded separately, so don't round-trip the
 // whole mission (updateMission rewrites every field). Pass null to remove it.
 const setMissionTaskImage = (id, p) => db.prepare('UPDATE missions SET task_image=? WHERE id=?').run(p||null, id);
@@ -1678,6 +1687,7 @@ module.exports = {
   getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,setModeLook,setGameMeetingPoint,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,getLocationGmTheme,setLocationGmTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,setMissionTileImage,
+  countGamesUsingLocation,countGamesUsingMode,countGamesUsingMission,
   getGame,getGames,getGameFull,getRunningGames,getActiveGames,getOldGames,getNeverStartedGames,getStalePausedGames,createGame,updateGame,deleteGame,selectMissions,
   getTeam,getTeams,createTeam,updateTeamPassword,createTeamJoinSession,hasTeamJoinSession,deleteTeam,getRankings,
   getTeamMissions,getSubmission,getSubmissionById,getAcceptedSubmissions,
