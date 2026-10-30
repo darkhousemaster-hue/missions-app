@@ -101,6 +101,15 @@ body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .am-body{margin-top:.55rem;}
 .am-modes{display:flex;flex-wrap:wrap;gap:.4rem;}
 .rule-item.am-dragging{opacity:.7;outline:2px dashed var(--orange-dim);outline-offset:2px;}
+.am-tab-n{margin-left:.4rem;font:600 .68rem/1 var(--mono);color:var(--text-muted);}
+.tab.active .am-tab-n{color:inherit;}
+/* Updates page: what an update brings and what the last one brought. */
+.upd-line{font-size:.9rem;color:var(--text);margin:0 0 .7rem;white-space:pre-line;}
+.upd-blocked{font-size:.88rem;color:var(--text);margin:0 0 .7rem;padding:.65rem .85rem;border-radius:var(--radius);background:rgba(212,43,43,.12);border:1px solid rgba(212,43,43,.35);}
+.upd-list{margin-bottom:.7rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);}
+.upd-list>summary{cursor:pointer;padding:.55rem .75rem;font-size:.85rem;font-weight:600;color:var(--text-dim);}
+.upd-list .upd-meta{font-weight:500;color:var(--text-muted);margin-left:.25rem;}
+.upd-list-body{padding:0 .75rem .6rem;max-height:320px;overflow-y:auto;}
 /* Tile picture preview in the mission editor (Christmas modes). */
 .m-tile-preview{width:132px;aspect-ratio:1.1;min-height:110px;flex-shrink:0;border-radius:9px;background:var(--surface2) center/cover no-repeat;border:1px solid var(--border);}
 /* Colour swatch in the mode editor. A bare <input type="color"> renders with
@@ -1003,27 +1012,6 @@ body.sel-cr #crms-toolbar{display:flex !important;}
           </div>
 
           <div class="label">
-            <span id="s-timeout-label">Timeout-Nachricht</span>
-            <span class="help" id="s-timeout-help">Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.</span>
-          </div>
-          <div class="control" data-tip="timeout">
-            <div class="lang-strip" data-prefix="timeout">
-              <span class="lang-tab is-active" data-lang="de" onclick="switchLangPanel('timeout','de',this)"><span class="tick" style="display:none;">✓</span>DE</span>
-              <span class="lang-tab" data-lang="en" onclick="switchLangPanel('timeout','en',this)"><span class="tick" style="display:none;">✓</span>EN</span>
-              <span class="lang-tab" data-lang="fr" onclick="switchLangPanel('timeout','fr',this)"><span class="tick" style="display:none;">✓</span>FR</span>
-              <span class="lang-tab" data-lang="it" onclick="switchLangPanel('timeout','it',this)"><span class="tick" style="display:none;">✓</span>IT</span>
-              <span class="lang-tab" data-lang="es" onclick="switchLangPanel('timeout','es',this)"><span class="tick" style="display:none;">✓</span>ES</span>
-            </div>
-            <div class="lang-panels" data-prefix="timeout">
-              <div class="lang-panel is-active" data-lang="de"><textarea id="s-timeout-de" class="textarea" rows="3" oninput="markLangTabFilled('timeout','de',!!this.value.trim())"></textarea></div>
-              <div class="lang-panel" data-lang="en"><textarea id="s-timeout-en" class="textarea" rows="3" oninput="markLangTabFilled('timeout','en',!!this.value.trim())"></textarea></div>
-              <div class="lang-panel" data-lang="fr"><textarea id="s-timeout-fr" class="textarea" rows="3" oninput="markLangTabFilled('timeout','fr',!!this.value.trim())"></textarea></div>
-              <div class="lang-panel" data-lang="it"><textarea id="s-timeout-it" class="textarea" rows="3" oninput="markLangTabFilled('timeout','it',!!this.value.trim())"></textarea></div>
-              <div class="lang-panel" data-lang="es"><textarea id="s-timeout-es" class="textarea" rows="3" oninput="markLangTabFilled('timeout','es',!!this.value.trim())"></textarea></div>
-            </div>
-          </div>
-
-          <div class="label">
             <span id="s-gh-label">GitHub-Repo-URL</span>
             <span class="help" id="s-gh-help">Wird vom In-App-Updater für <code>git pull</code> und das Versions-Badge verwendet.</span>
           </div>
@@ -1219,6 +1207,39 @@ body.sel-cr #crms-toolbar{display:flex !important;}
       <div id="stab-messages" class="stab">
         <h2 id="s-msgs-title">Automatische Nachrichten</h2>
         <p class="subtitle" id="s-msgs-subtitle">Sende automatisch eine Nachricht an alle Teams, wenn die Restzeit einen bestimmten Wert erreicht.</p>
+        <!-- The message when the time runs out: one for all games, so it sits
+             above the location tabs (see _amPaintTimeout). -->
+        <div class="rule-item" id="am-timeout" style="margin-bottom:1.1rem;">
+          <div class="am-head">
+            <button type="button" class="am-toggle" aria-expanded="true" onclick="amToggleTimeout()">
+              <span class="am-sum"><span class="am-sum-meta" id="s-timeout-label">Timeout-Nachricht</span><span class="am-sum-text" id="am-timeout-sum"></span></span>
+              <svg class="am-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="am-body" data-tip="timeout">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.35rem;">
+              <span id="s-timeout-help" style="font-size:.78rem;color:var(--text-muted);">Wird Spielern angezeigt, wenn der Timer abläuft. Pro Sprache.</span>
+              <button type="button" class="btn btn-ghost btn-sm" id="am-timeout-auto" style="font-size:.7rem;padding:.1rem .4rem;flex-shrink:0;" onclick="autoTranslateTimeout()">🌐 Auto</button>
+            </div>
+            <div class="lang-strip" data-prefix="timeout">
+              <span class="lang-tab is-active" data-lang="de" onclick="switchLangPanel('timeout','de',this)"><span class="tick" style="display:none;">✓</span>DE</span>
+              <span class="lang-tab" data-lang="en" onclick="switchLangPanel('timeout','en',this)"><span class="tick" style="display:none;">✓</span>EN</span>
+              <span class="lang-tab" data-lang="fr" onclick="switchLangPanel('timeout','fr',this)"><span class="tick" style="display:none;">✓</span>FR</span>
+              <span class="lang-tab" data-lang="it" onclick="switchLangPanel('timeout','it',this)"><span class="tick" style="display:none;">✓</span>IT</span>
+              <span class="lang-tab" data-lang="es" onclick="switchLangPanel('timeout','es',this)"><span class="tick" style="display:none;">✓</span>ES</span>
+            </div>
+            <div class="lang-panels" data-prefix="timeout">
+              <div class="lang-panel is-active" data-lang="de"><textarea id="s-timeout-de" class="textarea" rows="3" oninput="markLangTabFilled('timeout','de',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
+              <div class="lang-panel" data-lang="en"><textarea id="s-timeout-en" class="textarea" rows="3" oninput="markLangTabFilled('timeout','en',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
+              <div class="lang-panel" data-lang="fr"><textarea id="s-timeout-fr" class="textarea" rows="3" oninput="markLangTabFilled('timeout','fr',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
+              <div class="lang-panel" data-lang="it"><textarea id="s-timeout-it" class="textarea" rows="3" oninput="markLangTabFilled('timeout','it',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
+              <div class="lang-panel" data-lang="es"><textarea id="s-timeout-es" class="textarea" rows="3" oninput="markLangTabFilled('timeout','es',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
+            </div>
+          </div>
+        </div>
+        <!-- One tab per location plus "Alle Standorte" (_amRender). -->
+        <div class="tabs am-tabs" id="am-loc-tabs" role="tablist"></div>
+        <p id="s-msgs-shared-hint" style="color:var(--text-muted);font-size:.78rem;margin:-.4rem 0 .8rem;">Eine Nachricht mit mehreren Standorten ist überall dieselbe: Eine Änderung gilt für alle angehakten Standorte.</p>
         <div id="auto-msg-list"></div>
         <button class="btn btn-secondary" onclick="addAutoMessageRow()" style="margin-top:.5rem;">＋ <span id="s-msgs-add">Nachricht hinzufügen</span></button>
       </div>
@@ -1254,6 +1275,8 @@ body.sel-cr #crms-toolbar{display:flex !important;}
         <div class="card mb-2">
           <h3 style="margin-bottom:1rem;" id="s-update-title">App aktualisieren</h3>
           <p style="margin-bottom:1rem;font-size:.85rem;color:var(--text-dim);" id="s-update-hint">Zieht die neueste Version aus dem konfigurierten GitHub-Repository (siehe <strong style="color:var(--text);">Allgemein</strong>) und startet den Server neu.</p>
+          <!-- What an update would bring and what the last one brought (loadUpdatePanel). -->
+          <div id="upd-status" style="margin-bottom:1rem;"></div>
           <button class="btn btn-secondary btn-full" onclick="runUpdate()" id="btn-update">⬆ <span id="s-update-btn-label">Jetzt aktualisieren</span></button>
           <div id="update-log" style="margin-top:.75rem;font-family:var(--mono);font-size:.75rem;color:var(--text-dim);white-space:pre-wrap;max-height:220px;overflow-y:auto;background:var(--bg);padding:.5rem;border-radius:var(--radius);border:1px solid var(--border);display:none;"></div>
         </div>
@@ -1481,7 +1504,7 @@ function inlineIcon(name, sizeCls){
 }
 const GMT={
   de:{'mm-multi':"Mehrere Bilder",'mm-multi-sub':"Aus = ein Bild wie bisher.",'mm-multi-tip':"<strong>Erlaubt mehrere Aufnahmen für diese MiSSiON.</strong> Die Spieler sammeln sie in einer Galerie und reichen erst am Schluss alles zusammen ein.",'mm-multi-mode':"Anzahl-Regel",'mm-multi-mode-tip':"<strong>Mindestens:</strong> mehr Bilder sind erlaubt. <strong>Genau:</strong> weder mehr noch weniger.",'mm-multi-min':"Mindestens",'mm-multi-exact':"Genau",'mm-multi-count':"Anzahl",'mm-multi-count-tip':"Wie viele Bilder verlangt werden.",'s-maxmb-label':"Max. Upload-Grösse",'s-maxmb-help':"MB pro Datei. Hinter einem Cloudflare-Tunnel gilt dessen Grenze (Free 100 MB, Business 200 MB) — höher einstellen bringt dort nichts.",'tip-maxmb':"Obergrenze pro hochgeladener Datei. Wichtig: Läuft die App über einen Cloudflare-Tunnel, kappt Cloudflare grössere Anfragen selbst — ein höherer Wert hier hebt diese Grenze nicht auf.",'s-vidlen-label':"Max. Videolänge",'s-vidlen-help':"Sekunden. Längere Videos lehnt die Spieler-App mit Hinweis ab; die App-Kamera stoppt automatisch. 0 = kein Limit.",'tip-vidlen':"Begrenzt die Länge eingereichter Videos. Die Spieler-App prüft vor dem Hochladen und meldet zu lange Clips sofort, statt sie erst nach dem Upload scheitern zu lassen.",'loading-video':"Video wird geladen…",'rankings-fs-title':"RANGLISTE",'s-logo-help':"Schrift-Logo (aktuell) oder ein eigenes Bild-Logo für den Startbildschirm.",'s-logo-pick':"Bild wählen / ersetzen",'s-navtoggle-tip':"Menü ein- oder ausklappen",'gm-freeze-help':"Wählt das gegnerische Team und eine Dauer. Jedes Team kann jedes andere nur einmal einfrieren.",'gm-freeze-cancel':"Abbrechen",'upd-cancel':"Abbrechen",'prof-words-ph':"ein Wort pro Zeile\noder durch Komma getrennt",'cr-m-answer-addbtn':"Hinzufügen",'cr-m-answer-pending':"⚠ Noch nicht in der Liste — mit Enter oder ＋ hinzufügen.",'mtip-media':"<strong>Wie Spieler die Aufgabe belegen.</strong> Eine MiSSiON ist ein Foto oder ein Video, das das Team aufnimmt und du prüfst.",'mtip-photo':"<strong>Spieler machen ein Foto</strong> — z. B. eine Pose nachstellen, ein Objekt finden, als Team posieren.",'mtip-video':"<strong>Spieler nehmen ein kurzes Video auf</strong> — gut für Auftritte, Mutproben oder alles mit Bewegung/Ton.",'tipx-name':"<strong>Der Titel, den Spieler sehen.</strong> Mindestens eine Sprache ausfüllen; 🌐 Auto füllt den Rest.",'mtip-points':"<strong>Belohnung fürs Abschließen</strong>, sobald du die Einreichung freigibst.",'mtip-desc':"<strong>Setzt die Szene.</strong> Der Text zum Einstimmen — nicht die Anweisung selbst (die kommt im Tab „Aufgabe“).",'mtip-task':"<strong>Die konkrete Anweisung</strong> — was Spieler genau tun müssen, um die Mission abzuschließen.",'mtip-location':"<strong>Zu welchem Ort die Mission gehört.</strong> „Pool“ = ohne Zuordnung, für jedes Spiel wählbar.",'mtip-mode':"In welchem Spielmodus / Regelwerk die Mission erscheint.",'crtip-type':"<strong>Die Aufgabe der Mission.</strong> Wähle eine — sie bestimmt, welche Einstellungen unten erscheinen. (Das Erreichen des Orts wird separat unter „Platzierung“ geregelt.)",'crtip-type-quiz':"<strong>Spieler tippen eine Antwort.</strong> Korrekt, wenn sie einer der akzeptierten Lösungen entspricht (in ihrer Sprache). Ideal für Rätsel am Ort.",'crtip-type-media':"<strong>Spieler reichen eine Aufnahme ein</strong> — ein Foto oder kurzes Video. Du gibst sie frei, bevor Punkte vergeben werden.",'crtip-type-puzzle':"<strong>Spieler lösen ein Puzzle</strong> — Bild zusammensetzen oder in die richtige Reihenfolge bringen. Lösen schließt die Mission automatisch ab.",'crtip-points':"<strong>Belohnung fürs Abschließen</strong>, wird zur Teampunktzahl addiert.",'crtip-answers':"<strong>Was Spieler tippen müssen.</strong> Enter fügt eine Lösung hinzu — liste ruhig mehrere Schreibweisen auf, jede davon gilt. Die Eingabe muss komplett übereinstimmen (Leerzeichen egal). 🌐 Auto übersetzt nur die erste Lösung in die leeren Sprachen; weitere Varianten dort fügst du selbst hinzu.",'crtip-media':"Foto oder kurzes Video — die Spieler-App öffnet den passenden Kameramodus.",'crtip-placement':"<strong>Wo die Mission lebt.</strong> <strong>In der Route</strong> = GPS-Stopp in Reihenfolge; Spieler müssen die Koordinaten erreichen. <strong>Spezial</strong> = jederzeit im ⭐-Bereich, ohne GPS, ohne Reihenfolge.",'crtip-coords':"Der genaue Ort. Am besten über die Karte oder „Standort“ setzen statt zu tippen — beide Koordinaten werden dann gefüllt.",'crtip-radius':"<strong>Wie nah als „angekommen“ zählt.</strong> 20–40 m sind gut. Kleiner = strenger; größer = löst früher aus.",'crtip-showmap':"<strong>An:</strong> der Marker erscheint auf der Spielerkarte. <strong>Aus:</strong> versteckter Checkpoint — dieselbe GPS-Mission, aber nicht auf der Karte; Spieler finden ihn über Hinweise.",'crtip-repeat':"<strong>Aus:</strong> einmal abschließbar. <strong>An:</strong> wiederholbar, optional mit Wartezeit (0 Min = sofort wieder).",'crtip-timer':"Countdown für die Mission. Bei Überschreitung werden im gewählten Intervall Punkte abgezogen.",
-  'ms-drag-hint':'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Standort „Nicht zufällig“ ist.','mode-look-label':'Aussehen für Spieler','mode-look-tip':'Weihnachten: Weihnachtsmarkt als Kopfzeile, Schneefall und Missionskacheln mit Bild. Die Farben des Standorts bleiben. Standard lässt alles wie bisher.','mode-look-standard':'Standard','mode-look-christmas':'Weihnachten','mode-xmas-set':'16 Weihnachts-Missionen einfügen','mode-xmas-set-sub':'Mit Bild. Missionen mit gleichem Namen, die noch kein Bild haben, bekommen ihres. Jedes Bild lässt sich in der Mission durch ein eigenes ersetzen.','mode-xmas-new-sub':'Ein neuer Weihnachts-Modus startet mit den 16 Weihnachts-Missionen samt Bild.','mode-xmas-set-done':'{n} Weihnachts-Missionen eingefügt','mode-xmas-set-none':'Die Weihnachts-Missionen sind schon alle da.','mode-created-xmas':'Modus erstellt, mit {n} Weihnachts-Missionen','mode-meet-label':'Treffpunkt verlangen','mode-meet-sub':'Der Timer startet erst, wenn der Spielleiter den Treffpunkt eingetragen hat. Die Teams sehen ihn am Spielende mit Kartenlink.','meet-chip-empty':'Treffpunkt eintragen','meet-title':'Treffpunkt nach dem Spiel','meet-sub':'Wo trifft sich das Team am Ende? Die Teams sehen den Treffpunkt, sobald die Zeit abgelaufen ist, mit einem Knopf für Google Maps oder Apple Karten.','meet-ph':'Adresse oder Ort, z. B. Bahnhofplatz 1, Baden','meet-needed':'Ohne Treffpunkt startet dieses Spiel nicht. Bitte zuerst eintragen.','meet-saved':'Treffpunkt gespeichert','save-failed':'Speichern fehlgeschlagen','s-msgs-game':'Spiel','s-msgs-all-modes':'Alle Modi','mode-xmas-set-pics':'{n} Missionen haben ihr Bild bekommen','s-msgs-drag':'Ziehen, um die Reihenfolge zu ändern','s-msgs-toggle':'Ein- oder ausklappen','s-msgs-sum-when':'bei {n} Min. Restzeit','s-msgs-sum-empty':'noch ohne Text','m-tile-label':'Kachelbild (Weihnachten)','m-tile-own':'Eigenes Bild','m-tile-std':'Standardbild','m-tile-auto':'Ohne eigenes Bild bekommt die Kachel ein Standardbild.','m-tile-upload':'Bild hochladen','m-tile-replace':'Bild ersetzen','m-tile-reset':'Standardbild verwenden','m-tile-hint':'Das Bild auf der Missionskachel im Weihnachts-Look, nicht das Aufgabenbild. Am besten etwa 1000 × 900 px.','mode-norand-label':'Reihenfolge','mode-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.','mode-norand-pill':'Nicht zufällig','loc-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Missionsliste ziehen zum Sortieren). Aus: zufällig wie bisher.','cl-label':'Eigene Sprachen','cl-hint':'Zusätzliche Sprachen für Spieler an diesem Standort. Missions-Text wird darin eingegeben; App-Beschriftungen nutzen die Basissprache.','cl-name-ph':'z. B. Schwiizerdütsch','cl-base':'Basis','cl-add':'Sprache','cl-empty':'Noch keine eigenen Sprachen.','cl-name-req':'Bitte einen Sprachnamen eingeben','cl-dup':'Diese Sprache gibt es schon','mm-cust-title':'Eigene Sprachen (Standort)','mm-cust-hint':'Inhalt für die eigenen Sprachen dieses Standorts.',
+  'ms-drag-hint':'Ziehen zum Sortieren. Die Reihenfolge zählt nur, wenn der Standort „Nicht zufällig“ ist.','mode-look-label':'Aussehen für Spieler','mode-look-tip':'Weihnachten: Weihnachtsmarkt als Kopfzeile, Schneefall und Missionskacheln mit Bild. Die Farben des Standorts bleiben. Standard lässt alles wie bisher.','mode-look-standard':'Standard','mode-look-christmas':'Weihnachten','mode-xmas-set':'16 Weihnachts-Missionen einfügen','mode-xmas-set-sub':'Mit Bild. Missionen mit gleichem Namen, die noch kein Bild haben, bekommen ihres. Jedes Bild lässt sich in der Mission durch ein eigenes ersetzen.','mode-xmas-new-sub':'Ein neuer Weihnachts-Modus startet mit den 16 Weihnachts-Missionen samt Bild.','mode-xmas-set-done':'{n} Weihnachts-Missionen eingefügt','mode-xmas-set-none':'Die Weihnachts-Missionen sind schon alle da.','mode-created-xmas':'Modus erstellt, mit {n} Weihnachts-Missionen','mode-meet-label':'Treffpunkt verlangen','mode-meet-sub':'Der Timer startet erst, wenn der Spielleiter den Treffpunkt eingetragen hat. Die Teams sehen ihn am Spielende mit Kartenlink.','meet-chip-empty':'Treffpunkt eintragen','meet-title':'Treffpunkt nach dem Spiel','meet-sub':'Wo trifft sich das Team am Ende? Die Teams sehen den Treffpunkt, sobald die Zeit abgelaufen ist, mit einem Knopf für Google Maps oder Apple Karten.','meet-ph':'Adresse oder Ort, z. B. Bahnhofplatz 1, Baden','meet-needed':'Ohne Treffpunkt startet dieses Spiel nicht. Bitte zuerst eintragen.','meet-saved':'Treffpunkt gespeichert','save-failed':'Speichern fehlgeschlagen','s-msgs-game':'Spiel','s-msgs-all-modes':'Alle Modi','mode-xmas-set-pics':'{n} Missionen haben ihr Bild bekommen','s-msgs-drag':'Ziehen, um die Reihenfolge zu ändern','s-msgs-toggle':'Ein- oder ausklappen','s-msgs-sum-when':'bei {n} Min. Restzeit','s-msgs-sum-empty':'noch ohne Text','m-tile-label':'Kachelbild (Weihnachten)','m-tile-own':'Eigenes Bild','m-tile-std':'Standardbild','m-tile-auto':'Ohne eigenes Bild bekommt die Kachel ein Standardbild.','m-tile-upload':'Bild hochladen','m-tile-replace':'Bild ersetzen','m-tile-reset':'Standardbild verwenden','m-tile-hint':'Das Bild auf der Missionskachel im Weihnachts-Look, nicht das Aufgabenbild. Am besten etwa 1000 × 900 px.','s-msgs-no-loc':'Kein Standort mehr','s-msgs-shared-hint':'Eine Nachricht mit mehreren Standorten ist überall dieselbe: Eine Änderung gilt für alle angehakten Standorte.','mode-norand-label':'Reihenfolge','mode-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Liste ziehen zum Sortieren). Aus: zufällig wie bisher.','mode-norand-pill':'Nicht zufällig','loc-norand-hint':'An: Missionen erscheinen in der angeordneten Reihenfolge (Missionsliste ziehen zum Sortieren). Aus: zufällig wie bisher.','cl-label':'Eigene Sprachen','cl-hint':'Zusätzliche Sprachen für Spieler an diesem Standort. Missions-Text wird darin eingegeben; App-Beschriftungen nutzen die Basissprache.','cl-name-ph':'z. B. Schwiizerdütsch','cl-base':'Basis','cl-add':'Sprache','cl-empty':'Noch keine eigenen Sprachen.','cl-name-req':'Bitte einen Sprachnamen eingeben','cl-dup':'Diese Sprache gibt es schon','mm-cust-title':'Eigene Sprachen (Standort)','mm-cust-hint':'Inhalt für die eigenen Sprachen dieses Standorts.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modi','s-cr-add-mode':'＋ Modus','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Modus','s-cr-info':'Rail Adventure nutzt GPS-Ortung. Spieler folgen linearen Missionen durch die Stadt.','s-cr-drag-hint':'Drag & drop zum Sortieren. Spieler sehen Missionen der Reihe nach.','s-cr-empty-text':'Noch kein Rail Adventure Modus. Klicke ＋ Modus.','cr-no-missions':'Noch keine Rail Adventure Missionen. Klicke ＋ Mission.','cr-missions-suffix':' — Missionen',
   // CR mission modal labels
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (Meter)','cr-m-points':'Punkte',
@@ -1570,7 +1593,7 @@ const GMT={
   'update-ok':'Update erfolgreich! App startet neu…','update-failed':'Update fehlgeschlagen.',
   'ruleset-created':'Regelwerk erstellt!','cannot-del-default-rs':'Standard-Regelwerk kann nicht gelöscht werden.',
   'cr-mode-created':'Rail Adventure Modus erstellt!','pick-mode-first':'Erst einen Modus auswählen',
-  'rank-tab':'Rangliste','s-msgs-nav':'Auto-Nachrichten','s-msgs-title':'Automatische Nachrichten','s-msgs-subtitle':'Sende automatisch eine Nachricht an alle Teams, wenn die Restzeit einen bestimmten Wert erreicht.','s-msgs-add':'Nachricht hinzufügen','s-msgs-when':'Restzeit (Minuten)','s-msgs-mode':'Spielmodi','s-msgs-loc':'Standort','s-msgs-all-loc':'Alle Standorte','s-msgs-text':'Nachricht','s-msgs-ph':'z. B. Noch 5 Minuten!','s-msgs-lang-hint':'Jedes Team erhält die Nachricht in der Sprache, die in seiner App eingestellt ist.',
+  'rank-tab':'Rangliste','s-msgs-nav':'Auto-Nachrichten','s-msgs-title':'Automatische Nachrichten','s-msgs-subtitle':'Sende automatisch eine Nachricht an alle Teams, wenn die Restzeit einen bestimmten Wert erreicht.','s-msgs-add':'Nachricht hinzufügen','s-msgs-when':'Restzeit (Minuten)','s-msgs-mode':'Spielmodi','s-msgs-loc':'Standorte','s-msgs-all-loc':'Alle Standorte','s-msgs-text':'Nachricht','s-msgs-ph':'z. B. Noch 5 Minuten!','s-msgs-lang-hint':'Jedes Team erhält die Nachricht in der Sprache, die in seiner App eingestellt ist.',
 'th-label':'Farbschema (Spieler)','th-hint-loc':'Eigenes Aussehen der Spieler-App für diesen Standort. Standard = aktuelles Design.','th-hint-mode':'Eigenes Aussehen der Spieler-App für diesen Rail Adventure Modus. Standard = aktuelles Design.','th-open':'Farbschema bearbeiten','th-title':'Farbschema','th-g-brand':'Logo & Text','th-g-tile':'Kacheln','th-g-button':'Buttons','th-g-input':'Eingabefelder','th-g-border':'Rahmen','th-v-tile':'Kachel-Füllung','th-v-tile-text':'Kachel-Text','th-v-btn-bg':'Button-Füllung','th-v-btn-text':'Button-Text','th-g-nav':'Navigation','th-v-nav':'Symbole (Sprache/Chat/Regeln)','th-v-tile-active':'Kachel angetippt','th-g-notice':'Hinweise & Chat','th-v-notice':'Hinweis-Feld','th-v-notice-text':'Hinweis-Text','th-v-points':'Punkte-Text','th-v-points-bg':'Punkte-Füllung','th-v-chat':'Chat-Blase (Spieler)','th-v-input-bg':'Feld-Füllung','th-v-logo':'Logo & Wortmarke','th-border-width':'Rahmenstärke','th-g-bg':'Hintergrund','th-g-surface':'Flächen','th-g-text':'Text','th-g-accent':'Akzente','th-stamp':'Kopfzeile (klein)','th-wordmark':'Wortmarke','th-logo':'Logo-Bild (ersetzt Text)','th-logo-up':'⬆ Hochladen','th-reset':'Standard','th-reset-all':'Standard wiederherstellen','th-reset-confirm':'Alle Farben, Texte und das Logo auf den Standard zurücksetzen?','th-prev-join':'Beitritt','th-prev-play':'Spiel','th-prev-detail':'Mission','th-prev-chat':'Chat','th-prev-reject':'Ablehnung','th-hint':'Leere Felder behalten den Standard. Änderungen erscheinen sofort in der Vorschau.','th-saved':'Farbschema gespeichert!','th-side-player':'Spieler','th-side-gm':'Dashboard','th-gm-note':'Änderungen erscheinen sofort hier im Dashboard.','gm-v-accent':'Akzent (Aktionen)','gm-v-danger':'Gefahr / Löschen','th-v-bg':'App-Hintergrund','th-v-bg2':'Leisten (dunkel)','th-v-bg3':'Kopfzeile','th-v-surface':'Karten','th-v-surface2':'Eingaben & Buttons','th-v-border':'Rahmenlinien','th-v-text':'Text','th-v-text-dim':'Text sekundär','th-v-text-muted':'Text gedämpft','th-v-red':'Marke & Wortmarke','th-v-orange':'Akzent','th-v-green':'Erfolg',
 'st-stats-lbl':'Statistik','s-stats-title':'Statistik','s-stats-subtitle':'Wie viele Spiele wo gespielt wurden. Teams = Höchststand pro Spiel.','s-stats-period':'Zeitraum','s-stats-p-all':'Gesamt','s-stats-p-year':'Dieses Jahr','s-stats-p-month':'Dieser Monat','s-stats-p-30':'Letzte 30 Tage','stats-games':'Spiele','stats-teams':'Teams','stats-total':'Spiele gesamt','stats-teams-total':'Teams gesamt','stats-by-loc':'Nach Standort (MiSSiONS)','stats-by-mode':'Nach Rail Adventure Modus','stats-by-month':'Pro Monat','stats-loc':'Standort','stats-mode':'Modus','stats-month':'Monat','stats-empty':'Noch keine Spiele im gewählten Zeitraum. Die Zählung beginnt mit dieser Version; ältere, bereits bereinigte Spiele fehlen.','stats-error':'Statistik konnte nicht geladen werden.','s-msgs-empty':'Noch keine automatischen Nachrichten.','s-msgs-del-confirm':'Diese automatische Nachricht löschen?','s-autoupd-label':'Beim Start auf Updates prüfen','s-autoupd-sub':'Zeigt automatisch ein Fenster, wenn eine neue Version verfügbar ist.','cr-mission-created':'Mission erstellt!','c-del-mission':'Mission löschen?',
   'hint-saved':'Hinweis gespeichert!','c-del-hint':'Hinweis löschen?','hint-not-found':'Hinweis nicht gefunden',
@@ -1617,7 +1640,7 @@ const GMT={
   'manuals-gm':'GM-Handbuch','manuals-settings':'Einstellungs-Handbuch',
   'manuals-others':'Andere Sprachen'},
   en:{'mm-multi':"Multiple images",'mm-multi-sub':"Off = a single image, as before.",'mm-multi-tip':"<strong>Lets players take several shots for this mission.</strong> They collect them in a gallery and submit everything together at the end.",'mm-multi-mode':"Count rule",'mm-multi-mode-tip':"<strong>At least:</strong> more images are allowed. <strong>Exactly:</strong> no more, no fewer.",'mm-multi-min':"At least",'mm-multi-exact':"Exactly",'mm-multi-count':"How many",'mm-multi-count-tip':"How many images are required.",'s-maxmb-label':"Max upload size",'s-maxmb-help':"MB per file. Behind a Cloudflare tunnel its own limit applies (100 MB Free, 200 MB Business) — setting more here changes nothing there.",'tip-maxmb':"Ceiling per uploaded file. Note: when the app is reached through a Cloudflare tunnel, Cloudflare cuts larger requests itself — a higher value here does not lift that limit.",'s-vidlen-label':"Max video length",'s-vidlen-help':"Seconds. The player app refuses longer clips with a notice; the in-app camera stops on its own. 0 = no limit.",'tip-vidlen':"Caps the length of submitted videos. The player app checks before uploading and reports an over-long clip straight away, instead of letting it fail after the upload.",'loading-video':"Loading video…",'rankings-fs-title':"RANKING",'s-logo-help':"Text logo (current) or your own image logo for the start screen.",'s-logo-pick':"Choose / replace image",'s-navtoggle-tip':"Collapse or expand the menu",'gm-freeze-help':"Pick the opposing team and a duration. Each team can freeze each other team only once.",'gm-freeze-cancel':"Cancel",'upd-cancel':"Cancel",'prof-words-ph':"one word per line\nor comma separated",'cr-m-answer-addbtn':"Add",'cr-m-answer-pending':"⚠ Not in the list yet — add it with Enter or ＋.",'mtip-media':"<strong>How players prove the task.</strong> A MiSSiON is a photo or a video the team records and you review.",'mtip-photo':"<strong>Players take a photo</strong> — e.g. recreate a pose, find an object, pose as a team.",'mtip-video':"<strong>Players record a short video</strong> — good for performances, dares or anything with movement/sound.",'tipx-name':"<strong>The title players see.</strong> Fill in at least one language; 🌐 Auto fills the rest.",'mtip-points':"<strong>Reward for completing it</strong>, once you approve the submission.",'mtip-desc':"<strong>Sets the scene.</strong> The flavour text — not the instruction itself (that goes in the “Task” tab).",'mtip-task':"<strong>The actual instruction</strong> — exactly what players have to do to complete the mission.",'mtip-location':"<strong>Which location the mission belongs to.</strong> “Pool” = unassigned, selectable for any game.",'mtip-mode':"Which game mode / ruleset the mission appears in.",'crtip-type':"<strong>What the mission asks for.</strong> Pick one — it decides which settings appear below. (Reaching the location is handled separately under “Placement”.)",'crtip-type-quiz':"<strong>Players type an answer.</strong> Correct when it matches one of the accepted answers (in their language). Ideal for on-site riddles.",'crtip-type-media':"<strong>Players submit a recording</strong> — a photo or short video. You approve it before points are awarded.",'crtip-type-puzzle':"<strong>Players solve a puzzle</strong> — assemble an image or put it in the right order. Solving completes the mission automatically.",'crtip-points':"<strong>Reward for completing it</strong>, added to the team’s score.",'crtip-answers':"<strong>What players have to type.</strong> Enter adds an answer — list as many spellings as you like, each one counts. The input must match in full (spacing doesn’t matter). 🌐 Auto only translates the first answer into the empty languages; add any further variants there yourself.",'crtip-media':"Photo or short video — the player app opens the matching camera mode.",'crtip-placement':"<strong>Where the mission lives.</strong> <strong>In the route</strong> = a GPS stop in sequence; players have to reach the coordinates. <strong>Special</strong> = anytime in the ⭐ area, no GPS, no order.",'crtip-coords':"The exact spot. Best set via the map or “Location” rather than typing — both coordinates get filled in.",'crtip-radius':"<strong>How close counts as “arrived”.</strong> 20–40 m works well. Smaller = stricter; larger = triggers earlier.",'crtip-showmap':"<strong>On:</strong> the marker appears on the player map. <strong>Off:</strong> hidden checkpoint — the same GPS mission, but not on the map; players find it via hints.",'crtip-repeat':"<strong>Off:</strong> completable once. <strong>On:</strong> repeatable, optionally with a cooldown (0 min = straight away).",'crtip-timer':"Countdown for the mission. If it runs over, points are deducted at the chosen interval.",
-  'ms-drag-hint':'Drag to reorder. The order only matters when the location is set to "Do Not Randomize".','mode-look-label':'Player look','mode-look-tip':'Christmas: a Christmas-market header, falling snow and mission tiles with pictures. The location colours stay. Standard keeps everything as it is.','mode-look-standard':'Standard','mode-look-christmas':'Christmas','mode-xmas-set':'Add the 16 Christmas missions','mode-xmas-set-sub':'With pictures. Missions of the same name that have no picture get theirs. Each picture can be replaced with your own in the mission.','mode-xmas-new-sub':'A new Christmas mode starts with the 16 Christmas missions and their pictures.','mode-xmas-set-done':'{n} Christmas missions added','mode-xmas-set-none':'All Christmas missions are already there.','mode-created-xmas':'Mode created, with {n} Christmas missions','mode-meet-label':'Require a meeting point','mode-meet-sub':'The timer only starts once the game master has entered the meeting point. Teams see it at the end with a map link.','meet-chip-empty':'Enter meeting point','meet-title':'Meeting point after the game','meet-sub':'Where will the team meet at the end? Teams see the meeting point as soon as time is up, with a button for Google Maps or Apple Maps.','meet-ph':'Address or place, e.g. Bahnhofplatz 1, Baden','meet-needed':'This game won’t start without a meeting point. Please enter it first.','meet-saved':'Meeting point saved','save-failed':'Saving failed','s-msgs-game':'Game','s-msgs-all-modes':'All modes','mode-xmas-set-pics':'{n} missions got their picture','s-msgs-drag':'Drag to change the order','s-msgs-toggle':'Collapse or expand','s-msgs-sum-when':'at {n} min left','s-msgs-sum-empty':'no text yet','m-tile-label':'Tile picture (Christmas)','m-tile-own':'Your own picture','m-tile-std':'Standard picture','m-tile-auto':'Without its own picture the tile gets a standard one.','m-tile-upload':'Upload picture','m-tile-replace':'Replace picture','m-tile-reset':'Use the standard picture','m-tile-hint':'The picture on the mission tile in the Christmas look, not the task image. Best around 1000 × 900 px.','mode-norand-label':'Order','mode-norand-hint':'On: missions appear in the arranged order (drag the list to sort). Off: random, as before.','mode-norand-pill':'Do Not Randomize','loc-norand-hint':'On: missions appear in the arranged order (drag the mission list to sort). Off: random, as before.','cl-label':'Custom languages','cl-hint':'Extra languages for players at this location. You type the mission text in them; the app labels use the base language.','cl-name-ph':'e.g. Swiss German','cl-base':'Base','cl-add':'Language','cl-empty':'No custom languages yet.','cl-name-req':'Enter a language name','cl-dup':'That language already exists','mm-cust-title':'Custom languages (location)','mm-cust-hint':'Content for this location\'s custom languages.',
+  'ms-drag-hint':'Drag to reorder. The order only matters when the location is set to "Do Not Randomize".','mode-look-label':'Player look','mode-look-tip':'Christmas: a Christmas-market header, falling snow and mission tiles with pictures. The location colours stay. Standard keeps everything as it is.','mode-look-standard':'Standard','mode-look-christmas':'Christmas','mode-xmas-set':'Add the 16 Christmas missions','mode-xmas-set-sub':'With pictures. Missions of the same name that have no picture get theirs. Each picture can be replaced with your own in the mission.','mode-xmas-new-sub':'A new Christmas mode starts with the 16 Christmas missions and their pictures.','mode-xmas-set-done':'{n} Christmas missions added','mode-xmas-set-none':'All Christmas missions are already there.','mode-created-xmas':'Mode created, with {n} Christmas missions','mode-meet-label':'Require a meeting point','mode-meet-sub':'The timer only starts once the game master has entered the meeting point. Teams see it at the end with a map link.','meet-chip-empty':'Enter meeting point','meet-title':'Meeting point after the game','meet-sub':'Where will the team meet at the end? Teams see the meeting point as soon as time is up, with a button for Google Maps or Apple Maps.','meet-ph':'Address or place, e.g. Bahnhofplatz 1, Baden','meet-needed':'This game won’t start without a meeting point. Please enter it first.','meet-saved':'Meeting point saved','save-failed':'Saving failed','s-msgs-game':'Game','s-msgs-all-modes':'All modes','mode-xmas-set-pics':'{n} missions got their picture','s-msgs-drag':'Drag to change the order','s-msgs-toggle':'Collapse or expand','s-msgs-sum-when':'at {n} min left','s-msgs-sum-empty':'no text yet','m-tile-label':'Tile picture (Christmas)','m-tile-own':'Your own picture','m-tile-std':'Standard picture','m-tile-auto':'Without its own picture the tile gets a standard one.','m-tile-upload':'Upload picture','m-tile-replace':'Replace picture','m-tile-reset':'Use the standard picture','m-tile-hint':'The picture on the mission tile in the Christmas look, not the task image. Best around 1000 × 900 px.','s-msgs-no-loc':'No location left','s-msgs-shared-hint':'A message with several locations is the same message everywhere: a change applies to all ticked locations.','mode-norand-label':'Order','mode-norand-hint':'On: missions appear in the arranged order (drag the list to sort). Off: random, as before.','mode-norand-pill':'Do Not Randomize','loc-norand-hint':'On: missions appear in the arranged order (drag the mission list to sort). Off: random, as before.','cl-label':'Custom languages','cl-hint':'Extra languages for players at this location. You type the mission text in them; the app labels use the base language.','cl-name-ph':'e.g. Swiss German','cl-base':'Base','cl-add':'Language','cl-empty':'No custom languages yet.','cl-name-req':'Enter a language name','cl-dup':'That language already exists','mm-cust-title':'Custom languages (location)','mm-cust-hint':'Content for this location\'s custom languages.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Rail Adventure Modes','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure uses GPS tracking. Players follow linear missions through the city.','s-cr-drag-hint':'Drag & drop to reorder. Players see missions in order.','s-cr-empty-text':'No Rail Adventure mode yet. Click ＋ Mode.','cr-no-missions':'No Rail Adventure missions yet. Click ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Name','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Radius (meters)','cr-m-points':'Points',
   'cr-m-gps':'📍 GPS trigger','cr-m-map':'🗺️ Show on map','cr-m-timed':'⏱ Time limit',
@@ -1700,7 +1723,7 @@ const GMT={
   'update-ok':'Update successful! Restarting app…','update-failed':'Update failed.',
   'ruleset-created':'Ruleset created!','cannot-del-default-rs':"Default ruleset can't be deleted.",
   'cr-mode-created':'Rail Adventure mode created!','pick-mode-first':'Pick a mode first',
-  'rank-tab':'Rankings','s-msgs-nav':'Auto messages','s-msgs-title':'Automated messages','s-msgs-subtitle':'Automatically send a message to all teams when the remaining time reaches a set value.','s-msgs-add':'Add message','s-msgs-when':'Remaining time (minutes)','s-msgs-mode':'Game modes','s-msgs-loc':'Location','s-msgs-all-loc':'All locations','s-msgs-text':'Message','s-msgs-ph':'e.g. 5 minutes left!','s-msgs-lang-hint':'Each team receives the message in the language their app is set to.',
+  'rank-tab':'Rankings','s-msgs-nav':'Auto messages','s-msgs-title':'Automated messages','s-msgs-subtitle':'Automatically send a message to all teams when the remaining time reaches a set value.','s-msgs-add':'Add message','s-msgs-when':'Remaining time (minutes)','s-msgs-mode':'Game modes','s-msgs-loc':'Locations','s-msgs-all-loc':'All locations','s-msgs-text':'Message','s-msgs-ph':'e.g. 5 minutes left!','s-msgs-lang-hint':'Each team receives the message in the language their app is set to.',
 'th-label':'Colour scheme (players)','th-hint-loc':'Custom look of the player app for this location. Default = the current design.','th-hint-mode':'Custom look of the player app for this Rail Adventure mode. Default = the current design.','th-open':'Edit colour scheme','th-title':'Colour scheme','th-g-brand':'Logo & text','th-g-tile':'Tiles','th-g-button':'Buttons','th-g-input':'Input fields','th-g-border':'Border','th-v-tile':'Tile fill','th-v-tile-text':'Tile text','th-v-btn-bg':'Button fill','th-v-btn-text':'Button text','th-g-nav':'Navigation','th-v-nav':'Icons (language/chat/rules)','th-v-tile-active':'Tile (tapped)','th-g-notice':'Notices & chat','th-v-notice':'Notice box','th-v-notice-text':'Notice text','th-v-points':'Points text','th-v-points-bg':'Points fill','th-v-chat':'Chat bubble (player)','th-v-input-bg':'Field fill','th-v-logo':'Logo & wordmark','th-border-width':'Border thickness','th-g-bg':'Background','th-g-surface':'Surfaces','th-g-text':'Text','th-g-accent':'Accents','th-stamp':'Header (small)','th-wordmark':'Wordmark','th-logo':'Logo image (replaces text)','th-logo-up':'⬆ Upload','th-reset':'Default','th-reset-all':'Restore defaults','th-reset-confirm':'Reset all colours, texts and the logo to the default?','th-prev-join':'Join','th-prev-play':'Game','th-prev-detail':'Mission','th-prev-chat':'Chat','th-prev-reject':'Rejection','th-hint':'Empty fields keep the default. Changes appear instantly in the preview.','th-saved':'Colour scheme saved!','th-side-player':'Players','th-side-gm':'Dashboard','th-gm-note':'Changes apply live here in the dashboard.','gm-v-accent':'Accent (actions)','gm-v-danger':'Danger / delete','th-v-bg':'App background','th-v-bg2':'Bars (dark)','th-v-bg3':'Header','th-v-surface':'Cards','th-v-surface2':'Inputs & buttons','th-v-border':'Borders','th-v-text':'Text','th-v-text-dim':'Secondary text','th-v-text-muted':'Muted text','th-v-red':'Brand & wordmark','th-v-orange':'Accent','th-v-green':'Success',
 'st-stats-lbl':'Statistics','s-stats-title':'Statistics','s-stats-subtitle':'How many games were played, and where. Teams = peak per game.','s-stats-period':'Period','s-stats-p-all':'All time','s-stats-p-year':'This year','s-stats-p-month':'This month','s-stats-p-30':'Last 30 days','stats-games':'Games','stats-teams':'Teams','stats-total':'Games total','stats-teams-total':'Teams total','stats-by-loc':'By location (MiSSiONS)','stats-by-mode':'By Rail Adventure mode','stats-by-month':'Per month','stats-loc':'Location','stats-mode':'Mode','stats-month':'Month','stats-empty':'No games in the chosen period yet. Counting starts with this version; older, already cleaned-up games are missing.','stats-error':'Could not load the statistics.','s-msgs-empty':'No automated messages yet.','s-msgs-del-confirm':'Delete this automated message?','s-autoupd-label':'Check for updates on startup','s-autoupd-sub':'Automatically shows a window when a new version is available.','cr-mission-created':'Mission created!','c-del-mission':'Delete mission?',
   'hint-saved':'Hint saved!','c-del-hint':'Delete hint?','hint-not-found':'Hint not found',
@@ -1743,7 +1766,7 @@ const GMT={
   'manuals-gm':'GM Manual','manuals-settings':'Settings Manual',
   'manuals-others':'Other languages'},
   fr:{'mm-multi':"Plusieurs images",'mm-multi-sub':"Désactivé = une seule image, comme avant.",'mm-multi-tip':"<strong>Permet plusieurs prises pour cette mission.</strong> Les joueurs les rassemblent dans une galerie et envoient le tout à la fin.",'mm-multi-mode':"Règle de nombre",'mm-multi-mode-tip':"<strong>Au moins :</strong> davantage d’images est autorisé. <strong>Exactement :</strong> ni plus ni moins.",'mm-multi-min':"Au moins",'mm-multi-exact':"Exactement",'mm-multi-count':"Combien",'mm-multi-count-tip':"Combien d’images sont exigées.",'s-maxmb-label':"Taille max. d’envoi",'s-maxmb-help':"Mo par fichier. Derrière un tunnel Cloudflare, c’est sa limite qui s’applique (100 Mo Free, 200 Mo Business) — augmenter ici n’y change rien.",'tip-maxmb':"Plafond par fichier envoyé. Attention : si l’app passe par un tunnel Cloudflare, Cloudflare coupe lui-même les requêtes plus grandes — une valeur plus élevée ici ne lève pas cette limite.",'s-vidlen-label':"Durée max. des vidéos",'s-vidlen-help':"Secondes. L’app joueur refuse les clips plus longs avec un message ; la caméra intégrée s’arrête d’elle-même. 0 = sans limite.",'tip-vidlen':"Limite la durée des vidéos envoyées. L’app joueur vérifie avant l’envoi et signale immédiatement un clip trop long, au lieu de le laisser échouer après coup.",'loading-video':"Chargement de la vidéo…",'rankings-fs-title':"CLASSEMENT",'s-logo-help':"Logo typographique (actuel) ou votre propre logo image pour l’écran d’accueil.",'s-logo-pick':"Choisir / remplacer l’image",'s-navtoggle-tip':"Replier ou déplier le menu",'gm-freeze-help':"Choisissez l’équipe adverse et une durée. Chaque équipe ne peut geler une autre qu’une seule fois.",'gm-freeze-cancel':"Annuler",'upd-cancel':"Annuler",'prof-words-ph':"un mot par ligne\nou séparés par des virgules",'cr-m-answer-addbtn':"Ajouter",'cr-m-answer-pending':"⚠ Pas encore dans la liste — ajoutez-la avec Entrée ou ＋.",'mtip-media':"<strong>Comment les joueurs prouvent la tâche.</strong> Une MiSSiON est une photo ou une vidéo que l’équipe enregistre et que vous validez.",'mtip-photo':"<strong>Les joueurs prennent une photo</strong> — p. ex. reproduire une pose, trouver un objet, poser en équipe.",'mtip-video':"<strong>Les joueurs enregistrent une courte vidéo</strong> — idéal pour les performances, les défis ou tout ce qui bouge ou fait du bruit.",'tipx-name':"<strong>Le titre que voient les joueurs.</strong> Remplissez au moins une langue ; 🌐 Auto complète le reste.",'mtip-points':"<strong>Récompense pour la réussite</strong>, dès que vous validez l’envoi.",'mtip-desc':"<strong>Plante le décor.</strong> Le texte d’ambiance — pas la consigne elle-même (elle va dans l’onglet « Tâche »).",'mtip-task':"<strong>La consigne concrète</strong> — ce que les joueurs doivent faire exactement pour terminer la mission.",'mtip-location':"<strong>À quel lieu appartient la mission.</strong> « Pool » = non attribuée, disponible pour toute partie.",'mtip-mode':"Dans quel mode de jeu / règlement la mission apparaît.",'crtip-type':"<strong>Ce que demande la mission.</strong> Choisissez-en un — cela détermine les réglages affichés ci-dessous. (L’arrivée sur le lieu se règle séparément sous « Placement ».)",'crtip-type-quiz':"<strong>Les joueurs saisissent une réponse.</strong> Correcte si elle correspond à l’une des réponses acceptées (dans leur langue). Idéal pour les énigmes sur place.",'crtip-type-media':"<strong>Les joueurs envoient un enregistrement</strong> — une photo ou une courte vidéo. Vous la validez avant l’attribution des points.",'crtip-type-puzzle':"<strong>Les joueurs résolvent un puzzle</strong> — assembler une image ou la remettre dans l’ordre. La résolution termine la mission automatiquement.",'crtip-points':"<strong>Récompense pour la réussite</strong>, ajoutée au score de l’équipe.",'crtip-answers':"<strong>Ce que les joueurs doivent saisir.</strong> Entrée ajoute une réponse — listez autant d’orthographes que vous voulez, chacune compte. La saisie doit correspondre entièrement (les espaces n’importent pas). 🌐 Auto ne traduit que la première réponse dans les langues vides ; ajoutez-y vous-même les autres variantes.",'crtip-media':"Photo ou courte vidéo — l’app joueur ouvre le mode caméra correspondant.",'crtip-placement':"<strong>Où vit la mission.</strong> <strong>Dans le parcours</strong> = un arrêt GPS dans l’ordre ; les joueurs doivent atteindre les coordonnées. <strong>Spécial</strong> = à tout moment dans la zone ⭐, sans GPS, sans ordre.",'crtip-coords':"L’endroit exact. À définir de préférence via la carte ou « Position » plutôt qu’à la main — les deux coordonnées sont alors remplies.",'crtip-radius':"<strong>À quelle distance on est « arrivé ».</strong> 20–40 m fonctionne bien. Plus petit = plus strict ; plus grand = se déclenche plus tôt.",'crtip-showmap':"<strong>Activé :</strong> le marqueur apparaît sur la carte des joueurs. <strong>Désactivé :</strong> checkpoint caché — la même mission GPS, mais absente de la carte ; les joueurs le trouvent grâce aux indices.",'crtip-repeat':"<strong>Désactivé :</strong> réalisable une seule fois. <strong>Activé :</strong> répétable, avec temps d’attente optionnel (0 min = immédiatement).",'crtip-timer':"Compte à rebours pour la mission. En cas de dépassement, des points sont retirés à l’intervalle choisi.",
-  'ms-drag-hint':'Glisser pour réorganiser. L\'ordre ne compte que si le lieu est réglé sur « Ne pas mélanger ».','mode-look-label':'Apparence pour les joueurs','mode-look-tip':'Noël : un marché de Noël en en-tête, de la neige qui tombe et des tuiles de mission avec image. Les couleurs du lieu restent. Standard laisse tout comme avant.','mode-look-standard':'Standard','mode-look-christmas':'Noël','mode-xmas-set':'Ajouter les 16 missions de Noël','mode-xmas-set-sub':'Avec image. Les missions du même nom sans image reçoivent la leur. Chaque image peut être remplacée par la vôtre dans la mission.','mode-xmas-new-sub':'Un nouveau mode Noël démarre avec les 16 missions de Noël et leurs images.','mode-xmas-set-done':'{n} missions de Noël ajoutées','mode-xmas-set-none':'Toutes les missions de Noël sont déjà là.','mode-created-xmas':'Mode créé, avec {n} missions de Noël','mode-meet-label':'Exiger un point de rendez-vous','mode-meet-sub':'Le minuteur ne démarre qu’une fois le point de rendez-vous saisi par le maître du jeu. Les équipes le voient à la fin avec un lien vers la carte.','meet-chip-empty':'Saisir le point de rendez-vous','meet-title':'Point de rendez-vous après le jeu','meet-sub':'Où l’équipe se retrouve-t-elle à la fin ? Les équipes voient le point de rendez-vous dès que le temps est écoulé, avec un bouton pour Google Maps ou Apple Plans.','meet-ph':'Adresse ou lieu, p. ex. Bahnhofplatz 1, Baden','meet-needed':'Ce jeu ne démarre pas sans point de rendez-vous. Merci de le saisir d’abord.','meet-saved':'Point de rendez-vous enregistré','save-failed':'Échec de l’enregistrement','s-msgs-game':'Jeu','s-msgs-all-modes':'Tous les modes','mode-xmas-set-pics':'{n} missions ont reçu leur image','s-msgs-drag':'Glisser pour changer l’ordre','s-msgs-toggle':'Replier ou déplier','s-msgs-sum-when':'à {n} min de la fin','s-msgs-sum-empty':'pas encore de texte','m-tile-label':'Image de la tuile (Noël)','m-tile-own':'Votre image','m-tile-std':'Image standard','m-tile-auto':'Sans image propre, la tuile reçoit une image standard.','m-tile-upload':'Téléverser une image','m-tile-replace':'Remplacer l’image','m-tile-reset':'Utiliser l’image standard','m-tile-hint':'L’image de la tuile de mission dans le style Noël, pas l’image de la tâche. Idéalement environ 1000 × 900 px.','mode-norand-label':'Ordre','mode-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste pour trier). Désactivé : aléatoire, comme avant.','mode-norand-pill':'Ne pas mélanger','loc-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste des missions pour trier). Désactivé : aléatoire, comme avant.','cl-label':'Langues personnalisées','cl-hint':'Langues supplémentaires pour les joueurs de ce lieu. Vous y saisissez le texte des missions ; les libellés de l\'app utilisent la langue de base.','cl-name-ph':'p. ex. Suisse allemand','cl-base':'Base','cl-add':'Langue','cl-empty':'Aucune langue personnalisée.','cl-name-req':'Saisissez un nom de langue','cl-dup':'Cette langue existe déjà','mm-cust-title':'Langues personnalisées (lieu)','mm-cust-hint':'Contenu pour les langues personnalisées de ce lieu.',
+  'ms-drag-hint':'Glisser pour réorganiser. L\'ordre ne compte que si le lieu est réglé sur « Ne pas mélanger ».','mode-look-label':'Apparence pour les joueurs','mode-look-tip':'Noël : un marché de Noël en en-tête, de la neige qui tombe et des tuiles de mission avec image. Les couleurs du lieu restent. Standard laisse tout comme avant.','mode-look-standard':'Standard','mode-look-christmas':'Noël','mode-xmas-set':'Ajouter les 16 missions de Noël','mode-xmas-set-sub':'Avec image. Les missions du même nom sans image reçoivent la leur. Chaque image peut être remplacée par la vôtre dans la mission.','mode-xmas-new-sub':'Un nouveau mode Noël démarre avec les 16 missions de Noël et leurs images.','mode-xmas-set-done':'{n} missions de Noël ajoutées','mode-xmas-set-none':'Toutes les missions de Noël sont déjà là.','mode-created-xmas':'Mode créé, avec {n} missions de Noël','mode-meet-label':'Exiger un point de rendez-vous','mode-meet-sub':'Le minuteur ne démarre qu’une fois le point de rendez-vous saisi par le maître du jeu. Les équipes le voient à la fin avec un lien vers la carte.','meet-chip-empty':'Saisir le point de rendez-vous','meet-title':'Point de rendez-vous après le jeu','meet-sub':'Où l’équipe se retrouve-t-elle à la fin ? Les équipes voient le point de rendez-vous dès que le temps est écoulé, avec un bouton pour Google Maps ou Apple Plans.','meet-ph':'Adresse ou lieu, p. ex. Bahnhofplatz 1, Baden','meet-needed':'Ce jeu ne démarre pas sans point de rendez-vous. Merci de le saisir d’abord.','meet-saved':'Point de rendez-vous enregistré','save-failed':'Échec de l’enregistrement','s-msgs-game':'Jeu','s-msgs-all-modes':'Tous les modes','mode-xmas-set-pics':'{n} missions ont reçu leur image','s-msgs-drag':'Glisser pour changer l’ordre','s-msgs-toggle':'Replier ou déplier','s-msgs-sum-when':'à {n} min de la fin','s-msgs-sum-empty':'pas encore de texte','m-tile-label':'Image de la tuile (Noël)','m-tile-own':'Votre image','m-tile-std':'Image standard','m-tile-auto':'Sans image propre, la tuile reçoit une image standard.','m-tile-upload':'Téléverser une image','m-tile-replace':'Remplacer l’image','m-tile-reset':'Utiliser l’image standard','m-tile-hint':'L’image de la tuile de mission dans le style Noël, pas l’image de la tâche. Idéalement environ 1000 × 900 px.','s-msgs-no-loc':'Plus de lieu','s-msgs-shared-hint':'Un message coché pour plusieurs lieux est le même partout : une modification s’applique à tous les lieux cochés.','mode-norand-label':'Ordre','mode-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste pour trier). Désactivé : aléatoire, comme avant.','mode-norand-pill':'Ne pas mélanger','loc-norand-hint':'Activé : les missions apparaissent dans l\'ordre arrangé (glisser la liste des missions pour trier). Désactivé : aléatoire, comme avant.','cl-label':'Langues personnalisées','cl-hint':'Langues supplémentaires pour les joueurs de ce lieu. Vous y saisissez le texte des missions ; les libellés de l\'app utilisent la langue de base.','cl-name-ph':'p. ex. Suisse allemand','cl-base':'Base','cl-add':'Langue','cl-empty':'Aucune langue personnalisée.','cl-name-req':'Saisissez un nom de langue','cl-dup':'Cette langue existe déjà','mm-cust-title':'Langues personnalisées (lieu)','mm-cust-hint':'Contenu pour les langues personnalisées de ce lieu.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modes Rail Adventure','s-cr-add-mode':'＋ Mode','s-cr-add-mission':'＋ Mission','s-cr-edit-mode':'✎ Mode','s-cr-info':'Rail Adventure utilise la géolocalisation. Les joueurs suivent des missions linéaires à travers la ville.','s-cr-drag-hint':'Glisser-déposer pour réorganiser. Les joueurs voient les missions dans l\'ordre.','s-cr-empty-text':'Aucun mode Rail Adventure. Cliquez ＋ Mode.','cr-no-missions':'Aucune mission Rail Adventure. Cliquez ＋ Mission.','cr-missions-suffix':' — Missions',
   'cr-m-name':'Nom','cr-m-lat':'Latitude','cr-m-lng':'Longitude','cr-m-radius':'Rayon (mètres)','cr-m-points':'Points',
   'cr-m-gps':'📍 Déclencheur GPS','cr-m-map':'🗺️ Afficher sur la carte','cr-m-timed':'⏱ Limite de temps',
@@ -1826,7 +1849,7 @@ const GMT={
   'update-ok':'Mise à jour réussie ! Redémarrage…','update-failed':'Échec de la mise à jour.',
   'ruleset-created':'Jeu de règles créé !','cannot-del-default-rs':'Le jeu de règles par défaut ne peut pas être supprimé.',
   'cr-mode-created':'Mode Rail Adventure créé !','pick-mode-first':"Choisis d'abord un mode",
-  'rank-tab':'Classement','s-msgs-nav':'Messages auto','s-msgs-title':'Messages automatiques','s-msgs-subtitle':'Envoie automatiquement un message à toutes les équipes quand le temps restant atteint une valeur définie.','s-msgs-add':'Ajouter un message','s-msgs-when':'Temps restant (minutes)','s-msgs-mode':'Modes de jeu','s-msgs-loc':'Lieu','s-msgs-all-loc':'Tous les lieux','s-msgs-text':'Message','s-msgs-ph':'p. ex. Plus que 5 minutes !','s-msgs-lang-hint':'Chaque équipe reçoit le message dans la langue configurée dans son application.',
+  'rank-tab':'Classement','s-msgs-nav':'Messages auto','s-msgs-title':'Messages automatiques','s-msgs-subtitle':'Envoie automatiquement un message à toutes les équipes quand le temps restant atteint une valeur définie.','s-msgs-add':'Ajouter un message','s-msgs-when':'Temps restant (minutes)','s-msgs-mode':'Modes de jeu','s-msgs-loc':'Lieux','s-msgs-all-loc':'Tous les lieux','s-msgs-text':'Message','s-msgs-ph':'p. ex. Plus que 5 minutes !','s-msgs-lang-hint':'Chaque équipe reçoit le message dans la langue configurée dans son application.',
 'th-label':'Thème de couleurs (joueurs)','th-hint-loc':'Apparence personnalisée de l\'app joueur pour ce lieu. Standard = design actuel.','th-hint-mode':'Apparence personnalisée de l\'app joueur pour ce mode Rail Adventure. Standard = design actuel.','th-open':'Modifier le thème','th-title':'Thème de couleurs','th-g-brand':'Logo & texte','th-g-tile':'Tuiles','th-g-button':'Boutons','th-g-input':'Champs','th-g-border':'Bordure','th-v-tile':'Fond des tuiles','th-v-tile-text':'Texte des tuiles','th-v-btn-bg':'Fond des boutons','th-v-btn-text':'Texte des boutons','th-g-nav':'Navigation','th-v-nav':'Icônes (langue/chat/règles)','th-v-tile-active':'Tuile (appuyée)','th-g-notice':'Avis & chat','th-v-notice':'Encadré d’avis','th-v-notice-text':'Texte de l’avis','th-v-points':'Texte des points','th-v-points-bg':'Fond des points','th-v-chat':'Bulle de chat (joueur)','th-v-input-bg':'Fond des champs','th-v-logo':'Logo & logotype','th-border-width':'Épaisseur de bordure','th-g-bg':'Arrière-plan','th-g-surface':'Surfaces','th-g-text':'Texte','th-g-accent':'Accents','th-stamp':'En-tête (petit)','th-wordmark':'Logotype','th-logo':'Image du logo (remplace le texte)','th-logo-up':'⬆ Téléverser','th-reset':'Standard','th-reset-all':'Restaurer le standard','th-reset-confirm':'Réinitialiser toutes les couleurs, les textes et le logo au standard ?','th-prev-join':'Inscription','th-prev-play':'Jeu','th-prev-detail':'Mission','th-prev-chat':'Chat','th-prev-reject':'Refus','th-hint':'Les champs vides gardent le standard. Les changements apparaissent immédiatement dans l\'aperçu.','th-saved':'Thème enregistré !','th-side-player':'Joueurs','th-side-gm':'Tableau de bord','th-gm-note':'Les changements apparaissent ici en direct.','gm-v-accent':'Accent (actions)','gm-v-danger':'Danger / suppression','th-v-bg':'Fond de l\'app','th-v-bg2':'Barres (sombre)','th-v-bg3':'En-tête','th-v-surface':'Cartes','th-v-surface2':'Champs & boutons','th-v-border':'Bordures','th-v-text':'Texte','th-v-text-dim':'Texte secondaire','th-v-text-muted':'Texte atténué','th-v-red':'Marque & logotype','th-v-orange':'Accent','th-v-green':'Succès',
 'st-stats-lbl':'Statistiques','s-stats-title':'Statistiques','s-stats-subtitle':'Combien de parties ont été jouées, et où. Équipes = maximum par partie.','s-stats-period':'Période','s-stats-p-all':'Tout','s-stats-p-year':'Cette année','s-stats-p-month':'Ce mois-ci','s-stats-p-30':'30 derniers jours','stats-games':'Parties','stats-teams':'Équipes','stats-total':'Parties au total','stats-teams-total':'Équipes au total','stats-by-loc':'Par lieu (MiSSiONS)','stats-by-mode':'Par mode Rail Adventure','stats-by-month':'Par mois','stats-loc':'Lieu','stats-mode':'Mode','stats-month':'Mois','stats-empty':'Aucune partie sur la période choisie. Le comptage commence avec cette version ; les parties déjà nettoyées manquent.','stats-error':'Impossible de charger les statistiques.','s-msgs-empty':'Aucun message automatique pour l\'instant.','s-msgs-del-confirm':'Supprimer ce message automatique ?','s-autoupd-label':'Vérifier les mises à jour au démarrage','s-autoupd-sub':'Affiche automatiquement une fenêtre quand une nouvelle version est disponible.','cr-mission-created':'Mission créée !','c-del-mission':'Supprimer la mission ?',
   'hint-saved':'Indice enregistré !','c-del-hint':"Supprimer l'indice ?",'hint-not-found':'Indice introuvable',
@@ -1869,7 +1892,7 @@ const GMT={
   'manuals-gm':'Manuel GM','manuals-settings':'Manuel des paramètres',
   'manuals-others':'Autres langues'},
   it:{'mm-multi':"Più immagini",'mm-multi-sub':"Off = una sola immagine, come prima.",'mm-multi-tip':"<strong>Consente più scatti per questa missione.</strong> I giocatori li raccolgono in una galleria e inviano tutto alla fine.",'mm-multi-mode':"Regola sul numero",'mm-multi-mode-tip':"<strong>Almeno:</strong> sono ammesse più immagini. <strong>Esattamente:</strong> né più né meno.",'mm-multi-min':"Almeno",'mm-multi-exact':"Esattamente",'mm-multi-count':"Quante",'mm-multi-count-tip':"Quante immagini sono richieste.",'s-maxmb-label':"Dimensione max. upload",'s-maxmb-help':"MB per file. Dietro un tunnel Cloudflare vale il suo limite (100 MB Free, 200 MB Business) — alzarlo qui non cambia nulla.",'tip-maxmb':"Limite per file caricato. Nota: se l’app passa da un tunnel Cloudflare, è Cloudflare a tagliare le richieste più grandi — un valore più alto qui non rimuove quel limite.",'s-vidlen-label':"Durata max. video",'s-vidlen-help':"Secondi. L’app giocatore rifiuta i clip più lunghi con un avviso; la fotocamera interna si ferma da sola. 0 = nessun limite.",'tip-vidlen':"Limita la durata dei video inviati. L’app giocatore controlla prima del caricamento e segnala subito un clip troppo lungo, invece di farlo fallire dopo.",'loading-video':"Caricamento del video…",'rankings-fs-title':"CLASSIFICA",'s-logo-help':"Logo testuale (attuale) o un logo immagine personalizzato per la schermata iniziale.",'s-logo-pick':"Scegli / sostituisci immagine",'s-navtoggle-tip':"Comprimi o espandi il menu",'gm-freeze-help':"Scegli la squadra avversaria e una durata. Ogni squadra può congelare ogni altra una sola volta.",'gm-freeze-cancel':"Annulla",'upd-cancel':"Annulla",'prof-words-ph':"una parola per riga\no separate da virgole",'cr-m-answer-addbtn':"Aggiungi",'cr-m-answer-pending':"⚠ Non ancora nella lista — aggiungila con Invio o ＋.",'mtip-media':"<strong>Come i giocatori dimostrano il compito.</strong> Una MiSSiON è una foto o un video che la squadra registra e che tu approvi.",'mtip-photo':"<strong>I giocatori scattano una foto</strong> — es. ricreare una posa, trovare un oggetto, posare in squadra.",'mtip-video':"<strong>I giocatori registrano un breve video</strong> — ottimo per esibizioni, sfide o tutto ciò che ha movimento o suono.",'tipx-name':"<strong>Il titolo che vedono i giocatori.</strong> Compila almeno una lingua; 🌐 Auto riempie il resto.",'mtip-points':"<strong>Ricompensa per il completamento</strong>, non appena approvi l’invio.",'mtip-desc':"<strong>Crea l’atmosfera.</strong> Il testo introduttivo — non l’istruzione vera e propria (quella va nella scheda «Compito»).",'mtip-task':"<strong>L’istruzione concreta</strong> — cosa devono fare esattamente i giocatori per completare la missione.",'mtip-location':"<strong>A quale sede appartiene la missione.</strong> «Pool» = non assegnata, selezionabile per qualsiasi partita.",'mtip-mode':"In quale modalità di gioco / regolamento appare la missione.",'crtip-type':"<strong>Cosa richiede la missione.</strong> Scegline uno — determina quali impostazioni appaiono sotto. (L’arrivo sul posto si gestisce a parte in «Posizionamento».)",'crtip-type-quiz':"<strong>I giocatori digitano una risposta.</strong> Corretta se corrisponde a una delle risposte accettate (nella loro lingua). Ideale per enigmi sul posto.",'crtip-type-media':"<strong>I giocatori inviano una registrazione</strong> — una foto o un breve video. La approvi prima che vengano assegnati i punti.",'crtip-type-puzzle':"<strong>I giocatori risolvono un puzzle</strong> — comporre un’immagine o metterla nell’ordine giusto. La soluzione completa la missione automaticamente.",'crtip-points':"<strong>Ricompensa per il completamento</strong>, aggiunta al punteggio della squadra.",'crtip-answers':"<strong>Cosa devono digitare i giocatori.</strong> Invio aggiunge una risposta — elenca tutte le grafie che vuoi, ognuna vale. L’inserimento deve corrispondere per intero (gli spazi non contano). 🌐 Auto traduce solo la prima risposta nelle lingue vuote; le altre varianti aggiungile tu.",'crtip-media':"Foto o breve video — l’app giocatore apre la modalità fotocamera corrispondente.",'crtip-placement':"<strong>Dove vive la missione.</strong> <strong>Nel percorso</strong> = una tappa GPS in sequenza; i giocatori devono raggiungere le coordinate. <strong>Speciale</strong> = in qualsiasi momento nell’area ⭐, senza GPS, senza ordine.",'crtip-coords':"Il punto esatto. Meglio impostarlo dalla mappa o con «Posizione» invece di digitarlo — entrambe le coordinate vengono compilate.",'crtip-radius':"<strong>Quanto vicino conta come «arrivato».</strong> 20–40 m vanno bene. Più piccolo = più severo; più grande = scatta prima.",'crtip-showmap':"<strong>On:</strong> il segnaposto appare sulla mappa dei giocatori. <strong>Off:</strong> checkpoint nascosto — la stessa missione GPS, ma non sulla mappa; i giocatori lo trovano con i suggerimenti.",'crtip-repeat':"<strong>Off:</strong> completabile una volta sola. <strong>On:</strong> ripetibile, con attesa opzionale (0 min = subito).",'crtip-timer':"Conto alla rovescia per la missione. In caso di superamento, i punti vengono detratti all’intervallo scelto.",
-  'ms-drag-hint':'Trascina per riordinare. L\'ordine conta solo se la sede è impostata su «Non mescolare».','mode-look-label':'Aspetto per i giocatori','mode-look-tip':'Natale: un mercatino di Natale come intestazione, neve che cade e riquadri delle missioni con immagine. I colori della sede restano. Standard lascia tutto com’è.','mode-look-standard':'Standard','mode-look-christmas':'Natale','mode-xmas-set':'Aggiungi le 16 missioni di Natale','mode-xmas-set-sub':'Con immagine. Le missioni con lo stesso nome senza immagine ricevono la loro. Ogni immagine si può sostituire con una propria nella missione.','mode-xmas-new-sub':'Una nuova modalità Natale parte con le 16 missioni di Natale e le loro immagini.','mode-xmas-set-done':'{n} missioni di Natale aggiunte','mode-xmas-set-none':'Tutte le missioni di Natale ci sono già.','mode-created-xmas':'Modalità creata, con {n} missioni di Natale','mode-meet-label':'Richiedi un punto d’incontro','mode-meet-sub':'Il timer parte solo dopo che il game master ha inserito il punto d’incontro. Le squadre lo vedono alla fine con un link alla mappa.','meet-chip-empty':'Inserisci il punto d’incontro','meet-title':'Punto d’incontro dopo il gioco','meet-sub':'Dove si incontra la squadra alla fine? Le squadre vedono il punto d’incontro appena scade il tempo, con un pulsante per Google Maps o Apple Mappe.','meet-ph':'Indirizzo o luogo, es. Bahnhofplatz 1, Baden','meet-needed':'Questo gioco non parte senza un punto d’incontro. Inseriscilo prima.','meet-saved':'Punto d’incontro salvato','save-failed':'Salvataggio non riuscito','s-msgs-game':'Gioco','s-msgs-all-modes':'Tutte le modalità','mode-xmas-set-pics':'{n} missioni hanno ricevuto la loro immagine','s-msgs-drag':'Trascina per cambiare l’ordine','s-msgs-toggle':'Comprimi o espandi','s-msgs-sum-when':'a {n} min dalla fine','s-msgs-sum-empty':'ancora senza testo','m-tile-label':'Immagine del riquadro (Natale)','m-tile-own':'Immagine propria','m-tile-std':'Immagine standard','m-tile-auto':'Senza un’immagine propria il riquadro riceve un’immagine standard.','m-tile-upload':'Carica immagine','m-tile-replace':'Sostituisci immagine','m-tile-reset':'Usa l’immagine standard','m-tile-hint':'L’immagine sul riquadro della missione nello stile Natale, non l’immagine del compito. Ideale circa 1000 × 900 px.','mode-norand-label':'Ordine','mode-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista per ordinare). Off: casuale, come prima.','mode-norand-pill':'Non mescolare','loc-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista missioni per ordinare). Off: casuale, come prima.','cl-label':'Lingue personalizzate','cl-hint':'Lingue extra per i giocatori di questa sede. Ci digiti il testo delle missioni; le etichette dell\'app usano la lingua di base.','cl-name-ph':'es. Svizzero tedesco','cl-base':'Base','cl-add':'Lingua','cl-empty':'Nessuna lingua personalizzata.','cl-name-req':'Inserisci un nome di lingua','cl-dup':'Questa lingua esiste già','mm-cust-title':'Lingue personalizzate (sede)','mm-cust-hint':'Contenuto per le lingue personalizzate di questa sede.',
+  'ms-drag-hint':'Trascina per riordinare. L\'ordine conta solo se la sede è impostata su «Non mescolare».','mode-look-label':'Aspetto per i giocatori','mode-look-tip':'Natale: un mercatino di Natale come intestazione, neve che cade e riquadri delle missioni con immagine. I colori della sede restano. Standard lascia tutto com’è.','mode-look-standard':'Standard','mode-look-christmas':'Natale','mode-xmas-set':'Aggiungi le 16 missioni di Natale','mode-xmas-set-sub':'Con immagine. Le missioni con lo stesso nome senza immagine ricevono la loro. Ogni immagine si può sostituire con una propria nella missione.','mode-xmas-new-sub':'Una nuova modalità Natale parte con le 16 missioni di Natale e le loro immagini.','mode-xmas-set-done':'{n} missioni di Natale aggiunte','mode-xmas-set-none':'Tutte le missioni di Natale ci sono già.','mode-created-xmas':'Modalità creata, con {n} missioni di Natale','mode-meet-label':'Richiedi un punto d’incontro','mode-meet-sub':'Il timer parte solo dopo che il game master ha inserito il punto d’incontro. Le squadre lo vedono alla fine con un link alla mappa.','meet-chip-empty':'Inserisci il punto d’incontro','meet-title':'Punto d’incontro dopo il gioco','meet-sub':'Dove si incontra la squadra alla fine? Le squadre vedono il punto d’incontro appena scade il tempo, con un pulsante per Google Maps o Apple Mappe.','meet-ph':'Indirizzo o luogo, es. Bahnhofplatz 1, Baden','meet-needed':'Questo gioco non parte senza un punto d’incontro. Inseriscilo prima.','meet-saved':'Punto d’incontro salvato','save-failed':'Salvataggio non riuscito','s-msgs-game':'Gioco','s-msgs-all-modes':'Tutte le modalità','mode-xmas-set-pics':'{n} missioni hanno ricevuto la loro immagine','s-msgs-drag':'Trascina per cambiare l’ordine','s-msgs-toggle':'Comprimi o espandi','s-msgs-sum-when':'a {n} min dalla fine','s-msgs-sum-empty':'ancora senza testo','m-tile-label':'Immagine del riquadro (Natale)','m-tile-own':'Immagine propria','m-tile-std':'Immagine standard','m-tile-auto':'Senza un’immagine propria il riquadro riceve un’immagine standard.','m-tile-upload':'Carica immagine','m-tile-replace':'Sostituisci immagine','m-tile-reset':'Usa l’immagine standard','m-tile-hint':'L’immagine sul riquadro della missione nello stile Natale, non l’immagine del compito. Ideale circa 1000 × 900 px.','s-msgs-no-loc':'Nessun luogo rimasto','s-msgs-shared-hint':'Un messaggio con più luoghi è lo stesso ovunque: una modifica vale per tutti i luoghi selezionati.','mode-norand-label':'Ordine','mode-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista per ordinare). Off: casuale, come prima.','mode-norand-pill':'Non mescolare','loc-norand-hint':'On: le missioni appaiono nell\'ordine disposto (trascina la lista missioni per ordinare). Off: casuale, come prima.','cl-label':'Lingue personalizzate','cl-hint':'Lingue extra per i giocatori di questa sede. Ci digiti il testo delle missioni; le etichette dell\'app usano la lingua di base.','cl-name-ph':'es. Svizzero tedesco','cl-base':'Base','cl-add':'Lingua','cl-empty':'Nessuna lingua personalizzata.','cl-name-req':'Inserisci un nome di lingua','cl-dup':'Questa lingua esiste già','mm-cust-title':'Lingue personalizzate (sede)','mm-cust-hint':'Contenuto per le lingue personalizzate di questa sede.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modalità Rail Adventure','s-cr-add-mode':'＋ Modalità','s-cr-add-mission':'＋ Missione','s-cr-edit-mode':'✎ Modalità','s-cr-info':'Rail Adventure usa la geolocalizzazione. I giocatori seguono missioni lineari in città.','s-cr-drag-hint':'Trascina per riordinare. I giocatori vedono le missioni in ordine.','s-cr-empty-text':'Nessuna modalità Rail Adventure. Clicca ＋ Modalità.','cr-no-missions':'Nessuna missione Rail Adventure. Clicca ＋ Missione.','cr-missions-suffix':' — Missioni',
   'cr-m-name':'Nome','cr-m-lat':'Latitudine','cr-m-lng':'Longitudine','cr-m-radius':'Raggio (metri)','cr-m-points':'Punti',
   'cr-m-gps':'📍 Trigger GPS','cr-m-map':'🗺️ Mostra sulla mappa','cr-m-timed':'⏱ Limite di tempo',
@@ -1952,7 +1975,7 @@ const GMT={
   'update-ok':'Aggiornamento riuscito! Riavvio…','update-failed':'Aggiornamento fallito.',
   'ruleset-created':'Set di regole creato!','cannot-del-default-rs':'Set di regole predefinito non eliminabile.',
   'cr-mode-created':'Modalità Rail Adventure creata!','pick-mode-first':'Prima seleziona una modalità',
-  'rank-tab':'Classifica','s-msgs-nav':'Messaggi auto','s-msgs-title':'Messaggi automatici','s-msgs-subtitle':'Invia automaticamente un messaggio a tutte le squadre quando il tempo rimanente raggiunge un valore.','s-msgs-add':'Aggiungi messaggio','s-msgs-when':'Tempo rimanente (minuti)','s-msgs-mode':'Modalità','s-msgs-loc':'Luogo','s-msgs-all-loc':'Tutti i luoghi','s-msgs-text':'Messaggio','s-msgs-ph':'es. Ancora 5 minuti!','s-msgs-lang-hint':'Ogni squadra riceve il messaggio nella lingua impostata nella sua app.',
+  'rank-tab':'Classifica','s-msgs-nav':'Messaggi auto','s-msgs-title':'Messaggi automatici','s-msgs-subtitle':'Invia automaticamente un messaggio a tutte le squadre quando il tempo rimanente raggiunge un valore.','s-msgs-add':'Aggiungi messaggio','s-msgs-when':'Tempo rimanente (minuti)','s-msgs-mode':'Modalità','s-msgs-loc':'Luoghi','s-msgs-all-loc':'Tutti i luoghi','s-msgs-text':'Messaggio','s-msgs-ph':'es. Ancora 5 minuti!','s-msgs-lang-hint':'Ogni squadra riceve il messaggio nella lingua impostata nella sua app.',
 'th-label':'Schema colori (giocatori)','th-hint-loc':'Aspetto personalizzato dell\'app giocatori per questa sede. Standard = design attuale.','th-hint-mode':'Aspetto personalizzato dell\'app giocatori per questa modalità Rail Adventure. Standard = design attuale.','th-open':'Modifica schema colori','th-title':'Schema colori','th-g-brand':'Logo & testo','th-g-tile':'Caselle','th-g-button':'Pulsanti','th-g-input':'Campi','th-g-border':'Bordo','th-v-tile':'Sfondo caselle','th-v-tile-text':'Testo caselle','th-v-btn-bg':'Sfondo pulsanti','th-v-btn-text':'Testo pulsanti','th-g-nav':'Navigazione','th-v-nav':'Icone (lingua/chat/regole)','th-v-tile-active':'Riquadro (toccato)','th-g-notice':'Avvisi & chat','th-v-notice':'Riquadro avviso','th-v-notice-text':'Testo avviso','th-v-points':'Testo punti','th-v-points-bg':'Sfondo punti','th-v-chat':'Fumetto chat (giocatore)','th-v-input-bg':'Sfondo campi','th-v-logo':'Logo & logotipo','th-border-width':'Spessore bordo','th-g-bg':'Sfondo','th-g-surface':'Superfici','th-g-text':'Testo','th-g-accent':'Accenti','th-stamp':'Intestazione (piccola)','th-wordmark':'Logotipo','th-logo':'Immagine logo (sostituisce il testo)','th-logo-up':'⬆ Carica','th-reset':'Standard','th-reset-all':'Ripristina lo standard','th-reset-confirm':'Ripristinare tutti i colori, i testi e il logo allo standard?','th-prev-join':'Iscrizione','th-prev-play':'Gioco','th-prev-detail':'Missione','th-prev-chat':'Chat','th-prev-reject':'Rifiuto','th-hint':'I campi vuoti mantengono lo standard. Le modifiche appaiono subito nell\'anteprima.','th-saved':'Schema colori salvato!','th-side-player':'Giocatori','th-side-gm':'Dashboard','th-gm-note':'Le modifiche si applicano subito qui.','gm-v-accent':'Accento (azioni)','gm-v-danger':'Pericolo / elimina','th-v-bg':'Sfondo dell\'app','th-v-bg2':'Barre (scuro)','th-v-bg3':'Intestazione','th-v-surface':'Schede','th-v-surface2':'Campi & pulsanti','th-v-border':'Bordi','th-v-text':'Testo','th-v-text-dim':'Testo secondario','th-v-text-muted':'Testo attenuato','th-v-red':'Marchio & logotipo','th-v-orange':'Accento','th-v-green':'Successo',
 'st-stats-lbl':'Statistiche','s-stats-title':'Statistiche','s-stats-subtitle':'Quante partite sono state giocate, e dove. Squadre = massimo per partita.','s-stats-period':'Periodo','s-stats-p-all':'Totale','s-stats-p-year':'Quest\'anno','s-stats-p-month':'Questo mese','s-stats-p-30':'Ultimi 30 giorni','stats-games':'Partite','stats-teams':'Squadre','stats-total':'Partite totali','stats-teams-total':'Squadre totali','stats-by-loc':'Per sede (MiSSiONS)','stats-by-mode':'Per modalità Rail Adventure','stats-by-month':'Per mese','stats-loc':'Sede','stats-mode':'Modalità','stats-month':'Mese','stats-empty':'Nessuna partita nel periodo scelto. Il conteggio inizia con questa versione; le partite già ripulite mancano.','stats-error':'Impossibile caricare le statistiche.','s-msgs-empty':'Nessun messaggio automatico.','s-msgs-del-confirm':'Eliminare questo messaggio automatico?','s-autoupd-label':'Controlla aggiornamenti all\'avvio','s-autoupd-sub':'Mostra automaticamente una finestra quando è disponibile una nuova versione.','cr-mission-created':'Missione creata!','c-del-mission':'Eliminare la missione?',
   'hint-saved':'Suggerimento salvato!','c-del-hint':'Eliminare il suggerimento?','hint-not-found':'Suggerimento non trovato',
@@ -1995,7 +2018,7 @@ const GMT={
   'manuals-gm':'Manuale GM','manuals-settings':'Manuale impostazioni',
   'manuals-others':'Altre lingue'},
   es:{'mm-multi':"Varias imágenes",'mm-multi-sub':"Desactivado = una sola imagen, como antes.",'mm-multi-tip':"<strong>Permite varias tomas para esta misión.</strong> Los jugadores las reúnen en una galería y lo envían todo al final.",'mm-multi-mode':"Regla de cantidad",'mm-multi-mode-tip':"<strong>Al menos:</strong> se permiten más imágenes. <strong>Exactamente:</strong> ni más ni menos.",'mm-multi-min':"Al menos",'mm-multi-exact':"Exactamente",'mm-multi-count':"Cuántas",'mm-multi-count-tip':"Cuántas imágenes se exigen.",'s-maxmb-label':"Tamaño máx. de subida",'s-maxmb-help':"MB por archivo. Tras un túnel de Cloudflare rige su límite (100 MB Free, 200 MB Business) — subirlo aquí no cambia nada allí.",'tip-maxmb':"Tope por archivo subido. Nota: si la app pasa por un túnel de Cloudflare, es Cloudflare quien corta las solicitudes mayores — un valor más alto aquí no elimina ese límite.",'s-vidlen-label':"Duración máx. de vídeo",'s-vidlen-help':"Segundos. La app del jugador rechaza los clips más largos con un aviso; la cámara integrada se detiene sola. 0 = sin límite.",'tip-vidlen':"Limita la duración de los vídeos enviados. La app del jugador comprueba antes de subir y avisa de inmediato de un clip demasiado largo, en vez de dejar que falle después.",'loading-video':"Cargando el vídeo…",'rankings-fs-title':"CLASIFICACIÓN",'s-logo-help':"Logotipo de texto (actual) o tu propio logotipo de imagen para la pantalla de inicio.",'s-logo-pick':"Elegir / reemplazar imagen",'s-navtoggle-tip':"Contraer o expandir el menú",'gm-freeze-help':"Elige el equipo rival y una duración. Cada equipo solo puede congelar a otro una vez.",'gm-freeze-cancel':"Cancelar",'upd-cancel':"Cancelar",'prof-words-ph':"una palabra por línea\no separadas por comas",'cr-m-answer-addbtn':"Añadir",'cr-m-answer-pending':"⚠ Aún no está en la lista — añádela con Enter o ＋.",'mtip-media':"<strong>Cómo demuestran la tarea los jugadores.</strong> Una MiSSiON es una foto o un vídeo que el equipo graba y que tú revisas.",'mtip-photo':"<strong>Los jugadores hacen una foto</strong> — p. ej. recrear una pose, encontrar un objeto, posar en equipo.",'mtip-video':"<strong>Los jugadores graban un vídeo corto</strong> — ideal para actuaciones, retos o cualquier cosa con movimiento o sonido.",'tipx-name':"<strong>El título que ven los jugadores.</strong> Rellena al menos un idioma; 🌐 Auto completa el resto.",'mtip-points':"<strong>Recompensa por completarla</strong>, en cuanto apruebes el envío.",'mtip-desc':"<strong>Ambienta la escena.</strong> El texto introductorio — no la instrucción en sí (esa va en la pestaña «Tarea»).",'mtip-task':"<strong>La instrucción concreta</strong> — qué deben hacer exactamente los jugadores para completar la misión.",'mtip-location':"<strong>A qué ubicación pertenece la misión.</strong> «Pool» = sin asignar, disponible para cualquier partida.",'mtip-mode':"En qué modo de juego / reglamento aparece la misión.",'crtip-type':"<strong>Qué pide la misión.</strong> Elige uno — determina qué ajustes aparecen abajo. (Llegar al lugar se gestiona aparte en «Colocación».)",'crtip-type-quiz':"<strong>Los jugadores escriben una respuesta.</strong> Correcta si coincide con una de las respuestas aceptadas (en su idioma). Ideal para acertijos en el lugar.",'crtip-type-media':"<strong>Los jugadores envían una grabación</strong> — una foto o un vídeo corto. Tú la apruebas antes de otorgar puntos.",'crtip-type-puzzle':"<strong>Los jugadores resuelven un puzle</strong> — montar una imagen o ponerla en el orden correcto. Resolverlo completa la misión automáticamente.",'crtip-points':"<strong>Recompensa por completarla</strong>, se suma a la puntuación del equipo.",'crtip-answers':"<strong>Lo que deben escribir los jugadores.</strong> Enter añade una respuesta — enumera todas las grafías que quieras, cada una cuenta. La entrada debe coincidir por completo (los espacios no importan). 🌐 Auto solo traduce la primera respuesta a los idiomas vacíos; añade tú mismo las demás variantes.",'crtip-media':"Foto o vídeo corto — la app del jugador abre el modo de cámara correspondiente.",'crtip-placement':"<strong>Dónde vive la misión.</strong> <strong>En la ruta</strong> = una parada GPS en secuencia; los jugadores deben llegar a las coordenadas. <strong>Especial</strong> = en cualquier momento en la zona ⭐, sin GPS, sin orden.",'crtip-coords':"El punto exacto. Mejor fijarlo con el mapa o «Ubicación» en vez de escribirlo — así se rellenan ambas coordenadas.",'crtip-radius':"<strong>Qué distancia cuenta como «llegado».</strong> 20–40 m funciona bien. Menor = más estricto; mayor = se activa antes.",'crtip-showmap':"<strong>Activado:</strong> el marcador aparece en el mapa de los jugadores. <strong>Desactivado:</strong> checkpoint oculto — la misma misión GPS, pero fuera del mapa; los jugadores lo encuentran con pistas.",'crtip-repeat':"<strong>Desactivado:</strong> se puede completar una vez. <strong>Activado:</strong> repetible, con espera opcional (0 min = de inmediato).",'crtip-timer':"Cuenta atrás para la misión. Si se excede, se restan puntos en el intervalo elegido.",
-  'ms-drag-hint':'Arrastra para reordenar. El orden solo importa si la ubicación está en «No aleatorizar».','mode-look-label':'Aspecto para los jugadores','mode-look-tip':'Navidad: un mercado navideño como cabecera, nieve que cae y fichas de misión con imagen. Los colores de la ubicación se mantienen. Estándar lo deja todo como está.','mode-look-standard':'Estándar','mode-look-christmas':'Navidad','mode-xmas-set':'Añadir las 16 misiones de Navidad','mode-xmas-set-sub':'Con imagen. Las misiones con el mismo nombre sin imagen reciben la suya. Cada imagen se puede sustituir por una propia en la misión.','mode-xmas-new-sub':'Un modo Navidad nuevo empieza con las 16 misiones de Navidad y sus imágenes.','mode-xmas-set-done':'{n} misiones de Navidad añadidas','mode-xmas-set-none':'Todas las misiones de Navidad ya están.','mode-created-xmas':'Modo creado, con {n} misiones de Navidad','mode-meet-label':'Exigir un punto de encuentro','mode-meet-sub':'El temporizador solo arranca cuando el máster ha introducido el punto de encuentro. Los equipos lo ven al final con un enlace al mapa.','meet-chip-empty':'Introducir punto de encuentro','meet-title':'Punto de encuentro tras el juego','meet-sub':'¿Dónde se encuentra el equipo al final? Los equipos ven el punto de encuentro en cuanto se acaba el tiempo, con un botón para Google Maps o Apple Mapas.','meet-ph':'Dirección o lugar, p. ej. Bahnhofplatz 1, Baden','meet-needed':'Este juego no arranca sin punto de encuentro. Introdúcelo primero.','meet-saved':'Punto de encuentro guardado','save-failed':'Error al guardar','s-msgs-game':'Juego','s-msgs-all-modes':'Todos los modos','mode-xmas-set-pics':'{n} misiones han recibido su imagen','s-msgs-drag':'Arrastra para cambiar el orden','s-msgs-toggle':'Contraer o expandir','s-msgs-sum-when':'a {n} min del final','s-msgs-sum-empty':'aún sin texto','m-tile-label':'Imagen de la ficha (Navidad)','m-tile-own':'Imagen propia','m-tile-std':'Imagen estándar','m-tile-auto':'Sin imagen propia, la ficha recibe una imagen estándar.','m-tile-upload':'Subir imagen','m-tile-replace':'Sustituir imagen','m-tile-reset':'Usar la imagen estándar','m-tile-hint':'La imagen de la ficha de la misión en el estilo Navidad, no la imagen de la tarea. Lo ideal, unos 1000 × 900 px.','mode-norand-label':'Orden','mode-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista para ordenar). Desactivado: aleatorio, como antes.','mode-norand-pill':'No aleatorizar','loc-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista de misiones para ordenar). Desactivado: aleatorio, como antes.','cl-label':'Idiomas personalizados','cl-hint':'Idiomas extra para los jugadores de esta ubicación. Escribes el texto de las misiones en ellos; las etiquetas de la app usan el idioma base.','cl-name-ph':'p. ej. Alemán suizo','cl-base':'Base','cl-add':'Idioma','cl-empty':'Aún no hay idiomas personalizados.','cl-name-req':'Introduce un nombre de idioma','cl-dup':'Ese idioma ya existe','mm-cust-title':'Idiomas personalizados (ubicación)','mm-cust-hint':'Contenido para los idiomas personalizados de esta ubicación.',
+  'ms-drag-hint':'Arrastra para reordenar. El orden solo importa si la ubicación está en «No aleatorizar».','mode-look-label':'Aspecto para los jugadores','mode-look-tip':'Navidad: un mercado navideño como cabecera, nieve que cae y fichas de misión con imagen. Los colores de la ubicación se mantienen. Estándar lo deja todo como está.','mode-look-standard':'Estándar','mode-look-christmas':'Navidad','mode-xmas-set':'Añadir las 16 misiones de Navidad','mode-xmas-set-sub':'Con imagen. Las misiones con el mismo nombre sin imagen reciben la suya. Cada imagen se puede sustituir por una propia en la misión.','mode-xmas-new-sub':'Un modo Navidad nuevo empieza con las 16 misiones de Navidad y sus imágenes.','mode-xmas-set-done':'{n} misiones de Navidad añadidas','mode-xmas-set-none':'Todas las misiones de Navidad ya están.','mode-created-xmas':'Modo creado, con {n} misiones de Navidad','mode-meet-label':'Exigir un punto de encuentro','mode-meet-sub':'El temporizador solo arranca cuando el máster ha introducido el punto de encuentro. Los equipos lo ven al final con un enlace al mapa.','meet-chip-empty':'Introducir punto de encuentro','meet-title':'Punto de encuentro tras el juego','meet-sub':'¿Dónde se encuentra el equipo al final? Los equipos ven el punto de encuentro en cuanto se acaba el tiempo, con un botón para Google Maps o Apple Mapas.','meet-ph':'Dirección o lugar, p. ej. Bahnhofplatz 1, Baden','meet-needed':'Este juego no arranca sin punto de encuentro. Introdúcelo primero.','meet-saved':'Punto de encuentro guardado','save-failed':'Error al guardar','s-msgs-game':'Juego','s-msgs-all-modes':'Todos los modos','mode-xmas-set-pics':'{n} misiones han recibido su imagen','s-msgs-drag':'Arrastra para cambiar el orden','s-msgs-toggle':'Contraer o expandir','s-msgs-sum-when':'a {n} min del final','s-msgs-sum-empty':'aún sin texto','m-tile-label':'Imagen de la ficha (Navidad)','m-tile-own':'Imagen propia','m-tile-std':'Imagen estándar','m-tile-auto':'Sin imagen propia, la ficha recibe una imagen estándar.','m-tile-upload':'Subir imagen','m-tile-replace':'Sustituir imagen','m-tile-reset':'Usar la imagen estándar','m-tile-hint':'La imagen de la ficha de la misión en el estilo Navidad, no la imagen de la tarea. Lo ideal, unos 1000 × 900 px.','s-msgs-no-loc':'Sin ubicación','s-msgs-shared-hint':'Un mensaje con varias ubicaciones es el mismo en todas: un cambio se aplica a todas las ubicaciones marcadas.','mode-norand-label':'Orden','mode-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista para ordenar). Desactivado: aleatorio, como antes.','mode-norand-pill':'No aleatorizar','loc-norand-hint':'Activado: las misiones aparecen en el orden dispuesto (arrastra la lista de misiones para ordenar). Desactivado: aleatorio, como antes.','cl-label':'Idiomas personalizados','cl-hint':'Idiomas extra para los jugadores de esta ubicación. Escribes el texto de las misiones en ellos; las etiquetas de la app usan el idioma base.','cl-name-ph':'p. ej. Alemán suizo','cl-base':'Base','cl-add':'Idioma','cl-empty':'Aún no hay idiomas personalizados.','cl-name-req':'Introduce un nombre de idioma','cl-dup':'Ese idioma ya existe','mm-cust-title':'Idiomas personalizados (ubicación)','mm-cust-hint':'Contenido para los idiomas personalizados de esta ubicación.',
     'st-cityrush':'🏃 Rail Adventure','s-cr-title':'🏃 Modos Rail Adventure','s-cr-add-mode':'＋ Modo','s-cr-add-mission':'＋ Misión','s-cr-edit-mode':'✎ Modo','s-cr-info':'Rail Adventure usa el GPS. Los jugadores siguen misiones lineales por la ciudad.','s-cr-drag-hint':'Arrastrar y soltar para reordenar. Los jugadores ven las misiones en orden.','s-cr-empty-text':'Aún no hay modo Rail Adventure. Pulsa ＋ Modo.','cr-no-missions':'Aún no hay misiones Rail Adventure. Pulsa ＋ Misión.','cr-missions-suffix':' — Misiones',
   'cr-m-name':'Nombre','cr-m-lat':'Latitud','cr-m-lng':'Longitud','cr-m-radius':'Radio (metros)','cr-m-points':'Puntos',
   'cr-m-gps':'📍 Disparador GPS','cr-m-map':'🗺️ Mostrar en el mapa','cr-m-timed':'⏱ Límite de tiempo',
@@ -2078,7 +2101,7 @@ const GMT={
   'update-ok':'¡Actualización correcta! Reiniciando…','update-failed':'Actualización fallida.',
   'ruleset-created':'¡Conjunto de reglas creado!','cannot-del-default-rs':'El conjunto de reglas predeterminado no se puede eliminar.',
   'cr-mode-created':'¡Modo Rail Adventure creado!','pick-mode-first':'Elige primero un modo',
-  'rank-tab':'Clasificación','s-msgs-nav':'Mensajes auto','s-msgs-title':'Mensajes automáticos','s-msgs-subtitle':'Envía automáticamente un mensaje a todos los equipos cuando el tiempo restante alcanza un valor.','s-msgs-add':'Añadir mensaje','s-msgs-when':'Tiempo restante (minutos)','s-msgs-mode':'Modos de juego','s-msgs-loc':'Ubicación','s-msgs-all-loc':'Todas las ubicaciones','s-msgs-text':'Mensaje','s-msgs-ph':'p. ej. ¡Quedan 5 minutos!','s-msgs-lang-hint':'Cada equipo recibe el mensaje en el idioma configurado en su app.',
+  'rank-tab':'Clasificación','s-msgs-nav':'Mensajes auto','s-msgs-title':'Mensajes automáticos','s-msgs-subtitle':'Envía automáticamente un mensaje a todos los equipos cuando el tiempo restante alcanza un valor.','s-msgs-add':'Añadir mensaje','s-msgs-when':'Tiempo restante (minutos)','s-msgs-mode':'Modos de juego','s-msgs-loc':'Ubicaciones','s-msgs-all-loc':'Todas las ubicaciones','s-msgs-text':'Mensaje','s-msgs-ph':'p. ej. ¡Quedan 5 minutos!','s-msgs-lang-hint':'Cada equipo recibe el mensaje en el idioma configurado en su app.',
 'th-label':'Esquema de colores (jugadores)','th-hint-loc':'Aspecto personalizado de la app de jugadores para esta ubicación. Estándar = diseño actual.','th-hint-mode':'Aspecto personalizado de la app de jugadores para este modo Rail Adventure. Estándar = diseño actual.','th-open':'Editar esquema de colores','th-title':'Esquema de colores','th-g-brand':'Logo & texto','th-g-tile':'Casillas','th-g-button':'Botones','th-g-input':'Campos','th-g-border':'Borde','th-v-tile':'Relleno de casillas','th-v-tile-text':'Texto de casillas','th-v-btn-bg':'Relleno de botones','th-v-btn-text':'Texto de botones','th-g-nav':'Navegación','th-v-nav':'Iconos (idioma/chat/reglas)','th-v-tile-active':'Tarjeta (tocada)','th-g-notice':'Avisos & chat','th-v-notice':'Caja de aviso','th-v-notice-text':'Texto del aviso','th-v-points':'Texto de puntos','th-v-points-bg':'Relleno de puntos','th-v-chat':'Burbuja de chat (jugador)','th-v-input-bg':'Relleno de campos','th-v-logo':'Logo & logotipo','th-border-width':'Grosor del borde','th-g-bg':'Fondo','th-g-surface':'Superficies','th-g-text':'Texto','th-g-accent':'Acentos','th-stamp':'Encabezado (pequeño)','th-wordmark':'Logotipo','th-logo':'Imagen del logo (sustituye el texto)','th-logo-up':'⬆ Subir','th-reset':'Estándar','th-reset-all':'Restaurar el estándar','th-reset-confirm':'¿Restablecer todos los colores, textos y el logo al estándar?','th-prev-join':'Registro','th-prev-play':'Juego','th-prev-detail':'Misión','th-prev-chat':'Chat','th-prev-reject':'Rechazo','th-hint':'Los campos vacíos mantienen el estándar. Los cambios aparecen al instante en la vista previa.','th-saved':'¡Esquema de colores guardado!','th-side-player':'Jugadores','th-side-gm':'Panel','th-gm-note':'Los cambios se aplican al instante aquí.','gm-v-accent':'Acento (acciones)','gm-v-danger':'Peligro / eliminar','th-v-bg':'Fondo de la app','th-v-bg2':'Barras (oscuro)','th-v-bg3':'Encabezado','th-v-surface':'Tarjetas','th-v-surface2':'Campos & botones','th-v-border':'Bordes','th-v-text':'Texto','th-v-text-dim':'Texto secundario','th-v-text-muted':'Texto atenuado','th-v-red':'Marca & logotipo','th-v-orange':'Acento','th-v-green':'Éxito',
 'st-stats-lbl':'Estadísticas','s-stats-title':'Estadísticas','s-stats-subtitle':'Cuántas partidas se jugaron, y dónde. Equipos = máximo por partida.','s-stats-period':'Período','s-stats-p-all':'Total','s-stats-p-year':'Este año','s-stats-p-month':'Este mes','s-stats-p-30':'Últimos 30 días','stats-games':'Partidas','stats-teams':'Equipos','stats-total':'Partidas en total','stats-teams-total':'Equipos en total','stats-by-loc':'Por ubicación (MiSSiONS)','stats-by-mode':'Por modo Rail Adventure','stats-by-month':'Por mes','stats-loc':'Ubicación','stats-mode':'Modo','stats-month':'Mes','stats-empty':'Aún no hay partidas en el período elegido. El conteo empieza con esta versión; faltan las partidas ya limpiadas.','stats-error':'No se pudieron cargar las estadísticas.','s-msgs-empty':'Aún no hay mensajes automáticos.','s-msgs-del-confirm':'¿Eliminar este mensaje automático?','s-autoupd-label':'Buscar actualizaciones al iniciar','s-autoupd-sub':'Muestra automáticamente una ventana cuando hay una nueva versión.','cr-mission-created':'¡Misión creada!','c-del-mission':'¿Eliminar la misión?',
   'hint-saved':'¡Pista guardada!','c-del-hint':'¿Eliminar la pista?','hint-not-found':'Pista no encontrada',
@@ -2190,6 +2213,9 @@ function applyGmLang(){
   });
   // Refresh tooltips so a language switch retranslates the title attributes.
   applyTooltips();
+  // Lists drawn from data carry their own texts: redraw the one that is open.
+  if(document.getElementById('stab-updates')?.classList.contains('active')) loadUpdatePanel();
+  if(document.getElementById('stab-messages')?.classList.contains('active')){ _amRender(); _amPaintTimeout(); }
 }
 function setGmLang(lang){
   // No-op if it's already the active language or the requested code isn't
@@ -2281,6 +2307,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   // unless the GM turned the startup update check off in Settings › Updates.
   _initAutoUpdateToggle();
   if(localStorage.getItem('gm_auto_update') !== '0') checkForUpdate();
+  showUpdateDone();
 });
 
 async function loadLanding(){
@@ -4614,15 +4641,11 @@ async function autoTranslateTimeout(){
   if(!empty.length){toast(gmt('all-filled')||'Alle ausgefüllt','warning');return;}
   toast(gmt('translating')||'Übersetze…');
   const res=await API('/api/translate',{method:'POST',body:{text,fromLang,toLangs:empty}});
-  empty.forEach(lang=>{const el=document.getElementById('s-timeout-'+lang);if(el&&res[lang])el.value=res[lang];});
+  empty.forEach(lang=>{const el=document.getElementById('s-timeout-'+lang);if(el&&res[lang]){el.value=res[lang];markLangTabFilled('timeout',lang,true);}});
+  await saveTimeoutMsg();
   toast(gmt('translated')||'Übersetzt!','success');
 }
 async function saveGeneralSettings(){
-  const tout_de=document.getElementById('s-timeout-de')?.value||'';
-  const tout_en=document.getElementById('s-timeout-en')?.value||'';
-  const tout_fr=document.getElementById('s-timeout-fr')?.value||'';
-  const tout_it=document.getElementById('s-timeout-it')?.value||'';
-  const tout_es=document.getElementById('s-timeout-es')?.value||'';
   // GitHub URL moved into the General panel (was its own field on the
   // Updates panel before mockup-08 settings); include it in the payload.
   const github_url=document.getElementById('s-github-url')?.value||'';
@@ -4631,7 +4654,7 @@ async function saveGeneralSettings(){
   const max_upload_mb=Math.max(1, Math.min(200, parseInt(_mbRaw,10)||100));
   const _vlRaw=document.getElementById('s-vidlen')?.value;
   const max_video_seconds=Math.max(0, Math.min(600, parseInt(_vlRaw,10)||0));
-  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,max_video_seconds,max_upload_mb,timeout_text:tout_de||tout_en,timeout_text_de:tout_de,timeout_text_en:tout_en,timeout_text_fr:tout_fr,timeout_text_it:tout_it,timeout_text_es:tout_es,github_url,logo_mode}});
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,public_url:document.getElementById('s-public-url').value,max_video_seconds,max_upload_mb,github_url,logo_mode}});
   if(res.success) applyBrandLogo();
   toast(res.success?(gmt('saved')||'Gespeichert!'):res.error,res.success?'success':'error');
 }
@@ -6009,11 +6032,12 @@ async function saveGithubUrl(){
 }
 
 async function runUpdate(){
+  const L=updL();
   const btn=document.getElementById('btn-update');
   const log=document.getElementById('update-log');
   btn.disabled=true;
   log.style.display='block';
-  log.textContent='Starting update...';
+  log.textContent=L.updating;
   // Use a dedicated 'updating' key — previously this reused 'translating'
   // which (correctly) renders as "Übersetze…".
   toast(gmt('updating')||'Aktualisiere…');
@@ -6025,15 +6049,21 @@ async function runUpdate(){
       // (a reload here would be harmless but the "restarting" toast would lie).
       toast((gmLang==='de'?'Bereits aktuell — keine Aktualisierung nötig.':gmLang==='fr'?'Déjà à jour — aucune mise à jour nécessaire.':gmLang==='it'?'Già aggiornato — nessun aggiornamento necessario.':gmLang==='es'?'Ya actualizado — no hace falta actualizar.':'Already up to date — no update needed.'),'success');
       btn.disabled=false;
+      loadUpdatePanel();
     } else if(res.success){
       toast(gmt('update-ok')||'Update erfolgreich! App startet neu...','success');
-      setTimeout(()=>window.location.reload(),3000);
+      // Wait until the new version really runs, then say what it did.
+      _updMarkStarted();
+      waitForRestart();
+    } else if(res.blocked==='games_active'){
+      toast(L.blocked(res.activeCount||''),'error');
+      loadUpdatePanel();
     } else {
       toast(gmt('update-failed')||'Update fehlgeschlagen.','error');
       btn.disabled=false;
     }
   } catch(e) {
-    log.textContent='Fehler: '+(e.message||'Unknown error');
+    log.textContent=L.failed+' '+(e.message||'');
     btn.disabled=false;
   }
 }
@@ -8207,7 +8237,9 @@ function closeModal(){document.getElementById('modal-overlay').style.display='no
 let _activeGameSubTab = 'missions';
 
 // ── Automated messages settings ─────────────────────────────────────────────
-let _amLocations = [], _amModes = [], _amCrModes = [], _amData = {};
+let _amLocations = [], _amModes = [], _amCrModes = [], _amData = {}, _amOrder = [];
+// The location tab in view, 'all' or a location id. Remembered per browser.
+let _amTab = (() => { try { return localStorage.getItem('am_tab') || 'all'; } catch(e) { return 'all'; } })();
 // Which rules this GM has folded away: a per-browser view setting.
 function _amClosed(){ try { return new Set(JSON.parse(localStorage.getItem('am_closed') || '[]')); } catch(e) { return new Set(); } }
 function _amSaveClosed(set){ try { localStorage.setItem('am_closed', JSON.stringify([...set])); } catch(e) {} }
@@ -8223,20 +8255,50 @@ async function loadAutoMessages(){
   let msgs=[]; try{ msgs = await API('/api/automated-messages'); }catch(e){ msgs=[]; }
   if(!Array.isArray(msgs)) msgs=[];
   _amData = Object.fromEntries(msgs.map(m => [m.id, {...m}]));
-  if(!msgs.length){ list.innerHTML=`<p style="color:var(--text-muted);font-size:.9rem;margin:.25rem 0 .75rem;">${esc(gmt('s-msgs-empty')||'Noch keine automatischen Nachrichten.')}</p>`; return; }
-  const closed = _amClosed();
-  list.innerHTML = msgs.map(m => _amRow(m, closed.has(m.id))).join('');
+  _amOrder = msgs.map(m => m.id);
+  _amRender();
+  _amPaintTimeout();
+}
+// A tab per location, built from the live list, so a new location brings its own
+// tab. "Alle Standorte" shows every rule; a location's tab shows what fires
+// there: its own rules and the ones for all locations (Rail Adventure has no
+// locations). A rule on several locations is one row, so it reads the same in
+// each of their tabs and a change shows in all of them.
+function _amInTab(m, tab){
+  if(String(tab) === 'all') return true;
+  if(m.game_kind === 'cityrush') return false;
+  const ids = _amIds(m.location_ids);
+  return !ids.length || ids.includes(Number(tab));
+}
+function _amRender(){
+  const list = document.getElementById('auto-msg-list'), bar = document.getElementById('am-loc-tabs');
+  if(!list || !bar) return;
+  if(_amTab !== 'all' && !_amLocations.some(l => String(l.id) === String(_amTab))) _amTab = 'all';   // that location is gone
+  const all = _amOrder.map(id => _amData[id]).filter(Boolean);
+  bar.innerHTML = [{id:'all', name:gmt('s-msgs-all-loc')}, ..._amLocations].map(t => {
+    const on = String(t.id) === String(_amTab);
+    return `<button type="button" role="tab" class="tab ${on?'active':''}" aria-selected="${on}" onclick="amSetTab('${t.id}')">${esc(t.name)}<span class="am-tab-n">${all.filter(m => _amInTab(m, t.id)).length}</span></button>`;
+  }).join('');
+  const shown = all.filter(m => _amInTab(m, _amTab)), closed = _amClosed();
+  list.innerHTML = shown.length ? shown.map(m => _amRow(m, closed.has(m.id))).join('')
+    : `<p style="color:var(--text-muted);font-size:.9rem;margin:.25rem 0 .75rem;">${esc(gmt('s-msgs-empty')||'Noch keine automatischen Nachrichten.')}</p>`;
   amWireSort(list);
 }
-function _amModeIds(m){ try { const a = JSON.parse(m.mode_ids || '[]'); return Array.isArray(a) ? a.map(Number).filter(Boolean) : []; } catch(e) { return []; } }
+function amSetTab(tab){
+  _amTab = String(tab);
+  try { localStorage.setItem('am_tab', _amTab); } catch(e) {}
+  _amRender();
+}
+const _amIds = s => { try { const a = JSON.parse(s || '[]'); return Array.isArray(a) ? a.map(Number).filter(Boolean) : []; } catch(e) { return []; } };
 // What a rule does in one line, for its header (all that a folded rule shows):
-// when, which game, which modes and location, then the start of the text.
+// when, which game, which modes and locations, then the start of the text.
 function _amSummary(m){
-  const isCr = m.game_kind === 'cityrush', ids = _amModeIds(m);
+  const isCr = m.game_kind === 'cityrush', ids = _amIds(m.mode_ids), locs = _amIds(m.location_ids);
   const names = (isCr ? _amCrModes : _amModes).filter(x => ids.includes(Number(x.id))).map(x => x.name);
-  const loc = isCr ? null : (_amLocations.find(l => Number(l.id) === Number(m.location_id)) || {}).name;
+  const locNames = _amLocations.filter(l => locs.includes(Number(l.id))).map(l => l.name);
   const meta = [gmt('s-msgs-sum-when').replace('{n}', Math.round((m.trigger_seconds || 0) / 60)), isCr ? 'Rail Adventure' : 'MiSSiONS',
-    names.length ? names.join(', ') : gmt('s-msgs-all-modes'), ...(isCr ? [] : [loc || gmt('s-msgs-all-loc')])].join(' · ');
+    names.length ? names.join(', ') : gmt('s-msgs-all-modes'),
+    ...(isCr ? [] : [locs.length ? (locNames.join(', ') || gmt('s-msgs-no-loc')) : gmt('s-msgs-all-loc')])].join(' · ');
   const text = String(m['message_' + gmLang] || m.message_de || m.message || ['en','fr','it','es'].map(l => m['message_' + l]).find(Boolean) || '').trim();
   return { meta, text: text || gmt('s-msgs-sum-empty') };
 }
@@ -8247,19 +8309,29 @@ function _amPaintSummary(id){
   row.querySelector('.am-sum-meta').textContent = s.meta;
   row.querySelector('.am-sum-text').textContent = s.text;
 }
-// Spielmodi: any number of this game's modes, or "Alle Modi" when none is picked.
-function _amModePills(m){
-  const isCr = m.game_kind === 'cityrush', ids = _amModeIds(m);
-  const pill = (val, label, on) => `<span class="check-pill ${on ? 'is-on' : ''}" role="checkbox" aria-checked="${on}" tabindex="0" data-mode="${val}" onclick="amToggleMode(${m.id},this)" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.click();}"><span class="check-mark">${on ? '✓' : ''}</span>${esc(label)}</span>`;
-  return pill('', gmt('s-msgs-all-modes'), !ids.length) + (isCr ? _amCrModes : _amModes).map(x => pill(x.id, x.name, ids.includes(Number(x.id)))).join('');
+// Spielmodi and Standorte: any number of them, or the "Alle" pill when none is picked.
+function _amPills(m, field, items, allLabel){
+  const ids = _amIds(m[field]);
+  const pill = (val, label, on) => `<span class="check-pill ${on ? 'is-on' : ''}" role="checkbox" aria-checked="${on}" tabindex="0" data-val="${val}" onclick="amTogglePill(${m.id},'${field}',this)" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.click();}"><span class="check-mark">${on ? '✓' : ''}</span>${esc(label)}</span>`;
+  return pill('', allLabel, !ids.length) + items.map(x => pill(x.id, x.name, ids.includes(Number(x.id)))).join('');
 }
-// "Alle Modi" clears the choice; any other pill toggles its mode, and once none
-// is left the rule is for all modes again.
-async function amToggleMode(id, el){
-  const box = el.parentElement, all = box.querySelector('.check-pill[data-mode=""]');
+// The "Alle" pill clears the choice; any other pill toggles its entry, and once
+// none is left the rule is for all of them again.
+async function amTogglePill(id, field, el){
+  const box = el.parentElement, all = box.querySelector('.check-pill[data-val=""]');
   if(el === all) box.querySelectorAll('.check-pill').forEach(p => _amPill(p, p === all));
-  else { _amPill(el, !el.classList.contains('is-on')); _amPill(all, !box.querySelector('.check-pill.is-on:not([data-mode=""])')); }
-  await updAutoMsg(id, 'mode_ids', [...box.querySelectorAll('.check-pill.is-on')].map(p => Number(p.dataset.mode)).filter(Boolean));
+  else {
+    // Narrowing a rule for all locations from a location's tab keeps that
+    // location ticked, so the rule doesn't vanish from under the click.
+    if(field === 'location_ids' && all.classList.contains('is-on') && _amTab !== 'all'){
+      const here = box.querySelector(`.check-pill[data-val="${_amTab}"]`);
+      if(here && here !== el) _amPill(here, true);
+    }
+    _amPill(el, !el.classList.contains('is-on'));
+    _amPill(all, !box.querySelector('.check-pill.is-on:not([data-val=""])'));
+  }
+  await updAutoMsg(id, field, [...box.querySelectorAll('.check-pill.is-on')].map(p => Number(p.dataset.val)).filter(Boolean));
+  if(field === 'location_ids') _amRender();   // it may have left this tab, and the counts change
 }
 function _amPill(p, on){ p.classList.toggle('is-on', on); p.setAttribute('aria-checked', on ? 'true' : 'false'); p.querySelector('.check-mark').textContent = on ? '✓' : ''; }
 function amToggleOpen(id){
@@ -8294,8 +8366,14 @@ function amWireSort(list){
     const up = () => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
       item.classList.remove('am-dragging');
-      const order = [...list.querySelectorAll('.rule-item')].map(n => Number(n.dataset.id));
-      if(order.join() !== before) API('/api/automated-messages/reorder', {method:'PUT', body:{order}}).catch(() => {});
+      const seen = [...list.querySelectorAll('.rule-item')].map(n => Number(n.dataset.id));
+      if(seen.join() !== before){
+        // A tab shows only some rules: they swap places among themselves, the
+        // others keep theirs.
+        const inTab = new Set(seen); let i = 0;
+        _amOrder = _amOrder.map(x => inTab.has(x) ? seen[i++] : x);
+        API('/api/automated-messages/reorder', {method:'PUT', body:{order:_amOrder}}).catch(() => {});
+      }
     };
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
   });
@@ -8303,8 +8381,6 @@ function amWireSort(list){
 function _amRow(m, closed){
   const mins = Math.round((m.trigger_seconds||0)/60);
   const isCr = m.game_kind==='cityrush';
-  const locOpts = `<option value="">${esc(gmt('s-msgs-all-loc')||'Alle Standorte')}</option>` +
-    _amLocations.map(l=>`<option value="${l.id}" ${Number(m.location_id)===Number(l.id)?'selected':''}>${esc(l.name)}</option>`).join('');
   const s = _amSummary(m);
   return `<div class="rule-item ${closed?'is-closed':''}" data-id="${m.id}" style="margin-bottom:.6rem;">
     <div class="am-head">
@@ -8326,11 +8402,11 @@ function _amRow(m, closed){
     </div>
     <div style="margin-top:.5rem;">
       <div class="label">${esc(gmt('s-msgs-mode'))}</div>
-      <div class="am-modes" role="group" aria-label="${esc(gmt('s-msgs-mode'))}">${_amModePills(m)}</div>
+      <div class="am-modes" role="group" aria-label="${esc(gmt('s-msgs-mode'))}">${_amPills(m,'mode_ids',isCr?_amCrModes:_amModes,gmt('s-msgs-all-modes'))}</div>
     </div>
     <div class="am-loc" style="margin-top:.5rem;${isCr?'display:none;':''}">
-      <label class="label">${esc(gmt('s-msgs-loc')||'Standort')}</label>
-      <select class="select" onchange="updAutoMsg(${m.id},'location_id',this.value)">${locOpts}</select>
+      <div class="label">${esc(gmt('s-msgs-loc'))}</div>
+      <div class="am-modes" role="group" aria-label="${esc(gmt('s-msgs-loc'))}">${_amPills(m,'location_ids',_amLocations,gmt('s-msgs-all-loc'))}</div>
     </div>
     <div style="margin-top:.5rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
@@ -8382,14 +8458,42 @@ async function autoTranslateAutoMsg(id){
   toast(gmt('translated')||'Übersetzt!','success');
 }
 async function addAutoMessageRow(){
-  try{ await API('/api/automated-messages',{method:'POST',body:{trigger_seconds:300,game_kind:'missions',location_id:null,message:''}}); }catch(e){}
+  // A new rule belongs to the location whose tab is open.
+  const location_ids = _amTab==='all' ? null : [Number(_amTab)];
+  try{ await API('/api/automated-messages',{method:'POST',body:{trigger_seconds:300,game_kind:'missions',location_ids,message:''}}); }catch(e){}
   loadAutoMessages();
+}
+// ── Timeout message ─────────────────────────────────────────────────────────
+// The text players see when the time runs out. One for all games, so it sits
+// above the location tabs. Saved as soon as it is edited, like the rules.
+function _amPaintTimeout(){
+  const box=document.getElementById('am-timeout'), sum=document.getElementById('am-timeout-sum');
+  if(!box || !sum) return;
+  const v=l=>(document.getElementById('s-timeout-'+l)?.value||'').trim();
+  sum.textContent=v(gmLang)||v('de')||['en','fr','it','es'].map(v).find(Boolean)||gmt('s-msgs-sum-empty');
+  const closed=_amClosed().has('timeout');
+  box.classList.toggle('is-closed',closed);
+  box.querySelector('.am-toggle').setAttribute('aria-expanded',closed?'false':'true');
+  box.querySelector('.am-toggle').title=gmt('s-msgs-toggle');
+  document.getElementById('am-timeout-auto').textContent=gmt('cr-m-auto')||'🌐 Auto';
+}
+function amToggleTimeout(){
+  const c=_amClosed();
+  if(c.has('timeout')) c.delete('timeout'); else c.add('timeout');
+  _amSaveClosed(c);
+  _amPaintTimeout();
+}
+async function saveTimeoutMsg(){
+  const v=l=>document.getElementById('s-timeout-'+l)?.value||'';
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,timeout_text:v('de')||v('en'),timeout_text_de:v('de'),timeout_text_en:v('en'),timeout_text_fr:v('fr'),timeout_text_it:v('it'),timeout_text_es:v('es')}});
+  _amPaintTimeout();
+  if(!res || !res.success) toast(gmt('save-failed'),'error');
 }
 async function updAutoMsg(id, field, value){
   const body={}; body[field]=value;
   // keep the header line in step with what was just changed
   const d=_amData[id];
-  if(d){ d[field] = field==='mode_ids' ? (value && value.length ? JSON.stringify(value) : null) : value; _amPaintSummary(id); }
+  if(d){ d[field] = Array.isArray(value) ? (value.length ? JSON.stringify(value) : null) : value; _amPaintSummary(id); }
   try{ await API('/api/automated-messages/'+id,{method:'PUT',body}); }catch(e){}
 }
 async function delAutoMsg(id){
@@ -8426,6 +8530,7 @@ function switchSettingsTab(tab,el){
     if(f && !f.getAttribute('src')) f.setAttribute('src', '/at-studio.html?embed=1');
   }
   if(tab === 'manuals')  loadManualsList();
+  if(tab === 'updates')  loadUpdatePanel();
   if(tab === 'messages') loadAutoMessages();
   if(tab === 'stats')    loadStats();
 }
@@ -8501,35 +8606,50 @@ const UPD_I18N = {
        blocked:n=>`Aktualisierung nicht möglich: ${n} Spiel(e) laufen noch oder warten. Bitte zuerst alle Spiele beenden.`,
        needpw:'Bitte GM-Passwort eingeben.', wrongpw:'Falsches Passwort.',
        updating:'Aktualisiere… Die App startet neu.', failed:'Aktualisierung fehlgeschlagen.', uptodate:'Bereits aktuell.',
-       chTitle:"Was ist neu in", chAdded:"Neu", chChanged:"Geändert", chFixed:"Behoben" },
+       chTitle:"Was ist neu in", chAdded:"Neu", chChanged:"Geändert", chFixed:"Behoben",
+       checking:'Prüfe auf Updates…', current:v=>`Installiert: ${v}. Das ist die neueste Version.`, installed:v=>`Installiert: ${v}`,
+       checkFail:'Konnte gerade nicht prüfen, ob es ein Update gibt.', lastTitle:'Das hat das letzte Update gebracht',
+       doneTitle:'✓ Update installiert', noDetails:'Für dieses Update sind keine Details gespeichert.', ok:'OK' },
   en:{ none:'No updates found', title:'⬆ Update available',
        desc:(c,n)=>`A new version is available.\nCurrent: ${c}  →  New: ${n}`,
        pwLabel:'GM password', cancel:'Cancel', go:'Update now',
        blocked:n=>`Update not possible: ${n} game(s) still running or waiting. Please finish all games first.`,
        needpw:'Please enter the GM password.', wrongpw:'Wrong password.',
        updating:'Updating… the app will restart.', failed:'Update failed.', uptodate:'Already up to date.',
-       chTitle:"What's new in", chAdded:"Added", chChanged:"Changed", chFixed:"Fixed" },
+       chTitle:"What's new in", chAdded:"Added", chChanged:"Changed", chFixed:"Fixed",
+       checking:'Checking for updates…', current:v=>`Installed: ${v}. This is the latest version.`, installed:v=>`Installed: ${v}`,
+       checkFail:'Could not check for updates right now.', lastTitle:'What the last update brought',
+       doneTitle:'✓ Update installed', noDetails:'No details are stored for this update.', ok:'OK' },
   fr:{ none:'Aucune mise à jour', title:'⬆ Mise à jour disponible',
        desc:(c,n)=>`Une nouvelle version est disponible.\nActuelle : ${c}  →  Nouvelle : ${n}`,
        pwLabel:'Mot de passe MJ', cancel:'Annuler', go:'Mettre à jour',
        blocked:n=>`Mise à jour impossible : ${n} partie(s) en cours ou en attente. Terminez d'abord toutes les parties.`,
        needpw:'Veuillez saisir le mot de passe MJ.', wrongpw:'Mot de passe incorrect.',
        updating:"Mise à jour… l'application redémarre.", failed:'Échec de la mise à jour.', uptodate:'Déjà à jour.',
-       chTitle:"Nouveautés de", chAdded:"Ajouté", chChanged:"Modifié", chFixed:"Corrigé" },
+       chTitle:"Nouveautés de", chAdded:"Ajouté", chChanged:"Modifié", chFixed:"Corrigé",
+       checking:'Recherche de mises à jour…', current:v=>`Installée : ${v}. C'est la dernière version.`, installed:v=>`Installée : ${v}`,
+       checkFail:'Impossible de vérifier les mises à jour pour le moment.', lastTitle:"Ce qu'a apporté la dernière mise à jour",
+       doneTitle:'✓ Mise à jour installée', noDetails:'Aucun détail enregistré pour cette mise à jour.', ok:'OK' },
   it:{ none:'Nessun aggiornamento', title:'⬆ Aggiornamento disponibile',
        desc:(c,n)=>`È disponibile una nuova versione.\nAttuale: ${c}  →  Nuova: ${n}`,
        pwLabel:'Password GM', cancel:'Annulla', go:'Aggiorna ora',
        blocked:n=>`Aggiornamento non possibile: ${n} partita/e ancora in corso o in attesa. Termina prima tutte le partite.`,
        needpw:'Inserisci la password GM.', wrongpw:'Password errata.',
        updating:"Aggiornamento… l'app si riavvia.", failed:'Aggiornamento non riuscito.', uptodate:'Già aggiornato.',
-       chTitle:"Novità di", chAdded:"Aggiunto", chChanged:"Modificato", chFixed:"Corretto" },
+       chTitle:"Novità di", chAdded:"Aggiunto", chChanged:"Modificato", chFixed:"Corretto",
+       checking:'Verifica degli aggiornamenti…', current:v=>`Installata: ${v}. È l'ultima versione.`, installed:v=>`Installata: ${v}`,
+       checkFail:'Al momento non è possibile verificare gli aggiornamenti.', lastTitle:"Cosa ha portato l'ultimo aggiornamento",
+       doneTitle:'✓ Aggiornamento installato', noDetails:'Nessun dettaglio salvato per questo aggiornamento.', ok:'OK' },
   es:{ none:'No hay actualizaciones', title:'⬆ Actualización disponible',
        desc:(c,n)=>`Hay una nueva versión disponible.\nActual: ${c}  →  Nueva: ${n}`,
        pwLabel:'Contraseña GM', cancel:'Cancelar', go:'Actualizar ahora',
        blocked:n=>`No se puede actualizar: ${n} partida(s) en curso o en espera. Termina primero todas las partidas.`,
        needpw:'Introduce la contraseña GM.', wrongpw:'Contraseña incorrecta.',
        updating:'Actualizando… la app se reiniciará.', failed:'Error al actualizar.', uptodate:'Ya está actualizado.',
-       chTitle:"Novedades de", chAdded:"Añadido", chChanged:"Cambiado", chFixed:"Corregido" },
+       chTitle:"Novedades de", chAdded:"Añadido", chChanged:"Cambiado", chFixed:"Corregido",
+       checking:'Buscando actualizaciones…', current:v=>`Instalada: ${v}. Es la última versión.`, installed:v=>`Instalada: ${v}`,
+       checkFail:'Ahora mismo no se pueden buscar actualizaciones.', lastTitle:'Lo que trajo la última actualización',
+       doneTitle:'✓ Actualización instalada', noDetails:'No hay detalles guardados de esta actualización.', ok:'OK' },
 };
 function updL(){ return UPD_I18N[gmLang] || UPD_I18N.en; }
 
@@ -8603,6 +8723,15 @@ function renderUpdateChanges(changes, newVersion){
   const list = Array.isArray(changes) ? changes.filter(Boolean) : [];
   if(!list.length){ box.style.display='none'; body.innerHTML=''; return; }
   const L = updL();
+  body.innerHTML = updChangesHtml(list);
+  sum.textContent = (newVersion ? `${L.chTitle} ${newVersion} ` : `${L.chTitle} `) + `(${list.length})`;
+  box.open = false;
+  box.style.display='block';
+}
+// The Added / Changed / Fixed list, shared by the popup, the Updates page and the
+// "update installed" summary.
+function updChangesHtml(list){
+  const L = updL();
   const groups = { added:[], fixed:[], changed:[] };
   list.forEach(raw => {
     // Strip a leading "area: " prefix and the trailing "(v2.4.x)" marker so the
@@ -8619,12 +8748,64 @@ function renderUpdateChanges(changes, newVersion){
         ${items.map(i=>`<li style="margin-bottom:.18rem;">${esc(i)}</li>`).join('')}
       </ul>
     </div>` : '';
-  body.innerHTML = section(L.chAdded, groups.added)
-                 + section(L.chChanged, groups.changed)
-                 + section(L.chFixed, groups.fixed);
-  sum.textContent = (newVersion ? `${L.chTitle} ${newVersion} ` : `${L.chTitle} `) + `(${list.length})`;
-  box.open = false;
-  box.style.display='block';
+  return section(L.chAdded, groups.added)
+       + section(L.chChanged, groups.changed)
+       + section(L.chFixed, groups.fixed);
+}
+
+// ── Updates page ────────────────────────────────────────────────────────────
+// Says what an update would bring (the popup's list, open) and what the last one
+// brought, with the version and date.
+const _updDate = at => { try { return new Date(at).toLocaleString(gmLang, {dateStyle:'medium', timeStyle:'short'}); } catch(e) { return ''; } };
+function _updLastHtml(last, open){
+  if(!last || !Array.isArray(last.changes) || !last.changes.length) return '';
+  const meta = [last.to, last.at ? _updDate(last.at) : ''].filter(Boolean).join(' · ');
+  return `<details class="upd-list" ${open?'open':''}>
+    <summary>${esc(updL().lastTitle)}${meta?` <span class="upd-meta">${esc(meta)}</span>`:''}</summary>
+    <div class="upd-list-body">${updChangesHtml(last.changes)}</div>
+  </details>`;
+}
+async function loadUpdatePanel(){
+  const box=document.getElementById('upd-status'); if(!box) return;
+  const L=updL(), btn=document.getElementById('btn-update');
+  box.innerHTML=`<p class="upd-line">${esc(L.checking)}</p>`;
+  let r=null; try{ r=await API('/api/update/check'); }catch(e){}
+  const parts=[];
+  if(!r){ parts.push(`<p class="upd-line">${esc(L.checkFail)}</p>`); }
+  else if(r.updateAvailable){
+    parts.push(`<p class="upd-line">${esc(L.desc(r.currentVersion||r.currentCommit||'?', r.newVersion||r.remoteCommit||'?'))}</p>`);
+    if(r.activeGames>0) parts.push(`<p class="upd-blocked">${esc(L.blocked(r.activeGames))}</p>`);
+    const list=Array.isArray(r.changes)?r.changes.filter(Boolean):[];
+    if(list.length) parts.push(`<details class="upd-list" open>
+      <summary>${esc(`${L.chTitle} ${r.newVersion||''}`.trim())} <span class="upd-meta">(${list.length})</span></summary>
+      <div class="upd-list-body">${updChangesHtml(list)}</div>
+    </details>`);
+    parts.push(_updLastHtml(r.lastUpdate, false));
+  } else {
+    if(r.error) parts.push(`<p class="upd-line">${esc(L.checkFail)}${r.currentVersion?`<br>${esc(L.installed(r.currentVersion))}`:''}</p>`);
+    else parts.push(`<p class="upd-line">${esc(L.current(r.currentVersion||''))}</p>`);
+    parts.push(_updLastHtml(r.lastUpdate, true));
+  }
+  box.innerHTML=parts.join('');
+  if(btn) btn.disabled=!!(r && r.updateAvailable && r.activeGames>0);
+}
+// Marks that this browser started an update: after the restart it gets one
+// summary of what it did (showUpdateDone), not everyone who opens the page.
+function _updMarkStarted(){ try{ sessionStorage.setItem('upd_done','1'); }catch(e){} }
+async function showUpdateDone(){
+  let due=false;
+  try{ due=sessionStorage.getItem('upd_done')==='1'; sessionStorage.removeItem('upd_done'); }catch(e){}
+  if(!due) return;
+  const L=updL();
+  let r=null; try{ r=await API('/api/update/check'); }catch(e){}
+  const last=r&&r.lastUpdate, list=last&&Array.isArray(last.changes)?last.changes:[];
+  const ver=[last&&last.from, (last&&last.to)||(r&&r.currentVersion)].filter(Boolean).join('  →  ');
+  document.getElementById('modal-content').innerHTML=`
+    <h3 class="modal-title">${esc(L.doneTitle)}</h3>
+    ${ver?`<p style="color:var(--text-muted);font-size:.9rem;margin:.4rem 0 .6rem;">${esc(ver)}</p>`:''}
+    ${list.length?updChangesHtml(list):`<p style="color:var(--text-dim);font-size:.9rem;">${esc(L.noDetails)}</p>`}
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">${esc(L.ok)}</button></div>`;
+  document.getElementById('modal-overlay').style.display='flex';
 }
 
 async function confirmUpdate(){
@@ -8646,7 +8827,7 @@ async function confirmUpdate(){
   }
   if(res.error === 'Unauthorized'){ err.textContent = L.wrongpw; go.disabled = false; return; }
   if(res.success && res.upToDate){ toast(L.uptodate,'success'); closeUpdateModal(); return; }
-  if(res.success){ toast(L.updating,'success'); waitForRestart(); return; }
+  if(res.success){ toast(L.updating,'success'); _updMarkStarted(); waitForRestart(); return; }
   err.textContent = L.failed; go.disabled = false;
 }
 

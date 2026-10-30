@@ -488,6 +488,10 @@ try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_es TEXT DEFAULT
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN mode_id INTEGER"); } catch(e) {}
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN mode_ids TEXT"); } catch(e) {}
 try { db.exec("UPDATE automated_messages SET mode_ids='['||mode_id||']', mode_id=NULL WHERE mode_id IS NOT NULL"); } catch(e) {}
+// The locations a rule is for, the same way (NULL = all locations). It used to be
+// the single location_id; moved over once and cleared.
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN location_ids TEXT"); } catch(e) {}
+try { db.exec("UPDATE automated_messages SET location_ids='['||location_id||']', location_id=NULL WHERE location_id IS NOT NULL"); } catch(e) {}
 // The GM's own order of the rules in Settings (drag to sort). 0 everywhere
 // keeps the old order (latest trigger first) until someone drags.
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN order_index INTEGER DEFAULT 0"); } catch(e) {}
@@ -1148,10 +1152,9 @@ const getStatsSummary = (fromMs, toMs) => {
 // GM-configured: when a game's remaining time reaches trigger_seconds and the
 // game matches game_kind (+ location for missions), the text is auto-broadcast.
 const _amKind = k => (k==='cityrush' ? 'cityrush' : 'missions');
-const _amLoc  = l => (l!=null && l!=='' ? Number(l) : null);
-// A rule's modes as stored: sorted unique ids in JSON, NULL for "all modes".
-// Takes an array, a JSON or comma string, or one id.
-const _amModeList = v => {
+// A rule's modes or locations as stored: sorted unique ids in JSON, NULL for
+// "all of them". Takes an array, a JSON or comma string, or one id.
+const _amIdList = v => {
   let a = v;
   if(typeof a === 'string'){ try { a = JSON.parse(a); } catch(e) { a = a.split(','); } }
   if(!Array.isArray(a)) a = (a == null || a === '') ? [] : [a];
@@ -1181,9 +1184,10 @@ const createAutoMessage = (d={}) => {
   const base = _amBase(langs);
   // New rules go to the end of the GM's order.
   const next = (Number(db.prepare('SELECT MAX(order_index) mx FROM automated_messages').get()?.mx) || 0) + 1;
-  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_id,mode_ids,order_index,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')
-    .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind), _amLoc(d.location_id),
-      _amModeList(d.mode_ids!==undefined ? d.mode_ids : d.mode_id), next,
+  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_ids,mode_ids,order_index,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')
+    .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind),
+      _amIdList(d.location_ids!==undefined ? d.location_ids : d.location_id),
+      _amIdList(d.mode_ids!==undefined ? d.mode_ids : d.mode_id), next,
       base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es).lastInsertRowid);
 };
 const updateAutoMessage = (id,d={}) => {
@@ -1198,15 +1202,20 @@ const updateAutoMessage = (id,d={}) => {
   if(d.message!=null && d.message_de==null) langs.message_de = String(d.message); // legacy single-field update
   const base = _amBase(langs) || (d.message!=null?String(d.message):cur.message) || '';
   const kind = d.game_kind!=null?_amKind(d.game_kind):cur.game_kind;
-  // Mode ids belong to one game's list, so switching the game drops them.
-  const modeIds = d.mode_ids!==undefined ? _amModeList(d.mode_ids)
-                : d.mode_id!==undefined ? _amModeList(d.mode_id)
+  // Mode ids belong to one game's list, so switching the game drops them. Rail
+  // Adventure has no locations, so a rule switched to it drops those too.
+  const modeIds = d.mode_ids!==undefined ? _amIdList(d.mode_ids)
+                : d.mode_id!==undefined ? _amIdList(d.mode_id)
                 : (kind!==cur.game_kind ? null : cur.mode_ids);
-  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=?,mode_id=NULL,mode_ids=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
+  const locIds = kind==='cityrush' ? null
+               : d.location_ids!==undefined ? _amIdList(d.location_ids)
+               : d.location_id!==undefined ? _amIdList(d.location_id)
+               : cur.location_ids;
+  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=NULL,location_ids=?,mode_id=NULL,mode_ids=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
     d.enabled!=null?(d.enabled?1:0):cur.enabled,
     d.trigger_seconds!=null?Math.max(0,parseInt(d.trigger_seconds)||0):cur.trigger_seconds,
     kind,
-    d.location_id!==undefined?_amLoc(d.location_id):cur.location_id,
+    locIds,
     modeIds,
     base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es, id);
 };

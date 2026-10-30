@@ -12,6 +12,7 @@ const cron       = require('node-cron');
 const db         = require('./db/database');
 const collage    = require('./lib/collage');
 const profanity  = require('./lib/profanity');
+const lastUpdate = require('./lib/last-update');
 
 const app    = express();
 const server = http.createServer(app);
@@ -424,28 +425,33 @@ app.get('/api/version', (req,res) => {
 // Public on purpose — it only reveals version/commit info — while the actual
 // /api/update stays password- and game-gated.
 let _updCheckCache = { t: 0, data: null };
+// What the last update brought (lib/last-update.js). Recorded once per start; the
+// check below waits for it, so the page never reads the state from before.
+const _lastUpdateReady = lastUpdate.recordInstalled(__dirname, db).catch(e => console.warn('[update] could not record the installed version:', e.message));
 app.get('/api/update/check', async (req, res) => {
+  await _lastUpdateReady;
   const activeGames = db.getActiveGames().length;
+  const live = () => ({ activeGames, lastUpdate: lastUpdate.readLastUpdate(db) });
   if (_updCheckCache.data && (Date.now() - _updCheckCache.t) < 60000) {
-    return res.json({ ..._updCheckCache.data, activeGames });
+    return res.json({ ..._updCheckCache.data, ...live() });
   }
   const { execFile } = require('child_process');
   const run = (cmd, args) => new Promise(r => execFile(cmd, args,
     { cwd: __dirname, timeout: 15000, maxBuffer: 1024 * 1024 },
     (e, out) => r({ ok: !e, out: (out || '').trim() })));
 
+  let version = '';
+  try { version = 'v' + (JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || ''); } catch(e) {}
   const inRepo = await run('git', ['rev-parse', '--is-inside-work-tree']);
   if (!inRepo.ok || inRepo.out !== 'true') {
-    return res.json({ updateAvailable: false, error: 'not_a_git_checkout', activeGames });
+    return res.json({ updateAvailable: false, error: 'not_a_git_checkout', currentVersion: version, ...live() });
   }
   const head = (await run('git', ['rev-parse', 'HEAD'])).out;
   const remote = await run('git', ['ls-remote', 'origin', 'refs/heads/main']);
   if (!remote.ok || !remote.out) {
-    return res.json({ updateAvailable: false, error: 'check_failed', currentCommit: head.slice(0,7), activeGames });
+    return res.json({ updateAvailable: false, error: 'check_failed', currentVersion: version, currentCommit: head.slice(0,7), ...live() });
   }
   const remoteSha = remote.out.split(/\s+/)[0] || '';
-  let version = '';
-  try { version = 'v' + (JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || ''); } catch(e) {}
   const updateAvailable = !!(remoteSha && head && remoteSha !== head);
   // Changelog: the commit subjects between what's installed and what's on the
   // remote — i.e. exactly what this update would bring. Needs a fetch first;
@@ -476,7 +482,7 @@ app.get('/api/update/check', async (req, res) => {
     remoteCommit: remoteSha.slice(0,7),
   };
   _updCheckCache = { t: Date.now(), data };
-  res.json({ ...data, activeGames });
+  res.json({ ...data, ...live() });
 });
 
 // ── Modes ─────────────────────────────────────────────────────────────────────
@@ -2542,12 +2548,14 @@ function _fireAutoMessages(game, remaining, autoMsgs){
     const langMsgs = _amLangMap(m);
     if(!_AM_LANGS.some(l => langMsgs[l])) continue;   // skip blank (unfinished) rows
     if(m.game_kind !== kind) continue;
-    if(kind==='missions' && m.location_id!=null && Number(m.location_id)!==Number(game.location_id)) continue;
-    let ids = [];
-    if(m.mode_ids){ try { ids = JSON.parse(m.mode_ids); } catch(e) { ids = []; } }
-    if(Array.isArray(ids) && ids.length){
+    // A rule names its locations and modes as JSON id lists; no list = all.
+    const idsOf = s => { if(!s) return []; try { const a = JSON.parse(s); return Array.isArray(a) ? a.map(Number) : []; } catch(e) { return []; } };
+    const locs = idsOf(m.location_ids);
+    if(kind==='missions' && locs.length && !locs.includes(Number(game.location_id))) continue;
+    const ids = idsOf(m.mode_ids);
+    if(ids.length){
       if(modeId===undefined) modeId = kind==='cityrush' ? ((db.getGameCrMode(game.id)||{}).id ?? null) : game.mode_id;
-      if(!ids.map(Number).includes(Number(modeId))) continue;
+      if(!ids.includes(Number(modeId))) continue;
     }
     if(remaining <= m.trigger_seconds){ sent.add(m.id); _sendAutoBroadcast(game.id, langMsgs); }
   }
