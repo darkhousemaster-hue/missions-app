@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/css/app.css?v=2.4.61">
 <script src="/js/theme.js?v=20"></script>
 <script src="/js/dialog.js?v=1"></script>
+<script src="/js/end-screen.js"></script>
 <style>
 /* Player side: no muted grey — secondary text + icons read full white. */
 :root { --text-dim: var(--text); --text-muted: var(--text); }
@@ -320,6 +321,11 @@ body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflo
 #gameover-overlay h1 { font-size:clamp(3rem,12vw,6rem); color:var(--red); letter-spacing:.1em; }
 #gameover-overlay p  { font-size:1.1rem; max-width:480px; margin:1rem auto; color:var(--text-dim); }
 #go-extra p { color:var(--text); white-space:pre-line; overflow-wrap:anywhere; }
+/* The end screen as a picture (Christmas look, when the mode has one). Messages
+   open above it, so its layout stays the one the picture was made for. */
+#end-image { position:fixed; inset:0; z-index:1600; display:none; }
+body.end-img-up #msg-popup { z-index:1700; }
+body.end-img-up #msg-popup-text { white-space:pre-line; }
 
 @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.5} }
 /* New GM message: flash the whole chat button orange (not just the small dot). */
@@ -573,6 +579,7 @@ body.look-xmas .md-label:has(+ .md-desc:empty){display:none;}
     <div class="go-meet-btns" id="go-meet-btns"></div>
   </div>
 </div>
+<div id="end-image" role="alert"></div>
 
 <div class="toast-container" id="toast-container"></div>
 
@@ -975,7 +982,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   socket.on('settings_updated', () => { loadMissions(); });
   // The GM set or changed the meeting point; the end screen shows it live.
-  socket.on('meeting_point', ({ text }) => { _meetingPoint = text || null; paintMeetingPoint(); showEndIfMeeting(); });
+  socket.on('meeting_point', ({ text }) => {
+    _meetingPoint = text || null;
+    paintMeetingPoint();
+    if (endImageUp()) paintEndImage();
+    showEndIfMeeting();
+  });
 
   // Fix Android keyboard pushing input off screen.
   // We re-anchor both <body> and the fixed chat overlay to the visual viewport
@@ -1155,9 +1167,25 @@ function xmasCard(m, i) {
 let _meetingPoint = null;
 // Messages set to Restzeit 0, sent along when the page loads after the end.
 let _endMessages = [];
-// A meeting point always brings up the end screen, even with the timeout message off.
+// The mode's end screen picture and its text (Christmas look only), and the copy
+// fetched ahead of time.
+let _endScreen = null, _endPic = null;
+const endImageUp = () => document.getElementById('end-image').style.display === 'block';
+const endScreenUp = () => endImageUp() || document.getElementById('gameover-overlay').style.display === 'flex';
+// A meeting point or a picture always brings up the end screen, even with the
+// timeout message off.
 function showEndIfMeeting(){
-  if (_timeOver && _meetingPoint && document.getElementById('gameover-overlay').style.display !== 'flex') showGameOver('');
+  if (_timeOver && (_meetingPoint || _endScreen) && !endScreenUp()) showGameOver('');
+}
+function meetLinks(){
+  const txt = String(_meetingPoint || '').trim();
+  if (!txt) return [];
+  if (/^https?:\/\/\S+$/i.test(txt)) return [{ label: t('meet_open'), href: txt, cls: 'btn-primary' }];
+  const q = encodeURIComponent(txt);
+  const google = { label: t('meet_google'), href: `https://www.google.com/maps/search/?api=1&query=${q}`, cls: 'btn-primary' };
+  const apple  = { label: t('meet_apple'), href: `https://maps.apple.com/?q=${q}`, cls: 'btn-secondary' };
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return ios ? [apple, google] : [google, apple];
 }
 function paintMeetingPoint(){
   const box = document.getElementById('go-meet');
@@ -1168,13 +1196,27 @@ function paintMeetingPoint(){
   document.getElementById('go-meet-label').textContent = t('meet_title');
   const isUrl = /^https?:\/\/\S+$/i.test(txt);
   document.getElementById('go-meet-text').textContent = isUrl ? '' : txt;
-  const q = encodeURIComponent(txt);
-  const google = `<a class="btn btn-primary btn-lg" href="https://www.google.com/maps/search/?api=1&amp;query=${q}" target="_blank" rel="noopener">${esc(t('meet_google'))}</a>`;
-  const apple  = `<a class="btn btn-secondary btn-lg" href="https://maps.apple.com/?q=${q}" target="_blank" rel="noopener">${esc(t('meet_apple'))}</a>`;
-  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  document.getElementById('go-meet-btns').innerHTML = isUrl
-    ? `<a class="btn btn-primary btn-lg" href="${esc(txt)}" target="_blank" rel="noopener">${esc(t('meet_open'))}</a>`
-    : (ios ? apple + google : google + apple);
+  document.getElementById('go-meet-btns').innerHTML = meetLinks()
+    .map(l => `<a class="btn ${l.cls} btn-lg" href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('');
+}
+function paintEndImage(){
+  const c = _endScreen, L = baseOf(lang), txt = String(_meetingPoint || '').trim();
+  const addr = /^https?:\/\/\S+$/i.test(txt) ? '' : txt;
+  const words = EndScreen.texts(c, L, { title: t('go'), body: t('meet_title') + '\n' + EndScreen.TOKEN }, addr);
+  EndScreen.mount(document.getElementById('end-image'), { image: c.image, pos: c.pos, size: c.size, color: c.color, links: meetLinks(), ...words });
+}
+function showEndImage(){
+  document.getElementById('end-image').style.display = 'block';
+  document.body.classList.add('end-img-up');
+  paintEndImage();
+  _endMessages.forEach(m => addEndPopup(_msgText({ messages: m, content: m.de })));
+}
+// A message while the picture is up. Several in a row stay together, so the
+// second one doesn't wipe the first before it was read.
+function addEndPopup(text){
+  const pop = document.getElementById('msg-popup'), p = document.getElementById('msg-popup-text');
+  p.textContent = pop.style.display === 'flex' && p.textContent ? p.textContent + '\n\n' + text : text;
+  pop.style.display = 'flex';
 }
 
 async function loadMissions() {
@@ -1192,8 +1234,16 @@ async function loadMissions() {
     _timeOver = !!data.timer.started && data.timer.remaining <= 0;
   }
   _endMessages = data.end_messages || [];
+  _endScreen = data.end_screen || null;
+  // Fetched now, so it is there the moment the time runs out, whatever the signal is like then.
+  if (_endScreen && (!_endPic || _endPic.dataset.src !== _endScreen.image)) {
+    _endPic = new Image();
+    _endPic.dataset.src = _endScreen.image;
+    _endPic.src = _endScreen.image;
+  }
+  if (_endScreen && endImageUp()) paintEndImage();
   // A reload after the end loses the end screen; bring it back when it has a
-  // meeting point to show (games without one behave as before).
+  // meeting point or a picture to show (other games behave as before).
   showEndIfMeeting();
   if (typeof data.max_video_seconds === 'number') MAX_VIDEO_SECONDS = data.max_video_seconds;
   if (typeof data.max_upload_mb === 'number') setMaxUploadMb(data.max_upload_mb);
@@ -1953,7 +2003,8 @@ function onChatMessage(msg) {
   if (msg.rejection) { if (currentView !== 'chat') startChatFlash(); else _seenGm = _gmCount; return; }
   // The end screen has no way out: a popup would open behind it and the chat
   // can't be reached, so anything arriving now has to show on the screen itself.
-  if (document.getElementById('gameover-overlay').style.display === 'flex') { addEndMessage(text); return; }
+  if (endImageUp()) { addEndPopup(text); return; }
+  if (endScreenUp()) { addEndMessage(text); return; }
   if (currentView !== 'chat') {
     startChatFlash();
     document.getElementById('msg-popup-text').textContent = text;
@@ -2068,6 +2119,8 @@ function showGameOver(message) {
   document.getElementById('go-title').textContent = t('go');
   const ci=document.getElementById('chat-input');
   if(ci) ci.placeholder=t('chat_ph');
+  // The mode's own picture and text replace the regular end screen altogether.
+  if (_endScreen && window.EndScreen) { showEndImage(); return; }
   document.getElementById('go-msg').textContent   = message || '';
   document.getElementById('go-extra').textContent = '';
   _endMessages.forEach(m => addEndMessage(_msgText({ messages: m, content: m.de })));

@@ -417,6 +417,10 @@ try { db.exec("ALTER TABLE modes ADD COLUMN tile_title_color TEXT"); } catch(e) 
 // and the teams see it when the game ends.
 try { db.exec("ALTER TABLE modes ADD COLUMN look TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE modes ADD COLUMN meeting_required INTEGER DEFAULT 0"); } catch(e) {}
+// The Christmas look's end screen: a full-page picture (path under uploads/) and
+// the text on it (JSON, see normEndScreen).
+try { db.exec("ALTER TABLE modes ADD COLUMN end_image TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE modes ADD COLUMN end_screen TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE games ADD COLUMN meeting_point TEXT"); } catch(e) {}
 // A mission's own tile picture for the Christmas look (path under uploads/;
 // NULL = the standard one). Not the task image, which is a separate reference
@@ -670,10 +674,25 @@ const updateMode = (id, {name, ruleset_id, timer_default, location_id, tile_show
 const setModeTileImage = (id, rel) => db.prepare('UPDATE modes SET tile_image=? WHERE id=?').run(rel || null, Number(id));
 // Look and meeting-point switch, each written only when sent, so a save from a
 // page that doesn't know them leaves them as they are.
-const setModeLook = (id, {look, meeting_required}) => {
+const setModeLook = (id, {look, meeting_required, end_screen}) => {
   if(look !== undefined) db.prepare('UPDATE modes SET look=? WHERE id=?').run(look === 'christmas' ? 'christmas' : null, Number(id));
   if(meeting_required !== undefined) db.prepare('UPDATE modes SET meeting_required=? WHERE id=?')
     .run(meeting_required === true || meeting_required === 1 || meeting_required === '1' ? 1 : 0, Number(id));
+  if(end_screen !== undefined) db.prepare('UPDATE modes SET end_screen=? WHERE id=?').run(JSON.stringify(normEndScreen(end_screen)), Number(id));
+};
+// Written only by the upload/clear endpoints, like the tile image.
+const setModeEndImage = (id, rel) => db.prepare('UPDATE modes SET end_image=? WHERE id=?').run(rel || null, Number(id));
+// End screen text per language, where it sits (% of the height) and how it looks.
+// Goes to every player of the mode, so nothing but these fields gets through.
+const normEndScreen = v => {
+  let o = v;
+  if(typeof v === 'string'){ try { o = JSON.parse(v); } catch(e) { o = null; } }
+  if(!o || typeof o !== 'object') o = {};
+  const texts = (map, max) => Object.fromEntries(['de','en','fr','it','es'].map(l => [l, String((map && map[l]) ?? '').slice(0, max)]));
+  const clamp = (x, lo, hi, d) => { const n = Number(x); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : d; };
+  const shown = v => v === undefined || Number(v) !== 0 ? 1 : 0;
+  return { title: texts(o.title, 120), body: texts(o.body, 600), pos: clamp(o.pos, 10, 85, 14), size: clamp(o.size, 60, 160, 100),
+    color: /^#[0-9a-fA-F]{6}$/.test(String(o.color)) ? o.color : '#f4f2ee', show_title: shown(o.show_title), show_body: shown(o.show_body) };
 };
 const setGameMeetingPoint = (id, text) => db.prepare('UPDATE games SET meeting_point=? WHERE id=?')
   .run(String(text || '').trim().slice(0, 300) || null, id);
@@ -1684,7 +1703,7 @@ module.exports = {
   getGmTheme,setGmTheme,getGlobalPlayerTheme,setGlobalPlayerTheme,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,
-  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,setModeLook,setGameMeetingPoint,reorderMissions,getGameRules,
+  getModes,getMode,createMode,updateMode,deleteMode,reorderModes,setModeNoRandomize,setModeTileImage,setModeEndImage,normEndScreen,setModeLook,setGameMeetingPoint,reorderMissions,getGameRules,
   getLocations,getLocation,createLocation,updateLocation,deleteLocation,setLocationTheme,getLocationGmTheme,setLocationGmTheme,setCrModeTheme,
   getMissions,getMission,createMission,updateMission,deleteMission,setMissionTaskImage,setMissionTileImage,
   countGamesUsingLocation,countGamesUsingMode,countGamesUsingMission,

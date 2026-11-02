@@ -501,45 +501,49 @@ app.put('/api/modes/reorder', (req,res) => {
   db.reorderModes(Array.isArray(req.body.order) ? req.body.order : []);
   res.json({success:true});
 });
-// Tile artwork for the new-game mode picker. Stored under uploads/modes/ and
-// recorded on the mode itself. Replacing or clearing removes the old file so
-// swapped-out artwork doesn't pile up in the uploads folder.
-function _dropModeTile(mode){
-  const old = mode && mode.tile_image;
+// Mode artwork: the tile for the new-game mode picker and the Christmas look's
+// end screen picture. Stored under uploads/modes/ and recorded on the mode itself.
+// Replacing or clearing removes the old file so swapped-out artwork doesn't pile
+// up in the uploads folder.
+function _dropModeFile(old){
   if(!old || String(old).includes('..')) return;
   try { fs.unlinkSync(path.join(UPLOAD_DIR, old)); } catch(e) {}
 }
 // Raster images only. An uploaded file is served back from this origin, and
-// an SVG opened directly would run its own script there; a tile never needs
+// an SVG opened directly would run its own script there; artwork never needs
 // one, so the whole class is refused rather than sanitised.
 const TILE_TYPES = new Set(['image/png','image/jpeg','image/webp','image/gif']);
-app.post('/api/modes/:id/tile-image', upload.single('image'), (req,res) => {
-  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  if(!req.file) return res.status(400).json({error:'No file'});
-  if(!TILE_TYPES.has(String(req.file.mimetype||'').toLowerCase())){
-    try{ fs.unlinkSync(req.file.path); }catch(e){}
-    return res.status(400).json({error:'Unsupported image type'});
-  }
-  const mode = db.getMode(Number(req.params.id));
-  if(!mode){ try{ fs.unlinkSync(req.file.path); }catch(e){} return res.status(404).json({error:'Mode not found'}); }
-  const destDir = path.join(UPLOAD_DIR,'modes');
-  if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
-  const dest = path.join(destDir, req.file.filename);
-  try { fs.renameSync(req.file.path, dest); }
-  catch(e){ fs.copyFileSync(req.file.path,dest); fs.unlinkSync(req.file.path); }
-  _dropModeTile(mode);
-  const rel = `modes/${req.file.filename}`;
-  db.setModeTileImage(mode.id, rel);
-  res.json({success:true, tile_image: rel});
-});
-app.delete('/api/modes/:id/tile-image', (req,res) => {
-  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
-  const mode = db.getMode(Number(req.params.id));
-  if(!mode) return res.status(404).json({error:'Mode not found'});
-  _dropModeTile(mode);
-  db.setModeTileImage(mode.id, null);
-  res.json({success:true});
-});
+function modeImageRoutes(route, field, save){
+  app.post(`/api/modes/:id/${route}`, upload.single('image'), (req,res) => {
+    const refuse = (code, error) => { if(req.file){ try{ fs.unlinkSync(req.file.path); }catch(e){} } return res.status(code).json({error}); };
+    if(!isGmAuthed(req)) return refuse(401,'Unauthorized');
+    if(!req.file) return refuse(400,'No file');
+    if(!TILE_TYPES.has(String(req.file.mimetype||'').toLowerCase())) return refuse(400,'Unsupported image type');
+    const mode = db.getMode(Number(req.params.id));
+    if(!mode) return refuse(404,'Mode not found');
+    const destDir = path.join(UPLOAD_DIR,'modes');
+    if(!fs.existsSync(destDir)) fs.mkdirSync(destDir,{recursive:true});
+    const dest = path.join(destDir, req.file.filename);
+    try { fs.renameSync(req.file.path, dest); }
+    catch(e){ fs.copyFileSync(req.file.path,dest); fs.unlinkSync(req.file.path); }
+    _dropModeFile(mode[field]);
+    const rel = `modes/${req.file.filename}`;
+    save(mode.id, rel);
+    if(field === 'end_image') io.emit('settings_updated', {type:'modes'});
+    res.json({success:true, [field]: rel});
+  });
+  app.delete(`/api/modes/:id/${route}`, (req,res) => {
+    if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+    const mode = db.getMode(Number(req.params.id));
+    if(!mode) return res.status(404).json({error:'Mode not found'});
+    _dropModeFile(mode[field]);
+    save(mode.id, null);
+    if(field === 'end_image') io.emit('settings_updated', {type:'modes'});
+    res.json({success:true});
+  });
+}
+modeImageRoutes('tile-image', 'tile_image', db.setModeTileImage);
+modeImageRoutes('end-image', 'end_image', db.setModeEndImage);
 app.put('/api/modes/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try {
@@ -548,6 +552,8 @@ app.put('/api/modes/:id', (req,res) => {
     if(req.body.name !== undefined) db.updateMode(req.params.id, req.body);
     if(req.body.no_randomize !== undefined) db.setModeNoRandomize(Number(req.params.id), req.body.no_randomize);
     db.setModeLook(req.params.id, req.body);
+    // A game already running picks up the new end screen text.
+    if(req.body.end_screen !== undefined) io.emit('settings_updated', {type:'modes'});
     res.json({success:true});
   }
   catch(e) { res.status(400).json({error:e.message}); }
@@ -559,7 +565,10 @@ app.delete('/api/modes/:id', (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
   try {
     if(refuseIfInUse(res, db.countGamesUsingMode(req.params.id))) return;
-    db.deleteMode(req.params.id); res.json({success:true});
+    const mode = db.getMode(Number(req.params.id));
+    db.deleteMode(req.params.id);
+    if(mode){ _dropModeFile(mode.tile_image); _dropModeFile(mode.end_image); }
+    res.json({success:true});
   }
   catch(e) { res.status(400).json({error:e.message}); }
 });
@@ -1040,8 +1049,12 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   // Messages set to Restzeit 0, for an end screen that comes back after a reload.
   const end_messages = timer && timer.started && timer.remaining<=0
     ? _amRulesFor(game, _amEndRules(db.getAutoMessages())).map(r => r.langMsgs) : [];
+  // The Christmas look's end screen picture, if the mode has one. Sent from the
+  // start so the phone can have it loaded before the time runs out.
+  const end_screen = look && mode.end_image
+    ? {image: '/uploads/' + mode.end_image, ...db.normEndScreen(mode.end_screen)} : null;
   res.json({...publicTeam, missions, freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer,
-    look, meeting_point: (game && game.meeting_point) || null, end_messages});
+    look, meeting_point: (game && game.meeting_point) || null, end_messages, end_screen});
 });
 // GM dashboard detail is intentionally separate from the player team endpoint:
 // a GM who has not unlocked manager Settings must still be able to review
