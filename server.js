@@ -899,7 +899,7 @@ app.post('/api/games/:id/collage', (req,res) => {
   const job   = { gameId: g.id, step: 0, total: 0, phase: 'collecting', started_at: Date.now() };
   collageJobs.set(jobId, job);
   collage.generateCollage(db._db, g.id, UPLOAD_DIR, (p) => {
-    job.step  = p.step; job.total = p.total; job.phase = p.phase;
+    job.step  = p.step; job.total = p.total; job.phase = p.phase; job.skipped = p.skipped || 0;
   })
   .then(relPath => { job.phase = 'done'; job.path = relPath; })
   .catch(err   => { console.error('collage failed:', err);
@@ -913,7 +913,7 @@ app.get('/api/games/:id/collage/status/:jobId', (req,res) => {
   if(!job || job.gameId !== req.params.id) return res.status(404).json({ error: 'No such job' });
   res.json({
     phase: job.phase, step: job.step, total: job.total,
-    error: job.error || null,
+    error: job.error || null, skipped: job.skipped || 0,
     url: job.path ? `/api/games/${job.gameId}/collage/file` : null,
   });
 });
