@@ -592,7 +592,7 @@ let gameId, teamId, teamName;
 let socket;
 // Language priority: ?lang= from the join screen → saved m_lang → German.
 let lang = (() => {
-  const all = ['de','en','fr','it','es'];
+  const all = ['de','en','fr','it','es','zh'];
   const q = new URLSearchParams(window.location.search).get('lang');
   // Accept a built-in code, or provisionally any slug-shaped code (may be a
   // location's custom language — validated later by setAllowedLangs()).
@@ -736,13 +736,14 @@ const T = {
     video_too_long:'Vídeo demasiado largo ({len} s). Máx {max} s. Graba más corto.', video_shrinking:'Reduciendo el vídeo…', video_shrinking_hint:'Mantén la app abierta.', video_shrink_cancel:'Cancelar', video_max_reached:'Duración máxima alcanzada ({max} s) — grabación detenida.', file_too_large:'Archivo demasiado grande ({size} MB). Máx {max} MB. Graba más corto o en menor resolución.',
     broadcast:'Anuncio',
     flip:'🔄 Voltear', you:'Yo', no_missions:'No se han encontrado misiones.', no_rules:'No hay reglas.',
-  }
+  },
+  zh: {"times_up":"时间到！请前往集合地点。","description":"说明","task":"任务","photo":"照片","video":"视频","indoor":"室内","take_selfie":"拍团队自拍","selfie_saved":"自拍已保存！","error_generic":"出了点问题","view_image":"查看图片","rejected":"✗ 未通过","meet_title":"集合地点","meet_google":"Google 地图","meet_apple":"Apple 地图","meet_open":"打开地图","rules":"规则","rules_back":"← 返回","send":"发送","chat_ph":"给主持人发消息…","pending":"⏳ 等待审核","accepted":"✓ 已通过","take_photo":"拍照","take_video":"录视频","redo":"↺ 再试一次","go":"时间到","rej_title":"❌ 未通过","rej_btn":"好的，再试一次","upload":"✓ 上传","retake":"↺ 重拍","cancel":"✕ 取消","awaiting":"⏳ 等待审核","gallery_upload":"从相册上传","mission_accepted":"✓ 任务已通过！","no_mic":"麦克风不可用，视频将没有声音","cam_denied":"相机访问被拒绝","capture_failed":"录制失败：","uploading_review":"已上传！等待审核…","multi_need_min":"至少拍 {n} 张照片","multi_need_exact":"需要正好拍 {n} 张照片","multi_err_min":"至少需要 {n} 张照片，目前有 {have} 张。","multi_err_exact":"需要正好 {n} 张照片，目前有 {have} 张。","multi_need_min_1":"至少拍一张照片","multi_need_exact_1":"只拍一张照片","multi_err_min_1":"至少需要一张照片。","multi_err_exact_1":"只能有一张照片，目前有 {have} 张。","multi_added":"已添加 {n} 张照片","multi_skipped":"已跳过 {n} 张照片","multi_submit":"全部提交","delete":"删除","upload_failed":"上传失败","already_solved":"你们队已经完成了这个任务！","not_started":"时间还没开始，请稍候。","time_over":"时间到了，不能再提交。","pending_note":"等待主持人审核。","accepted_note":"已通过！","video_too_long":"视频太长（{len} 秒）。最长 {max} 秒，请拍一段更短的视频。","video_shrinking":"正在压缩视频…","video_shrinking_hint":"请保持应用打开。","video_shrink_cancel":"取消","video_max_reached":"已达到最长时长（{max} 秒），录制已停止。","file_too_large":"文件太大（{size} MB）。最大 {max} MB。请拍一段更短的视频或降低分辨率。","broadcast":"广播","flip":"🔄 翻转","you":"你","no_missions":"没有找到任务。","no_rules":"暂无规则。"}
 };
-const ALL_LANGS = ['de','en','fr','it','es'];
+const ALL_LANGS = ['de','en','fr','it','es','zh'];
 // LANGS is the currently-permitted set; the team-fetch payload narrows it
 // down via setAllowedLangs() once we know the game's location restrictions.
 // Until then we accept all five so the page renders something on first load.
-let LANGS = ['de','en','fr','it','es'];
+let LANGS = ['de','en','fr','it','es','zh'];
 // Custom (GM-defined) languages for this game's location, from the team
 // payload: [{code,label,base}]. They carry typed mission content; the app's
 // fixed labels fall back to each one's chosen base language.
@@ -753,8 +754,8 @@ function customLang(l){ return customLangs.find(c => c.code === l); }
 function baseOf(l){ const c = customLang(l); return c ? (c.base||'de') : l; }
 function t(k) { const L = baseOf(lang); return (T[L]||T.de)[k]||k; }
 // Compact button label + full tooltip for the language cycler.
-function langBtnLabel(){ const c = customLang(lang); return c ? (c.label||c.code).slice(0,2).toUpperCase() : lang.toUpperCase(); }
-function langFullLabel(){ const c = customLang(lang); return c ? (c.label||c.code) : lang.toUpperCase(); }
+function langBtnLabel(){ const c = customLang(lang); return c ? (c.label||c.code).slice(0,2).toUpperCase() : lang === 'zh' ? '中文' : lang.toUpperCase(); }
+function langFullLabel(){ const c = customLang(lang); return c ? (c.label||c.code) : lang === 'zh' ? '中文' : lang.toUpperCase(); }
 // Localized mission field ('name'|'description'|'task') with custom-language
 // support: prefer the custom content, else fall back to the base language.
 function mField(m, field){
@@ -766,7 +767,8 @@ function mField(m, field){
     const b = c.base || 'de';
     return m[field+'_'+b] || m[field+'_de'] || m[field+'_en'] || '';
   }
-  return m[field+'_'+lang] || m[field+'_de'] || m[field+'_en'] || '';
+  // Chinese falls back to English first: more visitors from China read it than German.
+  return m[field+'_'+lang] || (lang === 'zh' ? m[field+'_en'] || m[field+'_de'] : m[field+'_de'] || m[field+'_en']) || '';
 }
 
 // Replace the active language allow-list. Called after fetching the team
@@ -2105,7 +2107,7 @@ async function loadRules() {
   }
   if (list.length) {
     box.innerHTML = list.map((r,i) => {
-      const txt = (r[lang]||r.de||r.en||'')
+      const txt = (r[lang]||(lang === 'zh' ? r.en||r.de : r.de||r.en)||'')
         .replace(/\[photo\]/gi,'📷').replace(/\[video\]/gi,'🎬').replace(/\[indoor\]/gi,'🏠');
       return `<div class="rule-entry"><strong style="color:var(--text-muted);margin-right:.4rem;">${i+1}.</strong>${esc(txt)}</div>`;
     }).join('');

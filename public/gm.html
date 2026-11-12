@@ -1244,6 +1244,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
               <span class="lang-tab" data-lang="fr" onclick="switchLangPanel('timeout','fr',this)"><span class="tick" style="display:none;">✓</span>FR</span>
               <span class="lang-tab" data-lang="it" onclick="switchLangPanel('timeout','it',this)"><span class="tick" style="display:none;">✓</span>IT</span>
               <span class="lang-tab" data-lang="es" onclick="switchLangPanel('timeout','es',this)"><span class="tick" style="display:none;">✓</span>ES</span>
+              <span class="lang-tab" data-lang="zh" onclick="switchLangPanel('timeout','zh',this)"><span class="tick" style="display:none;">✓</span>ZH</span>
             </div>
             <div class="lang-panels" data-prefix="timeout">
               <div class="lang-panel is-active" data-lang="de"><textarea id="s-timeout-de" class="textarea" rows="3" oninput="markLangTabFilled('timeout','de',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
@@ -1251,6 +1252,7 @@ body.sel-cr #crms-toolbar{display:flex !important;}
               <div class="lang-panel" data-lang="fr"><textarea id="s-timeout-fr" class="textarea" rows="3" oninput="markLangTabFilled('timeout','fr',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
               <div class="lang-panel" data-lang="it"><textarea id="s-timeout-it" class="textarea" rows="3" oninput="markLangTabFilled('timeout','it',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
               <div class="lang-panel" data-lang="es"><textarea id="s-timeout-es" class="textarea" rows="3" oninput="markLangTabFilled('timeout','es',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
+              <div class="lang-panel" data-lang="zh"><textarea id="s-timeout-zh" class="textarea" rows="3" oninput="markLangTabFilled('timeout','zh',!!this.value.trim())" onchange="saveTimeoutMsg()"></textarea></div>
             </div>
           </div>
         </div>
@@ -4604,6 +4606,7 @@ async function loadSettings(){
   if(document.getElementById('s-timeout-fr')) document.getElementById('s-timeout-fr').value=s.timeout_text_fr||'';
   if(document.getElementById('s-timeout-it')) document.getElementById('s-timeout-it').value=s.timeout_text_it||'';
   if(document.getElementById('s-timeout-es')) document.getElementById('s-timeout-es').value=s.timeout_text_es||'';
+  if(document.getElementById('s-timeout-zh')) document.getElementById('s-timeout-zh').value=s.timeout_text_zh||'';
   _amTimeoutOn=s.timeout_enabled!=='0';
   _amPaintTimeout();
   await loadLocationsSettings();
@@ -4642,7 +4645,7 @@ async function loadSettings(){
   // Reflect filled-state ticks on the timeout lang-tabs (✓ on tabs that
   // already have content so the GM knows what's translated).
   if(typeof refreshLangTickMarks === 'function'){
-    ['de','en','fr','it','es'].forEach(l => {
+    ['de','en','fr','it','es','zh'].forEach(l => {
       const el = document.getElementById('s-timeout-' + l);
       if(el && typeof markLangTabFilled === 'function') markLangTabFilled('timeout', l, (el.value||'').trim() !== '');
     });
@@ -4664,7 +4667,7 @@ async function detectTunnel(){
 }
 
 async function autoTranslateTimeout(){
-  const fields={de:document.getElementById('s-timeout-de')?.value,en:document.getElementById('s-timeout-en')?.value,fr:document.getElementById('s-timeout-fr')?.value,it:document.getElementById('s-timeout-it')?.value,es:document.getElementById('s-timeout-es')?.value};
+  const fields={de:document.getElementById('s-timeout-de')?.value,en:document.getElementById('s-timeout-en')?.value,fr:document.getElementById('s-timeout-fr')?.value,it:document.getElementById('s-timeout-it')?.value,es:document.getElementById('s-timeout-es')?.value,zh:document.getElementById('s-timeout-zh')?.value};
   const filled=Object.entries(fields).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben','warning');return;}
   const [fromLang,text]=filled;
@@ -5008,11 +5011,15 @@ function modeEndReset(){
   if(_modeEndObjUrl){ URL.revokeObjectURL(_modeEndObjUrl); _modeEndObjUrl=null; }
   _modeEndFile=null; _modeEndRemove=false; _modeEndCur=null; _modeEndFocus=null; _modeEndPicked=null;
 }
+// The preview shows the players' wording in each language. Chinese has no staff
+// screen table, so its few player words for this screen live here.
+const GMT_ZH = {'mode-end-def-title':'时间到','mode-end-def-body':'集合地点\n{adresse}','mode-end-sample':'Bahnhofplatz 1, 5400 Baden','mode-end-google':'Google 地图','mode-end-apple':'Apple 地图'};
+const gmtFor = (l, k) => ((GMT[l] || (l === 'zh' ? GMT_ZH : GMT.en))[k] ?? GMT.en[k]);
 function modeEndFieldsHtml(m){
   const xmas=!!(m && m.look==='christmas');
   _modeEndCur = m && m.end_image ? m.end_image : null;
   let c={}; try { c=JSON.parse((m && m.end_screen)||'{}')||{}; } catch(e) {}
-  const d=EndScreen.DEFAULTS, title=c.title||{}, body=c.body||{}, langs=['de','en','fr','it','es'];
+  const d=EndScreen.DEFAULTS, title=c.title||{}, body=c.body||{}, langs=['de','en','fr','it','es','zh'];
   const inf=(k)=>`<i class="cme-info" tabindex="0">i<span class="cme-tip">${esc(gmt(k)||'')}</span></i>`;
   // Title and text can each be off, for a picture that already says it.
   const show=(id,v)=>{ const on=v===undefined||Number(v)!==0;
@@ -5020,9 +5027,9 @@ function modeEndFieldsHtml(m){
   const tabs=langs.map((l,i)=>`<button type="button" class="lang-tab ${i===0?'is-active':''}" data-lang="${l}" onclick="switchLangPanel('mode-end','${l}',this);modeEndSync()"><span class="tick" style="display:${(title[l]||body[l])?'inline':'none'}">✓</span>${l.toUpperCase()}</button>`).join('');
   const panels=langs.map((l,i)=>`<div class="lang-panel ${i===0?'is-active':''}" data-lang="${l}">
       <label class="label" for="mode-end-title-${l}">${esc(gmt('mode-end-title'))}</label>
-      <input id="mode-end-title-${l}" class="input" maxlength="120" value="${esc(title[l]||'')}" placeholder="${esc(GMT[l]['mode-end-def-title'])}" onfocus="_modeEndFocus=this" oninput="modeEndTyped('${l}')">
+      <input id="mode-end-title-${l}" class="input" maxlength="120" value="${esc(title[l]||'')}" placeholder="${esc(gmtFor(l,'mode-end-def-title'))}" onfocus="_modeEndFocus=this" oninput="modeEndTyped('${l}')">
       <label class="label" for="mode-end-body-${l}" style="margin-top:.5rem;">${esc(gmt('mode-end-body'))}</label>
-      <textarea id="mode-end-body-${l}" class="textarea" rows="3" maxlength="600" placeholder="${esc(GMT[l]['mode-end-def-body'])}" onfocus="_modeEndFocus=this" oninput="modeEndTyped('${l}')">${esc(body[l]||'')}</textarea>
+      <textarea id="mode-end-body-${l}" class="textarea" rows="3" maxlength="600" placeholder="${esc(gmtFor(l,'mode-end-def-body'))}" onfocus="_modeEndFocus=this" oninput="modeEndTyped('${l}')">${esc(body[l]||'')}</textarea>
     </div>`).join('');
   return `
     <div class="field" id="mode-end-wrap" style="display:${xmas?'block':'none'};margin-top:1rem;">
@@ -5070,7 +5077,7 @@ function modeEndFieldsHtml(m){
 }
 function modeEndForm(){
   const val=id=>document.getElementById(id)?.value||'';
-  const map=pre=>Object.fromEntries(['de','en','fr','it','es'].map(l=>[l,val(`mode-end-${pre}-${l}`)]));
+  const map=pre=>Object.fromEntries(['de','en','fr','it','es','zh'].map(l=>[l,val(`mode-end-${pre}-${l}`)]));
   const shown=id=>document.getElementById(id)?.checked===false?0:1;
   return { title:map('title'), body:map('body'), pos:Number(val('mode-end-pos'))||EndScreen.DEFAULTS.pos,
            size:Number(val('mode-end-size'))||EndScreen.DEFAULTS.size, color:val('mode-end-color')||EndScreen.DEFAULTS.color,
@@ -5082,10 +5089,10 @@ function modeEndLang(){ return document.querySelector('.lang-strip[data-prefix="
 // address and there are no map buttons, on the phone either.
 function modeEndOptions(lang){
   const f=modeEndForm(), meet=!!document.getElementById('mode-meet')?.checked;
-  const sample=meet ? GMT[lang]['mode-end-sample'] : '';
+  const sample=meet ? gmtFor(lang,'mode-end-sample') : '';
   return { pos:f.pos, size:f.size, color:f.color,
-    ...EndScreen.texts(f,lang,{title:GMT[lang]['mode-end-def-title'],body:GMT[lang]['mode-end-def-body']},sample),
-    links:meet ? [{label:GMT[lang]['mode-end-google']},{label:GMT[lang]['mode-end-apple']}] : [] };
+    ...EndScreen.texts(f,lang,{title:gmtFor(lang,'mode-end-def-title'),body:gmtFor(lang,'mode-end-def-body')},sample),
+    links:meet ? [{label:gmtFor(lang,'mode-end-google')},{label:gmtFor(lang,'mode-end-apple')}] : [] };
 }
 function modeEndUrl(){
   if(_modeEndObjUrl) return _modeEndObjUrl;
@@ -5172,7 +5179,7 @@ function modeEndInsert(){
 // Fills the empty languages from the first one written. The translator may turn
 // the placeholder into its own language, so it is put back afterwards.
 async function modeEndTranslate(){
-  const langs=['de','en','fr','it','es'], f=modeEndForm(), T=EndScreen.TOKEN;
+  const langs=['de','en','fr','it','es','zh'], f=modeEndForm(), T=EndScreen.TOKEN;
   const from=langs.find(l=>f.title[l].trim()||f.body[l].trim());
   if(!from){ toast(gmt('enter-text'),'warning'); return; }
   toast(gmt('translating'));
@@ -5306,19 +5313,19 @@ function langCheckboxes(idPrefix, checkedLangs){
   let arr;
   if (Array.isArray(checkedLangs))           arr = checkedLangs;
   else if (typeof checkedLangs === 'string') arr = checkedLangs.split(',').map(s=>s.trim());
-  else                                       arr = ['de','en','fr','it','es'];
+  else                                       arr = ['de','en','fr','it','es','zh'];
   const set = new Set(arr.filter(Boolean));
-  const flags = { de:'🇩🇪 DE', en:'🇬🇧 EN', fr:'🇫🇷 FR', it:'🇮🇹 IT', es:'🇪🇸 ES' };
-  return ['de','en','fr','it','es'].map(l => `
+  const flags = { de:'🇩🇪 DE', en:'🇬🇧 EN', fr:'🇫🇷 FR', it:'🇮🇹 IT', es:'🇪🇸 ES', zh:'🇨🇳 ZH' };
+  return ['de','en','fr','it','es','zh'].map(l => `
     <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
       <input type="checkbox" id="${idPrefix}${l}" ${set.has(l)?'checked':''} style="accent-color:var(--red);width:16px;height:16px;">
       ${flags[l]}
     </label>`).join('');
 }
 function readLangsByPrefix(idPrefix){
-  return ['de','en','fr','it','es']
+  return ['de','en','fr','it','es','zh']
     .filter(l => document.getElementById(idPrefix+l)?.checked)
-    .join(',') || 'de,en,fr,it,es';  // never let the GM save an empty list
+    .join(',') || 'de,en,fr,it,es,zh';  // never let the GM save an empty list
 }
 // Back-compat thin shims so existing Location modal call sites keep working.
 const locLangCheckboxes = (checked) => langCheckboxes('loc-lang-', checked);
@@ -5429,7 +5436,7 @@ function _locExtraFields(l){
       <div id="loc-custlang-list"></div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.45rem;">
         <input id="loc-cl-label" class="input" style="flex:1;min-width:130px;" placeholder="${esc(gmt('cl-name-ph')||'z. B. Schwiizerdütsch')}">
-        <select id="loc-cl-base" class="select" style="width:auto;">${['de','en','fr','it','es'].map(x=>`<option value="${x}">${esc(gmt('cl-base')||'Basis')}: ${x.toUpperCase()}</option>`).join('')}</select>
+        <select id="loc-cl-base" class="select" style="width:auto;">${['de','en','fr','it','es','zh'].map(x=>`<option value="${x}">${esc(gmt('cl-base')||'Basis')}: ${x.toUpperCase()}</option>`).join('')}</select>
         <button type="button" class="btn btn-secondary btn-sm" onclick="locCustLangAdd()">＋ ${esc(gmt('cl-add')||'Sprache')}</button>
       </div>
     </div>`;
@@ -5454,7 +5461,7 @@ function locCustLangAdd(){
   const base=document.getElementById('loc-cl-base').value||'de';
   const code=label.toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,12);
   if(code.length<2){ toast(gmt('cl-name-req')||'Ungültiger Name','warning'); return; }
-  if(['de','en','fr','it','es'].includes(code) || _locCustLangs.some(c=>c.code===code)){ toast(gmt('cl-dup')||'Diese Sprache gibt es schon','warning'); return; }
+  if(['de','en','fr','it','es','zh'].includes(code) || _locCustLangs.some(c=>c.code===code)){ toast(gmt('cl-dup')||'Diese Sprache gibt es schon','warning'); return; }
   _locCustLangs.push({code,label,base}); labEl.value=''; renderLocCustLangs();
 }
 function locCustLangRemove(i){ _locCustLangs.splice(i,1); renderLocCustLangs(); }
@@ -5531,7 +5538,7 @@ function msDragEnd(){ document.querySelectorAll('[id^="mcard-s-"]').forEach(el=>
 
 
 async function autoTranslateMissionName(){
-  const texts={de:document.getElementById('m-name-de')?.value,en:document.getElementById('m-name-en')?.value,fr:document.getElementById('m-name-fr')?.value,it:document.getElementById('m-name-it')?.value,es:document.getElementById('m-name-es')?.value};
+  const texts={de:document.getElementById('m-name-de')?.value,en:document.getElementById('m-name-en')?.value,fr:document.getElementById('m-name-fr')?.value,it:document.getElementById('m-name-it')?.value,es:document.getElementById('m-name-es')?.value,zh:document.getElementById('m-name-zh')?.value};
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben','warning');return;}
   const [fromLang,text]=filled;
@@ -5616,7 +5623,7 @@ function missionModal(m,locs){
       </div>
       ${langTabFields('m-name', 'input', {
         de: m?(m.name_de||m.name||''):'', en: vr('name_en'),
-        fr: vr('name_fr'), it: vr('name_it'), es: vr('name_es')
+        fr: vr('name_fr'), it: vr('name_it'), es: vr('name_es'), zh: vr('name_zh')
       })}
       <div class="grid-2" style="margin-top:.7rem;">
         <div class="field" style="margin:0;">
@@ -5663,7 +5670,7 @@ function missionModal(m,locs){
         </div>
         ${langTabFields('m-desc', 'textarea', {
           de: vr('description_de'), en: vr('description_en'),
-          fr: vr('description_fr'), it: vr('description_it'), es: vr('description_es')
+          fr: vr('description_fr'), it: vr('description_it'), es: vr('description_es'), zh: vr('description_zh')
         }, 'de', 3)}
       </div>
       <div id="mtab-task" class="mission-tab-content">
@@ -5673,7 +5680,7 @@ function missionModal(m,locs){
         </div>
         ${langTabFields('m-task', 'textarea', {
           de: vr('task_de'), en: vr('task_en'),
-          fr: vr('task_fr'), it: vr('task_it'), es: vr('task_es')
+          fr: vr('task_fr'), it: vr('task_it'), es: vr('task_es'), zh: vr('task_zh')
         }, 'de', 3)}
         <div class="field" style="margin-top:.7rem;">
           <label class="label">${gmt('task-image-label')||'Aufgabenbild (optional)'}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('task-image-tip')||'Optionales Bild zur Aufgabe. Spieler sehen einen „Bild ansehen“-Button im Missionsfenster.'}</span></i></label>
@@ -5850,7 +5857,7 @@ function switchMissionTab(tab,el){
 //   initial  : the language tab to start active on (defaults to 'de')
 //   rows     : rows attr for the textarea variant (default 4)
 function langTabFields(prefix, type, values, initial='de', rows=4){
-  const all = ['de','en','fr','it','es'];
+  const all = ['de','en','fr','it','es','zh'];
   const filled = l => String(values && values[l] || '').trim() !== '';
   const tabs = all.map(l => `
     <button type="button" class="lang-tab ${l===initial?'is-active':''}" data-lang="${l}"
@@ -5882,7 +5889,7 @@ function _parseChipList(v){
   return [s];   // legacy single answer
 }
 function langChipFields(prefix, values, initial='de'){
-  const all = ['de','en','fr','it','es'];
+  const all = ['de','en','fr','it','es','zh'];
   _chipVals[prefix] = {};
   all.forEach(l => { _chipVals[prefix][l] = _parseChipList(values && values[l]); });
   const tabs = all.map(l => `
@@ -5970,7 +5977,7 @@ function markLangTabFilled(prefix, lang, isFilled){
   if(tick) tick.style.display = isFilled ? 'inline' : 'none';
 }
 function refreshLangTickMarks(prefix){
-  ['de','en','fr','it','es'].forEach(l => {
+  ['de','en','fr','it','es','zh'].forEach(l => {
     const el = document.getElementById(`${prefix}-${l}`);
     if(el) markLangTabFilled(prefix, l, (el.value||'').trim() !== '');
   });
@@ -6040,7 +6047,7 @@ function checkPillRow(flags){
 }
 
 async function autoTranslate(section){
-  const texts={de:document.getElementById(`m-${section}-de`)?.value,en:document.getElementById(`m-${section}-en`)?.value,fr:document.getElementById(`m-${section}-fr`)?.value,it:document.getElementById(`m-${section}-it`)?.value,es:document.getElementById(`m-${section}-es`)?.value};
+  const texts={de:document.getElementById(`m-${section}-de`)?.value,en:document.getElementById(`m-${section}-en`)?.value,fr:document.getElementById(`m-${section}-fr`)?.value,it:document.getElementById(`m-${section}-it`)?.value,es:document.getElementById(`m-${section}-es`)?.value,zh:document.getElementById(`m-${section}-zh`)?.value};
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben / Enter text first','warning');return;}
   const [fromLang,text]=filled;
@@ -6074,7 +6081,7 @@ async function showAddMission(){ exitSelectionModes();
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveNewMission(){
-  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:(document.getElementById('m-type')?.value==='photo' && document.getElementById('m-multi')?.checked)?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
+  const res=await API('/api/missions',{method:'POST',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||currentModeId,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',name_zh:document.getElementById('m-name-zh')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',description_zh:document.getElementById('m-desc-zh')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',task_zh:document.getElementById('m-task-zh')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:(document.getElementById('m-type')?.value==='photo' && document.getElementById('m-multi')?.checked)?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
   if(res.success){if(res.id){ await uploadMsTaskImage(res.id); await uploadMsTileImage(res.id); }closeModal();loadMissions();toast(gmt('mission-created')||'MiSSiON erstellt!','success');}else toast(res.error,'error');
 }
 async function editMission(id){
@@ -6100,7 +6107,7 @@ async function editMission(id){
   const _mo=document.getElementById('modal-overlay');_mo.style.display='flex';const _mb=document.getElementById('modal-box');if(_mb)_mb.scrollTop=0;
 }
 async function saveEditMission(id){
-  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:(document.getElementById('m-type')?.value==='photo' && document.getElementById('m-multi')?.checked)?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
+  const res=await API(`/api/missions/${id}`,{method:'PUT',body:{password:settingsPassword,mode_id:Number(document.getElementById('m-mode').value)||1,location_id:document.getElementById('m-loc').value||null,name:document.getElementById('m-name-de').value,name_de:document.getElementById('m-name-de').value,name_en:document.getElementById('m-name-en').value,name_fr:document.getElementById('m-name-fr').value,name_it:document.getElementById('m-name-it').value,name_es:document.getElementById('m-name-es')?.value||'',name_zh:document.getElementById('m-name-zh')?.value||'',media_type:document.getElementById('m-type').value,points:+document.getElementById('m-pts').value,is_indoor:document.getElementById('m-indoor').checked?1:0,description_de:document.getElementById('m-desc-de').value,description_en:document.getElementById('m-desc-en').value,description_fr:document.getElementById('m-desc-fr').value,description_it:document.getElementById('m-desc-it').value,description_es:document.getElementById('m-desc-es')?.value||'',description_zh:document.getElementById('m-desc-zh')?.value||'',task_de:document.getElementById('m-task-de').value,task_en:document.getElementById('m-task-en').value,task_fr:document.getElementById('m-task-fr').value,task_it:document.getElementById('m-task-it').value,task_es:document.getElementById('m-task-es')?.value||'',task_zh:document.getElementById('m-task-zh')?.value||'',custom_i18n:collectMsCustI18n(),multi_enabled:(document.getElementById('m-type')?.value==='photo' && document.getElementById('m-multi')?.checked)?1:0,multi_mode:document.getElementById('m-multi-mode')?.value||'min',multi_count:+(document.getElementById('m-multi-count')?.value||2)}});
   if(res.success){await uploadMsTaskImage(id);await uploadMsTileImage(id);closeModal();loadMissions();toast(gmt('saved')||'Gespeichert!','success');}
 }
 async function deleteMission(id){
@@ -6134,6 +6141,7 @@ function renderRulesList(){
         <div class="field" style="margin:0;"><label class="label">FR</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'fr',this.value)">${esc(r.fr||'')}</textarea></div>
         <div class="field" style="margin:0;"><label class="label">IT</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'it',this.value)">${esc(r.it||'')}</textarea></div>
         <div class="field" style="margin:0;"><label class="label">ES</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'es',this.value)">${esc(r.es||'')}</textarea></div>
+        <div class="field" style="margin:0;"><label class="label">ZH</label><textarea class="textarea" rows="2" draggable="false" ondragstart="return false" oninput="updateRule(${i},'zh',this.value)">${esc(r.zh||'')}</textarea></div>
       </div>
     </div>`).join('');
   // Ensure textareas are not draggable
@@ -6152,13 +6160,13 @@ function ruleDragEnd(){
   document.querySelectorAll('.rule-item').forEach(el=>{el.style.opacity='';el.style.borderTop='';});
   dragSrc=null;
 }
-function addRuleItem(){rulesList.push({de:'',en:'',fr:'',it:'',es:''});renderRulesList();}
+function addRuleItem(){rulesList.push({de:'',en:'',fr:'',it:'',es:'',zh:''});renderRulesList();}
 function deleteRule(i){rulesList.splice(i,1);renderRulesList();}
 function updateRule(i,lang,val){if(rulesList[i])rulesList[i][lang]=val;}
 
 async function autoTranslateRule(i){
   const r=rulesList[i];if(!r)return;
-  const texts={de:r.de,en:r.en,fr:r.fr,it:r.it,es:r.es};
+  const texts={de:r.de,en:r.en,fr:r.fr,it:r.it,es:r.es,zh:r.zh};
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){toast(gmt('enter-text')||'Bitte Text eingeben / Enter text first','warning');return;}
   const [fromLang,text]=filled;
@@ -6847,7 +6855,7 @@ function crMissionModal(m){
       </div>
       ${langTabFields('cr-name', 'input', {
         de: vr('name_de'), en: vr('name_en'),
-        fr: vr('name_fr'), it: vr('name_it'), es: vr('name_es')
+        fr: vr('name_fr'), it: vr('name_it'), es: vr('name_es'), zh: vr('name_zh')
       })}
       <div style="margin-top:.7rem;max-width:180px;">
         <label class="label">${gmt('cr-m-points')||'Punkte'}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('crtip-points')}</span></i></label>
@@ -6867,7 +6875,7 @@ function crMissionModal(m){
         <div id="cr-answer-section">
         ${langChipFields('cr-answer', {
           de: vr('answer_de'), en: vr('answer_en'),
-          fr: vr('answer_fr'), it: vr('answer_it'), es: vr('answer_es')
+          fr: vr('answer_fr'), it: vr('answer_it'), es: vr('answer_es'), zh: vr('answer_zh')
         })}
         <div class="toggle-row" style="margin-top:.7rem;" onclick="toggleSwitch(this.querySelector('.toggle'),'cr-answer-case')">
           <div><div class="toggle-row-text">🔠 ${gmt('cr-m-answer-case')||'Groß-/Kleinschreibung beachten'}<i class="cme-info" tabindex="0">i<span class="cme-tip">${gmt('cr-m-answer-case-tip')||'Aus (Standard): „fuchs" und „Fuchs" gelten beide. An: die Schreibweise muss exakt stimmen — dann kannst du Varianten einzeln auflisten.'}</span></i></div><div class="toggle-row-sub">${gmt('cr-m-answer-case-sub')||'Aus = Groß-/Kleinschreibung egal.'}</div></div>
@@ -7130,7 +7138,7 @@ function crMissionModal(m){
       </div>
       ${langTabFields('cr-desc', 'textarea', {
         de: vr('description_de'), en: vr('description_en'),
-        fr: vr('description_fr'), it: vr('description_it'), es: vr('description_es')
+        fr: vr('description_fr'), it: vr('description_it'), es: vr('description_es'), zh: vr('description_zh')
       }, 'de', 3)}
     </div>
     <div id="mtab-task" class="mission-tab-content">
@@ -7139,7 +7147,7 @@ function crMissionModal(m){
       </div>
       ${langTabFields('cr-task', 'textarea', {
         de: vr('task_de'), en: vr('task_en'),
-        fr: vr('task_fr'), it: vr('task_it'), es: vr('task_es')
+        fr: vr('task_fr'), it: vr('task_it'), es: vr('task_es'), zh: vr('task_zh')
       }, 'de', 3)}
     </div>`;
 }
@@ -7604,6 +7612,7 @@ function getCrMissionData(){
     name_fr: document.getElementById('cr-name-fr')?.value||'',
     name_it: document.getElementById('cr-name-it')?.value||'',
     name_es: document.getElementById('cr-name-es')?.value||'',
+    name_zh: document.getElementById('cr-name-zh')?.value||'',
     lat: crReadNumber('cr-lat'),
     lng: crReadNumber('cr-lng'),
     radius_meters: parseInt(crReadNumber('cr-radius'))||30,
@@ -7627,21 +7636,25 @@ function getCrMissionData(){
     answer_fr: document.getElementById('cr-answer-fr')?.value||'',
     answer_it: document.getElementById('cr-answer-it')?.value||'',
     answer_es: document.getElementById('cr-answer-es')?.value||'',
+    answer_zh: document.getElementById('cr-answer-zh')?.value||'',
     hint_de: document.getElementById('cr-hint-de')?.value||'',
     hint_en: document.getElementById('cr-hint-en')?.value||'',
     hint_fr: document.getElementById('cr-hint-fr')?.value||'',
     hint_it: document.getElementById('cr-hint-it')?.value||'',
     hint_es: document.getElementById('cr-hint-es')?.value||'',
+    hint_zh: document.getElementById('cr-hint-zh')?.value||'',
     description_de: document.getElementById('cr-desc-de')?.value||'',
     description_en: document.getElementById('cr-desc-en')?.value||'',
     description_fr: document.getElementById('cr-desc-fr')?.value||'',
     description_it: document.getElementById('cr-desc-it')?.value||'',
     description_es: document.getElementById('cr-desc-es')?.value||'',
+    description_zh: document.getElementById('cr-desc-zh')?.value||'',
     task_de: document.getElementById('cr-task-de')?.value||'',
     task_en: document.getElementById('cr-task-en')?.value||'',
     task_fr: document.getElementById('cr-task-fr')?.value||'',
     task_it: document.getElementById('cr-task-it')?.value||'',
     task_es: document.getElementById('cr-task-es')?.value||'',
+    task_zh: document.getElementById('cr-task-zh')?.value||'',
   };
 }
 
@@ -7750,7 +7763,7 @@ let _crTempHints = _crTempHintsByType.answer;
 function addCrHintInline(type='answer'){
   type = type === 'gps' ? 'gps' : 'answer';
   const hintId = 'tmp_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  _crTempHintsByType[type].push({id: hintId, text_de:'', text_en:'', text_fr:'', text_it:'', text_es:'', image_path:null, _new:true, hint_type:type});
+  _crTempHintsByType[type].push({id: hintId, text_de:'', text_en:'', text_fr:'', text_it:'', text_es:'', text_zh:'', image_path:null, _new:true, hint_type:type});
   renderCrHintsInline(type);
 }
 
@@ -7786,6 +7799,7 @@ function renderCrHintsInline(type){
         <div><label class="label">FR</label><input class="input" id="hint-fr-${h.id}" value="${esc(h.text_fr||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_fr',this.value)"></div>
         <div><label class="label">IT</label><input class="input" id="hint-it-${h.id}" value="${esc(h.text_it||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_it',this.value)"></div>
         <div><label class="label">ES</label><input class="input" id="hint-es-${h.id}" value="${esc(h.text_es||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_es',this.value)"></div>
+        <div><label class="label">ZH</label><input class="input" id="hint-zh-${h.id}" value="${esc(h.text_zh||'')}" oninput="_crUpdateHint('${h.id}','${type}','text_zh',this.value)"></div>
       </div>
     </div>`).join('');
 }
@@ -7825,6 +7839,7 @@ async function saveCrHintsForMission(missionId){
       form.append('text_fr', h.text_fr||'');
       form.append('text_it', h.text_it||'');
       form.append('text_es', h.text_es||'');
+      form.append('text_zh', h.text_zh||'');
       form.append('order_index', i);
       form.append('hint_type', type);
       if(h._imageFile) form.append('image', h._imageFile);
@@ -7879,6 +7894,7 @@ function showCrHintModal(h, missionId){
       <div><label class="label">FR</label><textarea id="cr-hint-fr" class="textarea" rows="2">${v('text_fr')}</textarea></div>
       <div><label class="label">IT</label><textarea id="cr-hint-it" class="textarea" rows="2">${v('text_it')}</textarea></div>
       <div><label class="label">ES</label><textarea id="cr-hint-es" class="textarea" rows="2">${v('text_es')}</textarea></div>
+      <div><label class="label">ZH</label><textarea id="cr-hint-zh" class="textarea" rows="2">${v('text_zh')}</textarea></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
@@ -7896,6 +7912,7 @@ async function saveCrHint(hintId, missionId){
   form.append('text_fr',document.getElementById('cr-hint-fr')?.value||'');
   form.append('text_it',document.getElementById('cr-hint-it')?.value||'');
   form.append('text_es',document.getElementById('cr-hint-es')?.value||'');
+  form.append('text_zh',document.getElementById('cr-hint-zh')?.value||'');
   if(imgFile) form.append('image',imgFile);
   if(clearImg) form.append('clear_image','1');
   const url=hintId?`/api/cr/hints/${hintId}`:`/api/cr/hints/${missionId}`;
@@ -7933,7 +7950,7 @@ async function autoTranslateHint(hintId, type){
   if(!h){ toast(gmt('hint-not-found')||'Hinweis nicht gefunden','error'); return; }
   // Pull live values from the inputs in case the user typed but hasn't
   // blurred yet — keeps behaviour identical to the field-level translator.
-  const langs = ['de','en','fr','it','es'];
+  const langs = ['de','en','fr','it','es','zh'];
   const texts = Object.fromEntries(langs.map(l => {
     const el = document.getElementById(`hint-${l}-${hintId}`);
     return [l, el ? el.value : (h[`text_${l}`]||'')];
@@ -7964,7 +7981,7 @@ async function autoTranslateHint(hintId, type){
 // fields reference existing uploads; the binaries are not bundled.
 function _crExportShape(m, hints){
   return {
-    name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
+    name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'', name_zh:m.name_zh||'',
     points: m.points||10,
     lat: m.lat, lng: m.lng, radius_meters: m.radius_meters||30,
     use_map: !!m.use_map, use_gps: !!m.use_gps,
@@ -7980,17 +7997,17 @@ function _crExportShape(m, hints){
     task_image: m.task_image||null,
     use_scan: !!m.use_scan, scan_type: m.scan_type||'qr', scan_mode: m.scan_mode||'solve',
     scan_code: m.scan_code||'', scan_fragments: m.scan_fragments||'[]', scan_image: m.scan_image||null, scan_target: m.scan_target||null,
-    hint_de:m.hint_de||'', hint_en:m.hint_en||'', hint_fr:m.hint_fr||'', hint_it:m.hint_it||'', hint_es:m.hint_es||'',
+    hint_de:m.hint_de||'', hint_en:m.hint_en||'', hint_fr:m.hint_fr||'', hint_it:m.hint_it||'', hint_es:m.hint_es||'', hint_zh:m.hint_zh||'',
     has_answer: !!m.has_answer,
     answer_case_sensitive: m.answer_case_sensitive?1:0,
-    answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
+    answer_de:m.answer_de||'', answer_en:m.answer_en||'', answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'', answer_zh:m.answer_zh||'',
     description_de:m.description_de||'', description_en:m.description_en||'',
-    description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
+    description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'', description_zh:m.description_zh||'',
     task_de:m.task_de||'', task_en:m.task_en||'',
-    task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
+    task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'', task_zh:m.task_zh||'',
     hints: (hints||[]).map(h => ({
       hint_type: h.hint_type === 'gps' ? 'gps' : 'answer',
-      text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'', text_es:h.text_es||'',
+      text_de:h.text_de||'', text_en:h.text_en||'', text_fr:h.text_fr||'', text_it:h.text_it||'', text_es:h.text_es||'', text_zh:h.text_zh||'',
       image_path: h.image_path || null,
     })),
   };
@@ -8040,12 +8057,12 @@ async function importCrMissions(file){
       password: settingsPassword,
       mode_id: currentCrModeId,
       order_index: base + 1 + idx,
-      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
+      name_de:m.name_de||'', name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'', name_zh:m.name_zh||'',
       description_de:m.description_de||'', description_en:m.description_en||'',
-      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'', description_zh:m.description_zh||'',
       task_de:m.task_de||'', task_en:m.task_en||'',
-      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
-      hint_de:m.hint_de||'', hint_en:m.hint_en||'', hint_fr:m.hint_fr||'', hint_it:m.hint_it||'', hint_es:m.hint_es||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'', task_zh:m.task_zh||'',
+      hint_de:m.hint_de||'', hint_en:m.hint_en||'', hint_fr:m.hint_fr||'', hint_it:m.hint_it||'', hint_es:m.hint_es||'', hint_zh:m.hint_zh||'',
       points: Number(m.points)||10,
       lat: (m.lat ?? null), lng: (m.lng ?? null),
       radius_meters: Number(m.radius_meters)||30,
@@ -8072,7 +8089,7 @@ async function importCrMissions(file){
       has_answer: m.has_answer?1:0,
       answer_case_sensitive: m.answer_case_sensitive?1:0,
       answer_de:m.answer_de||'', answer_en:m.answer_en||'',
-      answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'',
+      answer_fr:m.answer_fr||'', answer_it:m.answer_it||'', answer_es:m.answer_es||'', answer_zh:m.answer_zh||'',
     };
     idx++;
     const res = await API('/api/cr/missions',{method:'POST',body});
@@ -8088,6 +8105,7 @@ async function importCrMissions(file){
         form.append('text_de', h.text_de||''); form.append('text_en', h.text_en||'');
         form.append('text_fr', h.text_fr||''); form.append('text_it', h.text_it||'');
         form.append('text_es', h.text_es||'');
+        form.append('text_zh', h.text_zh||'');
         form.append('order_index', i);
         form.append('hint_type', h.hint_type === 'gps' ? 'gps' : 'answer');
         await fetch(`/api/cr/hints/${res.id}`,{method:'POST',body:form}).catch(()=>{});
@@ -8225,7 +8243,7 @@ function useCurrentLocationForCrPicker(btn){
 }
 
 async function autoTranslateCrField(field){
-  const langs=['de','en','fr','it','es'];
+  const langs=['de','en','fr','it','es','zh'];
   // Some textareas use a shorter id prefix than the field name we get called
   // with (e.g. `cr-desc-de` for `description`). Map call-site names to the
   // actual DOM prefix so auto-translate doesn't silently no-op with
@@ -8399,6 +8417,7 @@ async function downloadSelectedMissions(){
       name_fr: m.name_fr||'',
       name_it: m.name_it||'',
       name_es: m.name_es||'',
+      name_zh: m.name_zh||'',
       // ── Mode & Location ───────────────────────────
       mode:     modeMap[m.mode_id]||'MiSSiONS',
       location: m.location_id ? (locMap[m.location_id]||null) : null,
@@ -8412,12 +8431,14 @@ async function downloadSelectedMissions(){
       description_fr: m.description_fr||'',
       description_it: m.description_it||'',
       description_es: m.description_es||'',
+      description_zh: m.description_zh||'',
       // ── Task (what players must do) ───────────────
       task_de: m.task_de||'',
       task_en: m.task_en||'',
       task_fr: m.task_fr||'',
       task_it: m.task_it||'',
       task_es: m.task_es||'',
+      task_zh: m.task_zh||'',
     }))
   };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
@@ -8452,14 +8473,14 @@ async function importMissions(file){
     const res=await API('/api/missions',{method:'POST',body:{
       password:settingsPassword,
       mode_id, location_id, name,
-      name_de:m.name_de||name, name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'',
+      name_de:m.name_de||name, name_en:m.name_en||'', name_fr:m.name_fr||'', name_it:m.name_it||'', name_es:m.name_es||'', name_zh:m.name_zh||'',
       media_type:m.media_type||'photo',
       points:Number(m.points)||1,
       is_indoor:m.is_indoor?1:0,
       description_de:m.description_de||'', description_en:m.description_en||'',
-      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'',
+      description_fr:m.description_fr||'', description_it:m.description_it||'', description_es:m.description_es||'', description_zh:m.description_zh||'',
       task_de:m.task_de||'', task_en:m.task_en||'',
-      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'',
+      task_fr:m.task_fr||'', task_it:m.task_it||'', task_es:m.task_es||'', task_zh:m.task_zh||'',
     }});
     if(res.id) ok++; else errors++;
   }
@@ -8567,7 +8588,7 @@ function _amSummary(m){
   const meta = [m.trigger_seconds ? gmt('s-msgs-sum-when').replace('{n}', Math.round(m.trigger_seconds / 60)) : gmt('s-msgs-sum-end'), isCr ? 'Rail Adventure' : 'MiSSiONS',
     names.length ? names.join(', ') : gmt('s-msgs-all-modes'),
     ...(isCr ? [] : [locs.length ? (locNames.join(', ') || gmt('s-msgs-no-loc')) : gmt('s-msgs-all-loc')])].join(' · ');
-  const text = String(m['message_' + gmLang] || m.message_de || m.message || ['en','fr','it','es'].map(l => m['message_' + l]).find(Boolean) || '').trim();
+  const text = String(m['message_' + gmLang] || m.message_de || m.message || ['en','fr','it','es','zh'].map(l => m['message_' + l]).find(Boolean) || '').trim();
   return { meta, text: text || gmt('s-msgs-sum-empty') };
 }
 function _amPaintSummary(id){
@@ -8700,7 +8721,7 @@ async function amSetGame(id, kind){
 // lang-tab strip as the mission editor. Unique prefix per row so multiple rules
 // can coexist. Each textarea persists its own language field on change.
 function _amLangFields(m){
-  const langs=['de','en','fr','it','es'];
+  const langs=['de','en','fr','it','es','zh'];
   const px=`am-${m.id}`;
   // Fall back to the legacy single `message` for German on old rows.
   const val=l=> (m['message_'+l]!=null && m['message_'+l]!=='') ? m['message_'+l] : (l==='de' ? (m.message||'') : '');
@@ -8711,7 +8732,7 @@ function _amLangFields(m){
   return `<div class="lang-strip" data-prefix="${px}">${tabs}</div><div class="lang-panels" data-prefix="${px}">${panels}</div>`;
 }
 async function autoTranslateAutoMsg(id){
-  const langs=['de','en','fr','it','es'];
+  const langs=['de','en','fr','it','es','zh'];
   const texts=Object.fromEntries(langs.map(l=>{const el=document.getElementById(`am-${id}-${l}`);return [l, el?el.value:''];}));
   const filled=Object.entries(texts).find(([,v])=>v&&v.trim());
   if(!filled){ toast(gmt('enter-text')||'Bitte Text eingeben','warning'); return; }
@@ -8742,7 +8763,7 @@ function _amPaintTimeout(){
   const box=document.getElementById('am-timeout'), sum=document.getElementById('am-timeout-sum');
   if(!box || !sum) return;
   const v=l=>(document.getElementById('s-timeout-'+l)?.value||'').trim();
-  sum.textContent=!_amTimeoutOn ? gmt('s-timeout-off') : v(gmLang)||v('de')||['en','fr','it','es'].map(v).find(Boolean)||gmt('s-msgs-sum-empty');
+  sum.textContent=!_amTimeoutOn ? gmt('s-timeout-off') : v(gmLang)||v('de')||['en','fr','it','es','zh'].map(v).find(Boolean)||gmt('s-msgs-sum-empty');
   const closed=!_amTimeoutOn || _amClosed().has('timeout');
   box.classList.toggle('is-closed',closed);
   box.classList.toggle('is-off',!_amTimeoutOn);
@@ -8770,7 +8791,7 @@ function amToggleTimeout(){
 }
 async function saveTimeoutMsg(){
   const v=l=>document.getElementById('s-timeout-'+l)?.value||'';
-  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,timeout_text:v('de')||v('en'),timeout_text_de:v('de'),timeout_text_en:v('en'),timeout_text_fr:v('fr'),timeout_text_it:v('it'),timeout_text_es:v('es')}});
+  const res=await API('/api/settings',{method:'PUT',body:{password:settingsPassword,timeout_text:v('de')||v('en'),timeout_text_de:v('de'),timeout_text_en:v('en'),timeout_text_fr:v('fr'),timeout_text_it:v('it'),timeout_text_es:v('es'),timeout_text_zh:v('zh')}});
   _amPaintTimeout();
   if(!res || !res.success) toast(gmt('save-failed'),'error');
 }

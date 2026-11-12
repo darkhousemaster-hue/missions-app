@@ -681,7 +681,7 @@ const teamName = sessionStorage.getItem('teamName') || 'Team';
 // The join page passes the chosen language in the URL so it survives even if
 // localStorage isn't shared; persist it so reloads keep it.
 let lang = (() => {
-  const all = ['de','en','fr','it','es'];
+  const all = ['de','en','fr','it','es','zh'];
   const q = params.get('lang');
   const pick = (q && all.includes(q)) ? q : (localStorage.getItem('cr_lang') || 'de');
   try { localStorage.setItem('cr_lang', pick); } catch(e) {}
@@ -977,8 +977,13 @@ const T = {
         broadcast:'Anuncio',
         error_generic:'Error',
         teammate_pending:'Un compañero ya ha enviado — esperando al Gamemaster.' },
+  zh: {"hints_title":"提示","hints_left":"剩余","start_mission":"开始任务 →","special_btn":"特别任务","desc":"说明","task":"任务","hint":"提示","mission":"任务","searching":"正在搜索 GPS…","near":"快到了…","arrived":"已到达！","penalty":"罚分","penalties":"罚分","overtime":"超时","complete":"完成任务","photo":"📷 拍照","video":"🎬 录视频","capture_team":"拍下一支队伍","no_gps":"没有 GPS 信号","timer_up":"时间到！","next":"下一个任务","finished":"完成！","all_missions":"所有任务","completed":"已完成","current":"当前","upcoming":"即将进行","gallery_upload":"从相册上传","show_hint":"💡 显示提示","rules":"规则","rules_back":"← 返回","back":"← 返回","close":"关闭","fullscreen":"全屏","jump_to_me":"📍 定位到我","answer_ph":"输入你的答案…","answer_btn":"✓ 回答","scan_btn":"扫描","scan_to_reveal":"扫描以揭晓","scan_collected":"已收集","scan_type_code":"改为输入代码","scan_code_ph":"代码","scan_submit":"提交","scan_title":"扫描代码","scan_title_frag":"扫描一个碎片","scan_title_reveal":"扫描以揭晓","scan_hint_qr":"将相机对准二维码","scan_hint_ar":"将相机对准图片","scan_cam_denied":"相机访问被拒绝。请使用“输入代码”。","scan_no_decoder":"扫描器不可用，请输入代码。","scan_no_match":"未识别，请继续尝试。","scan_fragment_ok":"碎片已收集","scan_all_collected":"✓ 所有碎片已收集！","scan_revealed":"✓ 任务已揭晓！","scan_ar_fail":"AR 无法启动，请使用二维码。","points":"分","mission_locked":"请先走到目的地…","time_left":"剩余时间","no_rules":"暂无规则。","pending_review":"等待主持人审核…","rejected_retry":"未通过，请再试一次。","accepted":"已通过！","rejected":"未通过","rej_title":"❌ 未通过","rej_btn":"好的，再试一次","skip_mission":"跳过任务","skip_confirm":"跳过这个任务吗？你们将不会得到分数。","skipped":"已跳过","special":"特别","special_missions":"特别任务","special_choose":"你们想玩哪个任务？","available":"可用","cooldown_wait":"请稍候：","rush_row":"任务","rush_gps_tile":"打卡点","rush_gps_locked":"请先完成一个任务","rush_block_rush":"请先完成一个打卡点","rush_gps_open":"点击打开","rush_locked_msg":"完成一个任务后才能去打卡点。","rush_block_rush_msg":"完成一个打卡点后才能开始下一个任务。","rush_wait_accept":"请等待主持人通过你们的上一个任务。","gps_hint":"GPS 提示","chat_ph":"给主持人发消息…","chat_send":"发送","chat_back":"返回","freeze_title":"冻结一支对手队伍","freeze_no_teams":"没有其他队伍。","freeze_pick_team":"请选择一支队伍","freeze_already":"已被冻结","freeze_done":"队伍已冻结！","freeze_failed":"冻结失败","frozen_toast":"你们被抓住了！","frozen_banner":"已冻结","caught_title":"被抓住了","caught_sub":"一支对手队伍抓住了你们！","caught_hint":"关闭后可以浏览任务，但暂时不能提交。","frozen_locked":"已锁定：你们的队伍被冻结了","all_done":"所有任务已完成！","total":"总计","no_camera":"相机不可用，请授予权限","no_mic":"麦克风不可用，视频将没有声音","capture_failed":"录制失败：","upload_failed":"上传失败","video_too_long":"视频太长（{len} 秒）。最长 {max} 秒，请拍一段更短的视频。","video_shrinking":"正在压缩视频…","video_shrinking_hint":"请保持应用打开。","video_shrink_cancel":"取消","video_max_reached":"已达到最长时长（{max} 秒），录制已停止。","file_too_large":"文件太大（{size} MB）。最大 {max} MB。请拍一段更短的视频或降低分辨率。","upload_failed_net":"上传失败：网络连接问题","selfie_upload_failed":"自拍上传失败，请再试一次","chat_send_failed":"消息发送失败","no_hints_left":"没有更多提示了","no_mission_picked":"未选择任务","no_gps_signal":"GPS 不可用","capture_team_msg":"照片已发送！可能获得 +5 分","upload_pending_review":"已上传，等待主持人审核…","right_answer":"✓ 正确！","not_started":"时间还没开始，请稍候。","selfie_title":"团队自拍","selfie_help":"游戏开始前：请拍一张你们队伍的合照。主持人会通过这张照片认出你们。","selfie_shoot":"拍照","selfie_retake":"重拍","selfie_upload":"上传并继续","view_image":"查看图片","draw_start":"绘画","draw_error":"无法开始，请再试一次","answer_required":"请输入你的答案。","answer_wrong":"不对，再试一次！","puzzle_hint":"把拼图块拖到正确的位置。","puzzle_solved":"✓ 完成！","puzzle_start":"开始拼图","puzzle_title":"拼图","puzzle_peek":"偷看","puzzle_view":"查看图片","puzzle_close_hint":"点击 ✕ 关闭","puzzle_order_hint":"把图片按正确的顺序排列。","broadcast":"广播","error_generic":"错误","teammate_pending":"一位队友已经提交了，正在等待主持人审核。"}
 };
 function t(k){ return (T[lang]||T.de)[k] || (T.de)[k] || k; }
+// A mission's text in the player's language. Chinese falls back to English
+// first (more visitors from China read it than German), the others to German.
+function crL(m, field){ return m[field+'_'+lang] || (lang === 'zh' && m[field+'_en']) || m[field+'_de'] || ''; }
+function crLangLabel(){ return lang === 'zh' ? '中文' : lang.toUpperCase(); }
 function toNum(v){
   if(v === null || v === undefined || v === '') return null;
   const n = Number(String(v).replace(',', '.'));
@@ -1139,9 +1144,9 @@ function applyProgressPayload(data={}){
 // arrives. Rail Adventure games are not tied to a location and therefore not
 // subject to per-location restriction by default; this hook exists so a
 // future CR-mode-level allow-list can plug in without touching the cycler.
-let crAllowedLangs = ['de','en','fr','it','es'];
+let crAllowedLangs = ['de','en','fr','it','es','zh'];
 function setCrAllowedLangs(csv){
-  const all = ['de','en','fr','it','es'];
+  const all = ['de','en','fr','it','es','zh'];
   let arr = String(csv || '').split(',').map(s => s.trim()).filter(l => all.includes(l));
   // A 0- or 1-language allow-list would strand players in one language with no
   // switcher (and override their join-screen choice). That's almost never
@@ -1153,7 +1158,7 @@ function setCrAllowedLangs(csv){
   if (!crAllowedLangs.includes(lang)) {
     lang = crAllowedLangs[0];
     localStorage.setItem('cr_lang', lang);
-    if (btn) btn.textContent = lang.toUpperCase();
+    if (btn) btn.textContent = crLangLabel();
     if (typeof applyCrTranslations === 'function') applyCrTranslations();
     if (typeof renderTiles === 'function') renderTiles();
     if (typeof renderSpecialTiles === 'function') renderSpecialTiles();
@@ -1163,7 +1168,7 @@ function crCycleLang(){
   const LANGS = crAllowedLangs;
   lang=LANGS[(LANGS.indexOf(lang)+1)%LANGS.length];
   localStorage.setItem('cr_lang',lang);
-  document.getElementById('btn-v-lang').textContent=lang.toUpperCase();
+  document.getElementById('btn-v-lang').textContent = crLangLabel();
   applyCrTranslations();
   renderTiles();
   renderSpecialTiles();   // special section label + tile pills depend on t()
@@ -1264,7 +1269,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   // Set the team name on the inner span so we don't wipe out the score chip.
   document.getElementById('cr-team-name-text').textContent = teamName;
-  document.getElementById('btn-v-lang').textContent = lang.toUpperCase();
+  document.getElementById('btn-v-lang').textContent = crLangLabel();
 
   // Anchor <body> and the fixed chat overlay to the visual viewport so the
   // Android Chrome soft keyboard doesn't push the chat input off-screen.
@@ -1374,7 +1379,7 @@ function renderRulesView(){
     return;
   }
   box.innerHTML = crRulesList.map((r,i) => {
-    const txt = (r[lang]||r.de||r.en||'')
+    const txt = (r[lang]||(lang === 'zh' ? r.en||r.de : r.de||r.en)||'')
       .replace(/\[photo\]/gi,'📷').replace(/\[video\]/gi,'🎬').replace(/\[indoor\]/gi,'🏠');
     return `<div style="padding:.5rem 0;border-bottom:1px solid var(--border);color:var(--text);line-height:1.6;">
       <strong style="color:var(--text-muted);margin-right:.4rem;">${i+1}.</strong>${esc(txt)}
@@ -1866,7 +1871,7 @@ function renderSpecialTiles(){
   _specialBtnWanted = true;
   if(btn){
     const label = specialMissions.length === 1
-      ? (specialMissions[0][`name_${lang}`] || specialMissions[0].name_de || (t('special_mission')||'Spezial-Mission'))
+      ? (crL(specialMissions[0], 'name') || (t('special_mission')||'Spezial-Mission'))
       : (t('special_missions')||'Spezial-Missionen');
     btn.setAttribute('aria-label', label);
     btn.setAttribute('title', label);
@@ -1922,7 +1927,7 @@ function openSpecialChooser(){
     const waitLabel  = onCooldown ? `${Math.floor(waitSec/60)}:${String(waitSec%60).padStart(2,'0')}` : '';
     const status     = done ? ('✓ ' + (t('completed')||'Erledigt'))
                      : onCooldown ? `⏳ ${waitLabel}` : `⭐ ${t('available')||'Verfügbar'}`;
-    const name = m[`name_${lang}`] || m.name_de || 'Special';
+    const name = crL(m, 'name') || 'Special';
     const icons = [
       m.use_puzzle?'🧩':'',
       m.use_draw?'🎨':'',
@@ -2059,9 +2064,9 @@ function refreshSpecialPopup(){
   if(popupMissionId == null) return;
   const m = specialMissions.find(x => x.id === popupMissionId);
   if(!m) return;
-  const name = m[`name_${lang}`] || m.name_de || '';
-  const desc = m[`description_${lang}`] || m.description_de || '';
-  let task = m[`task_${lang}`] || m.task_de || '';
+  const name = crL(m, 'name') || '';
+  const desc = crL(m, 'description') || '';
+  let task = crL(m, 'task') || '';
   // Reveal-scan specials hide their task (and its image) until the player scans.
   const specTaskLocked = m.use_scan && scanModeOf(m)==='reveal' && !hasArrivedFor(m);
   if(specTaskLocked) task='';
@@ -2229,7 +2234,7 @@ function crTileHtml(m, i){
   const pill = status==='done' ? `✓ ${skippedMissionIds.has(Number(m.id)) ? (t('skipped')||'Skipped') : t('completed')}`
              : status==='pending' ? `⏳ ${t('pending_review')||'Pending'}`
              : `· ${t('available')||'Available'}`;
-  const name = m[`name_${lang}`] || m.name_de || `${t('mission')} ${i+1}`;
+  const name = crL(m, 'name') || `${t('mission')} ${i+1}`;
   const icons = [
     m.is_rush?'⚡':'',
     m.use_gps?'📍':'',
@@ -2346,10 +2351,10 @@ function refreshPopup(){
   const isDone    = isMissionCleared(m);
   const isPending = isMissionPending(m);
   const isCurrent = !isDone && !isPending;
-  const name = m[`name_${lang}`] || m.name_de || '';
-  const desc = m[`description_${lang}`] || m.description_de || '';
-  let task   = m[`task_${lang}`] || m.task_de || '';
-  const hint = m[`hint_${lang}`] || m.hint_de || '';
+  const name = crL(m, 'name') || '';
+  const desc = crL(m, 'description') || '';
+  let task   = crL(m, 'task') || '';
+  const hint = crL(m, 'hint') || '';
   // The task — and its reference image — are the "solve me" step: keep them
   // hidden for a GPS mission until the player physically arrives. The
   // description (background/story) is always shown so they have context while
@@ -3044,7 +3049,7 @@ function renderRevealedHints(m){
   if(!list.length){ box.innerHTML=''; return; }
   const labelText = phase === 'gps' ? (t('gps_hint')||t('hint')) : t('hint');
   box.innerHTML = list.map((h, i) => {
-    const text = h[`text_${lang}`] || h.text_de || h.text_en || '';
+    const text = crL(h, 'text') || h.text_en || '';
     // Click to open in the zoomable lightbox; onerror hides orphaned paths.
     const img  = h.image_path
       ? `<img src="/uploads/${h.image_path}"
@@ -3738,7 +3743,7 @@ function showArrivedOverlay({missionId, sticky}){
   crShowView('mission');
   const overlay = document.getElementById('cr-arrived-overlay');
   document.getElementById('cr-arrived-text').textContent =
-    mission[`name_${lang}`] || mission.name_de || '';
+    crL(mission, 'name') || '';
   overlay.style.display = 'flex';
 }
 function dismissArrived(){
@@ -3840,7 +3845,7 @@ function renderAllMissionMarkers(){
     const state = isDone ? 'done' : isPending ? 'pending' : isCurrent ? 'current' : 'open';
     const icon = crMissionPin(state);
     const mk = L.marker([m.lat, m.lng], {icon}).addTo(mapMissionLayer);
-    mk.bindPopup(esc(m[`name_${lang}`]||m.name_de||`Mission ${i+1}`));
+    mk.bindPopup(esc(crL(m, 'name')||`Mission ${i+1}`));
     // Tap → open the full mission popup.
     mk.on('click', () => openMissionPopup(m.id));
     L.circle([m.lat,m.lng],{

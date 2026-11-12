@@ -245,6 +245,9 @@ try { db.exec("ALTER TABLE cr_missions ADD COLUMN task_es TEXT DEFAULT ''"); } c
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN hint_es TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_missions ADD COLUMN answer_es TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_hints ADD COLUMN text_es TEXT DEFAULT ''"); } catch(e) {}
+// Chinese (Simplified), added after Spanish: the same text fields.
+for (const [t, cols] of [['missions', ['name','description','task']], ['cr_missions', ['name','description','task','hint','answer']], ['cr_hints', ['text']]])
+  for (const c of cols) { try { db.exec(`ALTER TABLE ${t} ADD COLUMN ${c}_zh TEXT DEFAULT ''`); } catch(e) {} }
 // CR mode-level settings: allowed media + chosen ruleset + default game duration
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN allow_photo INTEGER DEFAULT 1"); } catch(e) {}
 try { db.exec("ALTER TABLE cr_modes ADD COLUMN allow_video INTEGER DEFAULT 1"); } catch(e) {}
@@ -359,6 +362,15 @@ try { db.exec("ALTER TABLE teams ADD COLUMN password_setup_token TEXT"); } catch
 // languages in the cycler — the rest are hidden. Default is all five
 // supported languages so existing locations behave as before.
 try { db.exec("ALTER TABLE locations ADD COLUMN allowed_langs TEXT DEFAULT 'de,en,fr,it,es'"); } catch(e) {}
+// Chinese added: a location or Rail Adventure route that offered every language
+// offers it too; one that picked its languages keeps its choice. Runs once.
+try {
+  if (!db.prepare("SELECT 1 FROM settings WHERE key='langs_zh_added'").get()) {
+    for (const t of ['locations', 'cr_modes'])
+      db.prepare(`UPDATE ${t} SET allowed_langs='de,en,fr,it,es,zh' WHERE allowed_langs IS NULL OR allowed_langs='' OR allowed_langs='de,en,fr,it,es'`).run();
+    db.prepare("INSERT INTO settings(key,value) VALUES('langs_zh_added','1')").run();
+  }
+} catch(e) {}
 // Per-location / per-RA-mode player colour scheme. JSON:
 //   { vars:{"--bg":"#101010",...}, logo:"themes/x.png"|null, stamp:"...", wordmark:"..." }
 // NULL = inherit the global player scheme (or the built-in defaults when off).
@@ -486,6 +498,7 @@ try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_en TEXT DEFAULT
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_fr TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_it TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_es TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE automated_messages ADD COLUMN message_zh TEXT DEFAULT ''"); } catch(e) {}
 // The modes a rule is for, as a JSON array of ids (NULL = every mode of its
 // game): MiSSiONS modes for game_kind 'missions', Rail Adventure routes for
 // 'cityrush'. 2.7.0 had a single mode_id; it is moved over once and cleared.
@@ -688,7 +701,7 @@ const normEndScreen = v => {
   let o = v;
   if(typeof v === 'string'){ try { o = JSON.parse(v); } catch(e) { o = null; } }
   if(!o || typeof o !== 'object') o = {};
-  const texts = (map, max) => Object.fromEntries(['de','en','fr','it','es'].map(l => [l, String((map && map[l]) ?? '').slice(0, max)]));
+  const texts = (map, max) => Object.fromEntries(['de','en','fr','it','es','zh'].map(l => [l, String((map && map[l]) ?? '').slice(0, max)]));
   const clamp = (x, lo, hi, d) => { const n = Number(x); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : d; };
   const shown = v => v === undefined || Number(v) !== 0 ? 1 : 0;
   return { title: texts(o.title, 120), body: texts(o.body, 600), pos: clamp(o.pos, 10, 85, 14), size: clamp(o.size, 60, 160, 100),
@@ -720,7 +733,7 @@ const deleteRuleset = id => {
 // string. Accepts either an array (['de','en']) or a comma string. Falls
 // back to all five supported languages if nothing valid is provided, so the
 // payer-side cycler never ends up with an empty list.
-const ALL_LANGS = ['de','en','fr','it','es'];
+const ALL_LANGS = ['de','en','fr','it','es','zh'];
 function normLangs(v) {
   let arr;
   if (Array.isArray(v))           arr = v;
@@ -868,12 +881,12 @@ const getMissions = (modeId, locationId) => {
 const getMission = id => db.prepare('SELECT * FROM missions WHERE id=?').get(id);
 // New missions append to the end of their mode's arranged order.
 const _nextMissionOrder = modeId => (Number(db.prepare('SELECT MAX(order_index) mx FROM missions WHERE mode_id=?').get(modeId||1)?.mx) || 0) + 1;
-const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',name_es='',description_de='',description_en='',description_fr='',description_it='',description_es='',task_de='',task_en='',task_fr='',task_it='',task_es='',media_type='photo',points=1,is_indoor=0,custom_i18n=null,multi_enabled=0,multi_mode='min',multi_count=2}) =>
-  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,order_index,custom_i18n,multi_enabled,multi_mode,multi_count) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',media_type,points,is_indoor?1:0,_nextMissionOrder(mode_id),normCustomI18n(custom_i18n),(media_type==='photo'&&multi_enabled)?1:0,multi_mode==='exact'?'exact':'min',Math.max(1,parseInt(multi_count,10)||2)).lastInsertRowid);
-const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,media_type,points,is_indoor,custom_i18n,multi_enabled,multi_mode,multi_count}) => {
+const createMission = ({mode_id=1,location_id=null,name='',name_de='',name_en='',name_fr='',name_it='',name_es='',description_de='',description_en='',description_fr='',description_it='',description_es='',task_de='',task_en='',task_fr='',task_it='',task_es='',name_zh='',description_zh='',task_zh='',media_type='photo',points=1,is_indoor=0,custom_i18n=null,multi_enabled=0,multi_mode='min',multi_count=2}) =>
+  num(db.prepare('INSERT INTO missions(mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,name_zh,description_zh,task_zh,media_type,points,is_indoor,order_index,custom_i18n,multi_enabled,multi_mode,multi_count) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it,description_es||'',task_de,task_en,task_fr,task_it,task_es||'',name_zh||'',description_zh||'',task_zh||'',media_type,points,is_indoor?1:0,_nextMissionOrder(mode_id),normCustomI18n(custom_i18n),(media_type==='photo'&&multi_enabled)?1:0,multi_mode==='exact'?'exact':'min',Math.max(1,parseInt(multi_count,10)||2)).lastInsertRowid);
+const updateMission = (id,{mode_id,location_id,name,name_de,name_en,name_fr,name_it,name_es,description_de,description_en,description_fr,description_it,description_es,task_de,task_en,task_fr,task_it,task_es,name_zh,description_zh,task_zh,media_type,points,is_indoor,custom_i18n,multi_enabled,multi_mode,multi_count}) => {
   const cur = getMission(id) || {};
   const ci = custom_i18n === undefined ? (cur.custom_i18n || null) : normCustomI18n(custom_i18n);
-  return db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,media_type=?,points=?,is_indoor=?,custom_i18n=?,multi_enabled=?,multi_mode=?,multi_count=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',media_type,points,is_indoor?1:0,ci,
+  return db.prepare('UPDATE missions SET mode_id=?,location_id=?,name=?,name_de=?,name_en=?,name_fr=?,name_it=?,name_es=?,description_de=?,description_en=?,description_fr=?,description_it=?,description_es=?,task_de=?,task_en=?,task_fr=?,task_it=?,task_es=?,name_zh=?,description_zh=?,task_zh=?,media_type=?,points=?,is_indoor=?,custom_i18n=?,multi_enabled=?,multi_mode=?,multi_count=? WHERE id=?').run(mode_id||1,location_id||null,name||name_de||'',name_de||name||'',name_en||name||'',name_fr||name||'',name_it||name||'',name_es||'',description_de,description_en,description_fr,description_it||'',description_es||'',task_de||'',task_en||'',task_fr||'',task_it||'',task_es||'',name_zh===undefined?(cur.name_zh||''):(name_zh||''),description_zh===undefined?(cur.description_zh||''):(description_zh||''),task_zh===undefined?(cur.task_zh||''):(task_zh||''),media_type,points,is_indoor?1:0,ci,
     (media_type==='photo' ? (multi_enabled===undefined?(cur.multi_enabled||0):(multi_enabled?1:0)) : 0),
     (multi_mode===undefined?(cur.multi_mode||'min'):(multi_mode==='exact'?'exact':'min')),
     (multi_count===undefined?(cur.multi_count||2):Math.max(1,parseInt(multi_count,10)||2)), id);
@@ -1058,9 +1071,9 @@ const getRankings = gameId => {
 
 // ── Team Missions ─────────────────────────────────────────────────────────────
 const getTeamMissions = teamId => db.prepare(`
-  SELECT tm.*, m.name as mission_name, m.name_de, m.name_en, m.name_fr, m.name_it, m.name_es,
-    m.description_de, m.description_en, m.description_fr, m.description_it, m.description_es,
-    m.task_de, m.task_en, m.task_fr, m.task_it, m.task_es,
+  SELECT tm.*, m.name as mission_name, m.name_de, m.name_en, m.name_fr, m.name_it, m.name_es, m.name_zh,
+    m.description_de, m.description_en, m.description_fr, m.description_it, m.description_es, m.description_zh,
+    m.task_de, m.task_en, m.task_fr, m.task_it, m.task_es, m.task_zh,
     m.media_type, m.points, m.is_indoor, m.task_image, m.tile_image, m.custom_i18n,
     m.multi_enabled, m.multi_mode, m.multi_count
   FROM team_missions tm JOIN missions m ON m.id=tm.mission_id
@@ -1189,7 +1202,7 @@ const _amIdList = v => {
   const ids = [...new Set(a.map(Number).filter(n => Number.isInteger(n) && n > 0))].sort((x, y) => x - y);
   return ids.length ? JSON.stringify(ids) : null;
 };
-const _AM_LANGS = ['de','en','fr','it','es'];
+const _AM_LANGS = ['de','en','fr','it','es','zh'];
 // Pick the base/legacy `message` from the five language fields: prefer German,
 // then any non-empty language. Keeps the NOT NULL `message` column meaningful
 // and gives the per-language fallback chain a sensible default.
@@ -1212,11 +1225,11 @@ const createAutoMessage = (d={}) => {
   const base = _amBase(langs);
   // New rules go to the end of the GM's order.
   const next = (Number(db.prepare('SELECT MAX(order_index) mx FROM automated_messages').get()?.mx) || 0) + 1;
-  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_ids,mode_ids,order_index,message,message_de,message_en,message_fr,message_it,message_es) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')
+  return num(db.prepare('INSERT INTO automated_messages(enabled,trigger_seconds,game_kind,location_ids,mode_ids,order_index,message,message_de,message_en,message_fr,message_it,message_es,message_zh) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)')
     .run(d.enabled!=null?(d.enabled?1:0):1, Math.max(0,parseInt(d.trigger_seconds)||0), _amKind(d.game_kind),
       _amIdList(d.location_ids!==undefined ? d.location_ids : d.location_id),
       _amIdList(d.mode_ids!==undefined ? d.mode_ids : d.mode_id), next,
-      base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es).lastInsertRowid);
+      base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es, langs.message_zh).lastInsertRowid);
 };
 const updateAutoMessage = (id,d={}) => {
   const cur = db.prepare('SELECT * FROM automated_messages WHERE id=?').get(id); if(!cur) return;
@@ -1239,13 +1252,13 @@ const updateAutoMessage = (id,d={}) => {
                : d.location_ids!==undefined ? _amIdList(d.location_ids)
                : d.location_id!==undefined ? _amIdList(d.location_id)
                : cur.location_ids;
-  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=NULL,location_ids=?,mode_id=NULL,mode_ids=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=? WHERE id=?').run(
+  db.prepare('UPDATE automated_messages SET enabled=?,trigger_seconds=?,game_kind=?,location_id=NULL,location_ids=?,mode_id=NULL,mode_ids=?,message=?,message_de=?,message_en=?,message_fr=?,message_it=?,message_es=?,message_zh=? WHERE id=?').run(
     d.enabled!=null?(d.enabled?1:0):cur.enabled,
     d.trigger_seconds!=null?Math.max(0,parseInt(d.trigger_seconds)||0):cur.trigger_seconds,
     kind,
     locIds,
     modeIds,
-    base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es, id);
+    base, langs.message_de, langs.message_en, langs.message_fr, langs.message_it, langs.message_es, langs.message_zh, id);
 };
 const deleteAutoMessage = id => db.prepare('DELETE FROM automated_messages WHERE id=?').run(id);
 
@@ -1293,7 +1306,7 @@ const updateCrMode  = (id, data) => {
   const allow_video   = data.allow_video   !== undefined ? (data.allow_video?1:0) : existing.allow_video;
   const ruleset_id    = data.ruleset_id    !== undefined ? (data.ruleset_id||null) : existing.ruleset_id;
   const timer_default = data.timer_default !== undefined ? (Number(data.timer_default)||60) : (existing.timer_default||60);
-  const allowed_langs = data.allowed_langs !== undefined ? normLangs(data.allowed_langs) : (existing.allowed_langs || 'de,en,fr,it,es');
+  const allowed_langs = data.allowed_langs !== undefined ? normLangs(data.allowed_langs) : (existing.allowed_langs || 'de,en,fr,it,es,zh');
   const rush_mode     = data.rush_mode     !== undefined ? (data.rush_mode?1:0) : (existing.rush_mode?1:0);
   const theme         = data.theme         !== undefined ? normTheme(data.theme) : (existing.theme || null);
   db.prepare('UPDATE cr_modes SET name=?, allow_photo=?, allow_video=?, ruleset_id=?, timer_default=?, allowed_langs=?, rush_mode=?, theme=? WHERE id=?')
@@ -1318,12 +1331,12 @@ const deleteCrMode  = id => {
 const getCrMissions    = modeId => db.prepare('SELECT * FROM cr_missions WHERE mode_id=? ORDER BY order_index, id').all(modeId);
 const getCrMission     = id => db.prepare('SELECT * FROM cr_missions WHERE id=?').get(id);
 // Field list shared by INSERT and UPDATE so adding a column happens in one place.
-const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','name_it','name_es',
-  'description_de','description_en','description_fr','description_it','description_es',
-  'task_de','task_en','task_fr','task_it','task_es','hint_de','hint_en','hint_fr','hint_it','hint_es',
+const CR_MISSION_EDIT_FIELDS = ['order_index','name_de','name_en','name_fr','name_it','name_es','name_zh',
+  'description_de','description_en','description_fr','description_it','description_es','description_zh',
+  'task_de','task_en','task_fr','task_it','task_es','task_zh','hint_de','hint_en','hint_fr','hint_it','hint_es','hint_zh',
   'points','lat','lng','radius_meters','use_map','use_gps',
   'is_timed','timer_seconds','penalty_interval','penalty_points','media_required',
-  'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es','answer_case_sensitive',
+  'has_answer','answer_de','answer_en','answer_fr','answer_it','answer_es','answer_zh','answer_case_sensitive',
   'hide_until_arrival',
   'is_special','repeat_minutes','is_repeatable','is_rush','skippable',
   'use_puzzle','puzzle_image','puzzle_grid',
@@ -1366,7 +1379,7 @@ const normalizeCrMissionData = (data = {}) => {
   if (out.lng !== undefined) out.lng = toNullableNumber(out.lng);
   out.radius_meters = toPositiveInt(out.radius_meters, 30);
   // Each answer field → a clean JSON array of accepted spellings.
-  ['answer_de','answer_en','answer_fr','answer_it','answer_es'].forEach(f => {
+  ['answer_de','answer_en','answer_fr','answer_it','answer_es','answer_zh'].forEach(f => {
     if (out[f] !== undefined && out[f] !== null) out[f] = JSON.stringify(parseAnswerList(out[f]));
   });
   ['use_map','use_gps','is_timed','has_answer','hide_until_arrival','is_special','is_rush','skippable','use_puzzle','is_repeatable','puzzle_peek_enabled','puzzle_peek_onetime','use_draw','draw_needs_approval','draw_collaborative','use_scan','answer_case_sensitive'].forEach(f => {
@@ -1499,16 +1512,16 @@ const getTeamGps = gameId =>
 const getCrHints     = (missionId, type) => type
   ? db.prepare('SELECT * FROM cr_hints WHERE mission_id=? AND hint_type=? ORDER BY order_index,id').all(missionId, type)
   : db.prepare('SELECT * FROM cr_hints WHERE mission_id=? ORDER BY order_index,id').all(missionId);
-const createCrHint   = ({mission_id,order_index=0,text_de='',text_en='',text_fr='',text_it='',text_es='',image_path=null,hint_type='answer'}) =>
-  num(db.prepare('INSERT INTO cr_hints(mission_id,order_index,text_de,text_en,text_fr,text_it,text_es,image_path,hint_type) VALUES(?,?,?,?,?,?,?,?,?)').run(mission_id,order_index,text_de,text_en,text_fr,text_it,text_es||'',image_path,hint_type==='gps'?'gps':'answer').lastInsertRowid);
-const updateCrHint   = (id,{order_index,text_de,text_en,text_fr,text_it,text_es,image_path,hint_type}) => {
+const createCrHint   = ({mission_id,order_index=0,text_de='',text_en='',text_fr='',text_it='',text_es='',text_zh='',image_path=null,hint_type='answer'}) =>
+  num(db.prepare('INSERT INTO cr_hints(mission_id,order_index,text_de,text_en,text_fr,text_it,text_es,text_zh,image_path,hint_type) VALUES(?,?,?,?,?,?,?,?,?,?)').run(mission_id,order_index,text_de,text_en,text_fr,text_it,text_es||'',text_zh||'',image_path,hint_type==='gps'?'gps':'answer').lastInsertRowid);
+const updateCrHint   = (id,{order_index,text_de,text_en,text_fr,text_it,text_es,text_zh,image_path,hint_type}) => {
   // If hint_type isn't passed we leave the existing value alone (back-compat).
-  const existing = db.prepare('SELECT hint_type FROM cr_hints WHERE id=?').get(id);
+  const existing = db.prepare('SELECT hint_type,text_zh FROM cr_hints WHERE id=?').get(id);
   const ht = hint_type !== undefined
     ? (hint_type==='gps'?'gps':'answer')
     : (existing ? existing.hint_type : 'answer');
-  db.prepare('UPDATE cr_hints SET order_index=?,text_de=?,text_en=?,text_fr=?,text_it=?,text_es=?,image_path=?,hint_type=? WHERE id=?')
-    .run(order_index||0,text_de||'',text_en||'',text_fr||'',text_it||'',text_es||'',image_path||null,ht,id);
+  db.prepare('UPDATE cr_hints SET order_index=?,text_de=?,text_en=?,text_fr=?,text_it=?,text_es=?,text_zh=?,image_path=?,hint_type=? WHERE id=?')
+    .run(order_index||0,text_de||'',text_en||'',text_fr||'',text_it||'',text_es||'',text_zh===undefined?((existing&&existing.text_zh)||''):(text_zh||''),image_path||null,ht,id);
 };
 const deleteCrHint   = id => db.prepare('DELETE FROM cr_hints WHERE id=?').run(id);
 const reorderCrHints = (missionId, orderedIds) => {

@@ -268,7 +268,9 @@ app.post('/api/translate', async (req,res) => {
   if (!text || !toLangs?.length) return res.status(400).json({error:'Missing params'});
   try {
     const results = await Promise.all(toLangs.map(async toLang => {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`;
+      // MyMemory wants a region for Chinese; ours is Simplified.
+      const mm = l => l === 'zh' ? 'zh-CN' : l;
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(mm(fromLang))}|${encodeURIComponent(mm(toLang))}`;
       const r = await fetch(url, {signal: AbortSignal.timeout(8000)});
       const data = await r.json();
       const translated = data.responseData?.translatedText || '';
@@ -1006,7 +1008,7 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   if(game && game.password_enabled && (team.password || team.password_setup_token) && !isGmAuthed(req) && !hasTeamPasswordAccess(req,team.id)){
     return res.status(403).json({error:'Team password required.',password_required:true});
   }
-  let allowed_langs = 'de,en,fr,it,es';
+  let allowed_langs = 'de,en,fr,it,es,zh';
   // Custom (GM-defined) languages live on the MiSSiONS location. Surface them
   // so the player's language cycler can offer them and fall content back to
   // each one's chosen base language for the app's fixed labels.
@@ -1100,11 +1102,12 @@ app.post('/api/games/:gameId/media/upload',
 const drawSessions = new Map(); // token -> {gameId,teamId,missionId,strokes:[],masterId,createdAt}
 function makeDrawToken(){ return uuidv4().slice(0,8).toUpperCase(); }
 function drawPromptFor(m){
-  if(!m) return {de:'',en:'',fr:'',it:'',es:''};
+  if(!m) return {de:'',en:'',fr:'',it:'',es:'',zh:''};
   return {
     de: m.task_de||m.description_de||'', en: m.task_en||m.description_en||'',
     fr: m.task_fr||m.description_fr||'', it: m.task_it||m.description_it||'',
     es: m.task_es||m.description_es||'',
+    zh: m.task_zh||m.description_zh||m.task_en||m.description_en||'',
   };
 }
 app.post('/api/games/:gameId/draw/session', (req,res) => {
@@ -1328,13 +1331,13 @@ app.get('/api/games/:id/rules', (req,res) => {
 // stays readable next to everything else the GM said. Stored with a per-language
 // copy so each device renders the label and mission name in its own language
 // (the GM's typed reason is passed through as written).
-const REJECT_LABEL = {de:'Abgelehnt', en:'Rejected', fr:'Refusé', it:'Rifiutato', es:'Rechazado'};
+const REJECT_LABEL = {de:'Abgelehnt', en:'Rejected', fr:'Refusé', it:'Rifiutato', es:'Rechazado', zh:'未通过'};
 function postRejectionToChat(gameId, teamId, mission, message){
   if(!gameId || !teamId) return;
   const reason = String(message||'').trim();
   const nameIn = l => String((mission && (mission['name_'+l] || mission.name_de || mission.name_en || mission.name)) || '').trim();
   const langMsgs = {};
-  ['de','en','fr','it','es'].forEach(l => {
+  ['de','en','fr','it','es','zh'].forEach(l => {
     const name = nameIn(l);
     langMsgs[l] = `❌ ${REJECT_LABEL[l]}${name ? ': ' + name : ''}` + (reason ? `\n${reason}` : '');
   });
@@ -1436,6 +1439,7 @@ app.post('/api/cr/hints/:missionId', upload.single('image'), (req,res) => {
     text_de: req.body.text_de||'', text_en: req.body.text_en||'',
     text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
     text_es: req.body.text_es||'',
+    text_zh: req.body.text_zh,
     image_path: imagePath,
     hint_type: req.body.hint_type === 'gps' ? 'gps' : 'answer',
   });
@@ -1453,6 +1457,7 @@ app.put('/api/cr/hints/:id', upload.single('image'), (req,res) => {
     text_de: req.body.text_de||'', text_en: req.body.text_en||'',
     text_fr: req.body.text_fr||'', text_it: req.body.text_it||'',
     text_es: req.body.text_es||'',
+    text_zh: req.body.text_zh,
     image_path: imagePath,
     hint_type: req.body.hint_type === 'gps' ? 'gps' : 'answer',
   });
@@ -1499,7 +1504,7 @@ app.post('/api/games/:gameId/cr/answer', (req,res) => {
     const t = String(s == null ? '' : s).trim().replace(/\s+/g, ' ');
     return caseSensitive ? t : t.toLowerCase();
   };
-  const correctAnswers = ['answer_de','answer_en','answer_fr','answer_it','answer_es']
+  const correctAnswers = ['answer_de','answer_en','answer_fr','answer_it','answer_es','answer_zh']
     .flatMap(f => db.parseAnswerList(mission[f]))
     .map(norm)
     .filter(Boolean);
@@ -1725,7 +1730,7 @@ function xmasSet(){
 const xmasKey = s => String(s || '').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
   .replace(/^[\s#]*\d+[\s.):-]*/, '').replace(/[^a-z0-9]/g, '');
 function xmasMatch(m){
-  const keys = [m.name_de, m.mission_name, m.name, m.name_en, m.name_fr, m.name_it, m.name_es].map(xmasKey).filter(Boolean);
+  const keys = [m.name_de, m.mission_name, m.name, m.name_en, m.name_fr, m.name_it, m.name_es, m.name_zh].map(xmasKey).filter(Boolean);
   return xmasSet().find(s => keys.includes(xmasKey(s.title))) || null;
 }
 const xmasTileUrl = f => `/assets/christmas/missions/${encodeURIComponent(path.basename(f))}`;
@@ -2077,7 +2082,7 @@ function sanitizeCrMissionForPlayer(m){
   // Quiz solutions must never reach the player device — answers are checked
   // server-side (/cr/answer), so the client has no use for them. has_answer
   // stays so the UI still renders the answer input.
-  ['answer_de','answer_en','answer_fr','answer_it','answer_es'].forEach(f => delete out[f]);
+  ['answer_de','answer_en','answer_fr','answer_it','answer_es','answer_zh'].forEach(f => delete out[f]);
   return out;
 }
 
@@ -2537,7 +2542,7 @@ io.on('connection', socket => {
 // game's remaining time first reaches a rule's trigger. _autoSent guards against
 // re-sending every tick (per game+rule); cleared when the game ends.
 const _autoSent = {};
-const _AM_LANGS = ['de','en','fr','it','es'];
+const _AM_LANGS = ['de','en','fr','it','es','zh'];
 // Build the {de,en,fr,it,es} map for an automated-message rule. Each language
 // the GM left blank falls back to the base text (German, else the first
 // non-empty language) so a player never gets an empty bubble.
@@ -2547,7 +2552,8 @@ function _amLangMap(m){
   const out = {};
   for(const l of _AM_LANGS){
     const v = String(m['message_'+l]||'').trim();
-    out[l] = v || base;
+    // Chinese falls back to English first: more visitors from China read it than German.
+    out[l] = v || (l === 'zh' && String(m.message_en||'').trim()) || base;
   }
   return out;
 }
@@ -2620,7 +2626,8 @@ setInterval(() => {
         en: db.getSetting('timeout_text_en')||'Time is up!',
         fr: db.getSetting('timeout_text_fr')||'Temps écoulé!',
         it: db.getSetting('timeout_text_it')||'Il tempo è scaduto!',
-        es: db.getSetting('timeout_text_es')||'¡Se acabó el tiempo!'
+        es: db.getSetting('timeout_text_es')||'¡Se acabó el tiempo!',
+        zh: db.getSetting('timeout_text_zh')||db.getSetting('timeout_text_en')||'时间到！'
       };
       io.to(`game_${game.id}`).emit('game_ended', _timeoutMsgOff() ? {silent:true} : {messages:langMsgs, message:msg});
       io.to(`gm_${game.id}`).emit('game_ended',{});

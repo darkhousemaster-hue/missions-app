@@ -275,6 +275,7 @@ body { min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--te
         <button class="lang-tab" data-lang="fr" onclick="setJoinLang('fr',this)">FR</button>
         <button class="lang-tab" data-lang="it" onclick="setJoinLang('it',this)">IT</button>
         <button class="lang-tab" data-lang="es" onclick="setJoinLang('es',this)">ES</button>
+        <button class="lang-tab" data-lang="zh" onclick="setJoinLang('zh',this)">中文</button>
       </div>
     </div>
 
@@ -361,7 +362,7 @@ let passwordAction = 'create';
 let passwordTeam = null;
 
 // ── i18n ──────────────────────────────────────────────────────────────────
-const JOIN_LANGS = ['de','en','fr','it','es'];
+const JOIN_LANGS = ['de','en','fr','it','es','zh'];
 // Custom (GM-defined) languages for this game's location: [{code,label,base}].
 // Populated once the game loads; the picker offers them and jt() falls each
 // one's fixed labels back to its chosen base language.
@@ -446,6 +447,7 @@ const JOIN_T = {
        code_lead:'Escanea el código QR del Gamemaster o introduce el ID de partida.', code_label:'ID de partida', code_ph:'p. ej. 7F3A9C1B',
        code_go:'Continuar', code_empty:'Introduce el ID de partida.', code_unknown:'No hay ninguna partida con este ID. Compruébalo con el Gamemaster.',
        enter_code:'Introducir un ID de partida'},
+  zh: {"loading":"加载中…","error":"错误","invalid":"代码无效或游戏已结束。","ask_gm":"请向主持人要一个新代码。","game_ended":"这场游戏已经结束。","lead":"拍一张自拍并取一个队名。其他队伍会在排行榜上看到你们的自拍。","selfie_cta":"点击拍照","teamname":"队名","teamname_ph":"输入队名…","lang_label":"语言","join_existing":"或加入已有的队伍","back":"返回","je_title":"加入已有的队伍","je_hint":"你会看到相同的任务，并且可以独立提交照片和视频。","no_teams":"这场游戏还没有队伍。","join_btn":"加入","start":"加入游戏","enter_name":"请输入队名。","min_chars":"队名至少需要 2 个字符。","password_title":"队伍密码","password_create":"为你们的队伍设置一个三位数密码。","password_enter":"输入队伍的三位数密码。","password_label":"3 位数字","password_next":"继续","password_save":"保存密码","password_invalid":"请输入正好三位数字。","password_wrong":"密码错误，请再试一次。","support":"技术支持","waiting":"等待中…","conn_err":"连接错误，请再试一次。","err_default":"出错了，请再试一次。","name_blocked":"这个队名不允许使用，请换一个。","name_taken":"这个队名已被使用，请换一个。","cam_denied":"相机访问被拒绝。","cam_unavailable":"相机不可用。","sm_retake":"重拍","sm_accept":"使用","code_lead":"扫描主持人给你的二维码，或输入游戏 ID。","code_label":"游戏 ID","code_ph":"例如 7F3A9C1B","code_go":"继续","code_empty":"请输入游戏 ID。","code_unknown":"没有这个 ID 的游戏，请和主持人核对。","enter_code":"输入游戏 ID"}
 };
 function jt(k) { const L = joinBaseOf(joinLang); return (JOIN_T[L] || JOIN_T.de)[k] || k; }
 

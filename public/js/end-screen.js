@@ -19,7 +19,7 @@
   const COVER_MAX = 0.7;
   const DEFAULTS = { pos: 14, size: 100, color: '#f4f2ee' };
   const TOKEN = '{adresse}';
-  const LANGS = ['de', 'en', 'fr', 'it', 'es'];
+  const LANGS = ['de', 'en', 'fr', 'it', 'es', 'zh'];
   const TITLE_PX = 120, BODY_PX = 54;
   const TITLE_FONT = "'HomeChristmas',Georgia,serif";
   const BODY_FONT = "'Inter',-apple-system,'Segoe UI',Roboto,sans-serif";
@@ -117,7 +117,9 @@
   // language (like the auto messages), else the built-in one.
   function pick(map, lang, fallback) {
     if (map && String(map[lang] || '').trim()) return map[lang];
-    const any = map && LANGS.map(l => map[l]).find(v => String(v || '').trim());
+    // Chinese tries English first, like the rest of the player app.
+    const order = lang === 'zh' ? ['en', ...LANGS] : LANGS;
+    const any = map && order.map(l => map[l]).find(v => String(v || '').trim());
     return any || fallback;
   }
   // Puts the address in. A line that held only the placeholder goes away when
