@@ -24,7 +24,10 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (req,file,cb) => { const d=path.join(UPLOAD_DIR,req.params.gameId||'misc'); fs.mkdirSync(d,{recursive:true}); cb(null,d); },
+  // A game's files go in a folder named after it. The ID comes from the address,
+  // so only a plain name becomes a folder; anything else lands in misc/, where
+  // the route then refuses it.
+  destination: (req,file,cb) => { const g=String(req.params.gameId||''); const d=path.join(UPLOAD_DIR,/^[A-Za-z0-9_-]+$/.test(g)?g:'misc'); fs.mkdirSync(d,{recursive:true}); cb(null,d); },
   // The extension comes from the uploader's own file name, so only a plain one
   // (.jpg, .heic, .mov…) is kept: a name like "a.jpg'x" would carry a quote into
   // every page that prints the stored path.
@@ -36,6 +39,26 @@ const storage = multer.diskStorage({
 });
 const upload       = multer({ storage, limits: { fileSize: 200*1024*1024 } });
 const uploadSingle = multer({ dest: path.join(UPLOAD_DIR,'templates'), limits: { fileSize: 20*1024*1024 } });
+
+// ── Stored media paths ──────────────────────────────────────────────────────
+// A team's photo or video is stored as "<gameId>/<uuid>.<ext>", the name the
+// upload route gives it. Rail Adventure phones send that path back when they
+// complete a mission, so it arrives from outside: it is only accepted in exactly
+// that form, for that game, for a file that is there. Every place that deletes
+// or reads a stored path also makes sure it stays inside the uploads folder.
+const MEDIA_FILE_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z0-9]{1,8}$/;
+function isGameMediaPath(gameId, rel){
+  if(typeof rel !== 'string') return false;
+  const cut = rel.indexOf('/');
+  return cut > 0 && rel.slice(0, cut) === String(gameId) && MEDIA_FILE_NAME.test(rel.slice(cut + 1));
+}
+// The file a stored path names, or null when the path would leave the uploads folder.
+function uploadFile(rel){
+  if(!rel || typeof rel !== 'string') return null;
+  const root = path.resolve(UPLOAD_DIR);
+  const abs = path.resolve(root, rel);
+  return abs.startsWith(root + path.sep) ? abs : null;
+}
 
 app.use(express.json({ limit: '50mb' }));
 
@@ -850,8 +873,9 @@ app.delete('/api/games/:id', (req,res) => {
       if (g && g.status === 'ended') db.markGameStatEnded(req.params.id);
       else db.dropGameStat(req.params.id);
     } catch(e){}
-    const dir=path.join(UPLOAD_DIR,req.params.id);
-    if(fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
+    // Only the game's own folder directly inside uploads/, whatever the ID spells.
+    const dir=uploadFile(String(req.params.id));
+    if(dir && path.dirname(dir)===path.resolve(UPLOAD_DIR) && fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
     db.deleteGame(req.params.id);
     res.json({success:true});
   } catch(e) {
@@ -1200,10 +1224,13 @@ app.get('/api/games/:gameId/freezes', (req,res) => {
 app.delete('/api/games/:gameId/teams/:teamId/missions/:missionId/media', (req,res) => {
   const {gameId,teamId,missionId}=req.params;
   const mediaPath = String((req.query && req.query.path) || (req.body && req.body.path) || '');
-  if(!mediaPath || !mediaPath.startsWith(gameId+'/')) return res.status(400).json({error:'bad path'});
+  if(!isGameMediaPath(gameId, mediaPath)) return res.status(400).json({error:'bad path'});
+  // Only a picture that is in this team's draft for this mission loses its file.
+  const inDraft = db.mediaListOf(db.getSubmission(Number(teamId), Number(missionId))).includes(mediaPath);
   const r = db.removeMissionDraftMedia({teamId:Number(teamId),missionId:Number(missionId),mediaPath});
   if(r && r.alreadyAccepted) return res.status(409).json({error:'Already completed'});
-  try{ fs.unlinkSync(path.join(UPLOAD_DIR, mediaPath)); }catch(e){}
+  const file = inDraft ? uploadFile(mediaPath) : null;
+  if(file){ try{ fs.unlinkSync(file); }catch(e){} }
   res.json({success:true, media:r.list});
 });
 // Finalise a draft. The rule is enforced here too, so a stale page cannot
@@ -1279,8 +1306,8 @@ app.post('/api/submissions/:id/review', (req,res) => {
     io.to(`team_${sub.team_id}`).emit('mission_accepted',{missionId:sub.mission_id});
   } else {
     db.rejectSubmission(sub.id,message);
-    const fp=path.join(UPLOAD_DIR,sub.media_path||'');
-    if(sub.media_path && fs.existsSync(fp)) fs.unlinkSync(fp);
+    const fp=uploadFile(sub.media_path);
+    if(fp && fs.existsSync(fp)) fs.unlinkSync(fp);
     io.to(`team_${sub.team_id}`).emit('mission_rejected',{missionId:sub.mission_id,message});
     postRejectionToChat(gameId, sub.team_id, db.getMission(sub.mission_id), message);
   }
@@ -2226,6 +2253,10 @@ app.post('/api/games/:gameId/cr/complete', (req,res) => {
 
   // Branch: media-bearing missions need GM approval. Don't advance yet.
   if(mediaPath) {
+    // The path the upload route handed this phone: this game, a stored file.
+    if (!isGameMediaPath(gameId, mediaPath) || !fs.existsSync(uploadFile(mediaPath))) {
+      return res.status(400).json({error:'bad_media'});
+    }
     if (!mission.use_draw && !crMediaMatchesMission(mission, mediaPath)) {
       return res.status(400).json({error:'Media type does not match mission (photo vs video)'});
     }
@@ -2285,8 +2316,8 @@ app.post('/api/cr/submissions/:id/review', (req,res) => {
     io.to(`team_${sub.team_id}`).emit('cr_submission_reviewed', {missionId: mission.id, accepted:true});
   } else {
     db.rejectCrSubmission(sub.id, message);
-    const fp = path.join(UPLOAD_DIR, sub.media_path||'');
-    if(sub.media_path && fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch(e){} }
+    const fp = uploadFile(sub.media_path);
+    if(fp && fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch(e){} }
     if(mission.is_special){
       // Per spec: rejected special-mission media skips the cooldown so the
       // player can retake immediately.
@@ -2408,6 +2439,10 @@ app.post('/api/games/:gameId/cr/special/complete', (req,res) => {
   }
   // Media branch → pending GM review (no instant award).
   if(mediaPath){
+    // The path the upload route handed this phone: this game, a stored file.
+    if (!isGameMediaPath(gameId, mediaPath) || !fs.existsSync(uploadFile(mediaPath))) {
+      return res.status(400).json({error:'bad_media'});
+    }
     if (!crMediaMatchesMission(mission, mediaPath)) {
       return res.status(400).json({error:'Media type does not match mission (photo vs video)'});
     }

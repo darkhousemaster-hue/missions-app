@@ -3302,9 +3302,10 @@ async function renderCrTeamMissions(teamId){
       : m.media_required === 'photo' ? inlineIcon('camera') : inlineIcon('pin');
     let thumbHtml;
     const mediaSub = sub || acceptedByMission[m.id] || progressMediaByMission[m.id];
-    if(mediaSub && mediaSub.media_path){
-      const src = `/uploads/${mediaSub.media_path}`;
-      const isVideo = m.media_required === 'video' || /\.(mp4|webm|mov)$/i.test(mediaSub.media_path);
+    const mediaRel = mediaSub ? safeMediaRel(mediaSub.media_path) : '';
+    if(mediaRel){
+      const src = `/uploads/${mediaRel}`;
+      const isVideo = m.media_required === 'video' || /\.(mp4|webm|mov)$/i.test(mediaRel);
       const rot = Number(mediaSub.media_rotation)||0;
       const rotStyle = rot ? ` style="transform:rotate(${rot}deg)"` : '';
       const lbOptions = mediaSub.id!=null ? `{rotateUrl:'/api/cr/submissions/${mediaSub.id}/rotate',rotation:${rot}}` : `{rotation:${rot}}`;
@@ -3587,9 +3588,14 @@ const _prefetchQ = [];
 let _prefetchBusy = 0;
 const PREFETCH_PARALLEL = 2;
 function mediaUrl(p){ return !p ? '' : (String(p).startsWith('/') ? String(p) : `/uploads/${p}`); }
+// A stored media path as it may enter this page's HTML: "<game>/<file>" in plain
+// characters. Rail Adventure paths come from the phones, so anything else is
+// left out rather than escaped into an attribute.
+function safeMediaRel(p){ const s = String(p||''); return /^[A-Za-z0-9_-]+\/[A-Za-z0-9._-]+$/.test(s) && !s.includes('..') ? s : ''; }
 function prefetchMedia(p){
   const url = mediaUrl(p);
-  if(!url || _prefetched.has(url)) return;
+  // Same-origin files only: a path from a phone must not send the GM's browser elsewhere.
+  if(!url || url.startsWith('//') || !/^\/[A-Za-z0-9._\/?=&-]+$/.test(url) || _prefetched.has(url)) return;
   // Don't spend someone's tethered data on files they may never open.
   const c = navigator.connection;
   if(c && (c.saveData || /(^|-)2g$/.test(c.effectiveType||''))) return;
