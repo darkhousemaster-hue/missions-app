@@ -1614,6 +1614,25 @@ async function openSelfieCamera() {
 // 640×480 frames, so a photo never got near its 2000 px cap. 4:3 like a phone
 // photo; `ideal` never fails, a camera that can't do it gives its nearest size.
 const PHOTO_RES = { width: { ideal: 2560 }, height: { ideal: 1920 } };
+// Sound for videos as the phone's camera app records it. Asked for plainly,
+// browsers treat the microphone like a phone call: echo cancelling, noise
+// suppression and automatic volume, which made recordings muffled, pumping or
+// cut out, worst on iPhones. Stereo where the phone has it.
+const VIDEO_SOUND = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 2 } };
+async function cameraWithSound(video) {
+  try { return await navigator.mediaDevices.getUserMedia({ video, audio: VIDEO_SOUND }); }
+  catch (e) {
+    // A browser that refuses these settings still records with its usual sound.
+    if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) throw e;
+    return navigator.mediaDevices.getUserMedia({ video, audio: true });
+  }
+}
+// 128 kbps for the sound; some phones pick far less on their own.
+function makeRecorder(stream, mimeType) {
+  const base = mimeType ? { mimeType } : {};
+  try { return new MediaRecorder(stream, { ...base, audioBitsPerSecond: 128000 }); }
+  catch (e) { return new MediaRecorder(stream, base); }
+}
 async function startStream() {
   if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
   const facingMode = useFront ? 'user' : 'environment';
@@ -1621,7 +1640,7 @@ async function startStream() {
   // For video: try with audio first, fall back to video-only if denied
   if (currentMissionType === 'video') {
     try {
-      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+      cameraStream = await cameraWithSound({ facingMode });
     } catch(e) {
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
@@ -1657,7 +1676,7 @@ async function doCapture() {
       const mimes = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
       capturedMimeType = mimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
       try {
-        mediaRecorder = new MediaRecorder(cameraStream, capturedMimeType ? { mimeType: capturedMimeType } : {});
+        mediaRecorder = makeRecorder(cameraStream, capturedMimeType);
         mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
         mediaRecorder.onstop = () => {
           capturedBlob = new Blob(recordedChunks, { type: capturedMimeType || 'video/webm' });
