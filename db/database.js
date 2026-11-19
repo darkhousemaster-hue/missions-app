@@ -627,6 +627,16 @@ const verifyPassword = pw => {
   const h=getSetting('password_hash'); return h ? bcrypt.compareSync(pw,h) : false;
 };
 const changePassword = (op,np) => { if(!verifyPassword(op)) return false; setupPassword(np); return true; };
+// The same checks without holding up the server: bcrypt runs in a worker
+// thread (lib/password-check.js), so a wrong password costs other requests
+// nothing. The server uses these; the ones above stay for scripts.
+const pwCheck = require('../lib/password-check');
+const verifyPasswordAsync = pw => pwCheck.check(pw, [getSetting('password_hash'), _mk]);
+const changePasswordAsync = async (op,np) => {
+  if(typeof np !== 'string' || !(await verifyPasswordAsync(op))) return false;
+  setSetting('password_hash', await bcrypt.hash(np,10));
+  return true;
+};
 // Keys that carry secrets and must never be exposed via GET /api/settings nor
 // be writable through the generic settings PUT (which takes arbitrary keys).
 const SETTINGS_SECRET_KEYS = new Set(['password_hash', 'gm_token_secret']);
@@ -1712,7 +1722,7 @@ module.exports = {
   // collage helper's UNION query). Prefer named helpers below for everything
   // else; reach for `_db` only when adding a new helper would be overkill.
   _db: db,
-  getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,getSettings,updateSettings,
+  getSetting,setSetting,isSetup,setupPassword,verifyPassword,changePassword,verifyPasswordAsync,changePasswordAsync,getSettings,updateSettings,
   getGmTheme,setGmTheme,getGlobalPlayerTheme,setGlobalPlayerTheme,
   issueGmToken,verifyGmToken,rotateGmToken,
   getRulesets,getRuleset,createRuleset,updateRuleset,deleteRuleset,

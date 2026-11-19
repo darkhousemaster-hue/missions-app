@@ -37,7 +37,15 @@ const storage = multer.diskStorage({
     cb(null,`${uuidv4()}${ext}`);
   }
 });
-const upload       = multer({ storage, limits: { fileSize: 200*1024*1024 } });
+// Every upload route also checks a password sent as a form field, once multer
+// has read the form (see checkBodyPassword).
+const _upload      = multer({ storage, limits: { fileSize: 200*1024*1024 } });
+const upload = {
+  single: (...a) => [_upload.single(...a), checkBodyPassword],
+  array:  (...a) => [_upload.array(...a),  checkBodyPassword],
+  fields: (...a) => [_upload.fields(...a), checkBodyPassword],
+  any:    (...a) => [_upload.any(...a),    checkBodyPassword],
+};
 const uploadSingle = multer({ dest: path.join(UPLOAD_DIR,'templates'), limits: { fileSize: 20*1024*1024 } });
 
 // ── Stored media paths ──────────────────────────────────────────────────────
@@ -61,6 +69,20 @@ function uploadFile(rel){
 }
 
 app.use(express.json({ limit: '50mb' }));
+app.use(checkBodyPassword);
+
+// A refused upload leaves nothing behind. Multer writes a file to disk before
+// the route has decided, so whenever the answer is an error, the files still
+// where multer put them are removed. A route that keeps a file moves it or
+// answers with success.
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if(res.statusCode < 400) return;
+    const files = req.file ? [req.file] : Array.isArray(req.files) ? req.files : Object.values(req.files || {}).flat();
+    for(const f of files) if(f && f.path) fs.unlink(f.path, () => {});
+  });
+  next();
+});
 
 // ── Baseline security headers ───────────────────────────────────────────────
 // Deliberately conservative: no Content-Security-Policy here. The pages load
@@ -177,13 +199,31 @@ function playBlocked(gameId) {
 // Despite the name, this is the Settings login, and that is for managers only:
 // nothing a GM does while running a game may require it. Deleting a whole game
 // is a manager action and keeps it.
-function isGmAuthed(req){
+function requestToken(req){
   const hdr = req.headers['authorization'] || '';
-  const bearer = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
-  const token = bearer || (req.body && req.body.token);
-  if(token && db.verifyGmToken(token)) return true;
-  if(req.body && req.body.password && db.verifyPassword(req.body.password)) return true;
-  return false;
+  return (hdr.startsWith('Bearer ') ? hdr.slice(7) : null) || (req.body && req.body.token);
+}
+function isGmAuthed(req){
+  if(db.verifyGmToken(requestToken(req))) return true;
+  // The password was checked before the route ran (checkBodyPassword).
+  return !!(req.body && req.body.password) && req[PW_OK] === true;
+}
+// ── The password, checked off the main thread ───────────────────────────────
+// bcrypt is slow on purpose, about half a second on a Raspberry Pi. Checked
+// inline, every request carrying a password held up every other request, so a
+// stream of wrong passwords could freeze all live games. It now runs in a
+// worker thread (lib/password-check.js) before the route, and isGmAuthed only
+// reads the answer. A valid token skips it, as before.
+const PW_OK = Symbol('passwordOk');
+// A team's own 3-digit password goes to these two routes. It is not the
+// manager's, so it is not checked against the manager password.
+const TEAM_PASSWORD_ROUTE = /^\/api\/games\/[^/]+\/teams\/[^/]+\/(password|verify-password)$/;
+async function checkBodyPassword(req, res, next){
+  const pw = req.body && req.body.password;
+  if(pw && req[PW_OK] === undefined && !TEAM_PASSWORD_ROUTE.test(req.path) && !db.verifyGmToken(requestToken(req))){
+    try { req[PW_OK] = await db.verifyPasswordAsync(pw); } catch(e) { req[PW_OK] = false; }
+  }
+  next();
 }
 
 const TEAM_ACCESS_TTL = 30 * 24 * 60 * 60 * 1000;
@@ -232,12 +272,16 @@ app.get('/api/setup-status', (req,res) => res.json({isSetup:true}));
 app.post('/api/setup',       (req,res) => res.json({success:true}));
 // On success, also hand back a long-lived token the client can use instead of
 // resending the password. Old clients that ignore `token` keep working.
-app.post('/api/settings/verify', (req,res) => {
-  const valid = db.verifyPassword(req.body.password);
+app.post('/api/settings/verify', async (req,res) => {
+  // Checked before the route ran, unless the request also held a valid token.
+  let valid = req[PW_OK];
+  if(valid === undefined){ try { valid = await db.verifyPasswordAsync(req.body.password); } catch(e) { valid = false; } }
+  valid = valid === true;
   res.json({valid, token: valid ? db.issueGmToken() : null});
 });
-app.post('/api/settings/change-password', (req,res) => {
-  const success = db.changePassword(req.body.oldPassword,req.body.newPassword);
+app.post('/api/settings/change-password', async (req,res) => {
+  let success = false;
+  try { success = await db.changePasswordAsync(req.body.oldPassword,req.body.newPassword); } catch(e) {}
   // Keep existing GM sessions valid after a password change (token secret is
   // independent of the password). Return a fresh token for convenience.
   res.json({success, token: success ? db.issueGmToken() : null});
@@ -1125,6 +1169,20 @@ app.post('/api/games/:gameId/media/upload',
 // draw.html has one way to load its mission context.
 const drawSessions = new Map(); // token -> {gameId,teamId,missionId,strokes:[],masterId,createdAt}
 function makeDrawToken(){ return uuidv4().slice(0,8).toUpperCase(); }
+// What a drawing keeps for teammates who join later, and all drawings together.
+// A stroke is a few kilobytes; past these limits strokes are still passed on
+// live but no longer kept, so memory stays bounded however much is sent.
+const DRAW_SESSIONS_MAX = 300;
+const DRAW_SESSION_BYTES = 8 * 1024 * 1024;
+const DRAW_TOTAL_BYTES = 128 * 1024 * 1024;
+let drawBytes = 0;
+const strokeBytes = new WeakMap();   // stroke -> bytes counted for it
+function forgetDrawSession(token){
+  const s = drawSessions.get(token);
+  if(!s) return;
+  drawBytes = Math.max(0, drawBytes - (s.bytes||0));
+  drawSessions.delete(token);
+}
 function drawPromptFor(m){
   if(!m) return {de:'',en:'',fr:'',it:'',es:'',zh:''};
   return {
@@ -1141,10 +1199,16 @@ app.post('/api/games/:gameId/draw/session', (req,res) => {
   if(!crMode) return res.status(400).json({error:'No Rail Adventure mode'});
   const mission = db.getCrMission(Number(missionId));
   if(!mission || !mission.use_draw) return res.status(400).json({error:'Not a draw mission'});
+  // With this many drawings open, the oldest is long abandoned: it gives way.
+  while(drawSessions.size >= DRAW_SESSIONS_MAX){
+    const oldest = drawSessions.keys().next().value;
+    io.to(`draw_${oldest}`).emit('draw_closed', {reason:'gone'});
+    forgetDrawSession(oldest);
+  }
   const token = makeDrawToken();
   drawSessions.set(token, {
     gameId, teamId:Number(teamId), missionId:Number(missionId),
-    collaborative: !!mission.draw_collaborative, strokes:[], masterId:null, createdAt:Date.now(),
+    collaborative: !!mission.draw_collaborative, strokes:[], bytes:0, masterId:null, createdAt:Date.now(),
   });
   const publicUrl = db.getSetting('public_url')||`http://localhost:${PORT}`;
   const url = `${publicUrl}/draw.html?session=${token}`;
@@ -1267,6 +1331,8 @@ app.post('/api/games/:gameId/teams/:teamId/missions/:missionId/upload',
       return res.status(423).json({error:'frozen'});
     }
     if(!req.file) return res.status(400).json({error:'No file'});
+    // A mission this team does not have keeps nothing: the file goes with the refusal.
+    if(!db.getSubmission(Number(teamId), Number(missionId))) return res.status(400).json({error:'Mission is not assigned to this team'});
     const mediaPath=`${gameId}/${req.file.filename}`;
     // Multi-image missions collect their shots as a DRAFT first: each upload is
     // stored but the mission stays 'open', so the GM is alerted once, when the
@@ -2531,8 +2597,14 @@ io.on('connection', socket => {
     socket.to(`draw_${token}`).emit('draw_peer', { count: io.sockets.adapter.rooms.get(`draw_${token}`)?.size || 1 });
   });
   socket.on('draw_stroke', ({token, stroke}) => {
-    const s = drawSessions.get(token); if(!s || !stroke) return;
-    if(s.strokes.length < 5000) s.strokes.push(stroke);
+    const s = drawSessions.get(token); if(!s || !stroke || typeof stroke !== 'object') return;
+    let n; try { n = JSON.stringify(stroke).length; } catch(e) { return; }
+    // Kept for teammates who join later, within the budget of this drawing and
+    // of all drawings together; past it the stroke is still passed on live.
+    if(s.strokes.length < 5000 && (s.bytes||0) + n <= DRAW_SESSION_BYTES && drawBytes + n <= DRAW_TOTAL_BYTES){
+      s.strokes.push(stroke); strokeBytes.set(stroke, n);
+      s.bytes = (s.bytes||0) + n; drawBytes += n;
+    }
     socket.to(`draw_${token}`).emit('draw_stroke', { stroke });
   });
   socket.on('draw_live', ({token, seg}) => {
@@ -2541,18 +2613,24 @@ io.on('connection', socket => {
   });
   socket.on('draw_remove', ({token, id}) => {
     const s = drawSessions.get(token); if(!s) return;
-    s.strokes = s.strokes.filter(st => st.id !== id);
+    s.strokes = s.strokes.filter(st => {
+      if(st.id !== id) return true;
+      const n = strokeBytes.get(st) || 0;
+      s.bytes = Math.max(0, (s.bytes||0) - n); drawBytes = Math.max(0, drawBytes - n);
+      return false;
+    });
     socket.to(`draw_${token}`).emit('draw_remove', { id });
   });
   socket.on('draw_clear', ({token}) => {
     const s = drawSessions.get(token); if(!s) return;
+    drawBytes = Math.max(0, drawBytes - (s.bytes||0)); s.bytes = 0;
     s.strokes = [];
     io.to(`draw_${token}`).emit('draw_clear', {});
   });
   socket.on('draw_close', ({token, reason}) => {
     if(!drawSessions.has(token)) return;
     io.to(`draw_${token}`).emit('draw_closed', { reason: reason||'closed' });
-    drawSessions.delete(token);
+    forgetDrawSession(token);
   });
   socket.on('disconnect', () => {
     const token = socket.data && socket.data.drawToken;
@@ -2566,7 +2644,7 @@ io.on('connection', socket => {
         const cur = drawSessions.get(token);
         if(cur && cur.masterId === socket.id && cur.masterGone){
           io.to(`draw_${token}`).emit('draw_closed', {reason:'master_left'});
-          drawSessions.delete(token);
+          forgetDrawSession(token);
         }
       }, 25000);
     }
@@ -2709,8 +2787,23 @@ cron.schedule('0 * * * *', () => {
   });
   // Sweep abandoned draw sessions (master never closed) older than 6h.
   const drawCutoff = Date.now()-6*60*60*1000;
-  for(const [token,s] of drawSessions){ if(s.createdAt < drawCutoff) drawSessions.delete(token); }
+  for(const [token,s] of drawSessions){ if(s.createdAt < drawCutoff) forgetDrawSession(token); }
+  sweepMiscUploads();
 });
+// Files multer left in misc/ by a request that never finished. Routes move the
+// files they keep, so anything there for an hour is a leftover. Also run once
+// at start, for leftovers from before.
+function sweepMiscUploads(){
+  const dir = path.join(UPLOAD_DIR, 'misc');
+  let names = [];
+  try { names = fs.readdirSync(dir); } catch(e) { return; }
+  const cutoff = Date.now() - 60*60*1000;
+  for(const n of names){
+    const f = path.join(dir, n);
+    try { const st = fs.statSync(f); if(st.isFile() && st.mtimeMs < cutoff) fs.unlinkSync(f); } catch(e) {}
+  }
+}
+sweepMiscUploads();
 
 // The bare address answered 404. People land there when they type only the
 // domain, and player pages before 2.6.9 sent a player who had lost their
