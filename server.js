@@ -332,21 +332,31 @@ app.post('/api/settings/template', uploadSingle.single('template'), (req,res) =>
 // Auto-translate via MyMemory (free, no API key required)
 app.post('/api/translate', async (req,res) => {
   const {text, fromLang, toLangs} = req.body;
-  if (!text || !toLangs?.length) return res.status(400).json({error:'Missing params'});
-  try {
-    const results = await Promise.all(toLangs.map(async toLang => {
-      // MyMemory wants a region for Chinese; ours is Simplified.
-      const mm = l => l === 'zh' ? 'zh-CN' : l;
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(mm(fromLang))}|${encodeURIComponent(mm(toLang))}`;
-      const r = await fetch(url, {signal: AbortSignal.timeout(8000)});
-      const data = await r.json();
-      const translated = data.responseData?.translatedText || '';
-      return [toLang, translated];
-    }));
-    res.json(Object.fromEntries(results));
-  } catch(e) {
-    res.status(500).json({error:'Translation failed: ' + e.message});
+  if (!text || !Array.isArray(toLangs) || !toLangs.length) return res.status(400).json({error:'Missing params'});
+  // MyMemory wants a region for Chinese; ours is Simplified.
+  const mm = l => l === 'zh' ? 'zh-CN' : l;
+  // Machine translation only (onlyprivate=1). Otherwise MyMemory answers short
+  // texts such as a mission title from its shared translation memory, where
+  // anyone's entry can win: "Brunnen" came back as "Wells", an emoji went
+  // missing, and "Foto & Video" in French as a line of someone's code.
+  const one = async toLang => {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(mm(fromLang))}|${encodeURIComponent(mm(toLang))}&onlyprivate=1&mt=1`;
+    const r = await fetch(url, {signal: AbortSignal.timeout(8000)});
+    const data = await r.json();
+    // A refusal (daily limit, text too long) also arrives as text: never hand
+    // it out as a translation.
+    if (Number(data.responseStatus) !== 200) throw new Error(String(data.responseDetails || data.responseStatus));
+    return String((data.responseData && data.responseData.translatedText) || '');
+  };
+  // One language failing does not lose the others.
+  const results = await Promise.allSettled(toLangs.map(one));
+  const out = {};
+  results.forEach((r, i) => { if (r.status === 'fulfilled' && r.value) out[toLangs[i]] = r.value; });
+  if (!Object.keys(out).length) {
+    const why = results.find(r => r.status === 'rejected');
+    return res.status(502).json({error: 'Translation failed' + (why ? ': ' + String((why.reason && why.reason.message) || why.reason) : '')});
   }
+  res.json(out);
 });
 
 // ── Update from GitHub ────────────────────────────────────────────────────────
