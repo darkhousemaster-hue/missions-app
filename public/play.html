@@ -984,8 +984,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   socket.on('settings_updated', () => { loadMissions(); });
   // The GM set or changed the meeting point; the end screen shows it live.
-  socket.on('meeting_point', ({ text }) => {
+  socket.on('meeting_point', ({ text, meeting }) => {
     _meetingPoint = text || null;
+    _meeting = meeting || null;
     paintMeetingPoint();
     if (endImageUp()) paintEndImage();
     showEndIfMeeting();
@@ -1166,7 +1167,7 @@ function xmasCard(m, i) {
 // Typed in by the GM for modes that ask for one; shown on the end screen with
 // map buttons, Apple Maps first on an iPhone and Google Maps first elsewhere.
 // A pasted map link opens as it is.
-let _meetingPoint = null;
+let _meetingPoint = null, _meeting = null;
 // Messages set to Restzeit 0, sent along when the page loads after the end.
 let _endMessages = [];
 // The mode's end screen picture and its text (Christmas look only), and the copy
@@ -1179,13 +1180,29 @@ const endScreenUp = () => endImageUp() || document.getElementById('gameover-over
 function showEndIfMeeting(){
   if (_timeOver && (_meetingPoint || _endScreen) && !endScreenUp()) showGameOver('');
 }
+// The meeting point as players see it: without any {tag}. The server works out
+// where a tag leads (a saved meeting point, coordinates or an address).
+function meetShown(){
+  if (_meeting) return String(_meeting.text || '');
+  return String(_meetingPoint || '').replace(/\{[^{}]*\}/g, ' ').replace(/[ \t]+/g, ' ').trim();
+}
 function meetLinks(){
   const txt = String(_meetingPoint || '').trim();
   if (!txt) return [];
   if (/^https?:\/\/\S+$/i.test(txt)) return [{ label: t('meet_open'), href: txt, cls: 'btn-primary' }];
-  const q = encodeURIComponent(txt);
-  const google = { label: t('meet_google'), href: `https://www.google.com/maps/search/?api=1&query=${q}`, cls: 'btn-primary' };
-  const apple  = { label: t('meet_apple'), href: `https://maps.apple.com/?q=${q}`, cls: 'btn-secondary' };
+  // A saved meeting point or coordinates in the text: the maps open that exact
+  // spot. Otherwise they search for the tag's address, else for the text.
+  const m = _meeting || {}, shown = meetShown();
+  let gq, aq;
+  if (m.lat != null && m.lng != null) {
+    gq = 'query=' + encodeURIComponent(m.lat + ',' + m.lng);
+    aq = 'll=' + m.lat + ',' + m.lng + '&q=' + encodeURIComponent(shown || m.place || t('meet_title'));
+  } else {
+    const q = encodeURIComponent(m.q || shown || txt);
+    gq = 'query=' + q; aq = 'q=' + q;
+  }
+  const google = { label: t('meet_google'), href: `https://www.google.com/maps/search/?api=1&${gq}`, cls: 'btn-primary' };
+  const apple  = { label: t('meet_apple'), href: `https://maps.apple.com/?${aq}`, cls: 'btn-secondary' };
   const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   return ios ? [apple, google] : [google, apple];
 }
@@ -1197,13 +1214,13 @@ function paintMeetingPoint(){
   if (!txt) return;
   document.getElementById('go-meet-label').textContent = t('meet_title');
   const isUrl = /^https?:\/\/\S+$/i.test(txt);
-  document.getElementById('go-meet-text').textContent = isUrl ? '' : txt;
+  document.getElementById('go-meet-text').textContent = isUrl ? '' : meetShown();
   document.getElementById('go-meet-btns').innerHTML = meetLinks()
     .map(l => `<a class="btn ${l.cls} btn-lg" href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('');
 }
 function paintEndImage(){
   const c = _endScreen, L = baseOf(lang), txt = String(_meetingPoint || '').trim();
-  const addr = /^https?:\/\/\S+$/i.test(txt) ? '' : txt;
+  const addr = /^https?:\/\/\S+$/i.test(txt) ? '' : meetShown();
   const words = EndScreen.texts(c, L, { title: t('go'), body: t('meet_title') + '\n' + EndScreen.TOKEN }, addr);
   EndScreen.mount(document.getElementById('end-image'), { image: c.image, pos: c.pos, size: c.size, color: c.color, links: meetLinks(), ...words });
 }
@@ -1225,6 +1242,7 @@ async function loadMissions() {
   const data = await fetch(`/api/games/${gameId}/teams/${teamId}`).then(r=>r.json());
   applyLook(data.look);
   _meetingPoint = data.meeting_point || null;
+  _meeting = data.meeting || null;
   paintMeetingPoint();
   // Custom (GM-defined) languages for this location. Set before setAllowedLangs
   // so the cycler includes them.

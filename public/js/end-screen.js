@@ -20,18 +20,25 @@
   const DEFAULTS = { pos: 14, size: 100, color: '#f4f2ee' };
   const TOKEN = '{adresse}';
   const LANGS = ['de', 'en', 'fr', 'it', 'es', 'zh'];
-  const TITLE_PX = 120, BODY_PX = 54;
-  const TITLE_FONT = "'HomeChristmas',Georgia,serif";
+  // Cherry Swash (SIL Open Font Licence, assets/christmas/OFL-CherrySwash.txt):
+  // festive capitals, plain lowercase, every umlaut and accent. The earlier
+  // Christmas font was hard to read and had no umlauts. It runs about 9% wider,
+  // so the title is 110 px instead of 120: as wide as before, and a picture made
+  // for the old title still fits.
+  const TITLE_PX = 110, BODY_PX = 54;
+  const TITLE_FONT = "'Cherry Swash',Georgia,serif";
+  const TITLE_FACE = "700 110px 'Cherry Swash'";
   const BODY_FONT = "'Inter',-apple-system,'Segoe UI',Roboto,sans-serif";
 
   const CSS = `
-@font-face{font-family:'HomeChristmas';src:url('/assets/christmas/homechristmas.woff2') format('woff2');font-display:swap;}
+@font-face{font-family:'Cherry Swash';font-weight:700;font-display:swap;src:url('/assets/christmas/cherryswash-700-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Cherry Swash';font-weight:700;font-display:swap;src:url('/assets/christmas/cherryswash-700-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF;}
 .endimg-box{position:relative;overflow:hidden;background:#0d0c0b;}
 .endimg-stage{position:absolute;left:50%;top:50%;width:${W}px;height:${H}px;overflow:hidden;-webkit-text-size-adjust:none;text-size-adjust:none;}
 .endimg-pic{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block;}
 .endimg-guide{position:absolute;left:${SAFE_X}px;right:${SAFE_X}px;top:${SAFE_Y}px;bottom:${SAFE_Y}px;border:4px dashed rgba(255,255,255,.28);border-radius:8px;}
 .endimg-text{position:absolute;left:${SAFE_X}px;right:${SAFE_X}px;text-align:center;}
-.endimg-title{font:400 ${TITLE_PX}px/1.1 ${TITLE_FONT};white-space:pre-line;overflow-wrap:anywhere;}
+.endimg-title{font:700 ${TITLE_PX}px/1.1 ${TITLE_FONT};white-space:pre-line;overflow-wrap:anywhere;}
 .endimg-body{font:500 ${BODY_PX}px/1.35 ${BODY_FONT};margin-top:36px;white-space:pre-line;overflow-wrap:anywhere;}
 .endimg-title:empty,.endimg-body:empty{display:none;}
 .endimg-title:empty+.endimg-body{margin-top:0;}
@@ -242,5 +249,5 @@
     } finally { host.remove(); }
   }
 
-  w.EndScreen = { W, H, SAFE_X, SAFE_Y, DEFAULTS, TOKEN, mount, texts, reference };
+  w.EndScreen = { W, H, SAFE_X, SAFE_Y, DEFAULTS, TOKEN, TITLE_FACE, mount, texts, reference };
 })(window);

@@ -1134,7 +1134,7 @@ app.get('/api/games/:gameId/teams/:teamId', (req,res) => {
   const end_screen = look && mode.end_image
     ? {image: '/uploads/' + mode.end_image, ...db.normEndScreen(mode.end_screen)} : null;
   res.json({...publicTeam, missions, freeze, allowed_langs, custom_langs, max_video_seconds, max_upload_mb, timer,
-    look, meeting_point: (game && game.meeting_point) || null, end_messages, end_screen});
+    look, meeting_point: (game && game.meeting_point) || null, meeting: resolveMeeting(game && game.meeting_point), end_messages, end_screen});
 });
 // GM dashboard detail is intentionally separate from the player team endpoint:
 // a GM who has not unlocked manager Settings must still be able to review
@@ -1951,9 +1951,71 @@ app.put('/api/games/:gameId/meeting-point', (req,res) => {
   if(!game) return res.status(404).json({error:'Not found'});
   db.setGameMeetingPoint(game.id, req.body && req.body.text);
   const text = db.getGame(game.id).meeting_point || null;
-  io.to(`game_${game.id}`).emit('meeting_point', {text});
-  io.to(`gm_${game.id}`).emit('meeting_point', {text});
-  res.json({success:true, meeting_point: text});
+  const meeting = resolveMeeting(text);
+  io.to(`game_${game.id}`).emit('meeting_point', {text, meeting});
+  io.to(`gm_${game.id}`).emit('meeting_point', {text, meeting});
+  res.json({success:true, meeting_point: text, meeting});
+});
+// ── Saved meeting points ────────────────────────────────────────────────────
+// Places with GPS a manager saves in Settings. The GM taps one in the meeting
+// point window, which puts its name in curly braces into the text: "Beim Kiosk
+// {Bahnhof Baden}". Players never see the braces; the map buttons on their end
+// screen lead to the point's coordinates. A tag may also hold coordinates
+// ("{47.4762, 8.3075}") or an address for the maps to search.
+function meetingPoints(){
+  let list = [];
+  try { list = JSON.parse(db.getSetting('meeting_points') || '[]'); } catch(e) {}
+  return (Array.isArray(list) ? list : [])
+    .filter(p => p && typeof p.name === 'string' && p.name.trim() && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+}
+function parseCoords(s){
+  const m = String(s || '').trim().match(/^(-?\d{1,2}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)$/);
+  if(!m) return null;
+  const lat = Number(m[1].replace(',', '.')), lng = Number(m[2].replace(',', '.'));
+  return (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) ? {lat, lng} : null;
+}
+// What players get from a meeting point text: the words to show, and where the
+// map buttons lead (coordinates, or a text to search for). null for no text.
+function resolveMeeting(raw){
+  const s = String(raw || '');
+  if(!s.trim()) return null;
+  const tags = [...s.matchAll(/\{([^{}]*)\}/g)].map(m => m[1].trim()).filter(Boolean);
+  const text = s.replace(/\{[^{}]*\}/g, ' ').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n');
+  const tag = tags[0] || '';
+  let geo = null, place = '';
+  if(tag){
+    const p = meetingPoints().find(x => x.name.trim().toLowerCase() === tag.toLowerCase());
+    if(p){ geo = {lat:p.lat, lng:p.lng}; place = p.name.trim(); }
+    else geo = parseCoords(tag);
+  }
+  return {
+    text: text || place || (geo ? '' : tag),
+    lat: geo ? geo.lat : null,
+    lng: geo ? geo.lng : null,
+    q: geo ? '' : (tag || text),
+    place,
+  };
+}
+// The list itself: read by the GM page (no login, like all GM work), written
+// from Settings with the manager login. Names are what the tags refer to, so
+// each is unique and free of braces.
+app.get('/api/meeting-points', (req,res) => res.json(meetingPoints()));
+app.put('/api/meeting-points', (req,res) => {
+  if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
+  const list = req.body && Array.isArray(req.body.points) ? req.body.points : null;
+  if(!list || list.length > 200) return res.status(400).json({error:'invalid'});
+  const seen = new Set(), out = [];
+  for(let i = 0; i < list.length; i++){
+    const p = list[i] || {};
+    const name = String(p.name || '').trim().slice(0, 80);
+    const lat = Number(p.lat), lng = Number(p.lng);
+    if(!name || /[{}]/.test(name) || seen.has(name.toLowerCase())) return res.status(400).json({error:'bad_name', index:i});
+    if(!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return res.status(400).json({error:'bad_coords', index:i});
+    seen.add(name.toLowerCase());
+    out.push({name, lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6});
+  }
+  db.setSetting('meeting_points', JSON.stringify(out));
+  res.json({success:true, points: out});
 });
 app.post('/api/cr/missions/:id/task-image', upload.single('image'), (req,res) => {
   if(!isGmAuthed(req)) return res.status(401).json({error:'Unauthorized'});
